@@ -1,6 +1,56 @@
-# BizBoost Hub - Empowering South African Entrepreneurs
+# 72X - Empowering South African Entrepreneurs
 
-BizBoost Hub is a comprehensive web application designed to help small businesses in South Africa accelerate their growth by providing actionable insights, educational resources, and personalized tools. The platform focuses on underserved markets like townships and rural areas, offering localized content and mobile-first design.
+SeventyTwoX is a comprehensive web application designed to help small businesses in South Africa accelerate their growth by providing actionable insights, educational resources, and personalized tools. The platform focuses on underserved markets like townships and rural areas, offering localized content and mobile-first design.
+
+
+With the latest update, 72X is now structured into three packages to support users at different stages of their business journey:
+
+🎁 Package Structure
+🟢 Startup Package (Default for all new users)
+
+All users begin with the Startup package upon registration. It includes essential onboarding features and a clear overview of the application. Core accessible features include:
+
+Overview Dashboard
+
+Business Schedule & Calendar
+
+Learning Modules
+
+Community Forum
+
+Selected Programs
+
+Profile Management
+
+🚫 Advanced tools such as Marketplace, Mentorship, Funding, AI Chatbot, etc., are locked but can be unlocked anytime by upgrading.
+
+🟠 Essential Package (Upgrade Tier 1)
+
+Includes everything in the Startup package plus:
+
+Marketplace – Promote and list products/services
+
+Mentorship Hub – Connect with peer and expert mentors
+
+Funding Finder – Access funding opportunities
+
+Data Input System – Track performance data and metrics
+
+AI Chatbot Assistance – Get real-time help and navigation
+
+✅ Perfect for entrepreneurs ready to grow with structured tools and community support.
+
+🔴 Premium Package (Upgrade Tier 2)
+
+Unlocks the entire platform, including everything in Startup and Essential packages, plus:
+
+Expert Q&A Sessions – Personalized responses from business experts
+
+AI Business Analyst – Deeper, AI-driven business performance insights
+
+App Store Access – Download third-party and BizBoost business apps
+
+👑 Ideal for advanced users seeking AI-powered decision support, full integration, and expert guidance.
 
 ## 🌍 Target Audience
 
@@ -9,106 +59,113 @@ BizBoost Hub is a comprehensive web application designed to help small businesse
 - Freelancers and solopreneurs aiming to grow their operations
 - Community-based businesses seeking digital transformation
 
-## ✨ Key Features
+✨ Key Features (All Packages, Tiered by Access Level)
+🚀 Core Business Tools
 
-### 🚀 Core Business Tools
-- **Acceleration Roadmap Generator**: Personalized growth roadmaps based on business type, industry, and stage
-- **Performance Dashboard**: Track revenue trends, customer metrics, and business goals
-- **Data Input System**: Upload and analyze business data for AI-driven insights
+Roadmap Generator (Startup+)
 
-### 📚 Learning & Development
-- **Interactive Learning Modules**: Bite-sized courses on financial literacy, marketing, digital tools, and compliance
-- **Daily Tips & Challenges**: Personalized business advice in multiple South African languages
-- **Resource Library**: Curated articles, videos, and case studies for different business stages
+Performance Dashboard (Startup+)
 
-### 🏪 Community & Marketplace
-- **Community Marketplace**: List and promote products/services with local focus
-- **Mentorship Hub**: Connect with experienced local entrepreneurs and peer support groups
-- **Community Forum**: Industry-specific discussions and networking opportunities
+Data Input System (Essential+)
 
-### 🎮 Gamification System
-- **XP & Levels**: Earn points and progress through entrepreneur levels (Bronze, Silver, Gold)
-- **Achievement Badges**: Unlock rewards for completing tasks and reaching milestones
-- **Weekly Challenges**: Structured goals with XP rewards to encourage engagement
-- **Streak Tracking**: Daily engagement rewards and progress visualization
+📚 Learning & Development
 
-### 💼 Business Applications
-- **BizBoost Solutions**: Proprietary software including Service Desk, Inventory Portal, and POS System
-- **Third-Party Integrations**: Access to productivity, finance, and marketing tools
-- **Software Marketplace**: Free trials, freemium options, and premium business applications
+Interactive Learning Modules (Startup+)
 
-### 🌐 Localization & Accessibility
-- **Multi-Language Support**: English, Afrikaans, isiZulu, isiXhosa, Sesotho, Setswana
-- **Mobile-First Design**: Optimized for smartphones and low-bandwidth connections
-- **Local Context**: South African currency (Rands), local locations, and cultural relevance
+Daily Business Tips (Startup+)
 
-## 🛠 Technology Stack
+Resource Library (Startup+)
 
-- **Frontend**: React 19.1.0 with TypeScript
-- **Styling**: Tailwind CSS with custom design system
-- **Icons**: Lucide React for consistent iconography
-- **Charts**: Recharts for data visualization
-- **UI Components**: Headless UI for accessible components
-- **Build Tool**: Vite for fast development and building
-- **Routing**: React Router DOM for navigation
+🏪 Community & Marketplace
 
-## 📱 Mobile-First Design
+Community Forum (Startup+)
 
-The application is designed with a mobile-first approach, featuring:
-- Responsive grid layouts that adapt from 1-4 columns
-- Touch-friendly interface with larger tap targets
-- Bottom navigation for easy thumb access on mobile devices
-- Compact components optimized for smaller screens
-- Progressive enhancement for larger displays
+Community Marketplace (Essential+)
 
-## 🎯 Revenue Model
+Mentorship Hub (Essential+)
 
-### Freemium Structure
-- **Free Tier**: Basic roadmap generator, resource library, community access
-- **Premium Tier**: Advanced courses, expert consultations, priority support
+🤖 AI & Automation
 
-### Software Solutions
-- **BizBoost Service Desk**: R299/month - Customer service management
-- **BizBoost Inventory Portal**: R199/month - Smart inventory tracking
-- **BizBoost POS System**: R149/month - Point of sale for retailers
+AI Chatbot Assistance (Essential+)
 
-### Additional Revenue Streams
-- Affiliate partnerships with business tool providers
-- Sponsored educational content and webinars
-- Expert consultation services
+AI Business Analyst (Premium only)
 
-## 🚀 Getting Started
+🧠 Expert Support
+
+Expert Q&A (Premium only)
+
+💼 Business Applications
+
+App Store / Software Marketplace (Premium only)
+
+BizBoost Solutions (POS, Inventory, Helpdesk) (Premium)
+
+🛠 Technology Stack
+
+React 19.1.0 + TypeScript
+
+Tailwind CSS
+
+Lucide React Icons
+
+Recharts (Data Visualizations)
+
+Headless UI
+
+Vite (Build Tool)
+
+React Router DOM
+
+📱 Mobile-First Design
+
+Optimized for low-bandwidth areas
+
+Mobile-friendly bottom nav
+
+Touch-first components
+
+Responsive grid (1–4 columns)
+
+💰 Revenue Model
+Freemium Structure
+
+Startup (Free): Dashboard, learning, basic community features
+
+Essential: Adds marketplace, mentorship, AI assistant, and more
+
+Premium: All-inclusive with expert tools and integrations
+
+Software Plans
+
+BizBoost Helpdesk – R299/mo
+
+Inventory Portal – R199/mo
+
+POS System – R149/mo
+
+Additional Revenue Streams
+
+Sponsored content
+
+Affiliate partnerships
+
+Paid webinars and expert sessions
+
+🧪 Getting Started
 
 ### Prerequisites
 - Node.js (version 18 or higher)
 - npm or yarn package manager
-
-### Installation
-
-1. Clone the repository:
-```bash
 git clone <repository-url>
-cd bizboost-hub
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-4. Open your browser and navigate to `http://localhost:5173`
-
-### Available Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint for code quality
+
+
+Visit: http://localhost:5173
 
 ## 📁 Project Structure
 
@@ -131,101 +188,79 @@ src/
 └── main.tsx           # Application entry point
 ```
 
-## 🌟 Key Pages & Features
+🌟 Highlighted Pages & Modules
+Feature	Startup	Essential	Premium
+Overview Dashboard	✅	✅	✅
+Learning Modules	✅	✅	✅
+Schedule	✅	✅	✅
+Community Forum	✅	✅	✅
+Marketplace	❌	✅	✅
+Mentorship Hub	❌	✅	✅
+Funding Finder	❌	✅	✅
+AI Chatbot	❌	✅	✅
+AI Business Analyst	❌	❌	✅
+Expert Q&A	❌	❌	✅
+App Store	❌	❌	✅
+🎨 Design System
 
-### Dashboard
-- Personalized greeting in multiple languages
-- Gamification panel with XP, levels, and badges
-- Daily tips and business challenges
-- Quick actions for core features
-- Recent activity tracking
+Consistent colors, typography, and responsive elements
 
-### Learning Modules
-- Interactive courses with progress tracking
-- Difficulty levels (Beginner, Intermediate, Advanced)
-- Gamified completion with XP rewards
-- Mobile-optimized video and content delivery
+Accessibility-first approach
 
-### Marketplace
-- Local product and service listings
-- Location-based filtering (Soweto, Alexandra, etc.)
-- Category organization (Food, Crafts, Services, etc.)
-- Easy product listing with photo upload
+Micro-interactions and state feedback
 
-### Mentorship Hub
-- Three-tier system: Find Mentors, Peer Support, My Connections
-- Local expertise matching
-- Language preference matching
-- Community group participation
+🌍 Localization
 
-### Applications
-- BizBoost proprietary solutions showcase
-- Third-party software integrations
-- Free trials and premium options
-- Category-based organization
+Supports 6 South African languages:
 
-## 🎨 Design System
+English
 
-### Colors
-- **Primary**: Blue (#0ea5e9) for main actions and branding
-- **Success**: Green for positive actions and achievements
-- **Warning**: Yellow/Orange for attention and challenges
-- **Error**: Red for critical actions and warnings
+Afrikaans
 
-### Typography
-- **Font Family**: Inter for clean, readable text
-- **Responsive Sizing**: Scales from mobile (14px base) to desktop
-- **Weight Hierarchy**: 300-700 range for proper emphasis
+isiZulu
 
-### Components
-- Consistent border radius (8px for cards, 6px for buttons)
-- Shadow system for depth and hierarchy
-- Hover states and micro-interactions
-- Accessibility-first design principles
+isiXhosa
 
-## 🌍 Localization
+Sesotho
 
-The platform supports six South African languages:
-- **English**: Primary language for interface
-- **Afrikaans**: "Welkom by BizBoost Hub"
-- **isiZulu**: "Siyakwamukela ku-BizBoost Hub"
-- **isiXhosa**: Localized business terminology
-- **Sesotho**: Community-focused translations
-- **Setswana**: Rural area accessibility
+Setswana
 
-## 📊 Analytics & Data
+📊 Analytics-Driven
 
-The platform is designed to be data-driven with:
-- User engagement tracking
-- Learning progress analytics
-- Business performance metrics
-- Community interaction data
-- Revenue and conversion tracking
+User engagement tracking
 
-## 🔮 Future Enhancements
+Progress tracking per user
 
-- Offline functionality for low-connectivity areas
-- WhatsApp integration for communication
-- Advanced AI-powered business insights
-- Expanded payment gateway integrations
-- Voice-based navigation for accessibility
-- Advanced analytics dashboard for business owners
+Feature adoption by package
 
-## 🤝 Contributing
+Conversion metrics on upgrades
+
+🔮 Future Enhancements
+
+Offline mode for rural areas
+
+WhatsApp-based learning support
+
+Advanced payment integrations
+
+Voice command features
+
+AI-generated business reports
+
+🤝 Contributing
 
 We welcome contributions from the community. Please read our contributing guidelines and code of conduct before submitting pull requests.
 
-## 📄 License
+📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 📞 Support
+📞 Support
 
-For support and questions:
-- Email: support@bizboosthub.co.za
-- Community Forum: Available within the application
-- Documentation: Comprehensive guides available in the Resource Library
+📧 Email: support@72Xsupport.co.za
 
----
+💬 Community:  Available within the application
 
-**BizBoost Hub** - Empowering South African entrepreneurs to build thriving businesses through technology, community, and localized support.
+📚 Help Docs: Comprehensive guides available in the Resource Library
+
+72X — Equipping South African entrepreneurs with scalable tools, community access, and localized business support through a powerful three-tier platform!
