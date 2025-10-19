@@ -1,0 +1,338 @@
+import React, { useState } from 'react';
+import { User, Edit, Save, Bell, Shield, Trash2 } from 'lucide-react';
+
+const Profile: React.FC = () => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
+  const [profileData, setProfileData] = useState({
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    phone: '+1 (555) 123-4567',
+    company: 'Doe Enterprises',
+    industry: 'Technology',
+    location: 'San Francisco, CA',
+    founded: '2020',
+    employees: '10-50',
+  });
+
+  const tabs = [
+    { id: 'profile', name: 'Profile', icon: User },
+    { id: 'notifications', name: 'Notifications', icon: Bell },
+    { id: 'security', name: 'Security', icon: Shield },
+  ];
+
+  const handleInputChange = (field: string, value: string) => {
+    setProfileData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = () => {
+    setIsEditing(false);
+    // Save profile data
+    console.log('Profile saved:', profileData);
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Profile Settings</h1>
+        <p className="text-gray-600">Manage your account and business information</p>
+      </div>
+
+      {/* Horizontal Tab Navigation */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2">
+        <nav className="flex space-x-2 overflow-x-auto">
+          {tabs.map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-primary-500 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="font-medium">{tab.name}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            {activeTab === 'profile' && (
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900">Profile Information</h2>
+                  <button
+                    onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                  >
+                    {isEditing ? <Save className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                    <span>{isEditing ? 'Save Changes' : 'Edit Profile'}</span>
+                  </button>
+                </div>
+
+                {/* Profile Picture */}
+                <div className="flex items-center space-x-6 mb-8">
+                  <div className="w-20 h-20 bg-primary-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">
+                      {profileData.name.split(' ').map(n => n[0]).join('')}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">{profileData.name}</h3>
+                    <p className="text-gray-600">{profileData.company}</p>
+                    {isEditing && (
+                      <button className="text-primary-600 text-sm hover:text-primary-700 mt-1">
+                        Change Photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Personal Information */}
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Personal Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Full Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.name}
+                          onChange={(e) => handleInputChange('name', e.target.value)}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          value={profileData.email}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          value={profileData.phone}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Location
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.location}
+                          onChange={(e) => handleInputChange('location', e.target.value)}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Business Information */}
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Business Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Company Name
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.company}
+                          onChange={(e) => handleInputChange('company', e.target.value)}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Industry
+                        </label>
+                        <select
+                          value={profileData.industry}
+                          onChange={(e) => handleInputChange('industry', e.target.value)}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                        >
+                          <option value="Technology">Technology</option>
+                          <option value="Healthcare">Healthcare</option>
+                          <option value="Finance">Finance</option>
+                          <option value="Retail">Retail</option>
+                          <option value="Manufacturing">Manufacturing</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Founded Year
+                        </label>
+                        <input
+                          type="text"
+                          value={profileData.founded}
+                          onChange={(e) => handleInputChange('founded', e.target.value)}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Company Size
+                        </label>
+                        <select
+                          value={profileData.employees}
+                          onChange={(e) => handleInputChange('employees', e.target.value)}
+                          disabled={!isEditing}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                        >
+                          <option value="1-10">1-10 employees</option>
+                          <option value="10-50">10-50 employees</option>
+                          <option value="50-100">50-100 employees</option>
+                          <option value="100+">100+ employees</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <div className="p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Notification Preferences</h2>
+                
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Email Notifications</h4>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'daily-quotes', label: 'Daily motivation quotes', checked: true },
+                        { id: 'ai-insights', label: 'AI insights and recommendations', checked: true },
+                        { id: 'data-analysis', label: 'Data analysis completion', checked: true },
+                        { id: 'weekly-reports', label: 'Weekly business reports', checked: false },
+                      ].map(item => (
+                        <label key={item.id} className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            defaultChecked={item.checked}
+                            className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                          />
+                          <span className="text-gray-700">{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Push Notifications</h4>
+                    <div className="space-y-3">
+                      {[
+                        { id: 'urgent-alerts', label: 'Urgent business alerts', checked: true },
+                        { id: 'goal-milestones', label: 'Goal milestone achievements', checked: true },
+                        { id: 'new-resources', label: 'New resources available', checked: false },
+                      ].map(item => (
+                        <label key={item.id} className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            defaultChecked={item.checked}
+                            className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                          />
+                          <span className="text-gray-700">{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <button className="mt-6 px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
+                  Save Preferences
+                </button>
+              </div>
+            )}
+
+            {activeTab === 'security' && (
+              <div className="p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Security Settings</h2>
+                
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Password</h4>
+                    <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                      Change Password
+                    </button>
+                  </div>
+
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Two-Factor Authentication</h4>
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-900">Enable 2FA</p>
+                        <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
+                      </div>
+                      <button className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
+                        Enable
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Data & Privacy</h4>
+                    <div className="space-y-3">
+                      <button className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">Download Your Data</p>
+                            <p className="text-sm text-gray-600">Get a copy of your business data</p>
+                          </div>
+                          <span className="text-primary-600">Download</span>
+                        </div>
+                      </button>
+                      
+                      <button className="w-full text-left p-4 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-red-900">Delete Account</p>
+                            <p className="text-sm text-red-600">Permanently delete your account and data</p>
+                          </div>
+                          <Trash2 className="w-5 h-5 text-red-600" />
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+      </div>
+    </div>
+  );
+};
+
+export default Profile;
