@@ -5,8 +5,8 @@ SeventyTwoX is a comprehensive web application designed to help small businesses
 
 With the latest update, 72X is now structured into three packages to support users at different stages of their business journey:
 
-##🎁 Package Structure
-###🟢 Startup Package (Default for all new users)
+## 🎁 Package Structure
+### 🟢 Startup Package (Default for all new users)
 
 All users begin with the Startup package upon registration. It includes essential onboarding features and a clear overview of the application. Core accessible features include:
 
@@ -19,7 +19,7 @@ Profile Management
 
 🚫 Advanced tools such as Marketplace, Mentorship, Funding, AI Chatbot, etc., are locked but can be unlocked anytime by upgrading.
 
-###🟠 Essential Package (Upgrade Tier 1)
+### 🟠 Essential Package (Upgrade Tier 1)
 
 Includes everything in the Startup package plus:
 Marketplace – Promote and list products/services
@@ -30,7 +30,7 @@ AI Chatbot Assistance – Get real-time help and navigation
 
 ✅ Perfect for entrepreneurs ready to grow with structured tools and community support.
 
-###🔴 Premium Package (Upgrade Tier 2)
+### 🔴 Premium Package (Upgrade Tier 2)
 
 Unlocks the entire platform, including everything in Startup and Essential packages, plus:
 Expert Q&A Sessions – Personalized responses from business experts
@@ -46,7 +46,7 @@ App Store Access – Download third-party and BizBoost business apps
 - Freelancers and solopreneurs aiming to grow their operations
 - Community-based businesses seeking digital transformation
 
-####✨ Key Features (All Packages, Tiered by Access Level)
+#### ✨ Key Features (All Packages, Tiered by Access Level)
 #####🚀 Core Business Tools
 
 Roadmap Generator (Startup+)
@@ -87,7 +87,7 @@ App Store / Software Marketplace (Premium only)
 
 BizBoost Solutions (POS, Inventory, Helpdesk) (Premium)
 
-#####🛠 Technology Stack
+##### 🛠 Technology Stack
 
 React 19.1.0 + TypeScript
 
@@ -103,7 +103,7 @@ Vite (Build Tool)
 
 React Router DOM
 
-####📱 Mobile-First Design
+#### 📱 Mobile-First Design
 
 Optimized for low-bandwidth areas
 
@@ -113,7 +113,7 @@ Touch-first components
 
 Responsive grid (1–4 columns)
 
-###💰 Revenue Model
+### 💰 Revenue Model
 Freemium Structure
 
 Startup (Free): Dashboard, learning, basic community features
@@ -138,7 +138,7 @@ Affiliate partnerships
 
 Paid webinars and expert sessions
 
-###🧪 Getting Started
+### 🧪 Getting Started
 
 ### Prerequisites
 - Node.js (version 18 or higher)
@@ -175,7 +175,7 @@ src/
 └── main.tsx           # Application entry point
 ```
 
-###🌟 Highlighted Pages & Modules
+### 🌟 Highlighted Pages & Modules
 Feature	Startup	Essential	Premium
 Overview Dashboard	✅	✅	✅
 Learning Modules	✅	✅	✅
@@ -250,4 +250,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 📚 Help Docs: Comprehensive guides available in the Resource Library
 
-###72X — Equipping South African entrepreneurs with scalable tools, community access, and localized business support through a powerful three-tier platform!
+### 72X — Equipping South African entrepreneurs with scalable tools, community access, and localized business support through a powerful three-tier platform!
