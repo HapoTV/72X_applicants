@@ -11,10 +11,15 @@ With the latest update, 72X is now structured into three packages to support use
 All users begin with the Startup package upon registration. It includes essential onboarding features and a clear overview of the application. Core accessible features include:
 
 Overview Dashboard
+
 Business Schedule & Calendar
+
 Learning Modules
+
 Community Forum
+
 Selected Programs
+
 Profile Management
 
 🚫 Advanced tools such as Marketplace, Mentorship, Funding, AI Chatbot, etc., are locked but can be unlocked anytime by upgrading.
@@ -47,7 +52,7 @@ App Store Access – Download third-party and BizBoost business apps
 - Community-based businesses seeking digital transformation
 
 #### ✨ Key Features (All Packages, Tiered by Access Level)
-#####🚀 Core Business Tools
+##### 🚀 Core Business Tools
 
 Roadmap Generator (Startup+)
 
