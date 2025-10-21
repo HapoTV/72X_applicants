@@ -29,8 +29,7 @@ const Login: React.FC = () => {
         e.preventDefault();
         setIsLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
+        try {
             const credentials = devCredentials[loginType];
             let isValid = false;
 
@@ -45,26 +44,24 @@ const Login: React.FC = () => {
             }
 
             if (isValid) {
-                // Store auth info in localStorage for development
+                // Store auth info in localStorage
                 localStorage.setItem('authToken', `${loginType}-token-${Date.now()}`);
                 localStorage.setItem('userType', loginType);
                 localStorage.setItem('userEmail', formData.email);
+                
                 if (loginType === 'user') {
                     localStorage.setItem('businessReference', formData.businessReference);
                     // Set default package to startup for new users
                     if (!localStorage.getItem('userPackage')) {
                         localStorage.setItem('userPackage', 'startup');
                     }
+                    // Navigate to user dashboard
+                    window.location.href = '/dashboard';
                 } else {
                     // Admins get premium package
                     localStorage.setItem('userPackage', 'premium');
-                }
-
-                // Redirect based on user type
-                if (loginType === 'admin') {
-                    navigate('/admin/dashboard');
-                } else {
-                    navigate('/dashboard');
+                    // Force full page reload for admin to ensure clean state
+                    window.location.href = '/admin/dashboard';
                 }
             } else {
                 const errorMsg = loginType === 'admin' 
@@ -72,9 +69,12 @@ const Login: React.FC = () => {
                     : 'Invalid credentials. Please check your email, business reference, and password.';
                 alert(errorMsg);
             }
-
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('An error occurred during login. Please try again.');
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     const fillDemoCredentials = () => {

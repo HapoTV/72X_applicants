@@ -42,6 +42,7 @@ import AnalyticsUpgrade from './pages/upgrades/AnalyticsUpgrade';
 import ResourcesUpgrade from './pages/upgrades/ResourcesUpgrade';
 import ExpertsUpgrade from './pages/upgrades/ExpertsUpgrade';
 import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -50,8 +51,15 @@ function App() {
         {/* Redirect root to login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         
-        {/* Login route without Layout */}
+        {/* Login route */}
         <Route path="/login" element={<Login />} />
+        
+        {/* Admin route - outside of main layout to avoid sidebar and chatbot */}
+        <Route path="/admin/dashboard" element={
+          localStorage.getItem('userType') === 'admin' 
+            ? <AdminDashboard /> 
+            : <Navigate to="/login" replace />
+        } />
         
         {/* All other routes with Layout */}
         <Route path="/*" element={
