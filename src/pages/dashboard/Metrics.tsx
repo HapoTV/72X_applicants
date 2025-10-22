@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { DollarSign, Users, TrendingUp, Target, Flame } from 'lucide-react';
+import { Banknote, Users, TrendingUp, Target, Flame } from 'lucide-react';
 import MetricCard from '../../components/MetricCard';
 
 const Metrics: React.FC = () => {
   const [selectedLanguage] = useState('en');
+  const [showChallenges, setShowChallenges] = useState(false);
 
   const translations = {
     en: {
@@ -17,59 +18,28 @@ const Metrics: React.FC = () => {
 
   const t = translations[selectedLanguage] || translations.en;
 
+  const readMetric = (key: string) => (localStorage.getItem(key) || '').trim() || '--';
   const metrics = [
-    {
-      title: t.monthlyRevenue,
-      value: 'R12,450',
-      change: '+15.2%',
-      trend: 'up' as const,
-      icon: DollarSign,
-    },
-    {
-      title: t.activeCustomers,
-      value: '247',
-      change: '+8.7%',
-      trend: 'up' as const,
-      icon: Users,
-    },
-    {
-      title: t.growthRate,
-      value: '18.3%',
-      change: '+3.1%',
-      trend: 'up' as const,
-      icon: TrendingUp,
-    },
-    {
-      title: t.goalsAchieved,
-      value: '6/10',
-      change: '60%',
-      trend: 'up' as const,
-      icon: Target,
-    },
+    { title: t.monthlyRevenue, value: readMetric('monthlyRevenue'), change: '', trend: 'up' as const, icon: Banknote },
+    { title: t.activeCustomers, value: readMetric('activeCustomers'), change: '', trend: 'up' as const, icon: Users },
+    { title: t.growthRate, value: readMetric('growthRate'), change: '', trend: 'up' as const, icon: TrendingUp },
+    { title: t.goalsAchieved, value: readMetric('goalsAchieved'), change: '', trend: 'up' as const, icon: Target },
   ];
 
-  const dailyChallenges = [
-    {
-      title: "Post 3 products on the marketplace",
-      description: "Increase your visibility by showcasing your best products",
-      reward: "50 XP + Visibility Badge",
-      progress: 1,
-      total: 3
-    },
-    {
-      title: "Complete Financial Planning module",
-      description: "Learn essential budgeting skills for your business",
-      reward: "100 XP + Finance Expert Badge",
-      progress: 0,
-      total: 1
-    },
-    {
-      title: "Connect with 2 mentors",
-      description: "Expand your network and get valuable advice",
-      reward: "75 XP + Networker Badge",
-      progress: 0,
-      total: 2
-    }
+  type Challenge = { id: string; title: string; description: string; reward: string; total: number };
+  const challenges: Challenge[] = [
+    { id: 'marketplace_post', title: 'Post 3 products on the marketplace', description: 'Increase visibility by showcasing your best products.', reward: '50 XP + Visibility Badge', total: 3 },
+    { id: 'learning_module', title: 'Complete 1 learning module', description: 'Boost your skills in Business Planning, Marketing, Finance, Ops or Leadership.', reward: '100 XP + Knowledge Badge', total: 1 },
+    { id: 'funding_apply', title: 'Shortlist 2 funding opportunities', description: 'Use Funding Finder to bookmark suitable grants/loans/investors.', reward: '40 XP + Funding Ready', total: 2 },
+    { id: 'mentorship_message', title: 'Send 1 question to a mentor', description: 'Start a conversation in Mentorship Hub to get advice.', reward: '60 XP + Networker Badge', total: 1 },
+    { id: 'data_input_update', title: "Update today's sales/customers", description: 'Record your daily numbers in Data Input so analytics can track growth.', reward: '35 XP + Consistency Streak', total: 1 },
+    { id: 'analytics_review', title: 'Review your analytics', description: 'Open the Analytics page to review trends and insights.', reward: '25 XP + Insightful', total: 1 },
+    { id: 'roadmap_task', title: 'Complete 1 roadmap task', description: 'Tick off a task in your AI roadmap to move your business forward.', reward: '80 XP + Momentum', total: 1 },
+    { id: 'community_reply', title: 'Reply to 2 community posts', description: 'Help peers or share your experience in Community discussions.', reward: '40 XP + Helper Badge', total: 2 },
+    { id: 'profile_complete', title: 'Complete your profile', description: 'Add/update business info so recommendations are more accurate.', reward: '30 XP + Profile Pro', total: 1 },
+    { id: 'schedule_event', title: 'Add 1 business event to your calendar', description: 'Schedule a key activity to stay on track.', reward: '20 XP + Planner', total: 1 },
+    { id: 'expert_session', title: 'Watch 1 expert session clip', description: 'Learn a tactic from the Experts page and jot one takeaway.', reward: '30 XP + Learner', total: 1 },
+    { id: 'funding_apply_draft', title: 'Draft 1 funding application answer', description: 'Prepare your company overview for a funding application.', reward: '50 XP + Funding Ready', total: 1 },
   ];
 
   return (
@@ -82,27 +52,22 @@ const Metrics: React.FC = () => {
         </div>
         
         <div className="space-y-2">
-          {dailyChallenges.slice(0, 1).map((challenge, index) => (
-            <div key={index} className="p-2 bg-orange-50 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-1 text-xs">{challenge.title}</h4>
-              <p className="text-gray-600 text-xs mb-1">{challenge.description}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-16 bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(challenge.progress / challenge.total) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-600">{challenge.progress}/{challenge.total}</span>
+          <div className="p-2 bg-orange-50 rounded-lg">
+            <h4 className="font-medium text-gray-900 mb-1 text-xs">{challenges[0].title}</h4>
+            <p className="text-gray-600 text-xs mb-1">{challenges[0].description}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-16 bg-gray-200 rounded-full h-2">
+                  <div className="bg-orange-500 h-2 rounded-full transition-all duration-300" style={{ width: '0%' }} />
                 </div>
-                <span className="text-xs text-orange-600 font-medium">{challenge.reward}</span>
+                <span className="text-xs text-gray-600">0/{challenges[0].total}</span>
               </div>
+              <span className="text-xs text-orange-600 font-medium">{challenges[0].reward}</span>
             </div>
-          ))}
+          </div>
         </div>
         
-        <button className="w-full mt-2 py-1.5 text-xs bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+        <button onClick={() => setShowChallenges(true)} className="w-full mt-2 py-1.5 text-xs bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
           View All Challenges
         </button>
       </div>
@@ -113,6 +78,35 @@ const Metrics: React.FC = () => {
           <MetricCard key={index} {...metric} />
         ))}
       </div>
+
+      {/* Challenges Modal */}
+      {showChallenges && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">All Challenges</h3>
+              <button onClick={() => setShowChallenges(false)} className="px-2 py-1 text-xs rounded-md border border-gray-300 hover:bg-gray-50">Close</button>
+            </div>
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+              {challenges.map((challenge: Challenge, idx: number) => (
+                <div key={idx} className="p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-medium text-gray-900">{challenge.title}</h4>
+                    <span className="text-xs text-orange-600 font-medium">{challenge.reward}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-2">{challenge.description}</p>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div className="bg-orange-500 h-2 rounded-full" style={{ width: '0%' }} />
+                    </div>
+                    <span className="text-xs text-gray-600">0/{challenge.total}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

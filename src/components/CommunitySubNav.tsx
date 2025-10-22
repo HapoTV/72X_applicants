@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { MessageSquare, Users, MessageCircle, X, Lock } from 'lucide-react';
+import { MessageSquare, Users, MessageCircle, Lock } from 'lucide-react';
 
 interface CommunitySubNavProps {
   onClose: () => void;
@@ -46,6 +46,7 @@ const CommunitySubNav: React.FC<CommunitySubNavProps> = ({ onClose }) => {
                 >
                   <NavLink
                     to={locked ? upgradePath : item.path}
+                    onClick={onClose}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
                         locked

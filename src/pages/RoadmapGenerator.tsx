@@ -200,11 +200,11 @@ const RoadmapGenerator: React.FC = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   >
                     <option value="">Select revenue range</option>
-                    <option value="0-50k">$0 - $50,000</option>
-                    <option value="50k-100k">$50,000 - $100,000</option>
-                    <option value="100k-500k">$100,000 - $500,000</option>
-                    <option value="500k-1m">$500,000 - $1,000,000</option>
-                    <option value="1m+">$1,000,000+</option>
+                    <option value="0-50k">R0 - R50,000</option>
+                    <option value="50k-100k">R50,000 - R100,000</option>
+                    <option value="100k-500k">R100,000 - R500,000</option>
+                    <option value="500k-1m">R500,000 - R1,000,000</option>
+                    <option value="1m+">R1,000,000+</option>
                   </select>
                 </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Clock, Plus } from 'lucide-react';
+import { Users, Clock } from 'lucide-react';
 
 const Networking: React.FC = () => {
   const networkingEvents = [
@@ -66,11 +66,7 @@ const Networking: React.FC = () => {
         <p className="text-gray-600">Connect with fellow entrepreneurs and expand your network</p>
       </div>
 
-      {/* Create Event Button */}
-      <button className="w-full md:w-auto px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2">
-        <Plus className="w-5 h-5" />
-        <span>Create Event</span>
-      </button>
+      
 
       {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

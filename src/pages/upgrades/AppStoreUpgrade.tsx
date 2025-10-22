@@ -12,7 +12,7 @@ const AppStoreUpgrade: React.FC = () => {
       benefits={[
         'Exclusive business apps and productivity tools',
         'Integrated solutions that work seamlessly together',
-        'Special pricing for BizBoost members',
+        'Special pricing for SeventyTwoX members',
         'Expert reviews and recommendations',
         'Easy installation and setup support',
         'Regular updates and new app additions',

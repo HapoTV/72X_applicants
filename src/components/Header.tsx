@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Menu, Bell, Search, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,6 +9,58 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const navigate = useNavigate();
   const userEmail = localStorage.getItem('userEmail');
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const index = useMemo(
+    () => [
+      { title: 'Dashboard', path: '/', keywords: ['home', 'overview', 'metrics'] },
+      { title: 'Schedule', path: '/schedule', keywords: ['calendar', 'events'] },
+      { title: 'Learning', path: '/learning', keywords: ['modules', 'courses'] },
+      { title: 'Community', path: '/community', keywords: ['discussions', 'networking', 'mentorship'] },
+      { title: 'Funding Finder', path: '/funding', keywords: ['grants', 'loans', 'investors'] },
+      { title: 'Expert Sessions', path: '/experts', keywords: ['q&a', 'videos', 'mentors'] },
+      { title: 'Toolkit', path: '/toolkit', keywords: ['tools', 'resources'] },
+      { title: 'Marketplace', path: '/marketplace', keywords: ['products', 'store'] },
+      { title: 'Mentorship Hub', path: '/mentorship-hub', keywords: ['mentors', 'peers'] },
+      { title: 'Applications', path: '/applications', keywords: ['apps', 'store'] },
+      // Profile/Settings aliases
+      { title: 'Profile', path: '/profile', keywords: ['settings', 'my profile', 'my information', 'account', 'user'] },
+      { title: 'Settings', path: '/profile', keywords: ['profile', 'account', 'my info', 'my information'] },
+      // Analytics/Data aliases
+      { title: 'Analytics', path: '/analytics', keywords: ['data', 'insights', 'reports', 'customers', 'growth'] },
+      { title: 'Data Input', path: '/data-input', keywords: ['data', 'input', 'capture', 'customers', 'growth'] },
+    ],
+    []
+  );
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [] as typeof index;
+    return index.filter(i =>
+      i.title.toLowerCase().includes(q) || i.keywords.some(k => k.toLowerCase().includes(q))
+    ).slice(0, 8);
+  }, [index, query]);
+
+  useEffect(() => {
+    if (query.length > 0) setOpen(true);
+    else setOpen(false);
+  }, [query]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const handleSelect = (path: string) => {
+    setOpen(false);
+    setQuery('');
+    navigate(path);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -36,8 +88,29 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                 <input
                     type="text"
                     placeholder="Search..."
+                    ref={inputRef}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onFocus={() => query && setOpen(true)}
                     className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64"
                 />
+                {open && results.length > 0 && (
+                  <div className="absolute mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    <ul className="py-1">
+                      {results.map((r) => (
+                        <li key={r.path}>
+                          <button
+                            onClick={() => handleSelect(r.path)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm text-gray-700"
+                          >
+                            <div className="font-medium text-gray-900">{r.title}</div>
+                            <div className="text-xs text-gray-500">{r.keywords.join(', ')}</div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </div>

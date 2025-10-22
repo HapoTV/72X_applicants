@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, DollarSign, Calendar, MapPin, ExternalLink, Bookmark, Star } from 'lucide-react';
+import { Search, Filter, Banknote, Calendar, MapPin, ExternalLink, Bookmark, Star } from 'lucide-react';
 
 const FundingFinder: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,11 +27,11 @@ const FundingFinder: React.FC = () => {
 
   const amountRanges = [
     { id: 'all', name: 'Any Amount' },
-    { id: '0-10k', name: 'Up to $10K' },
-    { id: '10k-50k', name: '$10K - $50K' },
-    { id: '50k-100k', name: '$50K - $100K' },
-    { id: '100k-500k', name: '$100K - $500K' },
-    { id: '500k+', name: '$500K+' }
+    { id: '0-10k', name: 'Up to R10K' },
+    { id: '10k-50k', name: 'R10K - R50K' },
+    { id: '50k-100k', name: 'R50K - R100K' },
+    { id: '100k-500k', name: 'R100K - R500K' },
+    { id: '500k+', name: 'R500K+' }
   ];
 
   const opportunities = [
@@ -40,7 +40,7 @@ const FundingFinder: React.FC = () => {
       title: 'Small Business Innovation Research (SBIR)',
       type: 'grants',
       provider: 'U.S. Small Business Administration',
-      amount: '$50,000 - $1,500,000',
+      amount: 'R50,000 - R1,500,000',
       deadline: 'March 30, 2024',
       industry: 'technology',
       location: 'United States',
@@ -56,7 +56,7 @@ const FundingFinder: React.FC = () => {
       title: 'Techstars Accelerator Program',
       type: 'accelerators',
       provider: 'Techstars',
-      amount: '$120,000',
+      amount: 'R120,000',
       deadline: 'April 15, 2024',
       industry: 'technology',
       location: 'Multiple Cities',
@@ -72,7 +72,7 @@ const FundingFinder: React.FC = () => {
       title: 'Women-Owned Small Business Loan',
       type: 'loans',
       provider: 'National Women\'s Business Center',
-      amount: '$5,000 - $250,000',
+      amount: 'R5,000 - R250,000',
       deadline: 'Rolling Applications',
       industry: 'all',
       location: 'United States',
@@ -88,7 +88,7 @@ const FundingFinder: React.FC = () => {
       title: 'Healthcare Innovation Challenge',
       type: 'competitions',
       provider: 'Health Innovation Hub',
-      amount: '$100,000',
+      amount: 'R100,000',
       deadline: 'May 1, 2024',
       industry: 'healthcare',
       location: 'Global',
@@ -104,7 +104,7 @@ const FundingFinder: React.FC = () => {
       title: 'Retail Innovation Fund',
       type: 'investors',
       provider: 'Retail Ventures Capital',
-      amount: '$250,000 - $2,000,000',
+      amount: 'R250,000 - R2,000,000',
       deadline: 'Ongoing',
       industry: 'retail',
       location: 'North America',
@@ -120,7 +120,7 @@ const FundingFinder: React.FC = () => {
       title: 'Manufacturing Modernization Grant',
       type: 'grants',
       provider: 'Department of Commerce',
-      amount: '$25,000 - $500,000',
+      amount: 'R25,000 - R500,000',
       deadline: 'June 15, 2024',
       industry: 'manufacturing',
       location: 'United States',
@@ -229,7 +229,7 @@ const FundingFinder: React.FC = () => {
               
               <div className="space-y-2 text-sm text-gray-600 mb-4">
                 <div className="flex items-center space-x-2">
-                  <DollarSign className="w-4 h-4" />
+                  <Banknote className="w-4 h-4" />
                   <span>{opportunity.amount}</span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -291,7 +291,7 @@ const FundingFinder: React.FC = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <DollarSign className="w-4 h-4" />
+                  <Banknote className="w-4 h-4" />
                   <span>{opportunity.amount}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -339,7 +339,7 @@ const FundingFinder: React.FC = () => {
         
         {filteredOpportunities.length === 0 && (
           <div className="text-center py-12">
-            <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <Banknote className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No funding opportunities found</h3>
             <p className="text-gray-600">Try adjusting your search criteria or filters.</p>
           </div>

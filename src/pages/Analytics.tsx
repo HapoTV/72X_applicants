@@ -62,7 +62,7 @@ const Analytics: React.FC = () => {
             </div>
             <span className="text-sm text-green-600 font-medium">+15.3%</span>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900">$147,500</h3>
+          <h3 className="text-2xl font-bold text-gray-900">R147,500</h3>
           <p className="text-gray-600 text-sm">Total Revenue (6 months)</p>
         </div>
 
@@ -84,7 +84,7 @@ const Analytics: React.FC = () => {
             </div>
             <span className="text-sm text-purple-600 font-medium">+8.7%</span>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900">$118</h3>
+          <h3 className="text-2xl font-bold text-gray-900">R118</h3>
           <p className="text-gray-600 text-sm">Avg. Customer Value</p>
         </div>
       </div>

@@ -40,7 +40,7 @@ AI Chatbot Assistance – Get real-time help and navigation
 Unlocks the entire platform, including everything in Startup and Essential packages, plus:
 Expert Q&A Sessions – Personalized responses from business experts
 AI Business Analyst – Deeper, AI-driven business performance insights
-App Store Access – Download third-party and BizBoost business apps
+App Store Access – Download third-party and SeventyTwoX business apps
 
 👑 Ideal for advanced users seeking AI-powered decision support, full integration, and expert guidance.
 
@@ -90,7 +90,7 @@ Expert Q&A (Premium only)
 
 App Store / Software Marketplace (Premium only)
 
-BizBoost Solutions (POS, Inventory, Helpdesk) (Premium)
+SeventyTwoX Solutions (POS, Inventory, Helpdesk) (Premium)
 
 ##### 🛠 Technology Stack
 

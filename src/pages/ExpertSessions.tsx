@@ -50,7 +50,7 @@ const ExpertSessions: React.FC = () => {
       category: 'marketing',
       attendees: 89,
       maxAttendees: 150,
-      price: '$29',
+      price: 'R29',
       description: 'Master the art of measuring and optimizing your digital marketing campaigns for maximum ROI.',
       topics: ['Attribution models', 'KPI selection', 'Analytics setup', 'Optimization strategies'],
       rating: 4.8,
@@ -67,7 +67,7 @@ const ExpertSessions: React.FC = () => {
       category: 'finance',
       attendees: 234,
       maxAttendees: 300,
-      price: '$49',
+      price: 'R49',
       description: 'Everything you need to know about preparing for and executing your first fundraising round.',
       topics: ['Pitch deck creation', 'Valuation basics', 'Investor outreach', 'Due diligence prep'],
       rating: 4.9,
@@ -98,7 +98,7 @@ const ExpertSessions: React.FC = () => {
       category: 'legal',
       views: 1890,
       rating: 4.8,
-      price: '$19',
+      price: 'R19',
       description: 'Navigate the legal landscape of starting and running a business with confidence.',
       image: 'https://images.pexels.com/photos/5668882/pexels-photo-5668882.jpeg?auto=compress&cs=tinysrgb&w=400'
     },
@@ -111,7 +111,7 @@ const ExpertSessions: React.FC = () => {
       category: 'marketing',
       views: 3120,
       rating: 4.9,
-      price: '$24',
+      price: 'R24',
       description: 'Proven customer acquisition strategies and tactics for sustainable business growth.',
       image: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400'
     }
@@ -126,7 +126,7 @@ const ExpertSessions: React.FC = () => {
       experience: '15+ years',
       rating: 4.9,
       sessions: 127,
-      hourlyRate: '$200',
+      hourlyRate: 'R200',
       availability: 'Available',
       image: 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400'
     },
@@ -138,7 +138,7 @@ const ExpertSessions: React.FC = () => {
       experience: '12+ years',
       rating: 4.8,
       sessions: 89,
-      hourlyRate: '$150',
+      hourlyRate: 'R150',
       availability: 'Available',
       image: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400'
     },
@@ -150,7 +150,7 @@ const ExpertSessions: React.FC = () => {
       experience: '10+ years',
       rating: 4.9,
       sessions: 156,
-      hourlyRate: '$175',
+      hourlyRate: 'R175',
       availability: 'Busy',
       image: 'https://images.pexels.com/photos/590022/pexels-photo-590022.jpeg?auto=compress&cs=tinysrgb&w=400'
     }

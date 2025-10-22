@@ -64,17 +64,17 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
   software_solutions: {
     keywords: ["software", "service desk", "inventory", "pos", "toolkit"],
     response:
-      "BizBoost offers proprietary tools like Service Desk, Inventory, and POS, plus integrations with third-party business tools to streamline operations.",
+      "SeventyTwoX offers proprietary tools like Service Desk, Inventory, and POS, plus integrations with third-party business tools to streamline operations.",
   },
   revenue_model: {
     keywords: ["revenue", "pricing", "model", "cost", "subscription"],
     response:
-      "Revenue streams include a free tier, premium subscriptions, and paid modules like BizBoost Service Desk, Inventory Portal, and POS system with add-ons for affiliate partnerships.",
+      "Revenue streams include a free tier, premium subscriptions, and paid modules like SeventyTwoX Service Desk, Inventory Portal, and POS system with add-ons for affiliate partnerships.",
   },
   ata_input: {
     keywords: ["data input", "upload data", "spreadsheets", "manual entry"],
     response:
-      "The Data Input System allows you to upload spreadsheets or enter data manually, which BizBoost uses to generate insights and recommendations.",
+      "The Data Input System allows you to upload spreadsheets or enter data manually, which SeventyTwoX uses to generate insights and recommendations.",
   },
   mobile_first: {
     keywords: ["mobile", "mobile-first", "offline", "low-bandwidth", "app"],
@@ -94,7 +94,7 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
   impact: {
     keywords: ["impact", "goals", "mission", "vision"],
     response:
-      "BizBoost aims to digitally empower thousands of entrepreneurs, boost township economies, promote inclusive adoption, and be South Africa’s go-to SME support platform.",
+      "SeventyTwoX aims to digitally empower thousands of entrepreneurs, boost township economies, promote inclusive adoption, and be South Africa’s go-to SME support platform.",
   },
   future_enhancements: {
     keywords: ["future", "roadmap", "enhancements", "next", "plans"],
@@ -131,9 +131,10 @@ export default function BizBoostChatbot() {
   const maxHistoryItems = 10;
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   
-  // Check user package - chatbot locked for startup users
-  const userPackage = localStorage.getItem('userPackage') || 'startup';
-  const isLocked = userPackage === 'startup';
+  // Locking is off by default; enable by setting localStorage.lockFeatures = '1'
+  const userPackage = localStorage.getItem('userPackage') || 'premium';
+  const lockingOn = localStorage.getItem('lockFeatures') === '1';
+  const isLocked = lockingOn && userPackage === 'startup';
 
   useEffect(() => {
     localStorage.setItem("bizboost_chat_history", JSON.stringify(history));
@@ -247,7 +248,7 @@ export default function BizBoostChatbot() {
       <div className="w-80 md:w-96 shadow-2xl rounded-2xl overflow-hidden bg-white border">
         <div className="flex items-center justify-between p-3 bg-gradient-to-r from-indigo-600 to-sky-500 text-white">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center font-bold">BB</div>
+            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center font-bold">72X</div>
             <div>
               <div className="text-sm font-semibold">SeventyTwoX Assistant</div>
               <div className="text-xs opacity-90">Ask about 72X</div>

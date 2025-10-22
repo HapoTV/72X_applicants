@@ -68,7 +68,7 @@ const Community: React.FC = () => {
       likes: 28,
       timeAgo: '8 hours ago',
       isHot: false,
-      preview: 'We have less than $500/month for marketing. What strategies work best...'
+      preview: 'We have less than R500/month for marketing. What strategies work best...'
     },
     {
       id: 5,
@@ -319,9 +319,6 @@ const Community: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
-                <button className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
-                  Create Event
-                </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

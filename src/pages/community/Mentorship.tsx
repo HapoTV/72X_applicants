@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Plus } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 const Mentorship: React.FC = () => {
   const mentors = [
@@ -77,12 +77,6 @@ const Mentorship: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Mentorship Program</h1>
         <p className="text-gray-600">Get guidance from experienced entrepreneurs and industry experts</p>
       </div>
-
-      {/* Become a Mentor Button */}
-      <button className="w-full md:w-auto px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2">
-        <Plus className="w-5 h-5" />
-        <span>Become a Mentor</span>
-      </button>
 
       {/* Mentors Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

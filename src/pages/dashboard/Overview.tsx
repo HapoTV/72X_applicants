@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp } from 'lucide-react';
+ 
 import DailyTip from '../../components/DailyTip';
 import QuickActions from '../../components/QuickActions';
 
@@ -36,6 +36,10 @@ const Overview: React.FC = () => {
     }
   };
 
+  const engagement = (() => {
+    try { return JSON.parse(localStorage.getItem('engagement') || 'null'); } catch { return null; }
+  })();
+
   const t = translations[selectedLanguage] || translations.en;
 
   const getGreeting = () => {
@@ -52,6 +56,18 @@ const Overview: React.FC = () => {
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
+  };
+
+  const getFirstName = () => {
+    const stored = (localStorage.getItem('firstName') || localStorage.getItem('userFirstName') || '').trim();
+    if (stored) return stored.split(' ')[0];
+    const email = (localStorage.getItem('userEmail') || '').trim();
+    if (email && email.includes('@')) {
+      const prefix = email.split('@')[0];
+      const guess = prefix.split(/[._-]/)[0];
+      if (guess) return guess.charAt(0).toUpperCase() + guess.slice(1);
+    }
+    return 'User';
   };
 
   return (
@@ -72,7 +88,7 @@ const Overview: React.FC = () => {
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg p-3 sm:p-4 text-white">
         <h1 className="text-lg sm:text-xl font-bold mb-1">
-          {getGreeting()}, Thabo! 🚀
+          {getGreeting()}, {getFirstName()}! 🚀
         </h1>
         <h2 className="text-base sm:text-lg font-semibold mb-1">{t.welcome}</h2>
         <p className="text-primary-100 mb-2 text-xs sm:text-sm">
@@ -88,33 +104,43 @@ const Overview: React.FC = () => {
         </div>
       </div>
 
-      {/* Gamification Panel */}
       <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg p-3 sm:p-4 text-white">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold">Engagement</h3>
+          <span className="text-xs opacity-80">My engagement</span>
+        </div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-sm font-semibold">Level 7 - Bronze Entrepreneur</h3>
-            <div className="flex items-center space-x-3 mt-1">
-              <div className="flex items-center space-x-1">
-                <TrendingUp className="w-3 h-3" />
-                <span className="text-xs">12 day streak</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="text-xs">8 badges</span>
-              </div>
+            {engagement ? (
+              <>
+                <h3 className="text-sm font-semibold">{engagement.levelTitle}</h3>
+                <div className="flex items-center space-x-3 mt-1">
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs">{engagement.streakLabel}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs">{engagement.badgesLabel}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="h-4" />
+            )}
+          </div>
+          {engagement ? (
+            <div className="text-right">
+              <div className="text-lg font-bold">{engagement.xpLabel}</div>
+              <div className="text-xs opacity-80">{engagement.nextLevelLabel}</div>
             </div>
-          </div>
-          <div className="text-right">
-            <div className="text-lg font-bold">2450 XP</div>
-            <div className="text-xs opacity-80">550 to next level</div>
-          </div>
+          ) : (
+            <div className="text-right" />
+          )}
         </div>
-
-        {/* XP Progress Bar */}
         <div className="mb-3">
           <div className="w-full bg-white bg-opacity-20 rounded-full h-2">
             <div 
               className="bg-white h-2 rounded-full transition-all duration-300"
-              style={{ width: '82%' }}
+              style={{ width: `${engagement ? engagement.progressPercent || 0 : 0}%` }}
             />
           </div>
         </div>

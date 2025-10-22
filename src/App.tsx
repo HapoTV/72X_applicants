@@ -17,7 +17,6 @@ import MarketingSales from './pages/learning/MarketingSales';
 import FinancialManagement from './pages/learning/FinancialManagement';
 import Operations from './pages/learning/Operations';
 import Leadership from './pages/learning/Leadership';
-import Toolkit from './pages/Toolkit';
 import Community from './pages/Community';
 import CommunityDiscussions from './pages/community/Discussions';
 import CommunityNetworking from './pages/community/Networking';
@@ -35,7 +34,6 @@ import BizBoostChatbot from './components/Chatbot'; //New code added for chatbot
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
 import MentorshipUpgrade from './pages/upgrades/MentorshipUpgrade';
 import FundingUpgrade from './pages/upgrades/FundingUpgrade';
-import AppStoreUpgrade from './pages/upgrades/AppStoreUpgrade';
 import DataInputUpgrade from './pages/upgrades/DataInputUpgrade';
 import RoadmapUpgrade from './pages/upgrades/RoadmapUpgrade';
 import AnalyticsUpgrade from './pages/upgrades/AnalyticsUpgrade';
@@ -90,7 +88,6 @@ function App() {
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/mentorship" element={<MentorshipHub />} />
               <Route path="/funding" element={<FundingFinder />} />
-              <Route path="/toolkit" element={<Toolkit />} />
               <Route path="/data-input" element={<DataInput />} />
               
               {/* Premium Package Features */}
@@ -104,7 +101,6 @@ function App() {
               <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
               <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
               <Route path="/upgrade/funding" element={<FundingUpgrade />} />
-              <Route path="/upgrade/toolkit" element={<AppStoreUpgrade />} />
               <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
               <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
               <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />

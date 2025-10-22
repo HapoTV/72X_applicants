@@ -9,7 +9,6 @@ import {
   Upload,
   X,
   GraduationCap,
-  Wrench,
   Users,
   DollarSign,
   Video,
@@ -44,6 +43,7 @@ interface NavItem {
 
 const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
   const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
   const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
   const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
@@ -51,7 +51,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
   
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
-  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+  const userPackage = (localStorage.getItem('userPackage') as PackageType) || 'premium';
   const userName = userEmail.split('@')[0].replace('.', ' ').split(' ').map(word => 
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
@@ -66,11 +66,10 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' },
     { path: '/community', icon: Users, label: 'Community', package: 'startup' },
     { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' },
-    { path: '/applications', icon: AppWindow, label: 'Selected Programs', package: 'startup' },
+    { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' },
     
     // Essential Package Features (includes all startup + these)
     { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
-    { path: '/toolkit', icon: Wrench, label: 'App Store', package: 'essential' },
     { path: '/data-input', icon: Upload, label: 'Data Input', package: 'essential' },
     
     // Premium Package Features (everything)
@@ -86,6 +85,10 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
   const packageHierarchy = { startup: 0, essential: 1, premium: 2 };
 
   const isFeatureLocked = (itemPackage: PackageType): boolean => {
+    // By default, everything is unlocked. If you want to re-enable gating,
+    // set localStorage.lockFeatures = '1' or set a lower userPackage.
+    const lockingOn = localStorage.getItem('lockFeatures') === '1';
+    if (!lockingOn) return false;
     return packageHierarchy[itemPackage] > packageHierarchy[userPackage];
   };
 
@@ -113,12 +116,19 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     onCommunityToggle?.(false);
   };
 
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem('navCollapsed', next ? '1' : '0');
+    window.dispatchEvent(new CustomEvent('nav-collapsed-changed'));
+  };
+
   return (
-    <nav className="bg-white h-full w-56 shadow-lg border-r border-gray-200 fixed left-0 top-0 z-50 md:z-auto flex flex-col">
-      <div className="p-4 flex-shrink-0">
+    <nav className={`bg-white h-full ${collapsed ? 'w-20' : 'w-56'} shadow-lg border-r border-gray-200 fixed left-0 top-0 z-50 md:z-auto flex flex-col transition-all duration-200 overflow-x-hidden`}>
+      <div className="p-4 flex-shrink-0 relative min-h-[88px]">
         <div className="flex items-center justify-between mb-0">
           <div className="flex items-center justify-center flex-1">
-            <img src={Logo} alt="SeventyTwoX Logo" className="w-36 h-36" />
+            {!collapsed && <img src={Logo} alt="SeventyTwoX Logo" className="w-36 h-36" />}
           </div>
           {onClose && (
             <button
@@ -128,21 +138,35 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
               <X className="w-4 h-4 text-gray-600" />
             </button>
           )}
+          {/* Floating chevron handle */}
+          {!onClose && (
+            <button
+              onClick={toggleCollapsed}
+              className="absolute -right-2 top-14 bg-white border border-gray-200 shadow rounded-full p-1 hover:bg-gray-50"
+              aria-label="Toggle sidebar"
+            >
+              <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+            </button>
+          )}
         </div>
 
         {/* User Profile Section */}
-        <div className="flex flex-col items-center py-4 border-b border-gray-200 -mt-10">
-          <div className="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center mb-3 shadow-md">
+        <div className="flex flex-col items-center py-4 border-b border-gray-200">
+          <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-3 shadow-md ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
             <span className="text-white text-xl font-bold">
               {userInitials}
             </span>
           </div>
-          <h3 className="text-sm font-semibold text-gray-900 text-center">{userName}</h3>
-          <p className="text-xs text-gray-500 text-center mt-1">{userEmail}</p>
+          {!collapsed && (
+            <>
+              <h3 className="text-sm font-semibold text-gray-900 text-center">{userName}</h3>
+              <p className="text-xs text-gray-500 text-center mt-1">{userEmail}</p>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4">
         <ul className="space-y-1">
           {navItems.map((item) => {
             const locked = isFeatureLocked(item.package);
@@ -179,7 +203,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   >
                     <div className="flex items-center space-x-2">
                       <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="font-medium text-sm">{item.label}</span>
+                      {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     <button
                       onClick={(e) => {
@@ -227,7 +251,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   >
                     <div className="flex items-center space-x-2">
                       <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="font-medium text-sm">{item.label}</span>
+                      {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     <button
                       onClick={(e) => {
@@ -275,7 +299,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   >
                     <div className="flex items-center space-x-2">
                       <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="font-medium text-sm">{item.label}</span>
+                      {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     <button
                       onClick={(e) => {
@@ -323,7 +347,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   >
                     <div className="flex items-center space-x-2">
                       <item.icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="font-medium text-sm">{item.label}</span>
+                      {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     <button
                       onClick={(e) => {
@@ -368,12 +392,14 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                 >
                   <div className="flex items-center space-x-2">
                     <item.icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="font-medium text-sm">{item.label}</span>
+                    {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                   </div>
-                  <div className="flex items-center space-x-1">
-                    {packageIcon}
-                    {locked && <Lock className="w-3 h-3" />}
-                  </div>
+                  {!collapsed && (
+                    <div className="flex items-center space-x-1">
+                      {packageIcon}
+                      {locked && <Lock className="w-3 h-3" />}
+                    </div>
+                  )}
                 </NavLink>
 
                 {/* Message for locked features */}

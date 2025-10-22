@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Lightbulb, RefreshCw, BookOpen } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 
 interface DailyTipProps {
   language: string;
@@ -65,13 +65,21 @@ const DailyTip: React.FC<DailyTipProps> = ({ language }) => {
   const currentTips = tips[language] || tips.en;
 
   useEffect(() => {
-    const today = new Date().getDate();
-    setCurrentTip(today % currentTips.length);
-  }, [language, currentTips.length]);
+    // Persist a daily rotating index per language
+    const keyIndex = `dailyTipIndex:${language}`;
+    const keyDate = `dailyTipDate:${language}`;
+    const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const lastDate = localStorage.getItem(keyDate);
+    let idx = Number(localStorage.getItem(keyIndex) || '0');
 
-  const nextTip = () => {
-    setCurrentTip((prev) => (prev + 1) % currentTips.length);
-  };
+    if (lastDate !== todayStr) {
+      // advance once per new day
+      idx = (idx + 1) % currentTips.length;
+      localStorage.setItem(keyIndex, String(idx));
+      localStorage.setItem(keyDate, todayStr);
+    }
+    setCurrentTip(idx % currentTips.length);
+  }, [language, currentTips.length]);
 
   return (
     <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
@@ -80,13 +88,6 @@ const DailyTip: React.FC<DailyTipProps> = ({ language }) => {
           <Lightbulb className="w-5 h-5 text-yellow-500" />
           <h3 className="font-semibold text-gray-900">Daily Business Tip</h3>
         </div>
-        <button
-          onClick={nextTip}
-          className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-          title="New tip"
-        >
-          <RefreshCw className="w-4 h-4 text-gray-500" />
-        </button>
       </div>
       
       <div className="mb-3">
@@ -103,10 +104,7 @@ const DailyTip: React.FC<DailyTipProps> = ({ language }) => {
         {currentTips[currentTip].content}
       </p>
       
-      <button className="flex items-center space-x-2 text-primary-600 hover:text-primary-700 text-sm font-medium">
-        <BookOpen className="w-4 h-4" />
-        <span>Learn More</span>
-      </button>
+      {/* Learn More removed per requirements */}
     </div>
   );
 };

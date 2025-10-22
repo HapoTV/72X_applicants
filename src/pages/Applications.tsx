@@ -7,7 +7,7 @@ const Applications: React.FC = () => {
 
   const categories = [
     { id: 'all', name: 'All Applications' },
-    { id: 'bizboost', name: 'BizBoost Solutions' },
+    { id: 'bizboost', name: 'SeventyTwoX Solutions' },
     { id: 'productivity', name: 'Productivity' },
     { id: 'finance', name: 'Finance & Accounting' },
     { id: 'marketing', name: 'Marketing & Sales' },
@@ -18,7 +18,7 @@ const Applications: React.FC = () => {
   const applications = [
     {
       id: 1,
-      name: 'BizBoost Service Desk',
+      name: 'SeventyTwoX Service Desk',
       description: 'Complete customer service management solution with ticket tracking, knowledge base, and analytics.',
       category: 'bizboost',
       type: 'Premium',
@@ -32,7 +32,7 @@ const Applications: React.FC = () => {
     },
     {
       id: 2,
-      name: 'BizBoost Inventory Portal',
+      name: 'SeventyTwoX Inventory Portal',
       description: 'Smart inventory management system with real-time tracking, automated reordering, and supplier integration.',
       category: 'bizboost',
       type: 'Premium',
@@ -88,7 +88,7 @@ const Applications: React.FC = () => {
     },
     {
       id: 6,
-      name: 'BizBoost POS System',
+      name: 'SeventyTwoX POS System',
       description: 'Point of sale system designed for South African retailers with inventory sync and payment processing.',
       category: 'bizboost',
       type: 'Premium',
@@ -189,8 +189,8 @@ const Applications: React.FC = () => {
   return (
     <div className="space-y-4 animate-fade-in px-2 sm:px-0">
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Business Applications</h1>
-        <p className="text-gray-600 text-sm">Discover powerful software solutions to streamline your business operations</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Business Toolkit</h1>
+        <p className="text-gray-600 text-sm">Access essential tools, templates, and software to streamline your business operations</p>
       </div>
 
       {/* Search and Filters */}
@@ -225,11 +225,11 @@ const Applications: React.FC = () => {
         </div>
       </div>
 
-      {/* BizBoost Solutions */}
+      {/* SeventyTwoX Solutions */}
       <div>
         <div className="flex items-center space-x-2 mb-4">
           <Zap className="w-5 h-5 text-primary-500" />
-          <h2 className="text-lg font-semibold text-gray-900">BizBoost Solutions</h2>
+          <h2 className="text-lg font-semibold text-gray-900">SeventyTwoX Solutions</h2>
           <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">Our Products</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

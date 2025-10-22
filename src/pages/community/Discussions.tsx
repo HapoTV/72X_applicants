@@ -61,7 +61,7 @@ const Discussions: React.FC = () => {
       likes: 28,
       timeAgo: '8 hours ago',
       isHot: false,
-      preview: 'We have less than $500/month for marketing. What strategies work best...'
+      preview: 'We have less than R500/month for marketing. What strategies work best...',
     },
     {
       id: 5,

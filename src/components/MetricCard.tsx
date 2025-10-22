@@ -1,12 +1,12 @@
 import React from 'react';
-import { Icon, TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react';
 
 interface MetricCardProps {
   title: string;
   value: string;
   change: string;
   trend: 'up' | 'down';
-  icon: Icon;
+  icon: LucideIcon;
 }
 
 const MetricCard: React.FC<MetricCardProps> = ({ title, value, change, trend, icon: Icon }) => {
@@ -16,16 +16,18 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, change, trend, ic
         <div className="p-1 sm:p-1.5 bg-primary-50 rounded-lg">
           <Icon className="w-3 h-3 sm:w-4 sm:h-4 text-primary-600" />
         </div>
-        <div className={`flex items-center space-x-1 text-xs ${
-          trend === 'up' ? 'text-green-600' : 'text-red-600'
-        }`}>
-          {trend === 'up' ? (
-            <TrendingUp className="w-3 h-3" />
-          ) : (
-            <TrendingDown className="w-3 h-3" />
-          )}
-          <span className="font-medium">{change}</span>
-        </div>
+        {change && (
+          <div className={`flex items-center space-x-1 text-xs ${
+            trend === 'up' ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {trend === 'up' ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : (
+              <TrendingDown className="w-3 h-3" />
+            )}
+            <span className="font-medium">{change}</span>
+          </div>
+        )}
       </div>
       
       <div>
