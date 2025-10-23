@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, GraduationCap, Users, AppWindow } from 'lucide-react';
+import { Calendar, GraduationCap, Users, User } from 'lucide-react';
 
 const QuickActions: React.FC = () => {
   const navigate = useNavigate();
@@ -29,10 +29,10 @@ const QuickActions: React.FC = () => {
       color: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
     },
     {
-      title: 'Selected Programs',
-      description: 'View your applications',
-      icon: AppWindow,
-      action: () => navigate('/applications'),
+      title: 'Profile',
+      description: 'View and edit your profile',
+      icon: User,
+      action: () => navigate('/profile'),
       color: 'bg-orange-50 text-orange-600 hover:bg-orange-100',
     },
   ];

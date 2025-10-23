@@ -7,7 +7,7 @@ type KBEntry = {
 
 const KNOWLEDGE_BASE: Record<string, KBEntry> = {
   executive_summary: {
-    keywords: ["executive", "summary", "overview", "what is bizboost"],
+    keywords: ["executive", "summary", "overview", "what is SeventyTwoX", "what is bizboost", "what is 72x"],
     response:
       "SeventyTwoX is a mobile-first, AI-enhanced platform tailored to accelerate the growth of small businesses, especially in South African townships and rural areas. By offering personalized tools, educational resources, and a vibrant community ecosystem, SeventyTwoX empowers local entrepreneurs to scale sustainably in a digital-first economy.",
   },
@@ -42,14 +42,14 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
       "Interactive mobile-optimized learning modules (financial literacy, marketing, compliance), daily tips in multiple languages, and a resource library of videos and case studies.",
   },
   community: {
-    keywords: ["community", "forum", "mentorship", "marketplace"],
+    keywords: ["community", "community features", "community hub"],
     response:
       "A community ecosystem with a mentorship hub, forum for discussions, and a marketplace to list and discover local products and services.",
   },
   marketplace: {
     keywords: ["marketplace", "sell", "buy", "products", "services"],
     response:
-      "The Marketplace lets you list, promote, and discover local products and services to grow your reach.",
+      "Verified business profiles with high engagement scores and active listings are automatically prioritized in the Marketplace feed.",
   },
   mentorship: {
     keywords: ["mentorship", "mentorship hub", "mentor", "advice"],
@@ -67,22 +67,22 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
       "SeventyTwoX offers proprietary tools like Service Desk, Inventory, and POS, plus integrations with third-party business tools to streamline operations.",
   },
   revenue_model: {
-    keywords: ["revenue", "pricing", "model", "cost", "subscription"],
+    keywords: ["revenue", "pricing model", "business model", "how you make money"],
     response:
       "Revenue streams include a free tier, premium subscriptions, and paid modules like SeventyTwoX Service Desk, Inventory Portal, and POS system with add-ons for affiliate partnerships.",
   },
-  ata_input: {
+  data_input: {
     keywords: ["data input", "upload data", "spreadsheets", "manual entry"],
     response:
       "The Data Input System allows you to upload spreadsheets or enter data manually, which SeventyTwoX uses to generate insights and recommendations.",
   },
   mobile_first: {
-    keywords: ["mobile", "mobile-first", "offline", "low-bandwidth", "app"],
+    keywords: ["mobile", "mobile-first", "low-bandwidth"],
     response:
       "Designed mobile-first with thumb-friendly navigation, responsive components, and plans for offline mode to support low-connectivity environments.",
   },
   localization: {
-    keywords: ["localization", "languages", "culture", "zulu", "xhosa", "sesotho"],
+    keywords: ["localization", "localised", "culture", "zulu", "xhosa", "sesotho", "currency", "zar"],
     response:
       "Localized experience with support for multiple South African languages, local currency (ZAR), and culturally-appropriate content and visuals.",
   },
@@ -92,18 +92,143 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
       "Analytics and data insights track engagement, learning progress, revenue conversion, and community interaction to inform improvements.",
   },
   impact: {
-    keywords: ["impact", "goals", "mission", "vision"],
+    keywords: [
+      "impact",
+      "goals",
+      "mission",
+      "vision",
+      "entrepreneurs",
+      "support for township businesses",
+      "support entrepreneurs",
+      "business support",
+      "support programs"
+    ],
     response:
-      "SeventyTwoX aims to digitally empower thousands of entrepreneurs, boost township economies, promote inclusive adoption, and be South Africa’s go-to SME support platform.",
+      "SeventyTwoX aims to digitally empower thousands of entrepreneurs, boost township economies, promote inclusive adoption through free business tools, mentorship programs, and marketplace visibility designed to help township businesses scale digitally , and be South Africa’s go-to SME support platform.",
   },
   future_enhancements: {
     keywords: ["future", "roadmap", "enhancements", "next", "plans"],
     response:
       "Planned enhancements include offline-first mode, WhatsApp integration, AI-powered business coaching, expanded payment gateways, and voice navigation for low-literacy users.",
   },
+  story: {
+    keywords: ["share", "my story", "my success"],
+    response:
+      "Yes. Go to “Community → My Story” to submit your journey. Selected stories are featured across SeventyTwoX social channels.",
+  },
+   protect: {
+    keywords: ["protected", "my data", "privacy", "security", "popia", "data protection"],
+    response:
+      "Absolutely. All data is encrypted and stored securely under South African data protection laws (POPIA compliant).",
+  },
+  offline: {
+    keywords: ["offline", "connection", "internet", "no internet", "without data", "offline mode"],
+    response:
+      "Yes. You can access learning modules, notes, and your growth roadmap offline. Data will sync automatically once you reconnect.",
+  },
+  slow: {
+    keywords: ["slow", "speed", "load", "lag", "loading", "performance", "app slow"],
+    response:
+      "Try clearing your app cache or checking your network connection. If the issue persists, contact support via the in-app Help Desk.",
+  },
+   certification: {
+    keywords: ["certificate", "certification", "modules", "complete", "course", "completed"],
+    response:
+      "You earn verified digital certificates and growth badges that increase your credibility in the Marketplace and mentorship hub.",
+  },
+  collaborate: {
+    keywords: ["collaborate", "collaboration", "collaborative learning", "other businesses"],
+    response:
+      "Yes. You can send collaboration requests or join community groups for co-branding and joint campaigns.",
+  },
+  fee: {
+    keywords: [
+      "fee",
+      "fees",
+      "charge",
+      "charges",
+      "do they charge",
+      "do you charge",
+      "any charges",
+      "transaction fee",
+      "is it free",
+      "free",
+      "cost to use",
+      "pricing"
+    ],
+    response:
+      "No transaction fees apply to your internal activities. However, marketplace sales or payment gateway usage may include small processing fees.",
+  },
+  subscription: {
+    keywords: ["subscription", "cancel subscription", "stop paying", "manage plan", "downgrade", "upgrade plan", "billing"],
+    response:
+      "Yes. You can manage or cancel your subscription under “Account Settings” without losing your stored business data",
+  },
+  payment: {
+    keywords: ["payment methods", "how to pay", "card", "eft", "wallet", "hapopay", "ways to pay"],
+    response:
+      "You can pay using bank cards, EFT, mobile wallets (HapoPay), or through SeventyTwoX Pay credits (coming soon).",
+  },
+  language: {
+    keywords: ["communicate", "language", "languages", "multilingual", "afrikaans", "zulu", "xhosa", "sesotho", "isizulu", "isixhosa"],
+    response:
+      "Yes. The AI assistant supports multiple South African languages including English, isiXhosa, isiZulu, Sesotho, and Afrikaans.",
+  },
+  tracker: {
+    keywords: ["smart", "tracker", "goal tracker", "progress", "goals"],
+    response:
+      "It is a tool that helps you to set business goals and tracks your progress automatically based on your daily inputs and transactions.",
+  },
+  assistant: {
+    keywords: ["ai", "ai assistant", "assistant", "chatbot", "bot", "ai coach"],
+    response:
+      "The AI assistant analyzes your data to suggest pricing improvements, marketing actions, and growth opportunities tailored to your business type and stage",
+  },
+  onboarding: {
+    keywords: ["onboarding", "setup", "get started", "getting started", "first steps", "how long setup"],
+    response:
+      "Less than 5 minutes. The app walks you through key setup steps and recommends your first business growth actions.",
+  },
+  password: {
+    keywords: ["forgot", "reset", "password", "blocked", "password reset"],
+    response:
+      "Tap \"Forgot Password\" on the login screen. You’ll receive a verification link or code to create a new password",
+  },
+  registration: {
+    keywords: ["register", "registration", "registering", "signing up issues", "registration issues"],
+    response:
+      "Unfortunately, you can only register one business under one account.",
+  },
+   account: {
+    keywords: [
+      "create account",
+      "how do i create an account",
+      "open an account",
+      "sign up",
+      "signup",
+      "create my account",
+      "how to create account",
+      "make an account",
+      "start account"
+    ],
+    response:
+      "Simply go to the app login page, select \"Create Account\", and fill in your business and owner details. You'll be onboarded into your dashboard immediately after verifying your email.",
+  },
   contact: {
-    keywords: ["contact", "support", "email", "help", "get in touch"],
-    response: "For support and enquiries: support@bizboosthub.co.za or use the in-app forum and documentation library.",
+    keywords: [
+      "contact support",
+      "how can i contact support",
+      "contact",
+      "support team",
+      "support email",
+      "help",
+      "get in touch",
+      "help desk",
+      "reach support",
+      "talk to support",
+      "email support"
+    ],
+    response: "For support and enquiries: support@seventytwox.co.za or use the in-app forum and documentation library.",
   },
   default: {
     keywords: [],
@@ -148,18 +273,56 @@ export default function BizBoostChatbot() {
     });
   }
 
+  // Normalize strings: lowercase, remove punctuation, collapse spaces
+  function normalize(s: string): string {
+    return s
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ") // remove punctuation incl. unicode
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function findResponse(query: string): string {
-    const q = query.toLowerCase();
+    const q = normalize(query);
+
+    let best: { key: string; score: number } | null = null;
 
     for (const key of Object.keys(KNOWLEDGE_BASE)) {
       if (key === "default") continue;
       const entry = KNOWLEDGE_BASE[key];
+
+      let entryBest = 0;
       for (const kw of entry.keywords) {
-        const normalizedKw = kw.toLowerCase();
-        if (q.includes(normalizedKw) || normalizedKw.includes(q)) {
-          return Array.isArray(entry.response) ? entry.response[0] : entry.response;
+        const kwNorm = normalize(kw);
+        let score = 0;
+
+        if (q === kwNorm) {
+          score = 100; // exact phrase
+        } else if (q.includes(kwNorm)) {
+          score = 80 + Math.min(20, kwNorm.length / 5); // phrase contained; longer phrases score higher
+        } else if (kwNorm.includes(q) && q.length > 2) {
+          score = 60; // query is subset of keyword
+        } else {
+          const words = kwNorm.split(" ").filter(Boolean);
+          if (words.length) {
+            const overlap = words.filter(w => q.includes(w)).length;
+            if (overlap) {
+              score = 40 + Math.floor((overlap / words.length) * 30); // token overlap
+            }
+          }
         }
+
+        if (score > entryBest) entryBest = score;
       }
+
+      if (!best || entryBest > best.score) {
+        best = { key, score: entryBest };
+      }
+    }
+
+    if (best && best.score >= 50) {
+      const resp = KNOWLEDGE_BASE[best.key].response;
+      return Array.isArray(resp) ? resp[0] : resp;
     }
 
     const resp = DEFAULT_RESPONSES[Math.floor(Math.random() * DEFAULT_RESPONSES.length)];
@@ -194,7 +357,7 @@ export default function BizBoostChatbot() {
   if (isLocked) {
     return (
       <div className="fixed right-6 bottom-6 z-50">
-        <div className="w-80 md:w-96 shadow-2xl rounded-2xl overflow-hidden bg-white border">
+        <div className="w-[300px] md:w-[360px] shadow-2xl rounded-2xl overflow-hidden bg-white border">
           <div className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center font-bold">🔒</div>
@@ -245,7 +408,7 @@ export default function BizBoostChatbot() {
 
   return (
     <div className="fixed right-6 bottom-6 z-50">
-      <div className="w-80 md:w-96 shadow-2xl rounded-2xl overflow-hidden bg-white border">
+      <div className="w-[300px] md:w-[360px] shadow-2xl rounded-2xl overflow-hidden bg-white border">
         <div className="flex items-center justify-between p-3 bg-gradient-to-r from-indigo-600 to-sky-500 text-white">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center font-bold">72X</div>
@@ -265,7 +428,7 @@ export default function BizBoostChatbot() {
         </div>
 
         {isOpen && (
-          <div className="flex flex-col h-96">
+          <div className="flex flex-col h-[560px] md:h-[620px]">
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {history.length === 0 && (
                 <div className="text-xs text-gray-500">Hi — ask me anything about SeventyTwoX. Try quick suggestions below.</div>
