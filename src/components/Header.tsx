@@ -68,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('businessReference');
     localStorage.removeItem('userPackage');
-    navigate('/login');
+    navigate('/');
   };
 
   return (

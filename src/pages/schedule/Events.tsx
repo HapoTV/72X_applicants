@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { Plus, Clock, MapPin, Calendar as CalendarIcon } from 'lucide-react';
+import React from 'react';
+import { Clock, MapPin, Calendar as CalendarIcon } from 'lucide-react';
 
 const Events: React.FC = () => {
-  const [showAddEvent, setShowAddEvent] = useState(false);
 
   const todayEvents = [
     {
@@ -50,16 +49,6 @@ const Events: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in px-2 sm:px-0">
-      {/* Add Event Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => setShowAddEvent(!showAddEvent)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="text-sm font-medium">Add Event</span>
-        </button>
-      </div>
 
       {/* Today's Events */}
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
@@ -121,61 +110,7 @@ const Events: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Event Modal (Simple version) */}
-      {showAddEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Event</h3>
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="Enter event title"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                <input
-                  type="time"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  placeholder="Enter location"
-                />
-              </div>
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddEvent(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
-                >
-                  Add Event
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modal removed: events are admin-managed only */}
     </div>
   );
 };

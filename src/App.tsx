@@ -29,6 +29,9 @@ import Applications from './pages/Applications';
 import AIBusinessAnalyst from './pages/AIBusinessAnalyst';
 import Login from './pages/Login';
 import BizBoostChatbot from './components/Chatbot'; //New code added for chatbot
+import LandingPage from './pages/LandingPage';
+import Signup from './pages/Signup';
+import SignupSuccess from './pages/SignupSuccess';
 
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
@@ -46,13 +49,16 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Redirect root to login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Public landing page */}
+        <Route path="/" element={<LandingPage />} />
         
-        {/* Login route */}
+        {/* Auth routes */}
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/signup/success" element={<SignupSuccess />} />
         
         {/* Admin route - outside of main layout to avoid sidebar and chatbot */}
+        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
         <Route path="/admin/dashboard" element={
           localStorage.getItem('userType') === 'admin' 
             ? <AdminDashboard /> 

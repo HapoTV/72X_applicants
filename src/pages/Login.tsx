@@ -247,7 +247,7 @@ const Login: React.FC = () => {
                     <p className="text-gray-600">
                         Don't have an account?{' '}
                         <button
-                            onClick={() => navigate('/welcome')}
+                            onClick={() => navigate('/signup')}
                             className="text-primary-600 hover:text-primary-700 font-medium"
                         >
                             Sign up for free

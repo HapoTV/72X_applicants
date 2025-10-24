@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, Plus, Video, Users, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, Video, Users, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Event {
   id: number;
@@ -119,10 +119,6 @@ const Schedule: React.FC = () => {
               Manage your meetings, sessions, and important deadlines
             </p>
           </div>
-          <button className="px-4 py-2 bg-white text-primary-600 rounded-lg hover:bg-primary-50 transition-colors flex items-center space-x-2">
-            <Plus className="w-5 h-5" />
-            <span className="font-medium">Add Event</span>
-          </button>
         </div>
       </div>
 
