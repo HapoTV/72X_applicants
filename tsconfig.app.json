@@ -19,12 +19,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    /*----------New lines to make sure our app works with shadcn -----*/
+
+    /* --- ADD THESE LINES --- */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/types": ["src/types/index.ts"]
+      "@/*": ["src/*"]
     },
     /* ----------------------- */
     "allowSyntheticDefaultImports": true
