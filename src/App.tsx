@@ -44,7 +44,11 @@ import AnalyticsUpgrade from './pages/upgrades/AnalyticsUpgrade';
 import ResourcesUpgrade from './pages/upgrades/ResourcesUpgrade';
 import ExpertsUpgrade from './pages/upgrades/ExpertsUpgrade';
 import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
-import AdminDashboard from './pages/AdminDashboard';
+
+
+// Admin Dashboard
+import AdminDashboard from './pages/adminDashboard/AdminDashboard';
+
 
 function App() {
   return (
