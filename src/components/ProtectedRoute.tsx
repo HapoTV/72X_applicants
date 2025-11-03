@@ -15,28 +15,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const authToken = localStorage.getItem('authToken');
     const userType = localStorage.getItem('userType');
 
-    // Check if user is authenticated
+    // If authentication is required but no token exists
     if (requireAuth && !authToken) {
         return <Navigate to="/login" replace />;
     }
 
-    // Check if admin access is required
-    if (requireAdmin && userType !== 'admin') {
+    // If admin access is required but user is not admin
+    if (requireAuth && requireAdmin && userType !== 'admin') {
         return <Navigate to="/login" replace />;
     }
 
-    // Check if user is trying to access login while already authenticated
+    // If user is already authenticated but trying to access auth pages (login/signup)
     if (!requireAuth && authToken) {
+        // Redirect to appropriate dashboard based on user type
         if (userType === 'admin') {
             return <Navigate to="/admin/dashboard" replace />;
         } else {
-            return <Navigate to="/" replace />;
+            return <Navigate to="/dashboard" replace />;
         }
-    }
-
-    // Redirect to splash screen if no auth token and accessing root
-    if (!authToken && window.location.pathname === '/') {
-        return <Navigate to="/splash" replace />;
     }
 
     return <>{children}</>;
