@@ -59,31 +59,12 @@ function App() {
         {/* Public landing page */}
         <Route path="/" element={<LandingPage />} />
         
-<<<<<<< Updated upstream
-        {/* Auth routes - don't require authentication */}
-        <Route path="/login" element={
-          <ProtectedRoute requireAuth={false}>
-            <Login />
-          </ProtectedRoute>
-        } />
-        <Route path="/signup" element={
-          <ProtectedRoute requireAuth={false}>
-            <Signup />
-          </ProtectedRoute>
-        } />
-        <Route path="/signup/success" element={
-          <ProtectedRoute requireAuth={false}>
-            <SignupSuccess />
-          </ProtectedRoute>
-        } />
-=======
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/request-demo" element={<RequestDemo />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/signup/success" element={<SignupSuccess />} />
->>>>>>> Stashed changes
         
         {/* Admin route - outside of main layout to avoid sidebar and chatbot */}
         <Route path="/admin/login" element={<Navigate to="/login" replace />} />
