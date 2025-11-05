@@ -59,3 +59,38 @@ textarea:focus {
   outline: 2px solid #0ea5e9;
   outline-offset: 2px;
 }
+
+/* Typing caret for hero headline */
+@keyframes caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.typing-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #111827;
+  margin-left: 4px;
+  animation: caret-blink 1s step-end infinite;
+}
+
+/* Slide-up animation for rotating audience word */
+@keyframes slide-up-in {
+  0% { opacity: 0; transform: translateY(18px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.rotating-word {
+  display: inline-block;
+  animation: slide-up-in 500ms ease-out both;
+}
+
+/* Generic scroll reveal - slide up */
+.reveal-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 600ms ease, transform 600ms ease;
+}
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}

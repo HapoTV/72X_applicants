@@ -33,6 +33,8 @@ import BizBoostChatbot from './components/Chatbot';
 import LandingPage from './pages/LandingPage';
 import Signup from './pages/Signup';
 import SignupSuccess from './pages/SignupSuccess';
+import RequestDemo from './pages/RequestDemo';
+import Pricing from './pages/Pricing';
 
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
@@ -57,6 +59,7 @@ function App() {
         {/* Public landing page */}
         <Route path="/" element={<LandingPage />} />
         
+<<<<<<< Updated upstream
         {/* Auth routes - don't require authentication */}
         <Route path="/login" element={
           <ProtectedRoute requireAuth={false}>
@@ -73,6 +76,14 @@ function App() {
             <SignupSuccess />
           </ProtectedRoute>
         } />
+=======
+        {/* Public routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/request-demo" element={<RequestDemo />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/signup/success" element={<SignupSuccess />} />
+>>>>>>> Stashed changes
         
         {/* Admin route - outside of main layout to avoid sidebar and chatbot */}
         <Route path="/admin/login" element={<Navigate to="/login" replace />} />
