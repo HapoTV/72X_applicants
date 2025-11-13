@@ -1,7 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import logoSvg from "../assets/Logo.svg";
-
+import wp3819576 from "../assets/wp3819576.jpg";
+import 'boxicons'
+import istock from "../assets/istockphoto-1321547410-170667a.jpg";
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
@@ -9,29 +11,29 @@ const LandingPage: React.FC = () => {
     {
       title: "AI Business Advisor",
       description: "Get personalized growth recommendations powered by artificial intelligence",
-      icon: "🤖",
+      icon: <box-icon type='solid' color='white' name='bot'></box-icon>,
     },
     {
       title: "Multi-language Support",
       description: "Available in all 11 official South African languages",
-      icon: "🗣️",
+      icon: <box-icon color='white' name='globe'></box-icon>,
     },
     {
       title: "Business Management Tools",
       description: "Inventory, POS, and service desk solutions in one platform",
-      icon: "🛠️",
+      icon: <box-icon type='solid' color='white' name='cog'></box-icon>,
     },
     {
       title: "Community & Mentorship",
       description: "Connect with successful entrepreneurs and business experts",
-      icon: "👥",
+      icon: <box-icon  color='white' type='solid' name='group'></box-icon>,
     },
   ];
 
   // Industries content rendered in stacked sections below
 
   const gradientBlue =
-    "linear-gradient(135deg, #0D0F3B 0%, #1A1C52 25%, #2258A6 50%, #1C90E6 75%, #33B0FF 100%)";
+    "linear-gradient(135deg, #353bb6ff 0%, #3135beff 25%, #2258A6 50%, #1C90E6 75%, #33B0FF 100%)";
 
   const handleLoginClick = () => {
     navigate("/login");
@@ -65,7 +67,7 @@ const LandingPage: React.FC = () => {
       ],
     },
     {
-      title: "Community & Mentorship",
+      title: "Community & Mentorship", 
       bullets: [
         "Learn from successful entrepreneurs",
         "Access workshops and mentorship",
@@ -90,63 +92,64 @@ const LandingPage: React.FC = () => {
       title: "Retail & E-commerce",
       desc: "Improve stock visibility, reduce stockouts and automate reordering.",
       points: ["Inventory sync across channels", "POS integrations", "Customer insights"],
-      color: "#EFF6FF",
+      color: " #1b73b6ff ",
     },
     {
       title: "Hospitality & Tourism",
       desc: "Streamline bookings and delight guests with smart messaging.",
       points: ["Automated confirmations", "Upsell campaigns", "Real‑time analytics"],
-      color: "#FDF2F8",
+      color: " #A3D3F7 ",
     },
     {
       title: "Professional Services",
       desc: "Manage clients, projects and billing while keeping communication sharp.",
       points: ["Service desk & tickets", "Lead capture", "Pipeline visibility"],
-      color: "#FEF3C7",
+      color: "#f26b6bff",
     },
     {
       title: "Manufacturing",
       desc: "Track orders and production with accurate inventory and supplier data.",
       points: ["Supplier management", "Quality logs", "Order analytics"],
-      color: "#ECFDF5",
+      color: "#3FA4EB",
     },
     {
       title: "Agriculture",
       desc: "Monitor inputs and sales while building resilient distribution.",
       points: ["Batch tracking", "Buyer CRM", "Mobile‑first capture"],
-      color: "#E0F2FE",
+      color: "#18cc36ff",
     },
     {
       title: "Transport & Logistics",
       desc: "Coordinate deliveries, incidents and customer comms from one place.",
       points: ["Job scheduling", "Proof of delivery", "Customer notifications"],
-      color: "#F1F5F9",
+      color: "#ce5fa0ff",
     },
     {
       title: "Construction",
       desc: "Keep projects on budget with site logs, issues and supplier control.",
       points: ["RFQs & suppliers", "Issue tracking", "Project dashboards"],
-      color: "#FEE2E2",
+      color: "#b3b628ff",
     },
     {
       title: "Healthcare",
       desc: "Manage appointments, records and patient journeys securely.",
       points: ["Appointments", "Patient CRM", "Consent & audits"],
-      color: "#EDE9FE",
+      color: "#8221a0ff",
     },
     {
       title: "Education",
       desc: "Automate enrollments, payments and communication with parents.",
       points: ["Enrollments", "Fees & billing", "Announcements"],
-      color: "#FFF7ED",
+      color: "#b48383ff",
     },
     {
       title: "Creative Industries",
       desc: "Sell services and digital goods while nurturing superfans.",
       points: ["Storefront & POS", "Email & SMS", "Community tools"],
-      color: "#F5F3FF",
+      color: "#18cc96ff",
+
     },
-  ];
+    ];
 
   // Observe elements with 'reveal-up' to add 'reveal-visible' on enter
   React.useEffect(() => {
@@ -203,10 +206,10 @@ const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
       {/* Header */}
       <header className="bg-[#F5F7FA] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-0">
           <div className="flex justify-between items-center h-20">
             {/* Logo and Navigation */}
-            <div className="flex items-center space-x-12">
+            <div className="flex items-center space-x-0">
               <img
                 src={logoSvg}
                 alt="72X Logo"
@@ -214,8 +217,8 @@ const LandingPage: React.FC = () => {
               />
               
               {/* Navigation */}
-              <nav className="hidden md:flex space-x-8">
-                <a href="#features" className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors">
+              <nav className="flex items-center justify-center space-x-3  p-1 text-gray-1000">
+                <a href="#features" className=" text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors">
                   Features
                 </a>
                 <a href="#industries" className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors">
@@ -231,16 +234,16 @@ const LandingPage: React.FC = () => {
             </div>
 
             {/* Auth Buttons */}
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-1">
               <button
                 onClick={() => navigate('/request-demo')}
-                className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
+                className="text-gray-700  hover:bg-[#3B82F6] px-0.5 py-0.1 rounded-lg font-semibold text-lg transition-all duration-100  hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
               >
-                Request a demo
+                Request demo
               </button>
               <button
                 onClick={() => navigate('/login')}
-                className="text-black bg-[#60A5FA] hover:bg-[#3B82F6] px-6 py-2.5 rounded-lg font-semibold text-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                className="text-black bg-[#60A5FA] hover:bg-[#3B82F6] px-2 py-1.5 rounded-lg font-semibold text-lg transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 Log in
               </button>
@@ -256,26 +259,26 @@ const LandingPage: React.FC = () => {
           <div className="max-w-[1280px] mx-auto px-2 lg:px-4 py-1 md:py-2 lg:py-3">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 min-h-[580px]">
               {/* Left Side - Content Card */}
-              <div className="bg-[#FDF2F8] flex items-center p-8 md:p-10 lg:p-12 rounded-3xl shadow-lg border border-black/5 min-h-[580px]">
+              <div className="bg-gray-700 flex items-center p-8 md:p-10 lg:p-12 rounded-3xl shadow-lg border border-black/5 min-h-[580px]">
                 <div className="max-w-3xl">
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-black leading-[1.05] mb-6">
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-blue-400 leading-[2] mb-6">
                     {typedHeadline}
                     <span className="typing-caret align-middle"></span>
                 </h1>
-                  <h2 className="text-4xl md:text-4xl lg:text-5xl font-bold text-black leading-[1.1] mb-6">
+                  <h2 className="text-4xl md:text-4xl lg:text-5xl font-bold text-white leading-[1.1] mb-6">
                   72X, the smart partner for your business growth.
                 </h2>
-                <p className="text-base md:text-lg text-black leading-relaxed mb-8">
+                <p className="text-base md:text-lg text-white leading-relaxed mb-8">
                   Empowering South African entrepreneurs with AI-driven growth tools, local language support,
                   interactive learning, and affordable business software tailored for <span className="font-bold">townships and rural areas.</span>
                 </p>
 
                 {/* Primary CTA removed as requested */}
 
-                <div className="mt-4 text-black text-sm flex flex-col items-start gap-2">
+                <div className="mt-4 text-purple-400 text-sm flex flex-col items-start gap-2">
                   <span>Don't have an account?</span>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-gray-700">Sign up with your business info for free access</span>
+                    <span className="text-white">Sign up with your business info for free access</span>
                     <button
                       onClick={() => navigate('/signup')}
                       className="text-black bg-[#60A5FA] hover:bg-[#3B82F6] px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
@@ -290,6 +293,7 @@ const LandingPage: React.FC = () => {
               {/* Right Side - Placeholder Card (kept subtle like reference) */}
               <div className="hidden lg:flex items-center">
                 <div className="w-full h-full min-h-[580px] bg-gray-100 rounded-3xl shadow-md border border-black/5"></div>
+              <img src={"logo.svg"} alt="" />
               </div>
             </div>
           </div>
@@ -303,21 +307,21 @@ const LandingPage: React.FC = () => {
                 Trusted by South African Entrepreneurs
               </p>
               <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
-                <div className="text-gray-400 font-semibold">Small Business Owners</div>
-                <div className="text-gray-400 font-semibold">Township Entrepreneurs</div>
-                <div className="text-gray-400 font-semibold">Local Retailers</div>
-                <div className="text-gray-400 font-semibold">Service Providers</div>
+                <div className="text-gray-800 font-semibold">Small Business Owners</div>
+                <div className="text-gray-800 font-semibold">Township Entrepreneurs</div>
+                <div className="text-gray-800 font-semibold">Local Retailers</div>
+                <div className="text-gray-800 font-semibold">Service Providers</div>
               </div>
             </div>
           </div>
         </section>
 
         {/* Features */}
-        <section id="features" className="py-20 bg-white">
+        <section id="features" className="py-20" style={{ background: `url(${istock})`,  backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Everything You Need to Grow</h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Everything You Need to Grow</h2>
+              <p className="text-xl text-gray-200 max-w-2xl mx-auto">
                 Comprehensive tools designed for the unique challenges of South African businesses
               </p>
             </div>
@@ -328,25 +332,25 @@ const LandingPage: React.FC = () => {
                   key={index}
                   onClick={() => setActiveFeatureIdx(index)}
                   className={`text-center group rounded-xl p-4 transition-all ${
-                    activeFeatureIdx === index ? 'bg-[#FDF2F8] ring-2 ring-[#FDF2F8]' : 'bg-transparent'
+                    activeFeatureIdx === index ? '' : 'bg-transparent'
                   }`}
                 >
                   <div
-                    className={`w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200 ${
-                      activeFeatureIdx === index ? 'bg-[#FDF2F8] ring-2 ring-[#60A5FA]' : ''
+                    className={`w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200 ${
+                      activeFeatureIdx === index ? 'bg-[#60A5FA] ' : ''
                     }`}
-                    style={{ background: activeFeatureIdx === index ? '#FDF2F8' : '#60A5FA' }}
+                    style={{ background: activeFeatureIdx === index ? '' : '' }}
                   >
                     <span className={`text-2xl ${activeFeatureIdx === index ? 'text-[#111827]' : 'text-white'}`}>{feature.icon}</span>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{feature.title}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{feature.description}</p>
+                  <h3 className="text-lg font-semibold text-white font-bold mb-2">{feature.title}</h3>
+                  <p className="text-white font-semibold text-sm leading-relaxed">{feature.description}</p>
                 </button>
               ))}
             </div>
 
             {/* Active feature panel */}
-            <div className="mt-10 bg-[#FDF2F8] border border-black/5 rounded-2xl p-6 md:p-8">
+            <div className="mt-10 bg-[#60A5FA] border border-black/5 rounded-2xl p-6 md:p-8">
               <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{featurePanels[activeFeatureIdx].title}</h3>
               <ul className="list-disc pl-6 space-y-2 text-gray-800">
                 {featurePanels[activeFeatureIdx].bullets.map((b, i) => (
@@ -381,19 +385,19 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Industries */}
-        <section id="industries" className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <section id="industries" className="py-20 bg-gray-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-3">
             <div className="mb-16 relative flex flex-col md:flex-row md:items-start md:justify-between gap-4">
               <div className="text-center md:text-left">
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Solutions for Every Industry</h2>
-                <p className="text-xl text-gray-600">Tailored solutions for South African businesses across all sectors</p>
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-100 mb-4">Solutions for Every Industry</h2>
+                <p className="text-xl text-gray-200">Tailored solutions for South African businesses across all sectors</p>
               </div>
               <button
                 onClick={() => {
                   document.getElementById('apps')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-300 text-gray-800 font-medium hover:opacity-90 transition-colors self-center md:self-start"
-                style={{ background: '#FDF2F8' }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-black-600 text-gray-800 font-medium hover:opacity-90 transition-colors self-center md:self-start"
+                style={{ background: '#fcfcfcff' }}
               >
                 Jump to Apps
                 <span>↓</span>
@@ -401,18 +405,19 @@ const LandingPage: React.FC = () => {
             </div>
 
             {/* Stacked industry highlights (scroll to explore) */}
-            <div className="mt-8 space-y-12">
-              {industryDetails.map((d, idx) => (
+            <div className="mt-8 space-y-5">
+              {industryDetails.map((d, idx) => ( 
                 <div key={d.title}>
-                  <div className={`max-w-2xl ${idx % 2 === 1 ? 'ml-auto' : ''}`}>
-                    <div className="rounded-2xl p-6 md:p-8 shadow-sm border border-gray-200" style={{ background: d.color }}>
-                      <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-white/70 text-gray-800 mb-3">{d.title}</span>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-3">How 72X helps</h3>
-                      <p className="text-gray-700 mb-4">{d.desc}</p>
-                      <ul className="space-y-2 text-gray-700 list-disc pl-5">
-                        {d.points.map((p) => (<li key={p}>{p}</li>))}
-                      </ul>
-                    </div>
+                  <div className={`max-w-2x2 ${idx % 2 === 1 ? 'ml-auto' : ''}`}>
+                
+                   { /*<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8-200 border-opacity-50  px-2 py-1.5 rounded-lg " style={{ background: d.color }}>
+                      <span className="inline-block px-8 py-4 rounded-full text-sm font-bold bg-white/70 text-gray-800 mb-3 ">{d.title}</span>
+                      <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-center">How 72X helps</h3>
+                      <p className="text-black-700 mb-4 text-center ">{d.desc}</p>
+                      <p className="space-y-2 text-black-700 list-disc pl-3 text-center">
+                        {d.points.map((p) => (<p key={p}>{p}</p>))}
+                      </p>
+                    </div>*/}
                   </div>
                 </div>
               ))}
@@ -420,22 +425,23 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
+
         {/* Apps */}
-        <section id="apps" className="py-20 bg-gray-50">
+        <section id="apps" className="py-20 bg-gray-50" >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Powerful Business Apps</h2>
-              <p className="text-xl text-gray-600">All the tools you need in one integrated platform</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Powerful Business Apps</h2>
+              <p className="text-xl text-gray-050">All the tools you need in one integrated platform</p>
             </div>
 
             {(() => {
               const apps = [
-                { icon: "📦", title: "Inventory Management", desc: "Track stock levels, manage suppliers, and automate reordering" },
-                { icon: "💳", title: "POS System", desc: "Modern point-of-sale with multiple payment options" },
-                { icon: "🎯", title: "AI Business Advisor", desc: "Get personalized growth recommendations and insights" },
-                { icon: "📊", title: "Analytics Dashboard", desc: "Real-time business performance tracking and reporting" },
-                { icon: "🛎️", title: "Service Desk", desc: "Manage customer service and support tickets efficiently" },
-                { icon: "👥", title: "CRM", desc: "Build better customer relationships and increase sales" },
+                { icon: <box-icon type='solid' name='package' color='white'></box-icon>, title: "Inventory Management", desc: "Track stock levels, manage suppliers, and automate reordering" },
+                { icon: <box-icon name='credit-card' color='white'></box-icon>, title: "POS System", desc: "Modern point-of-sale with multiple payment options" },
+                { icon: <box-icon name='target-lock' color='white'></box-icon>, title: "AI Business Advisor", desc: "Get personalized growth recommendations and insights" },
+                { icon: <box-icon type='solid' name='bar-chart-square' color='white'></box-icon>, title: "Analytics Dashboard", desc: "Real-time business performance tracking and reporting" },
+                { icon: <box-icon type='solid' name='bell' color='white'></box-icon>, title: "Service Desk", desc: "Manage customer service and support tickets efficiently" },
+                { icon: <box-icon type='solid' name='user' color='white'></box-icon>, title: "CRM", desc: "Build better customer relationships and increase sales" },
               ];
               const [showAllApps, setShowAllApps] = React.useState(false);
               // re-run reveal observer when toggled
@@ -460,18 +466,18 @@ const LandingPage: React.FC = () => {
                         key={app.title}
                         className={`bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-all reveal-up ${
                           !showAllApps && idx >= 3 ? 'opacity-20 pointer-events-none' : ''
-                        }`}
+                        }` }
                         style={{ transitionDelay: `${idx * 120}ms` }}
                       >
                         <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ background: '#60A5FA' }}>
                           <span className="text-xl text-white">{app.icon}</span>
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-3">{app.title}</h3>
-                        <p className="text-gray-600">{app.desc}</p>
+                        <h3 className="text-xl font-semibold text-blue-500 mb-3">{app.title}</h3>
+                        <p className="text-gray-900">{app.desc}</p>
                       </div>
                     ))}
                     {!showAllApps && (
-                      <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none hidden md:block" />
+                      <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-white to-transparent pointer-events-none hidden md:block" />
                     )}
                   </div>
                   <div className="mt-8 flex justify-center">
@@ -498,9 +504,9 @@ const LandingPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { icon: "👥", title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
-                { icon: "🎓", title: "Learn & Grow", desc: "Access exclusive workshops, webinars, and mentorship programs" },
-                { icon: "🤝", title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
+                { icon: <box-icon name='trending-up' type='solid' color='white' ></box-icon> , title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
+                { icon: <box-icon type='solid' name='graduation' color='white' ></box-icon>, title: "Learn & Grow", desc: "Access exclusive workshops, webinars, and mentorship programs" },
+                { icon: <box-icon name='group' color='white' ></box-icon>, title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
               ].map((item, i) => (
                 <div key={i} className="text-center">
                   <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#60A5FA' }}>
@@ -517,7 +523,7 @@ const LandingPage: React.FC = () => {
         {/* Pricing moved to dedicated page */}
 
         {/* Help */}
-        <section id="help" className="py-20 bg-gray-50">
+        <section id="help" className="py-20 bg-gray-50" >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">We're Here to Help</h2>
@@ -526,13 +532,13 @@ const LandingPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { icon: "📚", title: "Help Center", desc: "Comprehensive guides and documentation" },
-                { icon: "🎥", title: "Video Tutorials", desc: "Step-by-step video guides" },
-                { icon: "💬", title: "Live Chat", desc: "Instant help from our support team" },
-                { icon: "📞", title: "Phone Support", desc: "Talk directly with our experts" },
+                { icon: <box-icon name='book' color='white' ></box-icon>, title: "Help Center", desc: "Comprehensive guides and documentation" },
+                { icon: <box-icon name='camera-movie' color='white' ></box-icon>, title: "Video Tutorials", desc: "Step-by-step video guides" },
+                { icon: <box-icon name='conversation' type='solid' color='white' ></box-icon>, title: "Live Chat", desc: "Instant help from our support team" },
+                { icon: <box-icon name='phone-call' type='solid' color='white' ></box-icon>, title: "Phone Support", desc: "Talk directly with our experts" },
               ].map((help, h) => (
                 <div key={h} className="text-center">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: gradientBlue }}>
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#60A5FA' }}>
                     <span className="text-2xl text-white">{help.icon}</span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">{help.title}</h3>
@@ -544,7 +550,7 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* CTA */}
-        <section className="py-20" style={{ background: gradientBlue }}>
+        <section className="py-20" style={{ background: `url(${wp3819576})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
           <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to Grow Your Business?</h2>
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
@@ -566,7 +572,7 @@ const LandingPage: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="text-white" style={{ background: gradientBlue }}>
+      <footer className="text-white" style={{ background: '#60A5FA' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
