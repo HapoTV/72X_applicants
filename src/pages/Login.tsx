@@ -53,8 +53,8 @@ const Login: React.FC = () => {
                     console.log('Development admin login successful, redirecting...');
                     console.log('Auth data:', authData);
                     
-                    // Use window.location.replace to prevent back navigation to login
-                    window.location.replace('/admin/dashboard/overview');
+                    // Use navigate for proper routing with React Router
+                    navigate('/admin/dashboard/overview', { replace: true });
                     return;
                 } else {
                     console.error('Invalid admin credentials');
@@ -87,8 +87,8 @@ const Login: React.FC = () => {
                 console.log('Development user login successful, redirecting...');
                 console.log('Auth data:', authData);
                 
-                // Use window.location.replace to prevent back navigation to login
-                window.location.replace('/dashboard/overview');
+                // Use navigate for proper routing with React Router
+                navigate('/dashboard/overview', { replace: true });
                 return;
             }
 
