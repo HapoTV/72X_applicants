@@ -3,26 +3,26 @@ import { NavLink } from 'react-router-dom';
 import { 
   Home, 
   BarChart3, 
-  Map,
-  BookOpen, 
-  User, 
-  Upload,
-  X,
-  GraduationCap,
-  Users,
-  DollarSign,
-  Video,
-  ShoppingBag,
   MessageCircle,
   AppWindow,
   Brain,
-  Calendar,
   Lock,
   Star,
   Zap,
-  ChevronRight
+  ChevronRight,
+  X,
+  User,
+  DollarSign,
+  Video,
+  BookOpen,
+  Upload,
+  ShoppingBag,
+  Users,
+  Calendar
 } from 'lucide-react';
 import Logo from '../assets/Logo.svg';
+
+type PackageType = 'startup' | 'essential' | 'premium';
 
 interface NavigationProps {
   onClose?: () => void;
@@ -30,15 +30,6 @@ interface NavigationProps {
   onScheduleToggle?: (isOpen: boolean) => void;
   onLearningToggle?: (isOpen: boolean) => void;
   onCommunityToggle?: (isOpen: boolean) => void;
-}
-
-type PackageType = 'startup' | 'essential' | 'premium';
-
-interface NavItem {
-  path: string;
-  icon: any;
-  label: string;
-  package: PackageType;
 }
 
 const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle }) => {
@@ -51,22 +42,41 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
   
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
-  const userPackage = (localStorage.getItem('userPackage') as PackageType) || 'premium';
+  const userPackage = (localStorage.getItem('userPackage') as PackageType) || 'startup';
   const userName = userEmail.split('@')[0].replace('.', ' ').split(' ').map(word => 
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
 
-  const navItems: NavItem[] = [
-    // Startup Package Features
-    { path: '/', icon: Home, label: 'Dashboard', package: 'startup' },
-    { path: '/roadmap', icon: Map, label: 'Roadmap', package: 'premium' },
-    { path: '/schedule', icon: Calendar, label: 'Schedule', package: 'startup' },
-    { path: '/learning', icon: GraduationCap, label: 'Learning', package: 'startup' },
-    { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' },
-    { path: '/community', icon: Users, label: 'Community', package: 'startup' },
-    { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' },
-    { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' },
+  const navItems: Array<{
+    path: string;
+    icon: React.ElementType;
+    label: string;
+    package: PackageType;
+  }> = [
+    // Dashboard
+    { path: '/', icon: Home, label: 'Dashboard', package: 'startup' as PackageType },
+    
+    // Roadmap
+    { path: '/roadmap', icon: BarChart3, label: 'Roadmap', package: 'premium' as PackageType },
+    
+    // Schedule
+    { path: '/schedule', icon: Calendar, label: 'Schedule', package: 'startup' as PackageType },
+    
+    // Learning
+    { path: '/learning', icon: BookOpen, label: 'Learning', package: 'startup' as PackageType },
+    
+    // Marketplace
+    { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' as PackageType },
+    
+    // Community
+    { path: '/community', icon: Users, label: 'Community', package: 'startup' as PackageType },
+    
+    // Mentorship
+    { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' as PackageType },
+    
+    // Applications
+    { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' as PackageType },
     
     // Essential Package Features (includes all startup + these)
     { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
@@ -90,19 +100,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     const lockingOn = localStorage.getItem('lockFeatures') === '1';
     if (!lockingOn) return false;
     return packageHierarchy[itemPackage] > packageHierarchy[userPackage];
-  };
-
-  const getPackageIcon = (itemPackage: PackageType) => {
-    if (itemPackage === 'essential') return <Star className="w-3 h-3 text-blue-500" />;
-    if (itemPackage === 'premium') return <Zap className="w-3 h-3 text-purple-500" />;
-    return null;
-  };
-
-  const getTooltipMessage = (packageType: string) => {
-    if (packageType === 'essential') {
-      return 'This feature is for Essential package. You need to upgrade to unlock it!';
-    }
-    return 'This feature is for Premium package. You need to upgrade to unlock it!';
   };
 
   const closeAllSecondaryNavs = () => {
@@ -170,7 +167,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
         <ul className="space-y-1">
           {navItems.map((item) => {
             const locked = isFeatureLocked(item.package);
-            const packageIcon = getPackageIcon(item.package);
             // Create upgrade path by removing leading slash and adding /upgrade prefix
             const upgradePath = `/upgrade${item.path}`;
 
@@ -202,7 +198,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     <button
@@ -250,7 +246,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     <button
@@ -298,7 +294,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     <button
@@ -327,7 +323,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                 >
                   <NavLink
                     to="/community/discussions"
-                    onClick={(e) => {
+                    onClick={() => {
                       onClose?.();
                       // Close other secondary sidebars
                       setIsDashboardSubNavOpen(false);
@@ -346,7 +342,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     <button
@@ -391,12 +387,16 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   }
                 >
                   <div className="flex items-center space-x-2">
-                    <item.icon className="w-4 h-4 flex-shrink-0" />
+                    {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" })}
                     {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                   </div>
                   {!collapsed && (
                     <div className="flex items-center space-x-1">
-                      {packageIcon}
+                      {item.package === 'essential' ? (
+                      <Star className="w-3 h-3 text-blue-500" />
+                    ) : item.package === 'premium' ? (
+                      <Zap className="w-3 h-3 text-purple-500" />
+                    ) : null}
                       {locked && <Lock className="w-3 h-3" />}
                     </div>
                   )}

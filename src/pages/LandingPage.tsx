@@ -12,54 +12,19 @@ import {
   Brain, 
   GraduationCap, 
   Headphones, 
-  Bot, 
   MessagesSquare, 
   Bell, 
   Calendar, 
-  Clock, 
   CheckSquare, 
   ArrowRight,
   ArrowDown,
   Briefcase,
-  Settings,
   Sprout,
   Truck,
   Factory,
   Home,
-  Building2,
-  Utensils,
-  Stethoscope,
-  School,
-  Package,
-  Users,
-  FileText,
-  LineChart,
-  Cloud,
-  ShieldCheck,
-  Zap,
-  Cpu,
-  Database,
-  Server,
-  Network,
-  Smartphone,
-  CreditCard,
-  Globe,
-  Lock,
-  Mail,
-  MessageSquare,
-  Phone,
-  Settings2,
-  User,
-  Users2,
-  Wifi,
-  WifiOff,
-  X,
-  XCircle,
-  ZapOff,
-  ZoomIn,
-  ZoomOut
+  Phone
 } from 'lucide-react';
-import 'boxicons';
 import wp3819576 from "../assets/wp3819576.jpg";
 import istock from "../assets/istockphoto-1321547410-170667a.jpg";
 const logoUrl = "/Logo2.png";
@@ -84,7 +49,7 @@ const LandingPage: React.FC = () => {
       title: 'COMMUNICATION',
       items: [
         { name: '24/7 Support', icon: Headphones, path: '/support' },
-        { name: 'AI Chatbot', icon: Bot, path: '/chatbot' },
+        { name: 'AI Chatbot', icon: 'bx bxs-bot', path: '/chatbot' },
         { name: 'Community Chat', icon: MessagesSquare, path: '/community' },
         { name: 'Email/SMS Alerts', icon: Bell, path: '/notifications' },
       ]
@@ -102,7 +67,7 @@ const LandingPage: React.FC = () => {
       title: 'TIME',
       items: [
         { name: 'Event Scheduler', icon: Calendar, path: '/schedule' },
-        { name: 'Booking System', icon: Clock, path: '/bookings' },
+        { name: 'Booking System', icon: 'bx bx-time', path: '/bookings' },
         { name: 'Task Deadlines', icon: CheckSquare, path: '/tasks' },
         { name: 'Meeting Planner', icon: Video, path: '/meetings' },
       ]
@@ -146,32 +111,27 @@ const LandingPage: React.FC = () => {
     {
       title: "AI Business Advisor",
       description: "Get personalized growth recommendations powered by artificial intelligence",
-      icon: <box-icon type='solid' color='white' name='bot'></box-icon>,
+      icon: <i className="bx bxs-bot" style={{color: 'white'}}></i>,
     },
     {
       title: "Multi-language Support",
       description: "Available in all 11 official South African languages",
-      icon: <box-icon color='white' name='globe'></box-icon>,
+      icon: <i className="bx bx-globe" style={{color: 'white'}}></i>,
     },
     {
       title: "Business Management Tools",
       description: "Inventory, POS, and service desk solutions in one platform",
-      icon: <box-icon type='solid' color='white' name='cog'></box-icon>,
+      icon: <i className="bx bxs-cog" style={{color: 'white', fontSize: '20px'}}></i>,
     },
     {
       title: "Community & Mentorship",
       description: "Connect with successful entrepreneurs and business experts",
-      icon: <box-icon  color='white' type='solid' name='group'></box-icon>,
+      icon: <i className="bx bxs-group" style={{color: 'white', fontSize: '20px'}}></i>,
     },
   ];
 
   // Industries content rendered in stacked sections below
-  const gradientBlue =
-    "linear-gradient(135deg, #353bb6ff 0%, #3135beff 25%, #2258A6 50%, #1C90E6 75%, #33B0FF 100%)";
-
-  const handleLoginClick = () => {
-    navigate("/login");
-  };
+  // Removed unused gradientBlue and handleLoginClick
 
   // Interactive feature cards (tab-style)
   const [activeFeatureIdx, setActiveFeatureIdx] = React.useState<number>(0);
@@ -421,7 +381,7 @@ const LandingPage: React.FC = () => {
                                 <li key={item.path}>
                                   <button
                                     onClick={() => {
-                                      if (item.isAnchor) {
+                                      if ('isAnchor' in item && item.isAnchor) {
                                         // Scroll to section on same page
                                         const element = document.querySelector(item.path);
                                         if (element) {
@@ -653,7 +613,7 @@ const LandingPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {industryDetails.map((industry, index) => (
+              {industryDetails.map((industry) => (
                 <div 
                   key={industry.title}
                   className="bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col"
@@ -726,12 +686,12 @@ const LandingPage: React.FC = () => {
 
             {(() => {
               const apps = [
-                { icon: <box-icon type='solid' name='package' color='white'></box-icon>, title: "Inventory Management", desc: "Track stock levels, manage suppliers, and automate reordering" },
-                { icon: <box-icon name='credit-card' color='white'></box-icon>, title: "POS System", desc: "Modern point-of-sale with multiple payment options" },
-                { icon: <box-icon name='target-lock' color='white'></box-icon>, title: "AI Business Advisor", desc: "Get personalized growth recommendations and insights" },
-                { icon: <box-icon type='solid' name='bar-chart-square' color='white'></box-icon>, title: "Analytics Dashboard", desc: "Real-time business performance tracking and reporting" },
-                { icon: <box-icon type='solid' name='bell' color='white'></box-icon>, title: "Service Desk", desc: "Manage customer service and support tickets efficiently" },
-                { icon: <box-icon type='solid' name='user' color='white'></box-icon>, title: "CRM", desc: "Build better customer relationships and increase sales" },
+                { icon: <i className="bx bxs-package" style={{color: 'white'}}></i>, title: "Inventory Management", desc: "Track stock levels, manage suppliers, and automate reordering" },
+                { icon: <i className="bx bx-credit-card" style={{color: 'white'}}></i>, title: "POS System", desc: "Modern point-of-sale with multiple payment options" },
+                { icon: <i className="bx bx-target-lock" style={{color: 'white'}}></i>, title: "AI Business Advisor", desc: "Get personalized growth recommendations and insights" },
+                { icon: <i className="bx bxs-bar-chart-square" style={{color: 'white'}}></i>, title: "Analytics Dashboard", desc: "Real-time business performance tracking and reporting" },
+                { icon: <i className="bx bxs-bell" style={{color: 'white'}}></i>, title: "Service Desk", desc: "Manage customer service and support tickets efficiently" },
+                { icon: <i className="bx bxs-user" style={{color: 'white'}}></i>, title: "CRM", desc: "Build better customer relationships and increase sales" },
               ];
               const [showAllApps, setShowAllApps] = React.useState(false);
               // re-run reveal observer when toggled
@@ -794,9 +754,9 @@ const LandingPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               {[
-                { icon: <box-icon name='trending-up' type='solid' color='white' ></box-icon> , title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
-                { icon: <box-icon type='solid' name='graduation' color='white' ></box-icon>, title: "Learn & Grow", desc: "Access exclusive workshops, webinars, and mentorship programs" },
-                { icon: <box-icon name='group' color='white' ></box-icon>, title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
+                { icon: <i className="bx bxs-trending-up" style={{color: 'white'}}></i> , title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
+                { icon: <i className="bx bxs-graduation" style={{color: 'white'}}></i>, title: "Learn & Grow", desc: "Access exclusive workshops, webinars, and mentorship programs" },
+                { icon: <i className="bx bx-group" style={{color: 'white'}}></i>, title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
               ].map((item, i) => (
                 <div key={i} className="text-center">
                   <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#60A5FA' }}>

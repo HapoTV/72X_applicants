@@ -77,8 +77,10 @@ const Discussions: React.FC = () => {
     }
   ];
 
-  const getCategoryColor = (category: string) => {
-    const colors = {
+  type CategoryType = 'startup' | 'marketing' | 'finance' | 'operations' | 'tech' | 'legal' | string;
+  
+  const getCategoryColor = (category: CategoryType) => {
+    const colors: Record<CategoryType, string> = {
       startup: 'bg-blue-100 text-blue-800',
       marketing: 'bg-green-100 text-green-800',
       finance: 'bg-purple-100 text-purple-800',

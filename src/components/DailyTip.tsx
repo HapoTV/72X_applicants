@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Lightbulb } from 'lucide-react';
 
+type Language = 'en' | 'af' | 'zu';
+
+interface Tip {
+  title: string;
+  content: string;
+  category: string;
+}
+
 interface DailyTipProps {
-  language: string;
+  language: Language;
 }
 
 const DailyTip: React.FC<DailyTipProps> = ({ language }) => {
   const [currentTip, setCurrentTip] = useState(0);
   
-  const tips = {
+  const tips: Record<Language, Tip[]> = {
     en: [
       {
         title: "Start Small, Think Big",
@@ -62,7 +70,7 @@ const DailyTip: React.FC<DailyTipProps> = ({ language }) => {
     ]
   };
 
-  const currentTips = tips[language] || tips.en;
+  const currentTips = tips[language as Language] || tips.en;
 
   useEffect(() => {
     // Persist a daily rotating index per language

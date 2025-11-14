@@ -1,30 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Banknote, Users, TrendingUp, Target, Flame } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import MetricCard from '../../components/MetricCard';
 
+type Language = 'en' | 'af' | 'zu';
+
+interface TranslationKeys {
+  monthlyRevenue: string;
+  activeCustomers: string;
+  growthRate: string;
+  goalsAchieved: string;
+  dailyChallenge: string;
+  [key: string]: string;
+}
+
+const translations: Record<Language, TranslationKeys> = {
+  en: {
+    monthlyRevenue: "Monthly Revenue",
+    activeCustomers: "Active Customers",
+    growthRate: "Growth Rate",
+    goalsAchieved: "Goals Achieved",
+    dailyChallenge: "Today's Challenge"
+  },
+  af: {
+    monthlyRevenue: "Maandelikse Inkomste",
+    activeCustomers: "Aktiewe Kliënte",
+    growthRate: "Groei Koers",
+    goalsAchieved: "Doelwitte Bereik",
+    dailyChallenge: "Vandag se Uitdaging"
+  },
+  zu: {
+    monthlyRevenue: "Iholo lenyanga",
+    activeCustomers: "Amakhasimende asebenzayo",
+    growthRate: "Izinga lokukhula",
+    goalsAchieved: "Izinhloso ezifeziwe",
+    dailyChallenge: "Inselele yanamuhla"
+  }
+};
+
 const Metrics: React.FC = () => {
-  const [selectedLanguage] = useState('en');
+  const [selectedLanguage] = useState<Language>('en');
   const [showChallenges, setShowChallenges] = useState(false);
 
-  const translations = {
-    en: {
-      monthlyRevenue: "Monthly Revenue",
-      activeCustomers: "Active Customers",
-      growthRate: "Growth Rate",
-      goalsAchieved: "Goals Achieved",
-      dailyChallenge: "Today's Challenge"
-    },
-  };
-
-  const t = translations[selectedLanguage] || translations.en;
+  const t = useMemo(() => translations[selectedLanguage], [selectedLanguage]);
 
   const readMetric = (key: string) => (localStorage.getItem(key) || '').trim() || '--';
-  const metrics = [
-    { title: t.monthlyRevenue, value: readMetric('monthlyRevenue'), change: '', trend: 'up' as const, icon: Banknote },
-    { title: t.activeCustomers, value: readMetric('activeCustomers'), change: '', trend: 'up' as const, icon: Users },
-    { title: t.growthRate, value: readMetric('growthRate'), change: '', trend: 'up' as const, icon: TrendingUp },
-    { title: t.goalsAchieved, value: readMetric('goalsAchieved'), change: '', trend: 'up' as const, icon: Target },
-  ];
+  const metrics = useMemo(() => [
+    { 
+      title: t.monthlyRevenue, 
+      value: readMetric('monthlyRevenue'), 
+      change: '', 
+      trend: 'up' as const, 
+      icon: Banknote as LucideIcon,
+      changeType: 'increase' as const,
+      link: '#'
+    },
+    { 
+      title: t.activeCustomers, 
+      value: readMetric('activeCustomers'), 
+      change: '', 
+      trend: 'up' as const, 
+      icon: Users as LucideIcon,
+      changeType: 'increase' as const,
+      link: '#'
+    },
+    { 
+      title: t.growthRate, 
+      value: readMetric('growthRate'), 
+      change: '', 
+      trend: 'up' as const, 
+      icon: TrendingUp as LucideIcon,
+      changeType: 'increase' as const,
+      link: '#'
+    },
+    { 
+      title: t.goalsAchieved, 
+      value: readMetric('goalsAchieved'), 
+      change: '', 
+      trend: 'up' as const, 
+      icon: Target as LucideIcon,
+      changeType: 'increase' as const,
+      link: '#'
+    },
+  ], [t]);
 
   type Challenge = { id: string; title: string; description: string; reward: string; total: number };
   const challenges: Challenge[] = [

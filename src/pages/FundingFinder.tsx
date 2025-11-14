@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Search, Filter, Banknote, Calendar, MapPin, ExternalLink, Bookmark, Star } from 'lucide-react';
+import { Search, Banknote, Calendar, MapPin, ExternalLink, Bookmark, Star } from 'lucide-react';
+
+type FundingType = 'grants' | 'loans' | 'competitions' | 'accelerators' | 'investors' | string;
 
 const FundingFinder: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,13 +135,14 @@ const FundingFinder: React.FC = () => {
     }
   ];
 
-  const getTypeColor = (type: string) => {
-    const colors = {
-      grants: 'bg-green-100 text-green-800',
-      loans: 'bg-blue-100 text-blue-800',
+  const getTypeColor = (type: FundingType) => {
+    const colors: Record<FundingType, string> = {
+      grants: 'bg-blue-100 text-blue-800',
+      loans: 'bg-green-100 text-green-800',
       competitions: 'bg-purple-100 text-purple-800',
-      accelerators: 'bg-orange-100 text-orange-800',
-      investors: 'bg-red-100 text-red-800'
+      accelerators: 'bg-yellow-100 text-yellow-800',
+      investors: 'bg-red-100 text-red-800',
+      all: 'bg-gray-100 text-gray-800'
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
   };

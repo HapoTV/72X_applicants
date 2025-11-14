@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, FileText, DollarSign, TrendingUp, Calendar, Save, AlertCircle } from 'lucide-react';
+import { Upload, DollarSign, TrendingUp } from 'lucide-react';
 
 const DataInput: React.FC = () => {
   const [activeTab, setActiveTab] = useState('financial');
@@ -120,7 +120,7 @@ const DataInput: React.FC = () => {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <i className="bx bxs-info-circle text-blue-600 text-xl mt-0.5"></i>
                   <div>
                     <h4 className="font-medium text-blue-900">Data Privacy</h4>
                     <p className="text-sm text-blue-700 mt-1">
@@ -134,7 +134,7 @@ const DataInput: React.FC = () => {
                 type="submit"
                 className="w-full md:w-auto px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2"
               >
-                <Save className="w-4 h-4" />
+                <i className="bx bx-save text-lg"></i>
                 <span>Save Financial Data</span>
               </button>
             </form>
@@ -194,7 +194,7 @@ const DataInput: React.FC = () => {
                 type="submit"
                 className="w-full md:w-auto px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2"
               >
-                <Save className="w-4 h-4" />
+                <i className="bx bx-save text-lg"></i>
                 <span>Save Customer Data</span>
               </button>
             </form>
