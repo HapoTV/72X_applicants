@@ -1,21 +1,54 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-// Supports both Vite (VITE_) and CRA (REACT_APP_) env styles
+// Environment variable loader that works in both browser and Node.js environments
 const getEnv = (key: string): string | undefined => {
-  const vite = (globalThis as any)?.import?.meta?.env || (import.meta as any)?.env;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  return (vite && vite[key]) || (typeof process !== 'undefined' ? (process as any).env?.[key] : undefined);
+  // Check for Vite environment variables (VITE_)
+  const viteEnv = (globalThis as any)?.import?.meta?.env || (import.meta as any)?.env;
+  if (viteEnv && viteEnv[key]) {
+    return viteEnv[key];
+  }
+
+  // Check for Node.js process environment variables
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+
+  // Check for global window.ENV (useful for some server-side rendering setups)
+  if (typeof window !== 'undefined' && (window as any).ENV) {
+    return (window as any).ENV[key];
+  }
+
+  return undefined;
 };
 
+// Try to get environment variables with different possible names
 const SUPABASE_URL =
-  getEnv('VITE_SUPABASE_URL') || getEnv('REACT_APP_SUPABASE_URL') || getEnv('SUPABASE_URL');
+  getEnv('NEXT_PUBLIC_SUPABASE_URL') ||
+  getEnv('VITE_SUPABASE_URL') || 
+  getEnv('REACT_APP_SUPABASE_URL') || 
+  getEnv('SUPABASE_URL');
+
 const SUPABASE_ANON_KEY =
-  getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('REACT_APP_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY');
+  getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+  getEnv('VITE_SUPABASE_ANON_KEY') || 
+  getEnv('REACT_APP_SUPABASE_ANON_KEY') || 
+  getEnv('SUPABASE_ANON_KEY');
 
-let supabase: SupabaseClient | null = null;
-
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Log error if environment variables are missing (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  if (!SUPABASE_URL) console.error('Supabase URL is missing. Please check your environment variables.');
+  if (!SUPABASE_ANON_KEY) console.error('Supabase Anon Key is missing. Please check your environment variables.');
 }
+
+// Create and export the Supabase client
+const supabase: SupabaseClient | null = SUPABASE_URL && SUPABASE_ANON_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    })
+  : null;
 
 export { supabase };
