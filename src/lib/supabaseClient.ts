@@ -21,18 +21,9 @@ const getEnv = (key: string): string | undefined => {
   return undefined;
 };
 
-// Try to get environment variables with different possible names
-const SUPABASE_URL =
-  getEnv('NEXT_PUBLIC_SUPABASE_URL') ||
-  getEnv('VITE_SUPABASE_URL') || 
-  getEnv('REACT_APP_SUPABASE_URL') || 
-  getEnv('SUPABASE_URL');
-
-const SUPABASE_ANON_KEY =
-  getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
-  getEnv('VITE_SUPABASE_ANON_KEY') || 
-  getEnv('REACT_APP_SUPABASE_ANON_KEY') || 
-  getEnv('SUPABASE_ANON_KEY');
+// Hardcoded Supabase configuration for testing
+const SUPABASE_URL = 'https://oxabqoodvqvqskrztrsq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94YWJxb29kdnF2cXNrcnp0cnNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NzI1MzQsImV4cCI6MjA3NjI0ODUzNH0._BdnLDSSe003i83nf_vfnHMlGJSQdjcfEcKvmlyfqSc';
 
 // Log error if environment variables are missing (only in development)
 if (process.env.NODE_ENV !== 'production') {
