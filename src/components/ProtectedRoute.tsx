@@ -29,9 +29,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (!requireAuth && authToken) {
         // Redirect to appropriate dashboard based on user type
         if (userType === 'admin') {
-            return <Navigate to="/admin/dashboard" replace />;
+            return <Navigate to="/admin/dashboard/overview" replace />;
         } else {
-            return <Navigate to="/dashboard" replace />;
+            return <Navigate to="/dashboard/overview" replace />;
         }
     }
 

@@ -38,12 +38,23 @@ const Login: React.FC = () => {
             if (loginType === 'admin') {
                 if (formData.email === devAdmin.email && formData.password === devAdmin.password) {
                     // Store auth info in localStorage
-                    localStorage.setItem('authToken', `dev-admin-token-${Date.now()}`);
-                    localStorage.setItem('userType', 'admin');
-                    localStorage.setItem('userEmail', formData.email);
-                    localStorage.setItem('userPackage', 'premium');
+                    const authData = {
+                        token: `dev-admin-token-${Date.now()}`,
+                        userType: 'admin',
+                        email: formData.email,
+                        package: 'premium'
+                    };
+                    
+                    localStorage.setItem('authToken', authData.token);
+                    localStorage.setItem('userType', authData.userType);
+                    localStorage.setItem('userEmail', authData.email);
+                    localStorage.setItem('userPackage', authData.package);
+                    
                     console.log('Development admin login successful, redirecting...');
-                    window.location.href = '/admin/dashboard/overview';
+                    console.log('Auth data:', authData);
+                    
+                    // Use window.location.replace to prevent back navigation to login
+                    window.location.replace('/admin/dashboard/overview');
                     return;
                 } else {
                     console.error('Invalid admin credentials');
@@ -57,19 +68,27 @@ const Login: React.FC = () => {
                 formData.businessReference === devUser.businessReference) {
                 
                 // Store user data in localStorage
-                localStorage.setItem('authToken', `dev-user-token-${Date.now()}`);
-                localStorage.setItem('userType', 'user');
-                localStorage.setItem('userEmail', formData.email);
-                localStorage.setItem('businessReference', formData.businessReference);
-                localStorage.setItem('userId', 'dev-user-123');
+                const authData = {
+                    token: `dev-user-token-${Date.now()}`,
+                    userType: 'user',
+                    email: formData.email,
+                    businessRef: formData.businessReference,
+                    userId: 'dev-user-123',
+                    package: localStorage.getItem('userPackage') || 'startup'
+                };
                 
-                // Set default package to startup for new users if not set
-                if (!localStorage.getItem('userPackage')) {
-                    localStorage.setItem('userPackage', 'startup');
-                }
+                localStorage.setItem('authToken', authData.token);
+                localStorage.setItem('userType', authData.userType);
+                localStorage.setItem('userEmail', authData.email);
+                localStorage.setItem('businessReference', authData.businessRef);
+                localStorage.setItem('userId', authData.userId);
+                localStorage.setItem('userPackage', authData.package);
                 
                 console.log('Development user login successful, redirecting...');
-                window.location.href = '/dashboard/overview';
+                console.log('Auth data:', authData);
+                
+                // Use window.location.replace to prevent back navigation to login
+                window.location.replace('/dashboard/overview');
                 return;
             }
 
