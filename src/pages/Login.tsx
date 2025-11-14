@@ -43,7 +43,7 @@ const Login: React.FC = () => {
                     localStorage.setItem('userEmail', formData.email);
                     localStorage.setItem('userPackage', 'premium');
                     console.log('Development admin login successful, redirecting...');
-                    window.location.href = '/admin/dashboard';
+                    window.location.href = '/admin/dashboard/overview';
                     return;
                 } else {
                     console.error('Invalid admin credentials');
@@ -69,7 +69,7 @@ const Login: React.FC = () => {
                 }
                 
                 console.log('Development user login successful, redirecting...');
-                window.location.href = '/dashboard';
+                window.location.href = '/dashboard/overview';
                 return;
             }
 
