@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 // Hardcoded Supabase configuration
 const SUPABASE_URL = 'https://oxabqoodvqvqskrztrsq.supabase.co';
