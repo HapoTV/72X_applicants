@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2 } from 'lucide-react';
 import Logo from '../assets/Logo.svg';
+import { supabase } from '../lib/supabaseClient';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -30,48 +31,68 @@ const Login: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const credentials = devCredentials[loginType];
-            let isValid = false;
+            if (!supabase) {
+                throw new Error('Authentication service is not available');
+            }
 
+            // For admin login, we'll use a special check
             if (loginType === 'admin') {
-                // Admin login - no business reference required
-                isValid = formData.email === credentials.email && formData.password === credentials.password;
-            } else {
-                // User login - business reference required
-                isValid = formData.email === credentials.email && 
-                         formData.businessReference === credentials.businessReference && 
-                         formData.password === credentials.password;
+                const adminCredentials = devCredentials.admin;
+                if (formData.email === adminCredentials.email && formData.password === adminCredentials.password) {
+                    // Store auth info in localStorage
+                    localStorage.setItem('authToken', `admin-token-${Date.now()}`);
+                    localStorage.setItem('userType', 'admin');
+                    localStorage.setItem('userEmail', formData.email);
+                    localStorage.setItem('userPackage', 'premium');
+                    window.location.href = '/admin/dashboard';
+                    return;
+                } else {
+                    throw new Error('Invalid admin credentials');
+                }
             }
 
-            if (isValid) {
-                // Store auth info in localStorage
-                localStorage.setItem('authToken', `${loginType}-token-${Date.now()}`);
-                localStorage.setItem('userType', loginType);
-                localStorage.setItem('userEmail', formData.email);
-                
-                if (loginType === 'user') {
-                    localStorage.setItem('businessReference', formData.businessReference);
-                    // Set default package to startup for new users
-                    if (!localStorage.getItem('userPackage')) {
-                        localStorage.setItem('userPackage', 'startup');
-                    }
-                    // Navigate to user dashboard
-                    window.location.href = '/dashboard';
-                } else {
-                    // Admins get premium package
-                    localStorage.setItem('userPackage', 'premium');
-                    // Force full page reload for admin to ensure clean state
-                    window.location.href = '/admin/dashboard';
-                }
-            } else {
-                const errorMsg = loginType === 'admin' 
-                    ? 'Invalid credentials. Please check your email and password.'
-                    : 'Invalid credentials. Please check your email, business reference, and password.';
-                alert(errorMsg);
+            // For regular users, use Supabase authentication
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: formData.email,
+                password: formData.password
+            });
+
+            if (error) throw error;
+            if (!data.user) throw new Error('No user data returned');
+
+            // Get user profile to check business reference
+            const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', data.user.id)
+                .single();
+
+            if (profileError) throw profileError;
+
+            // Verify business reference for non-admin users
+            if (profileData.business_reference !== formData.businessReference) {
+                throw new Error('Invalid business reference');
             }
+
+            // Store user data in localStorage
+            localStorage.setItem('authToken', data.session?.access_token || '');
+            localStorage.setItem('userType', 'user');
+            localStorage.setItem('userEmail', formData.email);
+            localStorage.setItem('businessReference', formData.businessReference);
+            localStorage.setItem('userId', data.user.id);
+            
+            // Set default package to startup for new users if not set
+            if (!localStorage.getItem('userPackage')) {
+                localStorage.setItem('userPackage', 'startup');
+            }
+            
+            // Navigate to dashboard
+            window.location.href = '/dashboard';
+
         } catch (error) {
             console.error('Login error:', error);
-            alert('An error occurred during login. Please try again.');
+            const errorMessage = error instanceof Error ? error.message : 'An error occurred during login. Please try again.';
+            alert(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -82,7 +103,7 @@ const Login: React.FC = () => {
         setFormData(prev => ({
             ...prev,
             email: credentials.email,
-            businessReference: credentials.businessReference || '',
+            businessReference: loginType === 'user' ? credentials.businessReference || '' : '',
             password: credentials.password
         }));
     };
