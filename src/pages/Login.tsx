@@ -31,8 +31,10 @@ const Login: React.FC = () => {
         setIsLoading(true);
 
         try {
+            // Check if Supabase is initialized
             if (!supabase) {
-                throw new Error('Authentication service is not available');
+                console.error('Supabase client is not initialized');
+                throw new Error('Authentication service is not available. Please try again later.');
             }
 
             // For admin login, we'll use a special check
@@ -44,21 +46,32 @@ const Login: React.FC = () => {
                     localStorage.setItem('userType', 'admin');
                     localStorage.setItem('userEmail', formData.email);
                     localStorage.setItem('userPackage', 'premium');
+                    console.log('Admin login successful, redirecting...');
                     window.location.href = '/admin/dashboard';
                     return;
                 } else {
+                    console.error('Invalid admin credentials');
                     throw new Error('Invalid admin credentials');
                 }
             }
 
             // For regular users, use Supabase authentication
+            console.log('Attempting to sign in with:', formData.email);
             const { data, error } = await supabase.auth.signInWithPassword({
                 email: formData.email,
                 password: formData.password
             });
 
-            if (error) throw error;
-            if (!data.user) throw new Error('No user data returned');
+            if (error) {
+                console.error('Supabase auth error:', error);
+                throw error;
+            }
+            
+            if (!data.user) {
+                throw new Error('No user data returned from Supabase');
+            }
+
+            console.log('User authenticated, fetching profile...');
 
             // Get user profile to check business reference
             const { data: profileData, error: profileError } = await supabase
@@ -67,10 +80,19 @@ const Login: React.FC = () => {
                 .eq('id', data.user.id)
                 .single();
 
-            if (profileError) throw profileError;
+            if (profileError) {
+                console.error('Error fetching profile:', profileError);
+                throw profileError;
+            }
+
+            console.log('Profile data:', profileData);
 
             // Verify business reference for non-admin users
             if (profileData.business_reference !== formData.businessReference) {
+                console.error('Business reference mismatch:', {
+                    expected: formData.businessReference,
+                    actual: profileData.business_reference
+                });
                 throw new Error('Invalid business reference');
             }
 
@@ -86,6 +108,7 @@ const Login: React.FC = () => {
                 localStorage.setItem('userPackage', 'startup');
             }
             
+            console.log('Login successful, redirecting...');
             // Navigate to dashboard
             window.location.href = '/dashboard';
 
