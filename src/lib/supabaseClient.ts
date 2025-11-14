@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Check if we're running in a browser environment
 const isBrowser = typeof window !== 'undefined';
@@ -44,7 +44,7 @@ const createSafeStorage = () => ({
 });
 
 // Create and export the Supabase client
-let supabase: any = null;
+let supabase: SupabaseClient | null = null;
 
 if (isBrowser) {
   try {
