@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2 } from 'lucide-react';
 import Logo from '../assets/Logo.svg';
-import { supabase } from '../lib/supabaseClient';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -31,22 +30,19 @@ const Login: React.FC = () => {
         setIsLoading(true);
 
         try {
-            // Check if Supabase is initialized
-            if (!supabase) {
-                console.error('Supabase client is not initialized');
-                throw new Error('Authentication service is not available. Please try again later.');
-            }
+            // Check if we're using development credentials
+            const devUser = devCredentials.user;
+            const devAdmin = devCredentials.admin;
 
-            // For admin login, we'll use a special check
+            // For admin login
             if (loginType === 'admin') {
-                const adminCredentials = devCredentials.admin;
-                if (formData.email === adminCredentials.email && formData.password === adminCredentials.password) {
+                if (formData.email === devAdmin.email && formData.password === devAdmin.password) {
                     // Store auth info in localStorage
-                    localStorage.setItem('authToken', `admin-token-${Date.now()}`);
+                    localStorage.setItem('authToken', `dev-admin-token-${Date.now()}`);
                     localStorage.setItem('userType', 'admin');
                     localStorage.setItem('userEmail', formData.email);
                     localStorage.setItem('userPackage', 'premium');
-                    console.log('Admin login successful, redirecting...');
+                    console.log('Development admin login successful, redirecting...');
                     window.location.href = '/admin/dashboard';
                     return;
                 } else {
@@ -55,62 +51,31 @@ const Login: React.FC = () => {
                 }
             }
 
-            // For regular users, use Supabase authentication
-            console.log('Attempting to sign in with:', formData.email);
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: formData.email,
-                password: formData.password
-            });
-
-            if (error) {
-                console.error('Supabase auth error:', error);
-                throw error;
-            }
-            
-            if (!data.user) {
-                throw new Error('No user data returned from Supabase');
-            }
-
-            console.log('User authenticated, fetching profile...');
-
-            // Get user profile to check business reference
-            const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', data.user.id)
-                .single();
-
-            if (profileError) {
-                console.error('Error fetching profile:', profileError);
-                throw profileError;
+            // For regular user login
+            if (formData.email === devUser.email && 
+                formData.password === devUser.password && 
+                formData.businessReference === devUser.businessReference) {
+                
+                // Store user data in localStorage
+                localStorage.setItem('authToken', `dev-user-token-${Date.now()}`);
+                localStorage.setItem('userType', 'user');
+                localStorage.setItem('userEmail', formData.email);
+                localStorage.setItem('businessReference', formData.businessReference);
+                localStorage.setItem('userId', 'dev-user-123');
+                
+                // Set default package to startup for new users if not set
+                if (!localStorage.getItem('userPackage')) {
+                    localStorage.setItem('userPackage', 'startup');
+                }
+                
+                console.log('Development user login successful, redirecting...');
+                window.location.href = '/dashboard';
+                return;
             }
 
-            console.log('Profile data:', profileData);
-
-            // Verify business reference for non-admin users
-            if (profileData.business_reference !== formData.businessReference) {
-                console.error('Business reference mismatch:', {
-                    expected: formData.businessReference,
-                    actual: profileData.business_reference
-                });
-                throw new Error('Invalid business reference');
-            }
-
-            // Store user data in localStorage
-            localStorage.setItem('authToken', data.session?.access_token || '');
-            localStorage.setItem('userType', 'user');
-            localStorage.setItem('userEmail', formData.email);
-            localStorage.setItem('businessReference', formData.businessReference);
-            localStorage.setItem('userId', data.user.id);
-            
-            // Set default package to startup for new users if not set
-            if (!localStorage.getItem('userPackage')) {
-                localStorage.setItem('userPackage', 'startup');
-            }
-            
-            console.log('Login successful, redirecting...');
-            // Navigate to dashboard
-            window.location.href = '/dashboard';
+            // If we get here, credentials didn't match dev credentials
+            console.error('Invalid credentials');
+            throw new Error('Invalid email, business reference, or password');
 
         } catch (error) {
             console.error('Login error:', error);
