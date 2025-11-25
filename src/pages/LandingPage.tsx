@@ -26,8 +26,10 @@ import {
   Phone
 } from 'lucide-react';
 import wp3819576 from "../assets/wp3819576.jpg";
+import 'boxicons';
 const logoUrl = "/Logo2.png";
 const footerLogo = "/Logo3.png";
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [productDropdownOpen, setProductDropdownOpen] = React.useState(false);
@@ -435,53 +437,38 @@ const LandingPage: React.FC = () => {
 
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="relative">
-          {/* Centered container to keep boxes away from edges and header */}
-          <div className="max-w-[1280px] mx-auto px-2 lg:px-4 py-1 md:py-2 lg:py-3">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 min-h-[580px]">
-              {/* Left Side - Content Card */}
-              <div className="bg-gray-700 flex items-center p-8 md:p-10 lg:p-12 rounded-3xl shadow-lg border border-black/5 min-h-[580px]">
-                <div className="max-w-3xl">
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-blue-400 leading-[2] mb-6">
-                    {typedHeadline}
-                    <span className="typing-caret align-middle"></span>
-                  </h1>
-                  <h2 className="text-4xl md:text-4xl lg:text-5xl font-bold text-white leading-[1.1] mb-6">
-                    72X, the smart partner for your business growth.
-                  </h2>
-                  <p className="text-base md:text-lg text-white leading-relaxed mb-8">
-                    Empowering South African entrepreneurs with AI-driven growth tools, local language support,
-                    interactive learning, and affordable business software tailored for <span className="font-bold">townships and rural areas.</span>
-                  </p>
+        <section
+          id="features"
+          className="relative bg-center bg-cover "
+          style={{ backgroundAttachment: 'fixed' }}
+        >
+          <div className="absolute inset-0 bg-white/50" />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 md:py-40 min-h-[680px] lg:min-h-[580px]">
+            <div className="flex justify-center items-center">
+              <div className="text-blue text-center max-w-3xl">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight mb-4">
+                  {typedHeadline}
+                  <span className="typing-caret align-middle" />
+                </h1>
+                <p className="text-2xl font-semibold mb-4">72X, the smart partner for your business growth.</p>
+                <p className="mx-auto text-lg text-black/90 mb-8">
+                  Empowering South African entrepreneurs with AI-driven growth tools, local language support,
+                  interactive learning, and affordable business software tailored for <strong>townships and rural areas</strong>.
+                </p>
 
-                  <div className="mt-4 text-sm flex flex-col items-start gap-2">
-                  <span className="text-[#60A5FA]">Don't have an account?</span>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-white">Sign up with your business info for free access</span>
-                    <button
-                      onClick={() => navigate('/signup')}
-                      className="text-black bg-[#60A5FA] hover:bg-[#3B82F6] px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md"
-                    >
-                      Get started
-                    </button>
-                  </div>
-                </div>
-                </div>
-              </div>
-
-              {/* Right Side - Video */}
-              <div className="hidden lg:flex items-center">
-                <div className="w-full h-full min-h-[580px] bg-black rounded-3xl shadow-lg overflow-hidden">
-                  <video 
-                    autoPlay 
-                    loop 
-                    muted 
-                    playsInline
-                    className="w-full h-full object-cover"
+                <div className="flex flex-wrap justify-center gap-4">
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className="inline-flex items-center gap-2 bg-[#60A5FA] hover:bg-[#3B82F6] text-white px-6 py-3 rounded-lg font-semibold shadow-md"
                   >
-                    <source src="/Vidoe.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
+                    Get started
+                  </button>
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="inline-flex items-center gap-2 bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold shadow-md"
+                  >
+                    Start Free Trial
+                  </button>
                 </div>
               </div>
             </div>
