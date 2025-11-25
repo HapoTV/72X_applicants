@@ -5,8 +5,14 @@ const AIBusinessAnalyst: React.FC = () => {
   const [query, setQuery] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const [showTermsModal, setShowTermsModal] = useState(true);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   const handleAnalyze = async () => {
+    if (!hasAcceptedTerms) {
+      setShowTermsModal(true);
+      return;
+    }
     if (!query.trim()) return;
 
     setIsAnalyzing(true);
@@ -52,6 +58,42 @@ const AIBusinessAnalyst: React.FC = () => {
         </div>
       </div>
 
+      {/* Terms & Conditions Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 space-y-4">
+            <h2 className="text-xl font-semibold text-gray-900">Terms and Conditions for Using the AI Tool</h2>
+            <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4 bg-gray-50 text-sm text-gray-700 space-y-3">
+              <p>
+                72X shall not be liable for indirect, incidental, special, punitive, or consequential damages, including loss of
+                profits, lost data, lost funds, personal injury, property damage related to, in connection with, or otherwise
+                resulting from any use of 72X, or reliance on AI generated advice.
+              </p>
+              <p>
+                You agree to indemnify and hold 72X and its affiliates and their officers, directors, employees, and agents
+                harmless from any and all claims, demands, losses, liabilities, and expenses (including attorneys’ fees), arising
+                out of or in connection with your use of 72X and its Services, specifically its AI tool.
+              </p>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-gray-500 mr-4">
+                By clicking I Agree you confirm that you have read and accept these terms and conditions.
+              </p>
+              <button
+                type="button"
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
+                onClick={() => {
+                  setHasAcceptedTerms(true);
+                  setShowTermsModal(false);
+                }}
+              >
+                I Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Prompts */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center space-x-2 mb-4">
@@ -87,7 +129,7 @@ const AIBusinessAnalyst: React.FC = () => {
           />
           <button
             onClick={handleAnalyze}
-            disabled={!query.trim() || isAnalyzing}
+            disabled={!query.trim() || isAnalyzing || !hasAcceptedTerms}
             className="w-full md:w-auto px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
           >
             {isAnalyzing ? (

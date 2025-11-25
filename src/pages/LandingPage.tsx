@@ -26,7 +26,6 @@ import {
   Phone
 } from 'lucide-react';
 import wp3819576 from "../assets/wp3819576.jpg";
-import istock from "../assets/istockphoto-1321547410-170667a.jpg";
 const logoUrl = "/Logo2.png";
 const footerLogo = "/Logo3.png";
 const LandingPage: React.FC = () => {
@@ -111,22 +110,22 @@ const LandingPage: React.FC = () => {
     {
       title: "AI Business Advisor",
       description: "Get personalized growth recommendations powered by artificial intelligence",
-      icon: <i className="bx bxs-bot" style={{color: 'white'}}></i>,
+      icon: <i className="bx bx-chip" style={{color: 'white'}}></i>,
     },
     {
       title: "Multi-language Support",
       description: "Available in all 11 official South African languages",
-      icon: <i className="bx bx-globe" style={{color: 'white'}}></i>,
+      icon: <i className="bx bx-world" style={{color: 'white'}}></i>,
     },
     {
       title: "Business Management Tools",
       description: "Inventory, POS, and service desk solutions in one platform",
-      icon: <i className="bx bxs-cog" style={{color: 'white', fontSize: '20px'}}></i>,
+      icon: <i className="bx bx-grid-alt" style={{color: 'white', fontSize: '20px'}}></i>,
     },
     {
       title: "Community & Mentorship",
       description: "Connect with successful entrepreneurs and business experts",
-      icon: <i className="bx bxs-group" style={{color: 'white', fontSize: '20px'}}></i>,
+      icon: <i className="bx bx-support" style={{color: 'white', fontSize: '20px'}}></i>,
     },
   ];
 
@@ -507,22 +506,11 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Features */}
-        <section id="features" className="py-20 relative">
-          {/* Background with overlay */}
-          <div 
-            className="absolute inset-0 z-0" 
-            style={{
-              background: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url(${istock})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundAttachment: 'fixed',
-              filter: 'brightness(0.9)'
-            }}
-          ></div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <section id="features" className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Everything You Need to Grow</h2>
-              <p className="text-xl text-gray-200 max-w-2xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Everything You Need to Grow</h2>
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
                 Comprehensive tools designed for the unique challenges of South African businesses
               </p>
             </div>
@@ -543,8 +531,8 @@ const LandingPage: React.FC = () => {
                   >
                     <span className={`text-2xl ${activeFeatureIdx === index ? 'text-[#111827]' : 'text-white'}`}>{feature.icon}</span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white font-bold mb-2">{feature.title}</h3>
-                  <p className="text-white font-semibold text-sm leading-relaxed">{feature.description}</p>
+                  <h3 className="text-lg font-semibold text-gray-800 font-bold mb-2">{feature.title}</h3>
+                  <p className="text-gray-600 font-semibold text-sm leading-relaxed">{feature.description}</p>
                 </button>
               ))}
             </div>
@@ -754,9 +742,9 @@ const LandingPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               {[
-                { icon: <i className="bx bxs-trending-up" style={{color: 'white'}}></i> , title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
+                { icon: <i className="bx bxs-user-plus" style={{color: 'white'}}></i> , title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
                 { icon: <i className="bx bxs-graduation" style={{color: 'white'}}></i>, title: "Learn & Grow", desc: "Access exclusive workshops, webinars, and mentorship programs" },
-                { icon: <i className="bx bx-group" style={{color: 'white'}}></i>, title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
+                { icon: <i className="bx bxs-group" style={{color: 'white'}}></i>, title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
               ].map((item, i) => (
                 <div key={i} className="text-center">
                   <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#60A5FA' }}>
