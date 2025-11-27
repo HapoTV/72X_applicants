@@ -16,6 +16,7 @@ import {
   Bell, 
   Calendar, 
   CheckSquare, 
+  Clock,
   ArrowRight,
   ArrowDown,
   Briefcase,
@@ -25,8 +26,8 @@ import {
   Home,
   Phone
 } from 'lucide-react';
-import wp3819576 from "../assets/wp3819576.jpg";
 import reactSvg from "../assets/react.png";
+
 import retailImg from "../assets/retail.svg";
 import tourismImg from "../assets/tourism.svg";
 import professionalImg from "../assets/professional.svg";
@@ -47,6 +48,33 @@ const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [productDropdownOpen, setProductDropdownOpen] = React.useState(false);
   const productDropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const [showAllApps, setShowAllApps] = React.useState(false);
+
+  // re-run reveal observer when apps toggle changes
+  React.useEffect(() => {
+    const elements = Array.from(document.querySelectorAll('.reveal-up'));
+    elements.forEach((el) => {
+      const already = el.classList.contains('reveal-visible');
+      if (!already) {
+        const rect = (el as HTMLElement).getBoundingClientRect();
+        if (rect.top < window.innerHeight * 0.95) {
+          el.classList.add('reveal-visible');
+        }
+      }
+    });
+  }, [showAllApps]);
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (productDropdownRef.current && !productDropdownRef.current.contains(event.target as Node)) {
+        setProductDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Product categories for dropdown
   const productCategories = [
@@ -63,7 +91,7 @@ const LandingPage: React.FC = () => {
       title: 'COMMUNICATION',
       items: [
         { name: '24/7 Support', icon: Headphones, path: '/support' },
-        { name: 'AI Chatbot', icon: 'bx bxs-bot', path: '/chatbot' },
+        { name: 'AI Chatbot', icon: Brain, path: '/chatbot' },
         { name: 'Community Chat', icon: MessagesSquare, path: '/community' },
         { name: 'Email/SMS Alerts', icon: Bell, path: '/notifications' },
       ]
@@ -81,7 +109,7 @@ const LandingPage: React.FC = () => {
       title: 'TIME',
       items: [
         { name: 'Event Scheduler', icon: Calendar, path: '/schedule' },
-        { name: 'Booking System', icon: 'bx bx-time', path: '/bookings' },
+        { name: 'Booking System', icon: Clock, path: '/bookings' },
         { name: 'Task Deadlines', icon: CheckSquare, path: '/tasks' },
         { name: 'Meeting Planner', icon: Video, path: '/meetings' },
       ]
@@ -431,12 +459,8 @@ const LandingPage: React.FC = () => {
                                 <li key={item.path}>
                                   <button
                                     onClick={() => {
-                                      if ('isAnchor' in item && item.isAnchor) {
-                                        // Scroll to section on same page
-                                        const element = document.querySelector(item.path);
-                                        if (element) {
-                                          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        }
+                                      if (item.isAnchor) {
+                                        document.getElementById(item.path.replace('#', ''))?.scrollIntoView({ behavior: 'smooth' });
                                       } else {
                                         navigate(item.path);
                                       }
@@ -1018,20 +1042,6 @@ const LandingPage: React.FC = () => {
                 { icon: <i className="bx bxs-bell" style={{color: 'white'}}></i>, title: "Service Desk", desc: "Manage customer service and support tickets efficiently" },
                 { icon: <i className="bx bxs-user" style={{color: 'white'}}></i>, title: "CRM", desc: "Build better customer relationships and increase sales" },
               ];
-              const [showAllApps, setShowAllApps] = React.useState(false);
-              // re-run reveal observer when toggled
-              React.useEffect(() => {
-                const elements = Array.from(document.querySelectorAll('.reveal-up'));
-                elements.forEach((el) => {
-                  const already = el.classList.contains('reveal-visible');
-                  if (!already) {
-                    const rect = (el as HTMLElement).getBoundingClientRect();
-                    if (rect.top < window.innerHeight * 0.95) {
-                      el.classList.add('reveal-visible');
-                    }
-                  }
-                });
-              }, [showAllApps]);
 
               return (
                 <>
