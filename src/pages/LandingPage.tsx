@@ -26,6 +26,7 @@ import {
   Phone
 } from 'lucide-react';
 import wp3819576 from "../assets/wp3819576.jpg";
+import reactSvg from "../assets/react.png";
 import 'boxicons';
 const logoUrl = "/Logo2.png";
 const footerLogo = "/Logo3.png";
@@ -477,17 +478,15 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Trust Bar */}
-        <section className="bg-gray-50 py-8 border-y border-gray-200">
+        <section className="bg-gray-50 py-8 border-y border-gray-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
                 Trusted by South African Entrepreneurs
               </p>
-              <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
-                <div className="text-gray-800 font-semibold">Small Business Owners</div>
-                <div className="text-gray-800 font-semibold">Township Entrepreneurs</div>
-                <div className="text-gray-800 font-semibold">Local Retailers</div>
-                <div className="text-gray-800 font-semibold">Service Providers</div>
+              <div className="flex flex-wrap justify-center items-center gap-8 ">
+
+                <img src={reactSvg} alt="Trust Badge" className=" object-contain height-1200"style={{height: "400px", width: "700px",}} />
               </div>
             </div>
           </div>
