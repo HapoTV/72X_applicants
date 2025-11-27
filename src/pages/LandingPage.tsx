@@ -27,6 +27,18 @@ import {
 } from 'lucide-react';
 import wp3819576 from "../assets/wp3819576.jpg";
 import reactSvg from "../assets/react.png";
+import retailImg from "../assets/retail.svg";
+import tourismImg from "../assets/tourism.svg";
+import professionalImg from "../assets/professional.svg";
+import transportImg from "../assets/Transport.svg";
+import manufacturingImg from "../assets/manufacturing.svg";
+import agricultureImg from "../assets/Agriculture.svg";
+import educationImg from "../assets/education.svg";
+import estateImg from "../assets/estate.svg";
+import eventsImg from "../assets/events.svg";
+import financeImg from "../assets/finance.svg";
+import ngoImg from "../assets/NGO.svg";
+import healthcareImg from "../assets/healthcare.svg";
 import 'boxicons';
 const logoUrl = "/Logo2.png";
 const footerLogo = "/Logo3.png";
@@ -258,6 +270,34 @@ const LandingPage: React.FC = () => {
     }
     ];
 
+  // Additional industries for secondary strip
+  const additionalIndustries = [
+    {
+      title: "Education & Training",
+      desc: "Manage student data, online classes, assessments, and fee collections in one place."
+    },
+    {
+      title: "Healthcare & Clinics",
+      desc: "Streamline appointments, patient records, billing, and stock of medical supplies."
+    },
+    {
+      title: "Real Estate & Property Management",
+      desc: "Track properties, tenants, maintenance requests, and rental payments efficiently."
+    },
+    {
+      title: "Financial Services & Microfinance",
+      desc: "Handle client onboarding, loan portfolios, repayments, and regulatory reporting."
+    },
+    {
+      title: "Nonprofits & NGOs",
+      desc: "Coordinate projects, donors, funding, and impact reporting in a single system."
+    },
+    {
+      title: "Entertainment & Events",
+      desc: "Organize bookings, ticketing, vendors, and event analytics across venues."
+    }
+  ];
+
   // Observe elements with 'reveal-up' to add 'reveal-visible' on enter
   React.useEffect(() => {
     const observer = new IntersectionObserver(
@@ -308,6 +348,14 @@ const LandingPage: React.FC = () => {
       isCancelled = true;
     };
   }, []);
+
+  const [isRetailFlipped, setIsRetailFlipped] = React.useState(false);
+  const [isHospitalityFlipped, setIsHospitalityFlipped] = React.useState(false);
+  const [isProfessionalFlipped, setIsProfessionalFlipped] = React.useState(false);
+  const [isManufacturingFlipped, setIsManufacturingFlipped] = React.useState(false);
+  const [isAgricultureFlipped, setIsAgricultureFlipped] = React.useState(false);
+  const [isTransportFlipped, setIsTransportFlipped] = React.useState(false);
+  const [additionalFlipped, setAdditionalFlipped] = React.useState<boolean[]>(Array(6).fill(false));
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
@@ -567,14 +615,14 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Industries Section - Enhanced */}
-        <section id="industries" className="py-20 bg-gradient-to-br from-gray-900 to-gray-800">
+        <section id="industries" className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col md:flex-row justify-between items-center mb-16">
               <div className="text-center md:text-left mb-8 md:mb-0">
-                <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
                   Transform Your Industry with 72X
                 </h2>
-                <p className="text-xl text-gray-300 max-w-3xl">
+                <p className="text-xl text-gray-700 max-w-3xl">
                   Tailored solutions designed to address the unique challenges of South African businesses across all sectors
                 </p>
               </div>
@@ -586,55 +634,358 @@ const LandingPage: React.FC = () => {
                 <ArrowDown className="ml-2 h-5 w-5" />
               </a>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {industryDetails.map((industry) => (
-                <div 
-                  key={industry.title}
-                  className="bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col"
-                >
+          <div className={`overflow-hidden relative h-72 ${
+              isRetailFlipped ||
+              isHospitalityFlipped ||
+              isProfessionalFlipped ||
+              isManufacturingFlipped ||
+              isAgricultureFlipped ||
+              isTransportFlipped
+                ? 'industries-paused'
+                : ''
+            }`}>
+              <div className="flex space-x-6 industry-row-track-1">
+                {industryDetails.map((industry, index) => (
                   <div 
-                    className="h-1.5 w-full"
-                    style={{ backgroundColor: industry.color }}
-                  ></div>
-                  <div className="p-4 flex-1 flex flex-col">
-                    <div className="flex items-start space-x-3">
-                      <div 
-                        className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5" 
-                        style={{ backgroundColor: industry.color }}
-                      >
-                        <industry.icon className="w-5 h-5 text-white" />
+                    key={`${industry.title}-track1-${index}`}
+                    className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col min-w-[260px] max-w-xs ${[0,1,2,3,4,5].includes(index) ? 'industry-card' : ''} ${
+                      (index === 0 && isRetailFlipped) ||
+                      (index === 1 && isHospitalityFlipped) ||
+                      (index === 2 && isProfessionalFlipped) ||
+                      (index === 3 && isManufacturingFlipped) ||
+                      (index === 4 && isAgricultureFlipped) ||
+                      (index === 5 && isTransportFlipped)
+                        ? 'industry-card--flipped'
+                        : ''
+                    }`}
+                    onMouseEnter={
+                      index === 0
+                        ? () => setIsRetailFlipped(true)
+                        : index === 1
+                        ? () => setIsHospitalityFlipped(true)
+                        : index === 2
+                        ? () => setIsProfessionalFlipped(true)
+                        : index === 3
+                        ? () => setIsManufacturingFlipped(true)
+                        : index === 4
+                        ? () => setIsAgricultureFlipped(true)
+                        : index === 5
+                        ? () => setIsTransportFlipped(true)
+                        : undefined
+                    }
+                    onMouseLeave={
+                      index === 0
+                        ? () => setIsRetailFlipped(false)
+                        : index === 1
+                        ? () => setIsHospitalityFlipped(false)
+                        : index === 2
+                        ? () => setIsProfessionalFlipped(false)
+                        : index === 3
+                        ? () => setIsManufacturingFlipped(false)
+                        : index === 4
+                        ? () => setIsAgricultureFlipped(false)
+                        : index === 5
+                        ? () => setIsTransportFlipped(false)
+                        : undefined
+                    }
+                  >
+                    {[0,1,2,3,4,5].includes(index) ? (
+                      <div className="p-4 flex-1 flex flex-col industry-card-inner">
+                        <div className="industry-card-face industry-card-face--front">
+                          <div className="w-full h-full flex items-center justify-center">
+                            <img
+                              src={
+                                index === 0
+                                  ? retailImg
+                                  : index === 1
+                                  ? tourismImg
+                                  : index === 2
+                                  ? professionalImg
+                                  : index === 3
+                                  ? manufacturingImg
+                                  : index === 4
+                                  ? agricultureImg
+                                  : transportImg
+                              }
+                              alt={industry.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </div>
+                        <div className="industry-card-face industry-card-face--back">
+                          <div className="flex flex-col h-full items-center justify-center bg-gray-900 rounded-xl p-4 text-center">
+                            <h3 className="text-lg font-bold text-white mb-3">{industry.title}</h3>
+                            <p className="text-sm text-gray-200 leading-relaxed">{industry.desc}</p>
+                          </div>
+                        </div>
                       </div>
-                      <h3 className="text-lg font-bold text-white">{industry.title}</h3>
-                    </div>
-                    
-                    <p className="text-sm text-gray-300 mt-3 mb-4 line-clamp-3">{industry.desc}</p>
-                    
-                    <div className="mt-auto pt-2">
-                      <h4 className="text-xs font-semibold text-[#60A5FA] mb-2 uppercase tracking-wider">Key Features</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {industry.points.slice(0, 2).map((point, i) => (
-                          <span 
-                            key={i} 
-                            className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/50 text-gray-200 border border-gray-600/50 leading-tight"
+                    ) : (
+                      <div className="p-4 flex-1 flex flex-col">
+                        <div className="flex items-start space-x-3">
+                          <div 
+                            className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5" 
+                            style={{ backgroundColor: industry.color }}
                           >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#60A5FA] mr-1.5 flex-shrink-0"></span>
-                            <span className="line-clamp-1">{point.split(':')[0]}</span>
-                          </span>
-                        ))}
-                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/30 text-gray-400 border border-gray-600/30">
-                          + More
-                        </span>
+                            <industry.icon className="w-5 h-5 text-white" />
+                          </div>
+                          <h3 className="text-lg font-bold text-white">{industry.title}</h3>
+                        </div>
+                        
+                        <p className="text-sm text-gray-300 mt-3 mb-4 line-clamp-3">{industry.desc}</p>
+                        
+                        <div className="mt-auto pt-2">
+                          <h4 className="text-xs font-semibold text-[#60A5FA] mb-2 uppercase tracking-wider">Key Features</h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {industry.points.slice(0, 2).map((point, i) => (
+                              <span 
+                                key={i} 
+                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/50 text-gray-200 border border-gray-600/50 leading-tight"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#60A5FA] mr-1.5 flex-shrink-0"></span>
+                                <span className="line-clamp-1">{point.split(':')[0]}</span>
+                              </span>
+                            ))}
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/30 text-gray-400 border border-gray-600/30">
+                              + More
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              <div className="flex space-x-6 ml-6 industry-row-track-2" aria-hidden="true">
+                {industryDetails.map((industry, index) => (
+                  <div 
+                    key={`${industry.title}-track2-${index}`}
+                    className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col min-w-[260px] max-w-xs ${[0,1,2,3,4,5].includes(index) ? 'industry-card' : ''} ${
+                      (index === 0 && isRetailFlipped) ||
+                      (index === 1 && isHospitalityFlipped) ||
+                      (index === 2 && isProfessionalFlipped) ||
+                      (index === 3 && isManufacturingFlipped) ||
+                      (index === 4 && isAgricultureFlipped) ||
+                      (index === 5 && isTransportFlipped)
+                        ? 'industry-card--flipped'
+                        : ''
+                    }`}
+                    onMouseEnter={
+                      index === 0
+                        ? () => setIsRetailFlipped(true)
+                        : index === 1
+                        ? () => setIsHospitalityFlipped(true)
+                        : index === 2
+                        ? () => setIsProfessionalFlipped(true)
+                        : index === 3
+                        ? () => setIsManufacturingFlipped(true)
+                        : index === 4
+                        ? () => setIsAgricultureFlipped(true)
+                        : index === 5
+                        ? () => setIsTransportFlipped(true)
+                        : undefined
+                    }
+                    onMouseLeave={
+                      index === 0
+                        ? () => setIsRetailFlipped(false)
+                        : index === 1
+                        ? () => setIsHospitalityFlipped(false)
+                        : index === 2
+                        ? () => setIsProfessionalFlipped(false)
+                        : index === 3
+                        ? () => setIsManufacturingFlipped(false)
+                        : index === 4
+                        ? () => setIsAgricultureFlipped(false)
+                        : index === 5
+                        ? () => setIsTransportFlipped(false)
+                        : undefined
+                    }
+                  >
+                    {[0,1,2,3,4,5].includes(index) ? (
+                      <div className="p-4 flex-1 flex flex-col industry-card-inner">
+                        <div className="industry-card-face industry-card-face--front">
+                          <div className="w-full h-full flex items-center justify-center">
+                            <img
+                              src={
+                                index === 0
+                                  ? retailImg
+                                  : index === 1
+                                  ? tourismImg
+                                  : index === 2
+                                  ? professionalImg
+                                  : index === 3
+                                  ? manufacturingImg
+                                  : index === 4
+                                  ? agricultureImg
+                                  : transportImg
+                              }
+                              alt={industry.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </div>
+                        <div className="industry-card-face industry-card-face--back">
+                          <div className="flex flex-col h-full items-center justify-center bg-gray-900 rounded-xl p-4 text-center">
+                            <h3 className="text-lg font-bold text-white mb-3">{industry.title}</h3>
+                            <p className="text-sm text-gray-200 leading-relaxed">{industry.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 flex-1 flex flex-col">
+                        <div className="flex items-start space-x-3">
+                          <div 
+                            className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5" 
+                            style={{ backgroundColor: industry.color }}
+                          >
+                            <industry.icon className="w-5 h-5 text-white" />
+                          </div>
+                          <h3 className="text-lg font-bold text-white">{industry.title}</h3>
+                        </div>
+                        
+                        <p className="text-sm text-gray-300 mt-3 mb-4 line-clamp-3">{industry.desc}</p>
+                        
+                        <div className="mt-auto pt-2">
+                          <h4 className="text-xs font-semibold text-[#60A5FA] mb-2 uppercase tracking-wider">Key Features</h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {industry.points.slice(0, 2).map((point, i) => (
+                              <span 
+                                key={i} 
+                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/50 text-gray-200 border border-gray-600/50 leading-tight"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#60A5FA] mr-1.5 flex-shrink-0"></span>
+                                <span className="line-clamp-1">{point.split(':')[0]}</span>
+                              </span>
+                            ))}
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/30 text-gray-400 border border-gray-600/30">
+                              + More
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-16 text-center">
+            {/* Additional industries strip */}
+            <div className="mt-10">
+              <div className={`overflow-hidden relative h-64 ${
+                additionalFlipped.some((v) => v) ? 'industries-paused' : ''
+              }`}>
+                <div className="flex space-x-6 industry-row-track-1">
+                  {additionalIndustries.map((industry, index) => (
+                    <div
+                      key={`${industry.title}-extra-track1-${index}`}
+                      className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col min-w-[260px] max-w-xs industry-card ${additionalFlipped[index] ? 'industry-card--flipped' : ''}`}
+                      onMouseEnter={() =>
+                        setAdditionalFlipped((prev) => {
+                          const next = [...prev];
+                          next[index] = true;
+                          return next;
+                        })
+                      }
+                      onMouseLeave={() =>
+                        setAdditionalFlipped((prev) => {
+                          const next = [...prev];
+                          next[index] = false;
+                          return next;
+                        })
+                      }
+                    >
+                      <div className="p-4 flex-1 flex flex-col industry-card-inner">
+                        <div className="industry-card-face industry-card-face--front">
+                          <div className="w-full h-full flex items-center justify-center">
+                            <img
+                              src={
+                                index === 0
+                                  ? educationImg
+                                  : index === 1
+                                  ? healthcareImg
+                                  : index === 2
+                                  ? estateImg
+                                  : index === 3
+                                  ? financeImg
+                                  : index === 4
+                                  ? ngoImg
+                                  : eventsImg
+                              }
+                              alt={industry.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </div>
+                        <div className="industry-card-face industry-card-face--back">
+                          <div className="flex flex-col h-full items-center justify-center bg-gray-900 rounded-xl p-4 text-center">
+                            <h3 className="text-lg font-bold text-white mb-3">{industry.title}</h3>
+                            <p className="text-sm text-gray-200 leading-relaxed">{industry.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex space-x-6 ml-6 industry-row-track-2" aria-hidden="true">
+                  {additionalIndustries.map((industry, index) => (
+                    <div
+                      key={`${industry.title}-extra-track2-${index}`}
+                      className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col min-w-[260px] max-w-xs industry-card ${additionalFlipped[index] ? 'industry-card--flipped' : ''}`}
+                      onMouseEnter={() =>
+                        setAdditionalFlipped((prev) => {
+                          const next = [...prev];
+                          next[index] = true;
+                          return next;
+                        })
+                      }
+                      onMouseLeave={() =>
+                        setAdditionalFlipped((prev) => {
+                          const next = [...prev];
+                          next[index] = false;
+                          return next;
+                        })
+                      }
+                    >
+                      <div className="p-4 flex-1 flex flex-col industry-card-inner">
+                        <div className="industry-card-face industry-card-face--front">
+                          <div className="w-full h-full flex items-center justify-center">
+                            <img
+                              src={
+                                index === 0
+                                  ? educationImg
+                                  : index === 1
+                                  ? healthcareImg
+                                  : index === 2
+                                  ? estateImg
+                                  : index === 3
+                                  ? financeImg
+                                  : index === 4
+                                  ? ngoImg
+                                  : eventsImg
+                              }
+                              alt={industry.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        </div>
+                        <div className="industry-card-face industry-card-face--back">
+                          <div className="flex flex-col h-full items-center justify-center bg-gray-900 rounded-xl p-4 text-center">
+                            <h3 className="text-lg font-bold text-white mb-3">{industry.title}</h3>
+                            <p className="text-sm text-gray-200 leading-relaxed">{industry.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 text-center">
               <h3 className="text-2xl font-bold text-white mb-4">Don't see your industry?</h3>
-              <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
+              <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
                 Our platform is highly customizable to meet the unique needs of any business. Contact us to discuss a tailored solution for your industry.
               </p>
               <button 
@@ -647,7 +998,6 @@ const LandingPage: React.FC = () => {
                 Get a Custom Solution
               </button>
             </div>
-          </div>
         </section>
 
 
@@ -796,20 +1146,10 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* CTA */}
-        <section className="py-20 relative">
-          <div 
-            className="absolute inset-0 z-0" 
-            style={{
-              background: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url(${wp3819576})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundAttachment: 'fixed',
-              filter: 'brightness(0.9)'
-            }}
-          ></div>
-          <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative z-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to Grow Your Business?</h2>
-            <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+        <section className="py-20 bg-white">
+          <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Ready to Grow Your Business?</h2>
+            <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
               Join thousands of South African entrepreneurs using 72X to scale their businesses
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -821,9 +1161,9 @@ const LandingPage: React.FC = () => {
               </button>
               <button
                 onClick={() => navigate('/request-demo')}
-                className="bg-transparent border-2 border-white text-white hover:bg-white/10 px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
+                className="bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
               >
-                Schedule a Demo
+                Schedule demo
               </button>
             </div>
           </div>
