@@ -7,10 +7,11 @@ import EventsTab from './tabs/EventsTab';
 import LearningTab from './tabs/LearningTab';
 import MentorshipTab from './tabs/MentorshipTab';
 import FundingTab from './tabs/FundingTab';
+import AdminProfile from './tabs/AdminProfile';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'applicants' | 'events' | 'learning' | 'mentorship' | 'funding'>('applicants');
+    const [activeTab, setActiveTab] = useState<'applicants' | 'events' | 'learning' | 'mentorship' | 'profile' | 'funding'>('applicants');
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
@@ -31,6 +32,8 @@ export default function AdminDashboard() {
                 return <MentorshipTab />;
             case 'funding':
                 return <FundingTab />;
+            case 'profile':
+                return <AdminProfile />;
             default:
                 return <ApplicantsTab />;
         }

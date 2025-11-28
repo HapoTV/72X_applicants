@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
-import { Search, Banknote, Calendar, MapPin, ExternalLink, Bookmark, Star } from 'lucide-react';
-
-type FundingType = 'grants' | 'loans' | 'competitions' | 'accelerators' | 'investors' | string;
+// src/components/FundingFinder.tsx
+import React, { useState, useEffect } from 'react';
+import { Search, Banknote, Calendar, MapPin, ExternalLink, Bookmark, Star, Filter } from 'lucide-react';
+import { fundingService } from '../services/FundingService';
+import type { UserFundingItem } from '../interfaces/FundingData';
 
 const FundingFinder: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedIndustry, setSelectedIndustry] = useState('all');
   const [selectedAmount, setSelectedAmount] = useState('all');
+  const [fundingOpportunities, setFundingOpportunities] = useState<UserFundingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fundingTypes = [
     { id: 'all', name: 'All Types' },
@@ -36,126 +40,96 @@ const FundingFinder: React.FC = () => {
     { id: '500k+', name: 'R500K+' }
   ];
 
-  const opportunities = [
-    {
-      id: 1,
-      title: 'Small Business Innovation Research (SBIR)',
-      type: 'grants',
-      provider: 'U.S. Small Business Administration',
-      amount: 'R50,000 - R1,500,000',
-      deadline: 'March 30, 2024',
-      industry: 'technology',
-      location: 'United States',
-      description: 'Federal funding for small businesses engaged in research and development with commercialization potential.',
-      requirements: ['Must be for-profit', 'Less than 500 employees', 'U.S. owned and operated'],
-      rating: 4.8,
-      applicants: 2340,
-      successRate: '15%',
-      isFeatured: true
-    },
-    {
-      id: 2,
-      title: 'Techstars Accelerator Program',
-      type: 'accelerators',
-      provider: 'Techstars',
-      amount: 'R120,000',
-      deadline: 'April 15, 2024',
-      industry: 'technology',
-      location: 'Multiple Cities',
-      description: '13-week mentorship-driven accelerator program for early-stage technology companies.',
-      requirements: ['Early-stage startup', 'Scalable business model', 'Strong founding team'],
-      rating: 4.9,
-      applicants: 5600,
-      successRate: '1.5%',
-      isFeatured: true
-    },
-    {
-      id: 3,
-      title: 'Women-Owned Small Business Loan',
-      type: 'loans',
-      provider: 'National Women\'s Business Center',
-      amount: 'R5,000 - R250,000',
-      deadline: 'Rolling Applications',
-      industry: 'all',
-      location: 'United States',
-      description: 'Low-interest loans specifically designed for women entrepreneurs and business owners.',
-      requirements: ['51% women-owned', 'Operating for 2+ years', 'Good credit score'],
-      rating: 4.6,
-      applicants: 890,
-      successRate: '35%',
-      isFeatured: false
-    },
-    {
-      id: 4,
-      title: 'Healthcare Innovation Challenge',
-      type: 'competitions',
-      provider: 'Health Innovation Hub',
-      amount: 'R100,000',
-      deadline: 'May 1, 2024',
-      industry: 'healthcare',
-      location: 'Global',
-      description: 'Competition for innovative healthcare solutions that improve patient outcomes.',
-      requirements: ['Healthcare focus', 'Prototype or MVP', 'Clear market need'],
-      rating: 4.7,
-      applicants: 1200,
-      successRate: '8%',
-      isFeatured: false
-    },
-    {
-      id: 5,
-      title: 'Retail Innovation Fund',
-      type: 'investors',
-      provider: 'Retail Ventures Capital',
-      amount: 'R250,000 - R2,000,000',
-      deadline: 'Ongoing',
-      industry: 'retail',
-      location: 'North America',
-      description: 'Seed and Series A funding for innovative retail and e-commerce startups.',
-      requirements: ['Retail/e-commerce focus', 'Proven traction', 'Experienced team'],
-      rating: 4.5,
-      applicants: 450,
-      successRate: '12%',
-      isFeatured: true
-    },
-    {
-      id: 6,
-      title: 'Manufacturing Modernization Grant',
-      type: 'grants',
-      provider: 'Department of Commerce',
-      amount: 'R25,000 - R500,000',
-      deadline: 'June 15, 2024',
-      industry: 'manufacturing',
-      location: 'United States',
-      description: 'Grants to help manufacturers adopt new technologies and improve competitiveness.',
-      requirements: ['Manufacturing business', 'Technology upgrade plan', 'Job creation commitment'],
-      rating: 4.4,
-      applicants: 670,
-      successRate: '25%',
-      isFeatured: false
-    }
-  ];
+  useEffect(() => {
+    fetchFundingOpportunities();
+  }, []);
 
-  const getTypeColor = (type: FundingType) => {
-    const colors: Record<FundingType, string> = {
-      grants: 'bg-blue-100 text-blue-800',
-      loans: 'bg-green-100 text-green-800',
-      competitions: 'bg-purple-100 text-purple-800',
-      accelerators: 'bg-yellow-100 text-yellow-800',
-      investors: 'bg-red-100 text-red-800',
-      all: 'bg-gray-100 text-gray-800'
-    };
-    return colors[type] || 'bg-gray-100 text-gray-800';
+  const fetchFundingOpportunities = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const opportunities = await fundingService.getActiveFunding();
+      setFundingOpportunities(opportunities);
+    } catch (err) {
+      setError('Failed to load funding opportunities');
+      console.error('Error fetching funding opportunities:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredOpportunities = opportunities.filter(opportunity => {
+  const getTypeColor = (provider: string) => {
+    const providerLower = provider.toLowerCase();
+    if (providerLower.includes('grant')) return 'bg-blue-100 text-blue-800';
+    if (providerLower.includes('loan')) return 'bg-green-100 text-green-800';
+    if (providerLower.includes('competition') || providerLower.includes('challenge')) return 'bg-purple-100 text-purple-800';
+    if (providerLower.includes('accelerator') || providerLower.includes('incubator')) return 'bg-yellow-100 text-yellow-800';
+    if (providerLower.includes('investor') || providerLower.includes('capital')) return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
+  };
+
+  const getDaysLeftColor = (daysLeft?: number) => {
+    if (!daysLeft) return 'text-gray-500';
+    if (daysLeft < 0) return 'text-red-600';
+    if (daysLeft <= 7) return 'text-orange-600';
+    if (daysLeft <= 30) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
+  const filteredOpportunities = fundingOpportunities.filter(opportunity => {
     const matchesSearch = opportunity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         opportunity.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'all' || opportunity.type === selectedType;
-    const matchesIndustry = selectedIndustry === 'all' || opportunity.industry === selectedIndustry || opportunity.industry === 'all';
-    return matchesSearch && matchesType && matchesIndustry;
+                         opportunity.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         opportunity.provider.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
   });
 
-  const featuredOpportunities = opportunities.filter(opp => opp.isFeatured);
+  const featuredOpportunities = filteredOpportunities.filter(opp => 
+    opp.daysLeft && opp.daysLeft > 0 && opp.daysLeft <= 30
+  ).slice(0, 3);
+
+  const refreshFunding = () => {
+    fetchFundingOpportunities();
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+        
+        {/* Search and Filters Skeleton */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 bg-gray-200 rounded"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-10 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Featured Opportunities Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-6 bg-gray-200 rounded w-2/3"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -163,6 +137,20 @@ const FundingFinder: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Funding & Grant Finder</h1>
         <p className="text-gray-600">Discover funding opportunities tailored to your business needs and stage</p>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-red-700 text-sm">{error}</p>
+            <button 
+              onClick={refreshFunding}
+              className="text-red-700 hover:text-red-800 text-sm font-medium"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -179,15 +167,18 @@ const FundingFinder: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              {fundingTypes.map(type => (
-                <option key={type.id} value={type.id}>{type.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                {fundingTypes.map(type => (
+                  <option key={type.id} value={type.id}>{type.name}</option>
+                ))}
+              </select>
+            </div>
             
             <select
               value={selectedIndustry}
@@ -213,72 +204,80 @@ const FundingFinder: React.FC = () => {
       </div>
 
       {/* Featured Opportunities */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Featured Opportunities</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredOpportunities.map(opportunity => (
-            <div key={opportunity.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <span className={`px-3 py-1 text-xs rounded-full font-medium ${getTypeColor(opportunity.type)}`}>
-                  {opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
-                </span>
-                <button className="p-1 hover:bg-gray-100 rounded">
-                  <Bookmark className="w-4 h-4 text-gray-400" />
-                </button>
+      {featuredOpportunities.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Featured Opportunities</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredOpportunities.map(opportunity => (
+              <div key={opportunity.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-4">
+                  <span className={`px-3 py-1 text-xs rounded-full font-medium ${getTypeColor(opportunity.provider)}`}>
+                    {opportunity.provider}
+                  </span>
+                  <button className="p-1 hover:bg-gray-100 rounded">
+                    <Bookmark className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+                
+                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{opportunity.title}</h3>
+                <p className="text-gray-600 text-sm mb-3 line-clamp-1">{opportunity.provider}</p>
+                
+                <div className="space-y-2 text-sm text-gray-600 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Banknote className="w-4 h-4" />
+                    <span>{opportunity.fundingAmount || 'Amount not specified'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4" />
+                    <span className={getDaysLeftColor(opportunity.daysLeft)}>
+                      {opportunity.deadline || 'No deadline'}
+                      {opportunity.daysLeft !== undefined && (
+                        <span className="ml-1">
+                          ({opportunity.daysLeft > 0 ? `${opportunity.daysLeft} days left` : 'Expired'})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+                
+                <p className="text-gray-600 text-sm mb-4 line-clamp-3">{opportunity.description}</p>
+                
+                {opportunity.applicationUrl && (
+                  <button 
+                    onClick={() => window.open(opportunity.applicationUrl, '_blank')}
+                    className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Learn More</span>
+                  </button>
+                )}
               </div>
-              
-              <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{opportunity.title}</h3>
-              <p className="text-gray-600 text-sm mb-3">{opportunity.provider}</p>
-              
-              <div className="space-y-2 text-sm text-gray-600 mb-4">
-                <div className="flex items-center space-x-2">
-                  <Banknote className="w-4 h-4" />
-                  <span>{opportunity.amount}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{opportunity.deadline}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="w-4 h-4" />
-                  <span>{opportunity.location}</span>
-                </div>
-              </div>
-              
-              <p className="text-gray-600 text-sm mb-4 line-clamp-2">{opportunity.description}</p>
-              
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-                <div className="flex items-center space-x-1">
-                  <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                  <span>{opportunity.rating}</span>
-                </div>
-                <span>{opportunity.successRate} success rate</span>
-              </div>
-              
-              <button className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2">
-                <ExternalLink className="w-4 h-4" />
-                <span>Learn More</span>
-              </button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* All Opportunities */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">All Funding Opportunities</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">All Funding Opportunities</h2>
+          <span className="text-sm text-gray-500">
+            {filteredOpportunities.length} opportunities
+          </span>
+        </div>
+        
         <div className="space-y-4">
           {filteredOpportunities.map(opportunity => (
             <div key={opportunity.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
-                    <span className={`px-3 py-1 text-xs rounded-full font-medium ${getTypeColor(opportunity.type)}`}>
-                      {opportunity.type.charAt(0).toUpperCase() + opportunity.type.slice(1)}
+                    <span className={`px-3 py-1 text-xs rounded-full font-medium ${getTypeColor(opportunity.provider)}`}>
+                      {opportunity.provider}
                     </span>
-                    {opportunity.isFeatured && (
+                    {opportunity.daysLeft !== undefined && opportunity.daysLeft > 0 && opportunity.daysLeft <= 30 && (
                       <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                        Featured
+                        Ending Soon
                       </span>
                     )}
                   </div>
@@ -295,46 +294,47 @@ const FundingFinder: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Banknote className="w-4 h-4" />
-                  <span>{opportunity.amount}</span>
+                  <span>{opportunity.fundingAmount || 'Amount not specified'}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <Calendar className="w-4 h-4" />
-                  <span>{opportunity.deadline}</span>
+                  <span className={getDaysLeftColor(opportunity.daysLeft)}>
+                    {opportunity.deadline || 'No deadline'}
+                    {opportunity.daysLeft !== undefined && (
+                      <span className="ml-1">
+                        ({opportunity.daysLeft > 0 ? `${opportunity.daysLeft} days left` : 'Expired'})
+                      </span>
+                    )}
+                  </span>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <MapPin className="w-4 h-4" />
-                  <span>{opportunity.location}</span>
-                </div>
+                {opportunity.contactInfo && (
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <span>Contact: {opportunity.contactInfo}</span>
+                  </div>
+                )}
               </div>
               
               <p className="text-gray-600 text-sm mb-4">{opportunity.description}</p>
               
-              <div className="mb-4">
-                <h4 className="font-medium text-gray-900 mb-2">Requirements:</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  {opportunity.requirements.map((req, index) => (
-                    <li key={index} className="flex items-center space-x-2">
-                      <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                      <span>{req}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span>{opportunity.rating}</span>
-                  </div>
-                  <span>{opportunity.applicants.toLocaleString()} applicants</span>
-                  <span>{opportunity.successRate} success rate</span>
+                <div className="text-sm text-gray-500">
+                  {opportunity.daysLeft !== undefined && (
+                    <span className={getDaysLeftColor(opportunity.daysLeft)}>
+                      {opportunity.daysLeft > 0 ? `${opportunity.daysLeft} days left` : 'Application closed'}
+                    </span>
+                  )}
                 </div>
                 
-                <button className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2">
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Apply Now</span>
-                </button>
+                {opportunity.applicationUrl && (
+                  <button 
+                    onClick={() => window.open(opportunity.applicationUrl, '_blank')}
+                    className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+                    disabled={opportunity.isExpired}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>{opportunity.isExpired ? 'Expired' : 'Apply Now'}</span>
+                  </button>
+                )}
               </div>
             </div>
           ))}
