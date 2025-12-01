@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axiosClient from '../../../api/axiosClient';
 
 interface Application {
     id: string;
@@ -9,43 +10,100 @@ interface Application {
     submitted: string;
     actions: string;
     status: 'Pending' | 'Active' | 'Inactive';
+    userEmail: string;
 }
 
 export default function ApplicantsTab() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
+    const [applications, setApplications] = useState<Application[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const stats = [
         { 
             title: 'Total Applicants', 
-            value: '0', 
+            value: applications.length.toString(), 
             icon: '📄',
             color: 'blue'
         },
         { 
             title: 'Active', 
-            value: '0', 
+            value: applications.filter(app => app.status === 'Active').length.toString(), 
             icon: '✅',
             color: 'green'
         },
         { 
             title: 'Pending', 
-            value: '0', 
+            value: applications.filter(app => app.status === 'Pending').length.toString(), 
             icon: '⏳',
             color: 'yellow'
         },
         { 
             title: 'Inactive', 
-            value: '0', 
+            value: applications.filter(app => app.status === 'Inactive').length.toString(), 
             icon: '❌',
             color: 'red'
         },
     ];
 
-    const applications: Application[] = [];
+    useEffect(() => {
+        fetchApplications();
+    }, []);
+
+    const fetchApplications = async () => {
+        try {
+            setLoading(true);
+            const response = await axiosClient.get('/applications/all');
+            // Transform API response to match frontend interface
+            const transformedApplications: Application[] = response.data.map((app: any) => ({
+                id: app.applicationId,
+                referenceNumber: app.applicationNumber,
+                businessName: app.companyName || app.userFullName || 'N/A',
+                businessOwner: app.userFullName || 'N/A',
+                package: app.userPackage || 'startup',
+                submitted: new Date(app.submittedAt).toLocaleDateString(),
+                actions: 'view',
+                status: mapStatus(app.status),
+                userEmail: app.userEmail
+            }));
+            setApplications(transformedApplications);
+        } catch (error) {
+            console.error('Error fetching applications:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const mapStatus = (apiStatus: string): 'Pending' | 'Active' | 'Inactive' => {
+        switch (apiStatus?.toUpperCase()) {
+            case 'APPROVED':
+            case 'ACTIVE':
+                return 'Active';
+            case 'REJECTED':
+            case 'INACTIVE':
+                return 'Inactive';
+            default:
+                return 'Pending';
+        }
+    };
+
+    const updateApplicationStatus = async (applicationId: string, status: string, reviewNotes?: string) => {
+        try {
+            await axiosClient.put(`/applications/${applicationId}/status`, null, {
+                params: { 
+                    status, 
+                    reviewNotes: reviewNotes || `Status updated to ${status}` 
+                }
+            });
+            fetchApplications(); // Refresh the list
+        } catch (error) {
+            console.error('Error updating application status:', error);
+            alert('Error updating application status. Please try again.');
+        }
+    };
 
     const filteredApplications = applications.filter((app: Application) => {
-        const searchable = [app.referenceNumber, app.businessName, app.businessOwner, app.package]
+        const searchable = [app.referenceNumber, app.businessName, app.businessOwner, app.package, app.userEmail]
             .filter(Boolean) as string[];
         const matchesSearch = searchTerm === '' || searchable.some(value => 
             value.toLowerCase().includes(searchTerm.toLowerCase())
@@ -117,6 +175,7 @@ export default function ApplicantsTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REFERENCE NUMBER</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BUSINESS NAME</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OWNER</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EMAIL</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PACKAGE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SUBMITTED</th>
@@ -124,21 +183,48 @@ export default function ApplicantsTab() {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredApplications.length > 0 ? (
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-12 text-center">
+                                        <div className="text-center">
+                                            <div className="text-4xl mb-2">⏳</div>
+                                            <p className="mt-1 text-sm text-gray-500">Loading applications...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filteredApplications.length > 0 ? (
                                 filteredApplications.map((app) => (
                                     <tr key={app.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-gray-900">{app.referenceNumber}</div></td>
                                         <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-500">{app.businessName}</div></td>
                                         <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-500">{app.businessOwner}</div></td>
+                                        <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-500">{app.userEmail}</div></td>
                                         <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-500">{app.package}</div></td>
-                                        <td className="px-6 py-4 whitespace-nowrap"><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.status === 'Active' ? 'bg-green-100 text-green-800' : app.status === 'Inactive' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{app.status}</span></td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.status === 'Active' ? 'bg-green-100 text-green-800' : app.status === 'Inactive' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                {app.status}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap"><div className="text-sm text-gray-500">{app.submitted}</div></td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium"><button className="text-blue-600 hover:text-blue-900 mr-4">View</button><button className="text-green-600 hover:text-green-900">Edit</button></td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            <button 
+                                                className="text-blue-600 hover:text-blue-900 mr-4"
+                                                onClick={() => updateApplicationStatus(app.id, 'APPROVED', 'Application approved by admin')}
+                                            >
+                                                Approve
+                                            </button>
+                                            <button 
+                                                className="text-red-600 hover:text-red-900"
+                                                onClick={() => updateApplicationStatus(app.id, 'REJECTED', 'Application rejected by admin')}
+                                            >
+                                                Reject
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center">
+                                    <td colSpan={8} className="px-6 py-12 text-center">
                                         <div className="text-center">
                                             <div className="text-4xl mb-2">📄</div>
                                             <h3 className="mt-2 text-sm font-medium text-gray-900">No applications</h3>

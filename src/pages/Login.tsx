@@ -72,7 +72,7 @@ const Login: React.FC = () => {
     };
 
     const fillDemoCredentials = () => {
-        // Development credentials for testing
+        // Updated development credentials
         const demoCredentials = {
             user: { 
                 email: 'asandile.nkala@example.com', 
@@ -237,8 +237,8 @@ const Login: React.FC = () => {
                             <p className="ml-4">Business Ref: 7272002</p>
                             <p className="ml-4">Password: @TesterAsandile123</p>
                             <p className="mt-2"><strong>Admin:</strong></p>
-                            <p className="ml-4">Email: phelo.madala@example.com</p>
-                            <p className="ml-4">Password: @TesterPhelo123</p>
+                            <p className="ml-4">Email: asavela.mbengashe@example.com</p>
+                            <p className="ml-4">Password: @TesterAsavela123</p>
                         </div>
                         <button
                             type="button"

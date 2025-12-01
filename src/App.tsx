@@ -51,9 +51,12 @@ import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
 // Admin Dashboard
 import AdminDashboard from './pages/adminDashboard/AdminDashboard';
 
+import { AuthProvider } from './context/AuthContext';
+
 
 function App() {
   return (
+    <AuthProvider>
     <Router>
       <Routes>
         {/* Public landing page */}
@@ -141,6 +144,7 @@ function App() {
         } />
       </Routes>
     </Router>
+    </AuthProvider>
   );
 }
 
