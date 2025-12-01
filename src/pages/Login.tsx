@@ -1,10 +1,14 @@
+// src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2 } from 'lucide-react';
+import { authService } from '../services/AuthService';
+import { useAuth } from '../context/AuthContext';
 import Logo from '../assets/Logo.svg';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [loginType, setLoginType] = useState<'user' | 'admin'>('user');
     const [formData, setFormData] = useState({
         email: '',
@@ -15,12 +19,6 @@ const Login: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Development credentials
-    const devCredentials = {
-        user: { email: 'user@72X.co.za', businessReference: '72001', password: 'user123' },
-        admin: { email: 'admin@72X.co.za', businessReference: undefined, password: 'admin123' }
-    };
-
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
@@ -30,72 +28,40 @@ const Login: React.FC = () => {
         setIsLoading(true);
 
         try {
-            // Check if we're using development credentials
-            const devUser = devCredentials.user;
-            const devAdmin = devCredentials.admin;
+            const loginRequest = {
+                email: formData.email,
+                password: formData.password,
+                businessReference: loginType === 'user' ? formData.businessReference : undefined,
+                loginType: loginType
+            };
 
-            // For admin login
+            const userData = await authService.login(loginRequest);
+            
+            // Store auth info
+            localStorage.setItem('authToken', `token-${Date.now()}`);
+            localStorage.setItem('userType', loginType);
+            localStorage.setItem('userEmail', userData.email);
+            localStorage.setItem('userId', userData.userId);
+            
+            if (userData.businessReference) {
+                localStorage.setItem('businessReference', userData.businessReference);
+            }
+            if (userData.userPackage) {
+                localStorage.setItem('userPackage', userData.userPackage);
+            }
+
+            // Update auth context
+            login(userData);
+            
+            console.log('Login successful, redirecting...');
+            
+            // Redirect based on user type
             if (loginType === 'admin') {
-                if (formData.email === devAdmin.email && formData.password === devAdmin.password) {
-                    // Store auth info in localStorage
-                    const authData = {
-                        token: `dev-admin-token-${Date.now()}`,
-                        userType: 'admin',
-                        email: formData.email,
-                        package: 'premium'
-                    };
-                    
-                    localStorage.setItem('authToken', authData.token);
-                    localStorage.setItem('userType', authData.userType);
-                    localStorage.setItem('userEmail', authData.email);
-                    localStorage.setItem('userPackage', authData.package);
-                    
-                    console.log('Development admin login successful, redirecting...');
-                    console.log('Auth data:', authData);
-                    
-                    // Use navigate for proper routing with React Router
-                    navigate('/admin/dashboard/overview', { replace: true });
-                    return;
-                } else {
-                    console.error('Invalid admin credentials');
-                    throw new Error('Invalid admin credentials');
-                }
+                window.location.replace('/admin/dashboard/overview');
+            } else {
+                window.location.replace('/dashboard/overview');
             }
-
-            // For regular user login
-            if (formData.email === devUser.email && 
-                formData.password === devUser.password && 
-                formData.businessReference === devUser.businessReference) {
-                
-                // Store user data in localStorage
-                const authData = {
-                    token: `dev-user-token-${Date.now()}`,
-                    userType: 'user',
-                    email: formData.email,
-                    businessRef: formData.businessReference,
-                    userId: 'dev-user-123',
-                    package: localStorage.getItem('userPackage') || 'startup'
-                };
-                
-                localStorage.setItem('authToken', authData.token);
-                localStorage.setItem('userType', authData.userType);
-                localStorage.setItem('userEmail', authData.email);
-                localStorage.setItem('businessReference', authData.businessRef);
-                localStorage.setItem('userId', authData.userId);
-                localStorage.setItem('userPackage', authData.package);
-                
-                console.log('Development user login successful, redirecting...');
-                console.log('Auth data:', authData);
-                
-                // Use navigate for proper routing with React Router
-                navigate('/dashboard/overview', { replace: true });
-                return;
-            }
-
-            // If we get here, credentials didn't match dev credentials
-            console.error('Invalid credentials');
-            throw new Error('Invalid email, business reference, or password');
-
+            
         } catch (error) {
             console.error('Login error:', error);
             const errorMessage = error instanceof Error ? error.message : 'An error occurred during login. Please try again.';
@@ -106,11 +72,25 @@ const Login: React.FC = () => {
     };
 
     const fillDemoCredentials = () => {
-        const credentials = devCredentials[loginType];
+        // Development credentials for testing
+        const demoCredentials = {
+            user: { 
+                email: 'asandile.nkala@example.com', 
+                businessReference: '7272002', 
+                password: '@TesterAsandile123' 
+            },
+            admin: { 
+                email: 'asavela.mbengashe@example.com', 
+                businessReference: '', 
+                password: '@TesterAsavela123' 
+            }
+        };
+
+        const credentials = demoCredentials[loginType];
         setFormData(prev => ({
             ...prev,
             email: credentials.email,
-            businessReference: loginType === 'user' ? credentials.businessReference || '' : '',
+            businessReference: credentials.businessReference,
             password: credentials.password
         }));
     };
@@ -253,12 +233,12 @@ const Login: React.FC = () => {
                         <h4 className="font-medium text-gray-900 mb-2">Development Credentials:</h4>
                         <div className="text-sm text-gray-600 space-y-1">
                             <p><strong>User:</strong></p>
-                            <p className="ml-4">Email: user@72X.co.za</p>
-                            <p className="ml-4">Business Ref: 72001</p>
-                            <p className="ml-4">Password: user123</p>
+                            <p className="ml-4">Email: asandile.nkala@example.com</p>
+                            <p className="ml-4">Business Ref: 7272002</p>
+                            <p className="ml-4">Password: @TesterAsandile123</p>
                             <p className="mt-2"><strong>Admin:</strong></p>
-                            <p className="ml-4">Email: admin@72X.co.za</p>
-                            <p className="ml-4">Password: admin123</p>
+                            <p className="ml-4">Email: phelo.madala@example.com</p>
+                            <p className="ml-4">Password: @TesterPhelo123</p>
                         </div>
                         <button
                             type="button"
