@@ -6,6 +6,7 @@ import DashboardSubNav from './DashboardSubNav';
 import ScheduleSubNav from './ScheduleSubNav';
 import LearningSubNav from './LearningSubNav';
 import CommunitySubNav from './CommunitySubNav';
+import AppStoreSubNav from './AppStoreSubNav';
 import { useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -18,6 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
   const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
   const [isCommunitySubNavOpen, setIsCommunitySubNavOpen] = useState(false);
+  const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   const location = useLocation();
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
 
@@ -162,6 +164,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       setIsDashboardSubNavOpen(false);
       setIsScheduleSubNavOpen(false);
       setIsCommunitySubNavOpen(false);
+      setIsAppStoreSubNavOpen(false);
     }
   };
 
@@ -172,6 +175,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       setIsDashboardSubNavOpen(false);
       setIsScheduleSubNavOpen(false);
       setIsLearningSubNavOpen(false);
+      setIsAppStoreSubNavOpen(false);
+    }
+  };
+
+  // Handle App Store toggle - close others
+  const handleAppStoreToggle = (isOpen: boolean) => {
+    setIsAppStoreSubNavOpen(isOpen);
+    if (isOpen) {
+      setIsDashboardSubNavOpen(false);
+      setIsScheduleSubNavOpen(false);
+      setIsLearningSubNavOpen(false);
+      setIsCommunitySubNavOpen(false);
     }
   };
 
@@ -184,11 +199,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           onScheduleToggle={handleScheduleToggle}
           onLearningToggle={handleLearningToggle}
           onCommunityToggle={handleCommunityToggle}
+          onAppStoreToggle={handleAppStoreToggle}
         />
         {isDashboardSubNavOpen && <DashboardSubNav onClose={() => setIsDashboardSubNavOpen(false)} />}
         {isScheduleSubNavOpen && <ScheduleSubNav onClose={() => setIsScheduleSubNavOpen(false)} />}
         {isLearningSubNavOpen && <LearningSubNav onClose={() => setIsLearningSubNavOpen(false)} />}
         {isCommunitySubNavOpen && <CommunitySubNav onClose={() => setIsCommunitySubNavOpen(false)} />}
+        {isAppStoreSubNavOpen && <AppStoreSubNav onClose={() => setIsAppStoreSubNavOpen(false)} />}
         <div className={`flex-1 ${navCollapsed ? 'ml-20' : 'ml-56'} transition-all duration-200`}>
           <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
           <main className="p-6">

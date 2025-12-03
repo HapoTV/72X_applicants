@@ -30,15 +30,17 @@ interface NavigationProps {
   onScheduleToggle?: (isOpen: boolean) => void;
   onLearningToggle?: (isOpen: boolean) => void;
   onCommunityToggle?: (isOpen: boolean) => void;
+  onAppStoreToggle?: (isOpen: boolean) => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle }) => {
+const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle, onAppStoreToggle }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
   const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
   const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
   const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
   const [isCommunitySubNavOpen, setIsCommunitySubNavOpen] = useState(false);
+  const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
@@ -106,10 +108,12 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     setIsScheduleSubNavOpen(false);
     setIsLearningSubNavOpen(false);
     setIsCommunitySubNavOpen(false);
+    setIsAppStoreSubNavOpen(false);
     onDashboardToggle?.(false);
     onScheduleToggle?.(false);
     onLearningToggle?.(false);
     onCommunityToggle?.(false);
+    onAppStoreToggle?.(false);
   };
 
   const toggleCollapsed = () => {
@@ -184,9 +188,11 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       setIsScheduleSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
                       setIsCommunitySubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
                       onScheduleToggle?.(false);
                       onLearningToggle?.(false);
                       onCommunityToggle?.(false);
+                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -232,9 +238,11 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       setIsDashboardSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
                       setIsCommunitySubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onLearningToggle?.(false);
                       onCommunityToggle?.(false);
+                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -280,9 +288,11 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       setIsDashboardSubNavOpen(false);
                       setIsScheduleSubNavOpen(false);
                       setIsCommunitySubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onScheduleToggle?.(false);
                       onCommunityToggle?.(false);
+                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -328,9 +338,11 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       setIsDashboardSubNavOpen(false);
                       setIsScheduleSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onScheduleToggle?.(false);
                       onLearningToggle?.(false);
+                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -351,6 +363,58 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                         const newState = !isCommunitySubNavOpen;
                         setIsCommunitySubNavOpen(newState);
                         onCommunityToggle?.(newState);
+                      }}
+                      className="p-1 hover:bg-white/20 rounded transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </NavLink>
+                </li>
+              );
+            }
+
+            // Special handling for App Store - add arrow button with click
+            if (item.path === '/applications') {
+              return (
+                <li 
+                  key={item.path}
+                  className="relative group"
+                >
+                  <NavLink
+                    to="/applications/crm"
+                    onClick={() => {
+                      onClose?.();
+                      // Close other secondary sidebars
+                      setIsDashboardSubNavOpen(false);
+                      setIsScheduleSubNavOpen(false);
+                      setIsLearningSubNavOpen(false);
+                      setIsCommunitySubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
+                      onDashboardToggle?.(false);
+                      onScheduleToggle?.(false);
+                      onLearningToggle?.(false);
+                      onCommunityToggle?.(false);
+                      onAppStoreToggle?.(false);
+                    }}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`
+                    }
+                  >
+                    <div className="flex items-center space-x-2">
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
+                      {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newState = !isAppStoreSubNavOpen;
+                        setIsAppStoreSubNavOpen(newState);
+                        onAppStoreToggle?.(newState);
                       }}
                       className="p-1 hover:bg-white/20 rounded transition-colors"
                     >
