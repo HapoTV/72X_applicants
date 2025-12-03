@@ -9,7 +9,6 @@ import ScheduleEvents from './pages/schedule/Events';
 import ScheduleCalendar from './pages/schedule/Calendar';
 import Analytics from './pages/Analytics';
 import RoadmapGenerator from './pages/RoadmapGenerator';
-import Resources from './pages/Resources';
 import Profile from './pages/Profile';
 import DataInput from './pages/DataInput';
 import LearningModules from './pages/LearningModules';
@@ -43,10 +42,8 @@ import FundingUpgrade from './pages/upgrades/FundingUpgrade';
 import DataInputUpgrade from './pages/upgrades/DataInputUpgrade';
 import RoadmapUpgrade from './pages/upgrades/RoadmapUpgrade';
 import AnalyticsUpgrade from './pages/upgrades/AnalyticsUpgrade';
-import ResourcesUpgrade from './pages/upgrades/ResourcesUpgrade';
 import ExpertsUpgrade from './pages/upgrades/ExpertsUpgrade';
 import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
-
 
 // Admin Dashboard
 import AdminDashboard from './pages/adminDashboard/AdminDashboard';
@@ -124,7 +121,6 @@ function App() {
                 {/* Premium Package Features */}
                 <Route path="/roadmap" element={<RoadmapGenerator />} />
                 <Route path="/analytics" element={<Analytics />} />
-                <Route path="/resources" element={<Resources />} />
                 <Route path="/experts" element={<ExpertSessions />} />
                 <Route path="/ai-analyst" element={<AIBusinessAnalyst />} />
                 
@@ -135,7 +131,6 @@ function App() {
                 <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
                 <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
                 <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
-                <Route path="/upgrade/resources" element={<ResourcesUpgrade />} />
                 <Route path="/upgrade/experts" element={<ExpertsUpgrade />} />
                 <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
               </Routes>

@@ -84,7 +84,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     
     // Premium Package Features (everything)
     { path: '/analytics', icon: BarChart3, label: 'Analytics', package: 'premium' },
-    { path: '/resources', icon: BookOpen, label: 'Resources', package: 'premium' },
     { path: '/experts', icon: Video, label: 'Expert Q&A', package: 'premium' },
     { path: '/ai-analyst', icon: Brain, label: 'AI Business Analyst', package: 'premium' },
     

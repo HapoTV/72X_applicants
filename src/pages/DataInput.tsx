@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, DollarSign, TrendingUp } from 'lucide-react';
+import { dataInputService } from '../services/DataInputService';
 
 const DataInput: React.FC = () => {
   const [activeTab, setActiveTab] = useState('financial');
@@ -7,6 +8,9 @@ const DataInput: React.FC = () => {
     revenue: '',
     expenses: '',
     customers: '',
+    newCustomers: '',
+    retentionRate: '',
+    avgCustomerValue: '',
     period: 'monthly',
     date: new Date().toISOString().split('T')[0],
   });
@@ -23,9 +27,30 @@ const DataInput: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Form submitted:', formData);
-    alert('Data saved successfully! AI analysis will be updated shortly.');
+    
+    if (activeTab === 'financial') {
+      // Save financial data
+      const financialData = dataInputService.transformToFinancialData(formData, 'current-user');
+      dataInputService.saveFinancialData(financialData);
+    } else if (activeTab === 'customers') {
+      // Save customer data
+      const customerData = dataInputService.transformToCustomerData(formData, 'current-user');
+      dataInputService.saveCustomerData(customerData);
+    }
+    
+    alert('Data saved successfully! Analytics will be updated with your latest data.');
+    
+    // Reset form
+    setFormData({
+      revenue: '',
+      expenses: '',
+      customers: '',
+      newCustomers: '',
+      retentionRate: '',
+      avgCustomerValue: '',
+      period: 'monthly',
+      date: new Date().toISOString().split('T')[0],
+    });
   };
 
   return (
@@ -66,7 +91,7 @@ const DataInput: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Revenue ($)
+                    Revenue (R)
                   </label>
                   <input
                     type="number"
@@ -79,7 +104,7 @@ const DataInput: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Expenses ($)
+                    Expenses (R)
                   </label>
                   <input
                     type="number"
@@ -162,6 +187,8 @@ const DataInput: React.FC = () => {
                   </label>
                   <input
                     type="number"
+                    value={formData.newCustomers}
+                    onChange={(e) => handleInputChange('newCustomers', e.target.value)}
                     placeholder="Enter new customer count"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
@@ -173,6 +200,8 @@ const DataInput: React.FC = () => {
                   </label>
                   <input
                     type="number"
+                    value={formData.retentionRate}
+                    onChange={(e) => handleInputChange('retentionRate', e.target.value)}
                     placeholder="Enter retention rate"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
@@ -180,10 +209,12 @@ const DataInput: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Average Customer Value ($)
+                    Average Customer Value (R)
                   </label>
                   <input
                     type="number"
+                    value={formData.avgCustomerValue}
+                    onChange={(e) => handleInputChange('avgCustomerValue', e.target.value)}
                     placeholder="Enter average customer value"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
