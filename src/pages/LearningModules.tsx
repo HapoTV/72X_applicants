@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Clock, Star, Award, BookOpen, CheckCircle, Lock } from 'lucide-react';
+import { learningService } from '../services/LearningService';
+import { useAuth } from '../context/AuthContext';
+import type { UserLearningModule, LearningStats, LearningModuleFilter } from '../interfaces/LearningData';
 
 const LearningModules: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [completedModules] = useState(['1', '3']);
+  const { user } = useAuth();
+  const [selectedCategory, setSelectedCategory] = useState<'all' | string>('all');
+  const [modules, setModules] = useState<UserLearningModule[]>([]);
+  const [learningStats, setLearningStats] = useState<LearningStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const categories = [
     { id: 'all', name: 'All Modules' },
@@ -14,92 +21,61 @@ const LearningModules: React.FC = () => {
     { id: 'leadership', name: 'Leadership' }
   ];
 
-  const modules = [
-    {
-      id: '1',
-      title: 'How to Create a Winning Business Plan',
-      description: 'Learn to craft a comprehensive business plan that attracts investors and guides your growth.',
-      category: 'business-plan',
-      duration: '45 min',
-      lessons: 8,
-      difficulty: 'Beginner',
-      rating: 4.8,
-      students: 2340,
-      isPremium: false,
-      progress: 100,
-      thumbnail: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400'
-    },
-    {
-      id: '2',
-      title: 'Mastering Social Media Advertising',
-      description: 'Advanced strategies for Facebook, Instagram, and LinkedIn advertising that drive real results.',
-      category: 'marketing',
-      duration: '1h 20min',
-      lessons: 12,
-      difficulty: 'Intermediate',
-      rating: 4.9,
-      students: 1890,
-      isPremium: true,
-      progress: 0,
-      thumbnail: 'https://images.pexels.com/photos/267389/pexels-photo-267389.jpeg?auto=compress&cs=tinysrgb&w=400'
-    },
-    {
-      id: '3',
-      title: 'Financial Planning for Small Business',
-      description: 'Master budgeting, cash flow management, and financial forecasting for sustainable growth.',
-      category: 'finance',
-      duration: '55 min',
-      lessons: 10,
-      difficulty: 'Beginner',
-      rating: 4.7,
-      students: 3120,
-      isPremium: false,
-      progress: 100,
-      thumbnail: 'https://images.pexels.com/photos/590022/pexels-photo-590022.jpeg?auto=compress&cs=tinysrgb&w=400'
-    },
-    {
-      id: '4',
-      title: 'Scaling Your Business Without Burning Out',
-      description: 'Learn sustainable scaling strategies and build systems that work without your constant involvement.',
-      category: 'operations',
-      duration: '1h 10min',
-      lessons: 9,
-      difficulty: 'Advanced',
-      rating: 4.9,
-      students: 1560,
-      isPremium: true,
-      progress: 25,
-      thumbnail: 'https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=400'
-    },
-    {
-      id: '5',
-      title: 'Leadership Skills for Entrepreneurs',
-      description: 'Develop essential leadership skills to inspire your team and drive business success.',
-      category: 'leadership',
-      duration: '50 min',
-      lessons: 7,
-      difficulty: 'Intermediate',
-      rating: 4.6,
-      students: 2100,
-      isPremium: false,
-      progress: 0,
-      thumbnail: 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400'
-    },
-    {
-      id: '6',
-      title: 'Digital Marketing Fundamentals',
-      description: 'Complete guide to SEO, content marketing, email campaigns, and analytics.',
-      category: 'marketing',
-      duration: '2h 15min',
-      lessons: 15,
-      difficulty: 'Beginner',
-      rating: 4.8,
-      students: 4200,
-      isPremium: false,
-      progress: 60,
-      thumbnail: 'https://images.pexels.com/photos/265087/pexels-photo-265087.jpeg?auto=compress&cs=tinysrgb&w=400'
+  useEffect(() => {
+    if (user?.email) {
+      fetchLearningData();
     }
-  ];
+  }, [user?.email, selectedCategory]);
+
+  const fetchLearningData = async () => {
+    if (!user?.email) {
+      setError('User email not found');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const filter: LearningModuleFilter = {
+        category: selectedCategory === 'all' ? undefined : selectedCategory as any
+      };
+      
+      const [modulesData, statsData] = await Promise.all([
+        learningService.getUserModules(user.email, filter),
+        learningService.getLearningStats(user.email)
+      ]);
+      
+      setModules(modulesData);
+      setLearningStats(statsData);
+    } catch (err) {
+      setError('Failed to load learning modules');
+      console.error('Error fetching learning data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshLearningData = () => {
+    fetchLearningData();
+  };
+
+  const handleModuleAction = async (moduleId: string, action: 'start' | 'continue' | 'review') => {
+    if (!user?.email) return;
+
+    try {
+      // Start a learning session
+      await learningService.startSession(user.email, moduleId);
+      
+      // Navigate to module or start learning (implementation depends on your routing)
+      console.log(`${action} module: ${moduleId}`);
+      // TODO: Navigate to the actual learning module page
+      window.location.href = `/learning-modules/${moduleId}`;
+    } catch (err) {
+      console.error('Error starting learning session:', err);
+    }
+  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -110,43 +86,90 @@ const LearningModules: React.FC = () => {
     }
   };
 
-  const filteredModules = modules.filter(module => 
-    selectedCategory === 'all' || module.category === selectedCategory
-  );
+  if (!user?.email) {
+    return (
+      <div className="space-y-6 animate-fade-in px-2 sm:px-0">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+          <BookOpen className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Authentication Required</h3>
+          <p className="text-yellow-700">Please log in to view your learning modules.</p>
+        </div>
+      </div>
+    );
+  }
 
-  const totalProgress = Math.round(
-    (modules.reduce((sum, module) => sum + module.progress, 0) / modules.length)
-  );
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in px-2 sm:px-0">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2].map(i => (
+                <div key={i} className="h-16 bg-gray-100 rounded-lg"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-64 bg-gray-100 rounded-lg"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in px-2 sm:px-0">
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-red-700 text-sm">{error}</p>
+            <button 
+              onClick={refreshLearningData}
+              className="text-red-700 hover:text-red-800 text-sm font-medium"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Interactive Learning Modules</h1>
         <p className="text-gray-600">Master essential business skills with our bite-sized, interactive courses</p>
       </div>
 
       {/* Progress Overview */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Your Learning Progress</h3>
-          <div className="flex items-center space-x-2">
-            <Award className="w-5 h-5 text-yellow-500" />
-            <span className="text-sm font-medium text-gray-700">
-              {completedModules.length} modules completed
-            </span>
+      {learningStats && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Your Learning Progress</h3>
+            <div className="flex items-center space-x-2">
+              <Award className="w-5 h-5 text-yellow-500" />
+              <span className="text-sm font-medium text-gray-700">
+                {learningStats.completedModules} modules completed
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className="flex-1 bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-primary-500 h-3 rounded-full transition-all duration-300"
+                style={{ width: `${learningStats.totalProgress}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium text-gray-700">{learningStats.totalProgress}%</span>
           </div>
         </div>
-        
-        <div className="flex items-center space-x-4">
-          <div className="flex-1 bg-gray-200 rounded-full h-3">
-            <div 
-              className="bg-primary-500 h-3 rounded-full transition-all duration-300"
-              style={{ width: `${totalProgress}%` }}
-            />
-          </div>
-          <span className="text-sm font-medium text-gray-700">{totalProgress}%</span>
-        </div>
-      </div>
+      )}
 
       {/* Category Filter */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -169,7 +192,7 @@ const LearningModules: React.FC = () => {
 
       {/* Learning Modules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredModules.map(module => (
+        {modules.map(module => (
           <div key={module.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
             <div className="relative">
               <img 
@@ -189,7 +212,7 @@ const LearningModules: React.FC = () => {
                 )}
               </div>
               
-              {completedModules.includes(module.id) && (
+              {module.isCompleted && (
                 <div className="absolute top-4 left-4">
                   <div className="p-1 bg-green-500 rounded-full">
                     <CheckCircle className="w-4 h-4 text-white" />
@@ -198,8 +221,15 @@ const LearningModules: React.FC = () => {
               )}
 
               <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <button className="p-3 bg-white rounded-full hover:bg-gray-100 transition-colors">
-                  {module.isPremium && module.progress === 0 ? (
+                <button 
+                  onClick={() => {
+                    const action = module.progress === 0 ? 'start' : 
+                                 module.progress === 100 ? 'review' : 'continue';
+                    handleModuleAction(module.id, action);
+                  }}
+                  className="p-3 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  {module.isLocked ? (
                     <Lock className="w-6 h-6 text-gray-600" />
                   ) : (
                     <Play className="w-6 h-6 text-gray-600" />
@@ -251,7 +281,14 @@ const LearningModules: React.FC = () => {
                 </div>
               )}
 
-              <button className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2">
+              <button 
+                onClick={() => {
+                  const action = module.progress === 0 ? 'start' : 
+                               module.progress === 100 ? 'review' : 'continue';
+                  handleModuleAction(module.id, action);
+                }}
+                className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2"
+              >
                 {module.progress === 0 ? (
                   <>
                     <Play className="w-4 h-4" />
@@ -273,6 +310,14 @@ const LearningModules: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {modules.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No modules found</h3>
+          <p className="text-gray-500">Try adjusting your filters or check back later for new content.</p>
+        </div>
+      )}
     </div>
   );
 };
