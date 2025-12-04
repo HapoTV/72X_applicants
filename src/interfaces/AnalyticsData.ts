@@ -10,7 +10,7 @@ export const TIME_RANGE_OPTIONS: { value: AnalyticsTimeRange; label: string }[] 
   { value: 'custom', label: 'Custom range' }
 ];
 
-// ==================== REVENUE ANALYTICS ====================
+// ==================== REVENUE ANALYTICS =====================
 export interface RevenueData {
   period: string;
   revenue: number;
