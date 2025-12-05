@@ -16,9 +16,7 @@ const Signup: React.FC = () => {
     plan: 'startup' as 'startup' | 'essential' | 'premium',
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [documents, setDocuments] = useState<File[]>([]);
-  const [docError, setDocError] = useState<string | null>(null);
-
+  
   const update = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -27,7 +25,6 @@ const Signup: React.FC = () => {
     if (!form.businessName.trim()) return alert('Please enter your business name.');
     if (!form.phone.trim()) return alert('Please enter your contact number.');
     if (form.password !== form.confirmPassword) return alert('Passwords do not match.');
-    if (documents.length === 0) { setDocError('Please upload at least one supporting document.'); return; }
     setIsLoading(true);
     try {
       // Generate a business reference like 72XXXXX
@@ -124,40 +121,6 @@ const Signup: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-2">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-primary-100 text-primary-700">📎</span>
-              <h3 className="text-sm font-semibold text-gray-900">Supporting Documents</h3>
-            </div>
-            <p className="text-xs text-gray-600 mb-2">Upload PDF, Word, or PowerPoint files (.pdf, .doc, .docx, .ppt, .pptx). At least one file is required, such as a Business Proposal.</p>
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.ppt,.pptx"
-              onChange={(e) => {
-                const files = Array.from(e.target.files || []);
-                const allowed = ['pdf','doc','docx','ppt','pptx'];
-                const valid = files.filter(f => {
-                  const ext = f.name.split('.').pop()?.toLowerCase() || '';
-                  return allowed.includes(ext);
-                });
-                setDocuments(valid);
-                setDocError(valid.length === 0 ? 'Please upload valid documents (.pdf, .doc, .docx, .ppt, .pptx).' : null);
-              }}
-              className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 border border-gray-300 rounded-lg"
-            />
-            {docError && <div className="text-red-600 text-xs mt-2">{docError}</div>}
-            {documents.length > 0 && (
-              <ul className="mt-3 space-y-1 text-sm text-gray-700">
-                {documents.map((f, i) => (
-                  <li key={i} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                    <span className="truncate mr-3">{f.name}</span>
-                    <button type="button" onClick={() => { const copy = [...documents]; copy.splice(i,1); setDocuments(copy); }} className="text-red-600 hover:text-red-800 text-xs">Remove</button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
