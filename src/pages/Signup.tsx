@@ -28,8 +28,10 @@ const Signup: React.FC = () => {
     if (form.password !== form.confirmPassword) return alert('Passwords do not match.');
     setIsLoading(true);
     try {
-      // Generate a business reference like 72XXXXX
-      const ref = '72' + Math.floor(10000 + Math.random() * 90000).toString();
+      // Use provided bank reference or generate a new one
+      const ref = form.hasBankReference && form.businessReference.trim() 
+        ? form.businessReference 
+        : '72' + Math.floor(10000 + Math.random() * 90000).toString();
       localStorage.setItem('userEmail', form.email);
       localStorage.setItem('userFirstName', form.firstName);
       localStorage.setItem('userPhone', form.phone);
