@@ -9,6 +9,7 @@ const Signup: React.FC = () => {
     lastName: '',
     email: '',
     phone: '',
+    companyName: '',
     businessName: '',
     hasBankReference: false,
     businessReference: '',
@@ -23,6 +24,7 @@ const Signup: React.FC = () => {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.acceptTerms) return alert('Please accept the terms to continue.');
+    if (!form.companyName.trim()) return alert('Please enter your business name.');
     if (!form.phone.trim()) return alert('Please enter your contact number.');
     if (form.password !== form.confirmPassword) return alert('Passwords do not match.');
     setIsLoading(true);
@@ -32,6 +34,7 @@ const Signup: React.FC = () => {
       localStorage.setItem('userEmail', form.email);
       localStorage.setItem('userFirstName', form.firstName);
       localStorage.setItem('userPhone', form.phone);
+      localStorage.setItem('companyName', form.companyName);
       localStorage.setItem('businessReference', ref);
       localStorage.setItem('lastGeneratedReference', ref);
       localStorage.setItem('authToken', `user-token-${Date.now()}`);
@@ -112,6 +115,25 @@ const Signup: React.FC = () => {
             required
             />
             </div>
+
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+            <input
+                value={form.companyName}
+                  onChange={e => {
+                    const value = e.target.value;
+
+                      // Allow only letters and spaces
+              if (/^[A-Za-z\s]*$/.test(value)) {
+              update('companyName', value);
+                }
+              }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  required
+                    />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Do you have a business reference from your bank?</label>
             <div className="flex items-center gap-6 mt-2">
