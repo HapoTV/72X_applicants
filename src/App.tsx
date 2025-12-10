@@ -34,6 +34,7 @@ import Signup from './pages/Signup';
 import SignupSuccess from './pages/SignupSuccess';
 import RequestDemo from './pages/RequestDemo';
 import Pricing from './pages/Pricing';
+import TenderlyAI from './pages/applications/TenderlyAI';
 
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
@@ -110,6 +111,7 @@ function App() {
                 
                 {/* Other Protected Routes */}
                 <Route path="/applications" element={<Applications />} />
+                <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
                 <Route path="/profile" element={<Profile />} />
                 
                 {/* Essential Package Features */}
