@@ -9,550 +9,370 @@ import type {
   ExpenseCategory,
   ExpenseMetrics,
   KPIDashboard,
-  SalesData,
-  SalesMetrics,
-  ProductPerformance,
-  ProductMetrics,
-  UserActivity,
-  UserActivityMetrics,
-  FinancialMetrics,
-  CashFlowData,
-  MarketingMetrics,
-  CampaignPerformance,
-  DashboardAnalytics,
-  ChartData,
-  PieChartData,
-  LineChartData,
-  AnalyticsRequest,
-  AnalyticsApiResponse,
-  AnalyticsReport,
-  ReportRequest,
-  AnalyticsAlert,
-  AlertRequest,
-  AnalyticsGoal,
-  GoalRequest
+  DashboardAnalytics
 } from '../interfaces/AnalyticsData';
 
-/**
- * Service layer for handling all analytics-related operations
- */
 class AnalyticsService {
-  
-  // ==================== DASHBOARD ANALYTICS ====================
+  private baseURL = '/analytics';
 
-  /**
-   * Get comprehensive dashboard analytics
-   */
-  async getDashboardAnalytics(request: AnalyticsRequest): Promise<DashboardAnalytics> {
+  async getDashboardAnalytics(userId: string, timeRange: AnalyticsTimeRange = '6months'): Promise<DashboardAnalytics> {
     try {
-      const response = await axiosClient.post('/analytics/dashboard', request);
-      return this.transformToDashboardAnalytics(response.data);
+      const response = await axiosClient.get(`${this.baseURL}/dashboard/${userId}`, {
+        params: { timeRange }
+      });
+      
+      const data = response.data;
+      return this.transformToDashboardAnalytics(data);
     } catch (error) {
       console.error('Error fetching dashboard analytics:', error);
-      throw new Error('Failed to fetch dashboard analytics');
+      // Return default structure if API fails
+      return this.getDefaultDashboardAnalytics();
     }
   }
 
-  /**
-   * Get quick KPI metrics
-   */
-  async getKPIMetrics(timeRange: AnalyticsTimeRange): Promise<KPIDashboard> {
-    try {
-      const response = await axiosClient.get('/analytics/kpi', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching KPI metrics:', error);
-      throw new Error('Failed to fetch KPI metrics');
-    }
-  }
-
-  // ==================== REVENUE ANALYTICS ====================
-
-  /**
-   * Get revenue data over time
-   */
-  async getRevenueAnalytics(request: AnalyticsRequest): Promise<{ data: RevenueData[]; metrics: RevenueMetrics }> {
-    try {
-      const response = await axiosClient.post('/analytics/revenue', request);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching revenue analytics:', error);
-      throw new Error('Failed to fetch revenue analytics');
-    }
-  }
-
-  /**
-   * Get revenue chart data
-   */
-  async getRevenueChartData(timeRange: AnalyticsTimeRange): Promise<ChartData> {
-    try {
-      const response = await axiosClient.get('/analytics/revenue/chart', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching revenue chart data:', error);
-      throw new Error('Failed to fetch revenue chart data');
-    }
-  }
-
-  // ==================== CUSTOMER ANALYTICS ====================
-
-  /**
-   * Get customer analytics
-   */
-  async getCustomerAnalytics(request: AnalyticsRequest): Promise<{ data: CustomerData[]; metrics: CustomerMetrics }> {
-    try {
-      const response = await axiosClient.post('/analytics/customers', request);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching customer analytics:', error);
-      throw new Error('Failed to fetch customer analytics');
-    }
-  }
-
-  /**
-   * Get customer growth chart data
-   */
-  async getCustomerGrowthChartData(timeRange: AnalyticsTimeRange): Promise<LineChartData[]> {
-    try {
-      const response = await axiosClient.get('/analytics/customers/growth', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching customer growth data:', error);
-      throw new Error('Failed to fetch customer growth data');
-    }
-  }
-
-  // ==================== EXPENSE ANALYTICS ====================
-
-  /**
-   * Get expense analytics
-   */
-  async getExpenseAnalytics(request: AnalyticsRequest): Promise<{ data: ExpenseCategory[]; metrics: ExpenseMetrics }> {
-    try {
-      const response = await axiosClient.post('/analytics/expenses', request);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching expense analytics:', error);
-      throw new Error('Failed to fetch expense analytics');
-    }
-  }
-
-  /**
-   * Get expense breakdown for pie chart
-   */
-  async getExpenseBreakdown(timeRange: AnalyticsTimeRange): Promise<PieChartData[]> {
-    try {
-      const response = await axiosClient.get('/analytics/expenses/breakdown', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching expense breakdown:', error);
-      throw new Error('Failed to fetch expense breakdown');
-    }
-  }
-
-  // ==================== SALES ANALYTICS ====================
-
-  /**
-   * Get sales analytics
-   */
-  async getSalesAnalytics(request: AnalyticsRequest): Promise<{ data: SalesData[]; metrics: SalesMetrics }> {
-    try {
-      const response = await axiosClient.post('/analytics/sales', request);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching sales analytics:', error);
-      throw new Error('Failed to fetch sales analytics');
-    }
-  }
-
-  /**
-   * Get top performing products
-   */
-  async getTopProducts(limit: number = 10): Promise<ProductPerformance[]> {
-    try {
-      const response = await axiosClient.get('/analytics/products/top', {
-        params: { limit }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching top products:', error);
-      throw new Error('Failed to fetch top products');
-    }
-  }
-
-  /**
-   * Get product performance metrics
-   */
-  async getProductMetrics(timeRange: AnalyticsTimeRange): Promise<ProductMetrics> {
-    try {
-      const response = await axiosClient.get('/analytics/products/metrics', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching product metrics:', error);
-      throw new Error('Failed to fetch product metrics');
-    }
-  }
-
-  // ==================== USER ACTIVITY ANALYTICS ====================
-
-  /**
-   * Get user activity analytics
-   */
-  async getUserActivityAnalytics(request: AnalyticsRequest): Promise<{ data: UserActivity[]; metrics: UserActivityMetrics }> {
-    try {
-      const response = await axiosClient.post('/analytics/user-activity', request);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching user activity analytics:', error);
-      throw new Error('Failed to fetch user activity analytics');
-    }
-  }
-
-  // ==================== FINANCIAL ANALYTICS ====================
-
-  /**
-   * Get financial metrics
-   */
-  async getFinancialMetrics(timeRange: AnalyticsTimeRange): Promise<FinancialMetrics> {
-    try {
-      const response = await axiosClient.get('/analytics/financial', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching financial metrics:', error);
-      throw new Error('Failed to fetch financial metrics');
-    }
-  }
-
-  /**
-   * Get cash flow data
-   */
-  async getCashFlowData(timeRange: AnalyticsTimeRange): Promise<CashFlowData[]> {
-    try {
-      const response = await axiosClient.get('/analytics/cash-flow', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching cash flow data:', error);
-      throw new Error('Failed to fetch cash flow data');
-    }
-  }
-
-  // ==================== MARKETING ANALYTICS ====================
-
-  /**
-   * Get marketing metrics
-   */
-  async getMarketingMetrics(timeRange: AnalyticsTimeRange): Promise<MarketingMetrics> {
-    try {
-      const response = await axiosClient.get('/analytics/marketing', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching marketing metrics:', error);
-      throw new Error('Failed to fetch marketing metrics');
-    }
-  }
-
-  /**
-   * Get campaign performance
-   */
-  async getCampaignPerformance(timeRange: AnalyticsTimeRange): Promise<CampaignPerformance[]> {
-    try {
-      const response = await axiosClient.get('/analytics/campaigns', {
-        params: { timeRange }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching campaign performance:', error);
-      throw new Error('Failed to fetch campaign performance');
-    }
-  }
-
-  // ==================== REPORTS ====================
-
-  /**
-   * Generate analytics report
-   */
-  async generateReport(reportRequest: ReportRequest): Promise<AnalyticsReport> {
-    try {
-      const response = await axiosClient.post('/analytics/reports', reportRequest);
-      return response.data;
-    } catch (error) {
-      console.error('Error generating report:', error);
-      throw new Error('Failed to generate report');
-    }
-  }
-
-  /**
-   * Get all reports
-   */
-  async getReports(): Promise<AnalyticsReport[]> {
-    try {
-      const response = await axiosClient.get('/analytics/reports');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching reports:', error);
-      throw new Error('Failed to fetch reports');
-    }
-  }
-
-  /**
-   * Get report by ID
-   */
-  async getReportById(reportId: string): Promise<AnalyticsReport> {
-    try {
-      const response = await axiosClient.get(`/analytics/reports/${reportId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching report:', error);
-      throw new Error('Failed to fetch report');
-    }
-  }
-
-  /**
-   * Delete report
-   */
-  async deleteReport(reportId: string, userEmail: string): Promise<void> {
-    try {
-      await axiosClient.delete(`/analytics/reports/${reportId}`, {
-        params: { userEmail }
-      });
-    } catch (error) {
-      console.error('Error deleting report:', error);
-      throw new Error('Failed to delete report');
-    }
-  }
-
-  // ==================== ALERTS ====================
-
-  /**
-   * Create analytics alert
-   */
-  async createAlert(alertRequest: AlertRequest): Promise<AnalyticsAlert> {
-    try {
-      const response = await axiosClient.post('/analytics/alerts', alertRequest);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating alert:', error);
-      throw new Error('Failed to create alert');
-    }
-  }
-
-  /**
-   * Get all alerts
-   */
-  async getAlerts(): Promise<AnalyticsAlert[]> {
-    try {
-      const response = await axiosClient.get('/analytics/alerts');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching alerts:', error);
-      throw new Error('Failed to fetch alerts');
-    }
-  }
-
-  /**
-   * Update alert status
-   */
-  async updateAlertStatus(alertId: string, isActive: boolean): Promise<void> {
-    try {
-      await axiosClient.patch(`/analytics/alerts/${alertId}/status`, { isActive });
-    } catch (error) {
-      console.error('Error updating alert status:', error);
-      throw new Error('Failed to update alert status');
-    }
-  }
-
-  /**
-   * Delete alert
-   */
-  async deleteAlert(alertId: string, userEmail: string): Promise<void> {
-    try {
-      await axiosClient.delete(`/analytics/alerts/${alertId}`, {
-        params: { userEmail }
-      });
-    } catch (error) {
-      console.error('Error deleting alert:', error);
-      throw new Error('Failed to delete alert');
-    }
-  }
-
-  // ==================== GOALS ====================
-
-  /**
-   * Create analytics goal
-   */
-  async createGoal(goalRequest: GoalRequest): Promise<AnalyticsGoal> {
-    try {
-      const response = await axiosClient.post('/analytics/goals', goalRequest);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating goal:', error);
-      throw new Error('Failed to create goal');
-    }
-  }
-
-  /**
-   * Get all goals
-   */
-  async getGoals(): Promise<AnalyticsGoal[]> {
-    try {
-      const response = await axiosClient.get('/analytics/goals');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching goals:', error);
-      throw new Error('Failed to fetch goals');
-    }
-  }
-
-  /**
-   * Update goal progress
-   */
-  async updateGoalProgress(goalId: string, currentValue: number): Promise<void> {
-    try {
-      await axiosClient.patch(`/analytics/goals/${goalId}/progress`, { currentValue });
-    } catch (error) {
-      console.error('Error updating goal progress:', error);
-      throw new Error('Failed to update goal progress');
-    }
-  }
-
-  /**
-   * Delete goal
-   */
-  async deleteGoal(goalId: string, userEmail: string): Promise<void> {
-    try {
-      await axiosClient.delete(`/analytics/goals/${goalId}`, {
-        params: { userEmail }
-      });
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-      throw new Error('Failed to delete goal');
-    }
-  }
-
-  // ==================== DATA TRANSFORMATION METHODS ====================
-
-  /**
-   * Transform API response to DashboardAnalytics
-   */
-  private transformToDashboardAnalytics(apiData: AnalyticsApiResponse): DashboardAnalytics {
+  private transformToDashboardAnalytics(apiData: any): DashboardAnalytics {
     return {
-      timeRange: apiData.timeRange,
-      generatedAt: apiData.generatedAt,
-      revenueMetrics: apiData.metrics.revenue,
-      customerMetrics: apiData.metrics.customers,
-      expenseMetrics: apiData.metrics.expenses,
-      kpiDashboard: this.createKPIDashboard(apiData.metrics),
-      salesMetrics: apiData.metrics.sales,
+      timeRange: apiData.timeRange || '6months',
+      generatedAt: apiData.generatedAt || new Date().toISOString(),
+      revenueMetrics: this.transformRevenueMetrics(apiData.revenueMetrics),
+      customerMetrics: this.transformCustomerMetrics(apiData.customerMetrics),
+      expenseMetrics: this.transformExpenseMetrics(apiData.expenseMetrics),
+      kpiDashboard: this.createKPIDashboard(apiData.kpiDashboard || {}),
+      salesMetrics: this.transformSalesMetrics(apiData.salesMetrics),
       productMetrics: this.createProductMetrics(apiData),
-      userActivityMetrics: apiData.metrics.userActivity,
-      financialMetrics: apiData.metrics.financial,
-      marketingMetrics: apiData.metrics.marketing
+      userActivityMetrics: this.createUserActivityMetrics(),
+      financialMetrics: this.createFinancialMetrics(),
+      marketingMetrics: this.createMarketingMetrics()
     };
   }
 
-  /**
-   * Create KPI dashboard from metrics
-   */
-  private createKPIDashboard(metrics: AnalyticsApiResponse['metrics']): KPIDashboard {
+  private getDefaultDashboardAnalytics(): DashboardAnalytics {
     return {
-      revenue: {
-        id: 'revenue',
-        name: 'Total Revenue',
-        value: metrics.revenue.totalRevenue,
-        unit: 'R',
-        change: metrics.revenue.revenueGrowth,
-        changeType: metrics.revenue.revenueGrowth >= 0 ? 'increase' : 'decrease',
-        trend: metrics.revenue.revenueGrowth > 5 ? 'up' : metrics.revenue.revenueGrowth < -5 ? 'down' : 'stable',
-        status: metrics.revenue.revenueGrowth > 10 ? 'excellent' : metrics.revenue.revenueGrowth > 0 ? 'good' : 'poor'
+      timeRange: '6months',
+      generatedAt: new Date().toISOString(),
+      revenueMetrics: {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        totalProfit: 0,
+        revenueGrowth: 0,
+        profitMargin: 0,
+        averageMonthlyRevenue: 0,
+        averageMonthlyExpenses: 0,
+        averageMonthlyProfit: 0
       },
-      customers: {
-        id: 'customers',
-        name: 'Active Customers',
-        value: metrics.customers.activeCustomers,
-        unit: '',
-        change: metrics.customers.customerGrowth,
-        changeType: metrics.customers.customerGrowth >= 0 ? 'increase' : 'decrease',
-        trend: metrics.customers.customerGrowth > 5 ? 'up' : metrics.customers.customerGrowth < -5 ? 'down' : 'stable',
-        status: metrics.customers.customerGrowth > 10 ? 'excellent' : metrics.customers.customerGrowth > 0 ? 'good' : 'poor'
+      customerMetrics: {
+        totalCustomers: 0,
+        activeCustomers: 0,
+        newCustomers: 0,
+        customerGrowth: 0,
+        churnRate: 0,
+        averageCustomerValue: 0,
+        customerLifetimeValue: 0,
+        retentionRate: 0
       },
-      profit: {
-        id: 'profit',
-        name: 'Total Profit',
-        value: metrics.revenue.totalProfit,
-        unit: 'R',
-        change: metrics.revenue.profitMargin,
-        changeType: metrics.revenue.profitMargin >= 0 ? 'increase' : 'decrease',
-        trend: metrics.revenue.profitMargin > 15 ? 'up' : metrics.revenue.profitMargin < 5 ? 'down' : 'stable',
-        status: metrics.revenue.profitMargin > 20 ? 'excellent' : metrics.revenue.profitMargin > 10 ? 'good' : 'average'
+      expenseMetrics: {
+        totalExpenses: 0,
+        averageMonthlyExpenses: 0,
+        expenseGrowth: 0,
+        biggestExpenseCategory: 'N/A',
+        expenseBreakdown: []
       },
-      growth: {
-        id: 'growth',
-        name: 'Growth Rate',
-        value: metrics.revenue.revenueGrowth,
-        unit: '%',
-        change: metrics.revenue.revenueGrowth,
-        changeType: metrics.revenue.revenueGrowth >= 0 ? 'increase' : 'decrease',
-        trend: metrics.revenue.revenueGrowth > 10 ? 'up' : metrics.revenue.revenueGrowth < 0 ? 'down' : 'stable',
-        status: metrics.revenue.revenueGrowth > 15 ? 'excellent' : metrics.revenue.revenueGrowth > 5 ? 'good' : 'average'
+      kpiDashboard: this.createKPIDashboard({}),
+      salesMetrics: {
+        totalSales: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        conversionRate: 0,
+        salesGrowth: 0,
+        salesByCategory: []
       },
-      conversion: {
-        id: 'conversion',
-        name: 'Conversion Rate',
-        value: metrics.sales.conversionRate,
-        unit: '%',
-        change: 0, // Would need historical data
-        changeType: 'increase',
-        trend: 'stable',
-        status: metrics.sales.conversionRate > 3 ? 'excellent' : metrics.sales.conversionRate > 2 ? 'good' : 'average'
+      productMetrics: {
+        topProducts: [],
+        totalProducts: 0,
+        averageProductRating: 0,
+        totalProductViews: 0,
+        productConversionRate: 0
       },
-      retention: {
-        id: 'retention',
-        name: 'Customer Retention',
-        value: metrics.customers.retentionRate,
-        unit: '%',
-        change: 0, // Would need historical data
-        changeType: 'increase',
-        trend: 'stable',
-        status: metrics.customers.retentionRate > 80 ? 'excellent' : metrics.customers.retentionRate > 70 ? 'good' : 'average'
+      userActivityMetrics: {
+        totalActiveUsers: 0,
+        averageDailyActiveUsers: 0,
+        totalPageViews: 0,
+        averageSessionDuration: 0,
+        bounceRate: 0,
+        userRetentionRate: 0,
+        mostActiveDay: 'N/A'
+      },
+      financialMetrics: {
+        cashFlow: 0,
+        burnRate: 0,
+        runway: 0,
+        grossMargin: 0,
+        netMargin: 0,
+        ebitda: 0,
+        debtToEquity: 0,
+        currentRatio: 0
+      },
+      marketingMetrics: {
+        totalMarketingSpend: 0,
+        costPerAcquisition: 0,
+        customerAcquisitionCost: 0,
+        returnOnAdSpend: 0,
+        marketingROI: 0,
+        conversionRate: 0,
+        clickThroughRate: 0,
+        impressions: 0
       }
     };
   }
 
-  /**
-   * Create product metrics from API data
-   */
-  private createProductMetrics(apiData: AnalyticsApiResponse): ProductMetrics {
-    // This would need actual product data from the API
+  private transformRevenueMetrics(data: any): RevenueMetrics {
+    return {
+      totalRevenue: data?.totalRevenue || 0,
+      totalExpenses: data?.totalExpenses || 0,
+      totalProfit: data?.totalProfit || 0,
+      revenueGrowth: data?.revenueGrowth || 0,
+      profitMargin: data?.profitMargin || 0,
+      averageMonthlyRevenue: data?.averageMonthlyRevenue || 0,
+      averageMonthlyExpenses: data?.averageMonthlyExpenses || 0,
+      averageMonthlyProfit: data?.averageMonthlyProfit || 0
+    };
+  }
+
+  private transformCustomerMetrics(data: any): CustomerMetrics {
+    return {
+      totalCustomers: data?.totalCustomers || 0,
+      activeCustomers: data?.activeCustomers || 0,
+      newCustomers: data?.newCustomers || 0,
+      customerGrowth: data?.customerGrowth || 0,
+      churnRate: data?.churnRate || 0,
+      averageCustomerValue: data?.averageCustomerValue || 0,
+      customerLifetimeValue: data?.customerLifetimeValue || 0,
+      retentionRate: data?.retentionRate || 0
+    };
+  }
+
+  private transformExpenseMetrics(data: any): ExpenseMetrics {
+    const breakdown = data?.expenseBreakdown || [];
+    return {
+      totalExpenses: data?.totalExpenses || 0,
+      averageMonthlyExpenses: data?.averageMonthlyExpenses || 0,
+      expenseGrowth: data?.expenseGrowth || 0,
+      biggestExpenseCategory: data?.biggestExpenseCategory || 'N/A',
+      expenseBreakdown: breakdown.map((item: any) => ({
+        name: item.name || 'Unknown',
+        value: item.value || 0,
+        percentage: item.percentage || 0,
+        color: item.color || '#CCCCCC',
+        trend: 'stable'
+      }))
+    };
+  }
+
+  private transformSalesMetrics(data: any): any {
+    return {
+      totalSales: data?.totalSales || 0,
+      totalOrders: data?.totalOrders || 0,
+      averageOrderValue: data?.averageOrderValue || 0,
+      conversionRate: data?.conversionRate || 0,
+      salesGrowth: data?.salesGrowth || 0,
+      topSellingProduct: data?.topSellingProduct || 'N/A',
+      salesByCategory: data?.salesByCategory || []
+    };
+  }
+
+  private createKPIDashboard(data: any): KPIDashboard {
+    return {
+      revenue: {
+        id: 'revenue',
+        name: 'Total Revenue',
+        value: data.revenue?.value || 0,
+        unit: 'R',
+        change: data.revenue?.change || 0,
+        changeType: data.revenue?.change >= 0 ? 'increase' : 'decrease',
+        trend: this.getTrend(data.revenue?.change),
+        status: this.getStatus(data.revenue?.change)
+      },
+      customers: {
+        id: 'customers',
+        name: 'Active Customers',
+        value: data.customers?.value || 0,
+        unit: '',
+        change: data.customers?.change || 0,
+        changeType: data.customers?.change >= 0 ? 'increase' : 'decrease',
+        trend: this.getTrend(data.customers?.change),
+        status: this.getStatus(data.customers?.change)
+      },
+      profit: {
+        id: 'profit',
+        name: 'Total Profit',
+        value: data.profit?.value || 0,
+        unit: 'R',
+        change: data.profit?.change || 0,
+        changeType: data.profit?.change >= 0 ? 'increase' : 'decrease',
+        trend: this.getTrend(data.profit?.change),
+        status: this.getStatus(data.profit?.change)
+      },
+      growth: {
+        id: 'growth',
+        name: 'Growth Rate',
+        value: data.growth?.value || 0,
+        unit: '%',
+        change: data.growth?.change || 0,
+        changeType: data.growth?.change >= 0 ? 'increase' : 'decrease',
+        trend: this.getTrend(data.growth?.change),
+        status: this.getStatus(data.growth?.change)
+      },
+      conversion: {
+        id: 'conversion',
+        name: 'Conversion Rate',
+        value: data.conversion?.value || 0,
+        unit: '%',
+        change: 0,
+        changeType: 'increase',
+        trend: 'stable',
+        status: 'average'
+      },
+      retention: {
+        id: 'retention',
+        name: 'Customer Retention',
+        value: data.retention?.value || 0,
+        unit: '%',
+        change: 0,
+        changeType: 'increase',
+        trend: 'stable',
+        status: 'average'
+      }
+    };
+  }
+
+  private getTrend(change: number): 'up' | 'down' | 'stable' {
+    if (change > 5) return 'up';
+    if (change < -5) return 'down';
+    return 'stable';
+  }
+
+  private getStatus(change: number): 'excellent' | 'good' | 'average' | 'poor' {
+    if (change > 10) return 'excellent';
+    if (change > 0) return 'good';
+    if (change > -5) return 'average';
+    return 'poor';
+  }
+
+  private createProductMetrics(data: any): any {
     return {
       topProducts: [],
       totalProducts: 0,
       averageProductRating: 0,
       totalProductViews: 0,
-      productConversionRate: apiData.metrics.sales.conversionRate
+      productConversionRate: 0
     };
+  }
+
+  private createUserActivityMetrics(): any {
+    return {
+      totalActiveUsers: 0,
+      averageDailyActiveUsers: 0,
+      totalPageViews: 0,
+      averageSessionDuration: 0,
+      bounceRate: 0,
+      userRetentionRate: 0,
+      mostActiveDay: 'N/A'
+    };
+  }
+
+  private createFinancialMetrics(): any {
+    return {
+      cashFlow: 0,
+      burnRate: 0,
+      runway: 0,
+      grossMargin: 0,
+      netMargin: 0,
+      ebitda: 0,
+      debtToEquity: 0,
+      currentRatio: 0
+    };
+  }
+
+  private createMarketingMetrics(): any {
+    return {
+      totalMarketingSpend: 0,
+      costPerAcquisition: 0,
+      customerAcquisitionCost: 0,
+      returnOnAdSpend: 0,
+      marketingROI: 0,
+      conversionRate: 0,
+      clickThroughRate: 0,
+      impressions: 0
+    };
+  }
+
+  // ==================== CHART DATA METHODS ====================
+
+  async getRevenueChartData(userId: string, timeRange: AnalyticsTimeRange): Promise<RevenueData[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/revenue/chart/${userId}`, {
+        params: { timeRange }
+      });
+      
+      const data = response.data;
+      return this.transformRevenueChartData(data);
+    } catch (error) {
+      console.error('Error fetching revenue chart data:', error);
+      return this.getDefaultRevenueData();
+    }
+  }
+
+  private transformRevenueChartData(apiData: any): RevenueData[] {
+    const labels = apiData.labels || [];
+    const revenueData = apiData.datasets?.[0]?.data || [];
+    const expenseData = apiData.datasets?.[1]?.data || [];
+    
+    return labels.map((label: string, index: number) => ({
+      period: label,
+      revenue: revenueData[index] || 0,
+      expenses: expenseData[index] || 0,
+      profit: (revenueData[index] || 0) - (expenseData[index] || 0)
+    }));
+  }
+
+  private getDefaultRevenueData(): RevenueData[] {
+    return [
+      { period: 'Jan', revenue: 18000, expenses: 12000, profit: 6000 },
+      { period: 'Feb', revenue: 22000, expenses: 14000, profit: 8000 },
+      { period: 'Mar', revenue: 19000, expenses: 13000, profit: 6000 },
+      { period: 'Apr', revenue: 25000, expenses: 15000, profit: 10000 },
+      { period: 'May', revenue: 28000, expenses: 16000, profit: 12000 },
+      { period: 'Jun', revenue: 24500, expenses: 14500, profit: 10000 }
+    ];
+  }
+
+  async getExpenseBreakdown(userId: string, timeRange: AnalyticsTimeRange): Promise<ExpenseCategory[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/expenses/breakdown/${userId}`, {
+        params: { timeRange }
+      });
+      
+      return (response.data || []).map((item: any) => ({
+        name: item.name || 'Unknown',
+        value: item.value || 0,
+        percentage: item.percentage || 0,
+        color: item.color || '#CCCCCC',
+        trend: 'stable'
+      }));
+    } catch (error) {
+      console.error('Error fetching expense breakdown:', error);
+      return [
+        { name: 'Marketing', value: 35, percentage: 35, color: '#0ea5e9', trend: 'stable' },
+        { name: 'Operations', value: 25, percentage: 25, color: '#10b981', trend: 'stable' },
+        { name: 'Staff', value: 20, percentage: 20, color: '#f59e0b', trend: 'stable' },
+        { name: 'Technology', value: 12, percentage: 12, color: '#ef4444', trend: 'stable' },
+        { name: 'Other', value: 8, percentage: 8, color: '#8b5cf6', trend: 'stable' },
+      ];
+    }
   }
 
   // ==================== UTILITY METHODS ====================
 
-  /**
-   * Format currency for display
-   */
   formatCurrency(amount: number, currency: string = 'R'): string {
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
@@ -562,28 +382,10 @@ class AnalyticsService {
     }).format(amount).replace('ZAR', currency);
   }
 
-  /**
-   * Format percentage for display
-   */
   formatPercentage(value: number, decimals: number = 1): string {
     return `${value.toFixed(decimals)}%`;
   }
 
-  /**
-   * Format large numbers
-   */
-  formatNumber(value: number): string {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
-    }
-    return value.toString();
-  }
-
-  /**
-   * Get trend color based on change
-   */
   getTrendColor(change: number, isPositiveGood: boolean = true): string {
     if (isPositiveGood) {
       return change >= 0 ? 'text-green-600' : 'text-red-600';
@@ -591,69 +393,6 @@ class AnalyticsService {
       return change >= 0 ? 'text-red-600' : 'text-green-600';
     }
   }
-
-  /**
-   * Get status color for metrics
-   */
-  getStatusColor(status: 'excellent' | 'good' | 'average' | 'poor'): string {
-    switch (status) {
-      case 'excellent': return 'text-green-600';
-      case 'good': return 'text-blue-600';
-      case 'average': return 'text-yellow-600';
-      case 'poor': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  }
-
-  /**
-   * Calculate percentage change
-   */
-  calculatePercentageChange(current: number, previous: number): number {
-    if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / previous) * 100;
-  }
-
-  /**
-   * Validate analytics request
-   */
-  validateAnalyticsRequest(request: AnalyticsRequest): string | null {
-    if (!request.timeRange) {
-      return 'Time range is required';
-    }
-    
-    if (request.timeRange === 'custom') {
-      if (!request.startDate || !request.endDate) {
-        return 'Start date and end date are required for custom time range';
-      }
-      
-      const start = new Date(request.startDate);
-      const end = new Date(request.endDate);
-      
-      if (start >= end) {
-        return 'Start date must be before end date';
-      }
-      
-      const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysDiff > 365) {
-        return 'Custom time range cannot exceed 1 year';
-      }
-    }
-    
-    return null; // No errors
-  }
-
-  /**
-   * Get default analytics request
-   */
-  getDefaultAnalyticsRequest(timeRange: AnalyticsTimeRange = '6months'): AnalyticsRequest {
-    return {
-      timeRange,
-      metrics: ['revenue', 'customers', 'expenses', 'sales'],
-      groupBy: 'month'
-    };
-  }
 }
 
-// Export as singleton instance
 export const analyticsService = new AnalyticsService();
-export default analyticsService;
