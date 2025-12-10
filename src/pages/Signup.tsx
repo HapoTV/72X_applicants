@@ -9,7 +9,7 @@ const Signup: React.FC = () => {
     lastName: '',
     email: '',
     phone: '',
-    businessName: '',
+    companyName: '',
     password: '',
     confirmPassword: '',
     acceptTerms: false,
@@ -22,7 +22,7 @@ const Signup: React.FC = () => {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.acceptTerms) return alert('Please accept the terms to continue.');
-    if (!form.businessName.trim()) return alert('Please enter your business name.');
+    if (!form.companyName.trim()) return alert('Please enter your business name.');
     if (!form.phone.trim()) return alert('Please enter your contact number.');
     if (form.password !== form.confirmPassword) return alert('Passwords do not match.');
     setIsLoading(true);
@@ -32,7 +32,7 @@ const Signup: React.FC = () => {
       localStorage.setItem('userEmail', form.email);
       localStorage.setItem('userFirstName', form.firstName);
       localStorage.setItem('userPhone', form.phone);
-      localStorage.setItem('businessName', form.businessName);
+      localStorage.setItem('businessName', form.companyName);
       localStorage.setItem('businessReference', ref);
       localStorage.setItem('lastGeneratedReference', ref);
       localStorage.setItem('authToken', `user-token-${Date.now()}`);
@@ -57,13 +57,38 @@ const Signup: React.FC = () => {
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-              <input value={form.firstName} onChange={e => update('firstName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
-            </div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+            <input
+        value={form.firstName}
+            onChange={e => {
+        const value = e.target.value;
+                // Allow only letters and spaces
+          if (/^[A-Za-z\s]*$/.test(value)) {
+          update('firstName', value);
+          }
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+          />
+        </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-              <input value={form.lastName} onChange={e => update('lastName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+              <input
+                value={form.lastName}
+                  onChange={e => {
+                    const value = e.target.value;
+
+                  // Allow only letters and spaces
+                      if (/^[A-Za-z\s]*$/.test(value)) {
+                        update('lastName', value);
+                }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                required
+                />
+              </div>
+
           </div>
 
           <div>
@@ -73,13 +98,41 @@ const Signup: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
-              <input value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="e.g. 082 123 4567" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+          <input
+          value={form.phone}
+            onChange={e => {
+              const value = e.target.value;
+
+                // Allow digits and spaces only
+                if (/^[0-9\s]*$/.test(value)) {
+                update("phone", value);
+              }
+            }}
+            placeholder="e.g. 082 123 4567"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            required
+            />
             </div>
+
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
-              <input value={form.businessName} onChange={e => update('businessName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+            <input
+                value={form.companyName}
+                  onChange={e => {
+                    const value = e.target.value;
+
+                      // Allow only letters and spaces
+              if (/^[A-Za-z\s]*$/.test(value)) {
+              update('companyName', value);
+                }
+              }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  required
+                    />
             </div>
+
           </div>
 
           <div className="pt-2">
