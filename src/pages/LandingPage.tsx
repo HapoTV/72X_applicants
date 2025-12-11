@@ -430,7 +430,7 @@ const LandingPage: React.FC = () => {
                   
                   {productDropdownOpen && (
                     <div 
-                      className="fixed left-0 right-0 mt-2 bg-white border-t border-gray-200 shadow-xl z-50 py-8"
+                      className="fixed left-0 right-0 mt-2 bg-white shadow-xl z-50 py-8"
                       onMouseEnter={() => setProductDropdownOpen(true)}
                       onMouseLeave={() => setProductDropdownOpen(false)}
                     >
@@ -550,7 +550,7 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* Trust Bar */}
-        <section className="bg-gray-50 py-8 border-y border-gray-800">
+        <section className="bg-gray-50 py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
@@ -1231,7 +1231,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-white/20 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+          <div className="mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
             <div className="text-white/90 text-sm">© {new Date().getFullYear()} 72X. All rights reserved.</div>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <a href="#" className="text-white/90 hover:text-white transition-colors text-sm">Privacy</a>
