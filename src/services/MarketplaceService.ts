@@ -100,8 +100,9 @@ class MarketplaceService {
    */
   async createProduct(productData: ProductFormData, createdBy: string): Promise<AdminProductItem> {
     try {
-      const productRequest: ProductRequest = this.transformToProductRequest(productData, createdBy);
-      const response = await axiosClient.post('/marketplace/products', productRequest);
+      const productDTO = this.transformToProductDTO(productData, createdBy);
+      console.log('Sending product data to backend:', productDTO);
+      const response = await axiosClient.post('/marketplace/products', productDTO);
       return this.transformToAdminProductItem(response.data);
     } catch (error) {
       console.error('Error creating product:', error);
@@ -510,6 +511,27 @@ class MarketplaceService {
       returnPolicy: formData.returnPolicy || undefined,
       negotiable: formData.negotiable,
       images: formData.images,
+      createdBy: createdBy
+    };
+  }
+
+  /**
+   * Transform form data to match backend ProductDTO expectations
+   */
+  private transformToProductDTO(formData: ProductFormData, createdBy: string): any {
+    return {
+      title: formData.title,
+      description: formData.description,
+      price: formData.price,
+      category: formData.category,
+      location: formData.location,
+      condition: formData.condition || 'new',
+      tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : [],
+      specifications: formData.specifications ? this.parseSpecifications(formData.specifications) : {},
+      shippingInfo: formData.shippingInfo || null,
+      returnPolicy: formData.returnPolicy || null,
+      negotiable: formData.negotiable || false,
+      images: formData.images || [],
       createdBy: createdBy
     };
   }

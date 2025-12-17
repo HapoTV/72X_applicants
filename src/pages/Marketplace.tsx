@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Star, Heart, Share2, Plus, Camera, Tag } from 'lucide-react';
+import { marketplaceService } from '../services/MarketplaceService';
+import { useAuth } from '../context/AuthContext';
+import type { UserProductItem, MarketplaceCategory, MarketplaceLocation } from '../interfaces/MarketplaceData';
 
 const Marketplace: React.FC = () => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [showAddProduct, setShowAddProduct] = useState(false);
-  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Form state for new product
   const [newProduct, setNewProduct] = useState({
     title: '',
@@ -18,22 +24,9 @@ const Marketplace: React.FC = () => {
     image: ''
   });
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      title: 'Listed Product Example',
-      description: 'This is an example of how your product will appear when listed. Users can add their own products using the "List Product" button above.',
-      price: 'R45',
-      seller: 'Your Business Name',
-      location: 'Your Location',
-      category: 'agriculture',
-      rating: 4.8,
-      reviews: 23,
-      image: 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400',
-      featured: true,
-      inStock: true
-    }
-  ]);
+  const [products, setProducts] = useState<UserProductItem[]>([]);
+  const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
+  const [locations, setLocations] = useState<MarketplaceLocation[]>([]);
 
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,73 +41,152 @@ const Marketplace: React.FC = () => {
   };
 
   // Handle form submission
-  const handleListProduct = (e: React.FormEvent) => {
+  const handleListProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user?.email) {
+      alert('Please login to list a product');
+      return;
+    }
     
     if (!newProduct.title || !newProduct.description || !newProduct.price || !newProduct.businessName) {
       alert('Please fill in all required fields');
       return;
     }
 
-    // Create new product object
-    const productToAdd = {
-      id: products.length + 1,
-      title: newProduct.title,
-      description: newProduct.description,
-      price: `R${newProduct.price}`,
-      seller: newProduct.businessName,
-      location: newProduct.location,
-      category: newProduct.category,
-      rating: 0,
-      reviews: 0,
-      image: uploadedImage || 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400',
-      featured: false,
-      inStock: true
-    };
-
-    // Add to products array
-    setProducts([...products, productToAdd]);
-    
-    // Reset form
-    setNewProduct({
-      title: '',
-      description: '',
-      price: '',
-      businessName: '',
-      category: 'food',
-      location: 'soweto',
-      image: ''
-    });
-    setUploadedImage(null);
-    setShowAddProduct(false);
-    
-    alert('Product listed successfully!');
+    try {
+      setLoading(true);
+      
+      // Prepare form data
+      const productData: any = {
+        title: newProduct.title,
+        description: newProduct.description,
+        price: newProduct.price,
+        category: newProduct.category,
+        location: newProduct.location,
+        condition: 'new' as const,
+        tags: '',
+        specifications: '',
+        shippingInfo: '',
+        returnPolicy: '',
+        negotiable: false,
+        images: uploadedImage ? [uploadedImage] : []
+      };
+      
+      // Validate product data
+      if (!productData.title || !productData.description || !productData.price) {
+        throw new Error('Product title, description, and price are required');
+      }
+      
+      if (!productData.category || !productData.location) {
+        throw new Error('Product category and location are required');
+      }
+      
+      console.log('Sending product data to backend:', productData);
+      
+      // Create product via service
+      await marketplaceService.createProduct(productData, user.email);
+      
+      // Refresh products list
+      await fetchMarketplaceData();
+      
+      // Reset form
+      setNewProduct({
+        title: '',
+        description: '',
+        price: '',
+        businessName: '',
+        category: 'food',
+        location: 'soweto',
+        image: ''
+      });
+      setUploadedImage(null);
+      setShowAddProduct(false);
+      
+      alert('Product listed successfully!');
+    } catch (error) {
+      console.error('Error listing product:', error);
+      setError('Failed to list product');
+      alert('Failed to list product. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const categories = [
-    { id: 'all', name: 'All Categories' },
-    { id: 'food', name: 'Food & Beverages' },
-    { id: 'crafts', name: 'Arts & Crafts' },
-    { id: 'clothing', name: 'Clothing & Fashion' },
-    { id: 'services', name: 'Services' },
-    { id: 'agriculture', name: 'Agriculture' },
-    { id: 'beauty', name: 'Beauty & Personal Care' },
-    { id: 'electronics', name: 'Electronics & Repairs' },
-    { id: 'home', name: 'Home & Garden' },
-    { id: 'other', name: 'Other' }
-  ];
+  // Fetch data on component mount and when filters change
+  useEffect(() => {
+    fetchMarketplaceData();
+  }, [searchTerm, selectedCategory, selectedLocation]);
 
-  const locations = [
-    { id: 'all', name: 'All Locations' },
-    { id: 'soweto', name: 'Soweto' },
-    { id: 'alexandra', name: 'Alexandra' },
-    { id: 'khayelitsha', name: 'Khayelitsha' },
-    { id: 'mitchells-plain', name: 'Mitchells Plain' },
-    { id: 'mamelodi', name: 'Mamelodi' },
-    { id: 'umlazi', name: 'Umlazi' },
-    { id: 'mdantsane', name: 'Mdantsane' },
-    { id: 'other', name: 'Other' }
-  ];
+  const fetchMarketplaceData = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Try to fetch products with filters
+      try {
+        const searchParams: any = {};
+        if (searchTerm) searchParams.query = searchTerm;
+        if (selectedCategory !== 'all') searchParams.category = selectedCategory;
+        if (selectedLocation !== 'all') searchParams.location = selectedLocation;
+        
+        const productsResponse = await marketplaceService.getActiveProducts(searchParams);
+        setProducts(productsResponse.products);
+      } catch (apiError) {
+        console.log('Backend API not available, using fallback data');
+        // Fallback to empty state when backend is not available
+        setProducts([]);
+      }
+      
+      // Fetch categories and locations (with fallback)
+      try {
+        const [categoriesData, locationsData] = await Promise.all([
+          marketplaceService.getCategories(),
+          marketplaceService.getLocations()
+        ]);
+        
+        setCategories(categoriesData);
+        setLocations(locationsData);
+      } catch (fallbackError) {
+        console.log('Categories/Locations API not available, using fallback data');
+        // Fallback data when backend is not available
+        setCategories([
+          { id: 'all', name: 'All Categories' },
+          { id: 'food', name: 'Food & Beverages' },
+          { id: 'crafts', name: 'Arts & Crafts' },
+          { id: 'clothing', name: 'Clothing & Fashion' },
+          { id: 'services', name: 'Services' },
+          { id: 'agriculture', name: 'Agriculture' },
+          { id: 'beauty', name: 'Beauty & Personal Care' },
+          { id: 'electronics', name: 'Electronics & Repairs' },
+          { id: 'home', name: 'Home & Garden' },
+          { id: 'other', name: 'Other' }
+        ]);
+        
+        setLocations([
+          { id: 'all', name: 'All Locations' },
+          { id: 'soweto', name: 'Soweto' },
+          { id: 'alexandra', name: 'Alexandra' },
+          { id: 'khayelitsha', name: 'Khayelitsha' },
+          { id: 'mitchells-plain', name: 'Mitchells Plain' },
+          { id: 'mamelodi', name: 'Mamelodi' },
+          { id: 'umlazi', name: 'Umlazi' },
+          { id: 'mdantsane', name: 'Mdantsane' },
+          { id: 'other', name: 'Other' }
+        ]);
+      }
+    } catch (err) {
+      console.error('Error fetching marketplace data:', err);
+      setError('Failed to load marketplace data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -126,6 +198,37 @@ const Marketplace: React.FC = () => {
 
   const featuredProducts = products.filter(product => product.featured);
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Tag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Marketplace</h3>
+          <p className="text-gray-600">{error}</p>
+          <button 
+            onClick={() => {
+              setError(null);
+              fetchMarketplaceData();
+            }}
+            className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 animate-fade-in px-2 sm:px-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -134,13 +237,15 @@ const Marketplace: React.FC = () => {
           <p className="text-gray-600 text-sm">Discover and support local businesses in your community</p>
         </div>
         
-        <button
-          onClick={() => setShowAddProduct(true)}
-          className="mt-4 sm:mt-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>List Product</span>
-        </button>
+        {user && (
+          <button
+            onClick={() => setShowAddProduct(true)}
+            className="mt-4 sm:mt-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>List Product</span>
+          </button>
+        )}
       </div>
 
       {/* Search and Filters */}
@@ -239,58 +344,71 @@ const Marketplace: React.FC = () => {
 
       {/* All Products */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">All Products & Services</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map(product => (
-            <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-              <div className="relative">
-                <img 
-                  src={product.image} 
-                  alt={product.title}
-                  className="w-full h-32 object-cover"
-                />
-                {product.featured && (
-                  <div className="absolute top-2 left-2">
-                    <span className="px-2 py-1 bg-yellow-500 text-white text-xs rounded-full font-medium">
-                      Featured
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="p-3">
-                <h3 className="font-semibold text-gray-900 mb-1 text-sm line-clamp-1">{product.title}</h3>
-                <p className="text-gray-600 text-xs mb-2 line-clamp-2">{product.description}</p>
-                
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-primary-600 text-sm">{product.price}</span>
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                    <span className="text-xs text-gray-600">{product.rating}</span>
-                  </div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          All Products & Services {products.length > 0 && `(${products.length})`}
+        </h2>
+        {products.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map(product => (
+              <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+                <div className="relative">
+                  <img 
+                    src={product.images?.[0] || 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400'} 
+                    alt={product.title}
+                    className="w-full h-32 object-cover"
+                  />
+                  {product.featured && (
+                    <div className="absolute top-2 left-2">
+                      <span className="px-2 py-1 bg-yellow-500 text-white text-xs rounded-full font-medium">
+                        Featured
+                      </span>
+                    </div>
+                  )}
                 </div>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                  <span className="truncate">{product.seller}</span>
-                  <div className="flex items-center space-x-1">
-                    <MapPin className="w-3 h-3" />
-                    <span>{product.location}</span>
+                <div className="p-3">
+                  <h3 className="font-semibold text-gray-900 mb-1 text-sm line-clamp-1">{product.title}</h3>
+                  <p className="text-gray-600 text-xs mb-2 line-clamp-2">{product.description}</p>
+                  
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-bold text-primary-600 text-sm">{product.price}</span>
+                    <div className="flex items-center space-x-1">
+                      <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                      <span className="text-xs text-gray-600">{product.rating}</span>
+                    </div>
                   </div>
+                  
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                    <span className="truncate">{product.seller}</span>
+                    <div className="flex items-center space-x-1">
+                      <MapPin className="w-3 h-3" />
+                      <span>{product.location}</span>
+                    </div>
+                  </div>
+                  
+                  <button className="w-full py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-xs">
+                    Contact Seller
+                  </button>
                 </div>
-                
-                <button className="w-full py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-xs">
-                  Contact Seller
-                </button>
               </div>
-            </div>
-          ))}
-        </div>
-        
-        {filteredProducts.length === 0 && (
+            ))}
+          </div>
+        ) : (
           <div className="text-center py-12">
             <Tag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-600">Try adjusting your search criteria or filters.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Available</h3>
+            <p className="text-gray-600 mb-4">
+              {user ? 'Be the first to list a product in your community!' : 'Login to start buying and selling in your community!'}
+            </p>
+            {user && (
+              <button
+                onClick={() => setShowAddProduct(true)}
+                className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                List First Product
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -366,7 +484,7 @@ const Marketplace: React.FC = () => {
                     onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                   >
-                    {categories.slice(1).map(category => (
+                    {categories.map(category => (
                       <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
                   </select>
@@ -380,7 +498,7 @@ const Marketplace: React.FC = () => {
                   onChange={(e) => setNewProduct({...newProduct, location: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                 >
-                  {locations.slice(1).map(location => (
+                  {locations.map(location => (
                     <option key={location.id} value={location.id}>{location.name}</option>
                   ))}
                 </select>
