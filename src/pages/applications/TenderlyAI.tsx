@@ -81,8 +81,8 @@ export default function TenderlyAI() {
   }
 
   const handleSignOut = () => {
-    // No auth needed, just redirect to home
-    window.location.href = '/'
+    // No auth needed, just redirect to dashboard
+    window.location.href = '/dashboard'
   }
 
   const handleSearch = (query: string) => {
