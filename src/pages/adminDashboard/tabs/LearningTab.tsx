@@ -12,7 +12,7 @@ interface LearningItem {
     createdBy: string;
 }
 
-type LearningSection = 'BUSINESS' | 'MARKETING' | 'FINANCE' | 'OPERATIONS' | 'LEADERSHIP';
+type LearningSection = 'BUSINESS' | 'MARKETING' | 'FINANCE' | 'OPERATIONS' | 'LEADERSHIP' | 'STANDARD_BANK';
 
 export default function LearningTab() {
     const [learningSection, setLearningSection] = useState<LearningSection>('BUSINESS');
@@ -22,6 +22,7 @@ export default function LearningTab() {
         FINANCE: [],
         OPERATIONS: [],
         LEADERSHIP: [],
+        STANDARD_BANK: [],
     });
     const [showAddLearning, setShowAddLearning] = useState(false);
     const [newLearning, setNewLearning] = useState<{ 
@@ -44,7 +45,8 @@ export default function LearningTab() {
         MARKETING: 'Marketing & Sales',
         FINANCE: 'Financial Management',
         OPERATIONS: 'Operations',
-        LEADERSHIP: 'Leadership'
+        LEADERSHIP: 'Leadership',
+        STANDARD_BANK: 'StandardBank'
     };
 
     useEffect(() => {
@@ -63,6 +65,7 @@ export default function LearningTab() {
                 FINANCE: [],
                 OPERATIONS: [],
                 LEADERSHIP: [],
+                STANDARD_BANK: [],
             };
             
             // Group by category

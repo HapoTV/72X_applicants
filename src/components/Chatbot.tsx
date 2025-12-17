@@ -233,7 +233,7 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
   default: {
     keywords: [],
     response: [
-      "That's an interesting question! For complex queries try asking our OpenAI assistant. Click on this link: https://chat.openai.com/",
+      "That's an interesting question! For complex queries try to contact our support team.",
     ],
   },
 };

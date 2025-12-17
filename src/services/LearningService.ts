@@ -308,6 +308,72 @@ class LearningService {
         isCompleted: false,
         isLocked: false,
         lastAccessed: '2024-11-30T16:20:00Z'
+      },
+      {
+        id: '7',
+        title: 'Introduction to StandardBank',
+        description: 'Get started with StandardBank Learning Management basics and core banking operations.',
+        category: 'standardbank',
+        duration: '30 min',
+        lessons: 5,
+        difficulty: 'Beginner',
+        rating: 4.8,
+        students: 1500,
+        isPremium: false,
+        progress: 100,
+        thumbnail: 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400',
+        isCompleted: true,
+        isLocked: false,
+        lastAccessed: '2024-12-01T10:30:00Z'
+      },
+      {
+        id: '8',
+        title: 'Advanced Banking Operations',
+        description: 'Master complex banking operations, compliance, and workflow management.',
+        category: 'standardbank',
+        duration: '45 min',
+        lessons: 8,
+        difficulty: 'Advanced',
+        rating: 4.7,
+        students: 800,
+        isPremium: true,
+        progress: 0,
+        thumbnail: 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400',
+        isCompleted: false,
+        isLocked: true
+      },
+      {
+        id: '9',
+        title: 'Customer Service Excellence',
+        description: 'Enhance your customer service skills for banking and client relationship management.',
+        category: 'standardbank',
+        duration: '40 min',
+        lessons: 6,
+        difficulty: 'Intermediate',
+        rating: 4.9,
+        students: 1200,
+        isPremium: false,
+        progress: 0,
+        thumbnail: 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400',
+        isCompleted: false,
+        isLocked: false
+      },
+      {
+        id: '10',
+        title: 'Banking Compliance and Regulations',
+        description: 'Understanding banking regulations, compliance requirements, and risk management.',
+        category: 'standardbank',
+        duration: '55 min',
+        lessons: 10,
+        difficulty: 'Intermediate',
+        rating: 4.6,
+        students: 950,
+        isPremium: true,
+        progress: 25,
+        thumbnail: 'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400',
+        isCompleted: false,
+        isLocked: false,
+        lastAccessed: '2024-11-28T14:15:00Z'
       }
     ];
 
@@ -377,9 +443,9 @@ class LearningService {
 
   private getMockLearningStats(): LearningStats {
     return {
-      totalModules: 6,
+      totalModules: 10,
       completedModules: 2,
-      inProgressModules: 2,
+      inProgressModules: 3,
       totalProgress: 47,
       timeSpent: 245,
       averageRating: 4.8,
@@ -388,12 +454,13 @@ class LearningService {
         'marketing': 2,
         'finance': 1,
         'operations': 1,
-        'leadership': 1
+        'leadership': 1,
+        'standardbank': 4
       },
       byDifficulty: {
-        'Beginner': 2,
-        'Intermediate': 3,
-        'Advanced': 1
+        'Beginner': 3,
+        'Intermediate': 4,
+        'Advanced': 3
       }
     };
   }

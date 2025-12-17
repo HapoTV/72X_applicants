@@ -1,6 +1,5 @@
 // src/components/admin/AdminNavbar.tsx
 import { LogOut, User } from 'lucide-react';
-import Logo from '../../assets/Logo.svg';
 import { useAuth } from '../../context/AuthContext';
 
 interface AdminNavbarProps {
@@ -15,7 +14,7 @@ export default function AdminNavbar({ onLogout }: AdminNavbarProps) {
             <div className="px-6 py-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                        <img src={Logo} alt="SeventyTwoX Logo" className="w-16 h-16" />
+                        <img src="/Logo2.png" alt="SeventyTwoX Logo" className="w-16 h-16" />
                         <span className="text-2xl font-bold ml-3">Admin Dashboard</span>
                     </div>
                     <div className="flex items-center space-x-4">

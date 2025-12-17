@@ -12,6 +12,7 @@ const LearningSubNav: React.FC<LearningSubNavProps> = ({ onClose }) => {
     { path: '/learning/financial-management', label: 'Financial Management' },
     { path: '/learning/operations', label: 'Operations' },
     { path: '/learning/leadership', label: 'Leadership' },
+    { path: '/learning/standardbank-lm', label: 'StandardBank' },
   ];
 
   return (

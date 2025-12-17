@@ -17,6 +17,7 @@ import MarketingSales from './pages/learning/MarketingSales';
 import FinancialManagement from './pages/learning/FinancialManagement';
 import Operations from './pages/learning/Operations';
 import Leadership from './pages/learning/Leadership';
+import StandardBankLM from './pages/learning/StandardBankLM';
 import Community from './pages/Community';
 import CommunityDiscussions from './pages/community/Discussions';
 import CommunityNetworking from './pages/community/Networking';
@@ -25,7 +26,6 @@ import FundingFinder from './pages/FundingFinder';
 import ExpertSessions from './pages/ExpertSessions';
 import Marketplace from './pages/Marketplace';
 import MentorshipHub from './pages/MentorshipHub';
-import Applications from './pages/Applications';
 import AIBusinessAnalyst from './pages/AIBusinessAnalyst';
 import Login from './pages/Login';
 import BizBoostChatbot from './components/Chatbot';
@@ -35,6 +35,8 @@ import SignupSuccess from './pages/SignupSuccess';
 import RequestDemo from './pages/RequestDemo';
 import Pricing from './pages/Pricing';
 import TenderlyAI from './pages/applications/TenderlyAI';
+import CRM from './pages/applications/CRM';
+import FinanceManager from './pages/applications/FinanceManager';
 
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
@@ -102,6 +104,7 @@ function App() {
                 <Route path="/learning/financial-management" element={<FinancialManagement />} />
                 <Route path="/learning/operations" element={<Operations />} />
                 <Route path="/learning/leadership" element={<Leadership />} />
+                <Route path="/learning/standardbank-lm" element={<StandardBankLM />} />
                 
                 {/* Community Routes */}
                 <Route path="/community" element={<Community />} />
@@ -110,7 +113,9 @@ function App() {
                 <Route path="/community/mentorship" element={<CommunityMentorship />} />
                 
                 {/* Other Protected Routes */}
-                <Route path="/applications" element={<Applications />} />
+                <Route path="/applications" element={<Navigate to="/applications/crm" replace />} />
+                <Route path="/applications/crm/*" element={<CRM />} />
+                <Route path="/applications/finance-manager" element={<FinanceManager />} />
                 <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
                 <Route path="/profile" element={<Profile />} />
                 
