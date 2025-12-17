@@ -6,6 +6,90 @@ const Marketplace: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [showAddProduct, setShowAddProduct] = useState(false);
+  
+  // Form state for new product
+  const [newProduct, setNewProduct] = useState({
+    title: '',
+    description: '',
+    price: '',
+    businessName: '',
+    category: 'food',
+    location: 'soweto',
+    image: ''
+  });
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [products, setProducts] = useState([
+    {
+      id: 1,
+      title: 'Listed Product Example',
+      description: 'This is an example of how your product will appear when listed. Users can add their own products using the "List Product" button above.',
+      price: 'R45',
+      seller: 'Your Business Name',
+      location: 'Your Location',
+      category: 'agriculture',
+      rating: 4.8,
+      reviews: 23,
+      image: 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400',
+      featured: true,
+      inStock: true
+    }
+  ]);
+
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle form submission
+  const handleListProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newProduct.title || !newProduct.description || !newProduct.price || !newProduct.businessName) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Create new product object
+    const productToAdd = {
+      id: products.length + 1,
+      title: newProduct.title,
+      description: newProduct.description,
+      price: `R${newProduct.price}`,
+      seller: newProduct.businessName,
+      location: newProduct.location,
+      category: newProduct.category,
+      rating: 0,
+      reviews: 0,
+      image: uploadedImage || 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400',
+      featured: false,
+      inStock: true
+    };
+
+    // Add to products array
+    setProducts([...products, productToAdd]);
+    
+    // Reset form
+    setNewProduct({
+      title: '',
+      description: '',
+      price: '',
+      businessName: '',
+      category: 'food',
+      location: 'soweto',
+      image: ''
+    });
+    setUploadedImage(null);
+    setShowAddProduct(false);
+    
+    alert('Product listed successfully!');
+  };
 
   const categories = [
     { id: 'all', name: 'All Categories' },
@@ -16,7 +100,8 @@ const Marketplace: React.FC = () => {
     { id: 'agriculture', name: 'Agriculture' },
     { id: 'beauty', name: 'Beauty & Personal Care' },
     { id: 'electronics', name: 'Electronics & Repairs' },
-    { id: 'home', name: 'Home & Garden' }
+    { id: 'home', name: 'Home & Garden' },
+    { id: 'other', name: 'Other' }
   ];
 
   const locations = [
@@ -27,94 +112,8 @@ const Marketplace: React.FC = () => {
     { id: 'mitchells-plain', name: 'Mitchells Plain' },
     { id: 'mamelodi', name: 'Mamelodi' },
     { id: 'umlazi', name: 'Umlazi' },
-    { id: 'mdantsane', name: 'Mdantsane' }
-  ];
-
-  const products = [
-    {
-      id: 1,
-      title: 'Fresh Vegetables Bundle',
-      description: 'Locally grown fresh vegetables including spinach, carrots, and potatoes',
-      price: 'R45',
-      seller: 'Nomsa\'s Garden',
-      location: 'Soweto',
-      category: 'agriculture',
-      rating: 4.8,
-      reviews: 23,
-      image: 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400',
-      featured: true,
-      inStock: true
-    },
-    {
-      id: 2,
-      title: 'Handmade Beaded Jewelry',
-      description: 'Beautiful traditional beaded necklaces and bracelets, perfect for special occasions',
-      price: 'R120',
-      seller: 'Thandi\'s Crafts',
-      location: 'Alexandra',
-      category: 'crafts',
-      rating: 4.9,
-      reviews: 45,
-      image: 'https://images.pexels.com/photos/1191531/pexels-photo-1191531.jpeg?auto=compress&cs=tinysrgb&w=400',
-      featured: false,
-      inStock: true
-    },
-    {
-      id: 3,
-      title: 'Mobile Phone Repair Service',
-      description: 'Professional mobile phone repair service. Screen replacement, battery change, and more',
-      price: 'From R80',
-      seller: 'Tech Solutions',
-      location: 'Khayelitsha',
-      category: 'services',
-      rating: 4.7,
-      reviews: 67,
-      image: 'https://images.pexels.com/photos/404280/pexels-photo-404280.jpeg?auto=compress&cs=tinysrgb&w=400',
-      featured: true,
-      inStock: true
-    },
-    {
-      id: 4,
-      title: 'Traditional Shweshwe Dresses',
-      description: 'Custom-made traditional dresses using authentic Shweshwe fabric',
-      price: 'R350',
-      seller: 'Mama\'s Fashion',
-      location: 'Mamelodi',
-      category: 'clothing',
-      rating: 4.6,
-      reviews: 34,
-      image: 'https://images.pexels.com/photos/1536619/pexels-photo-1536619.jpeg?auto=compress&cs=tinysrgb&w=400',
-      featured: false,
-      inStock: true
-    },
-    {
-      id: 5,
-      title: 'Homemade Koeksisters',
-      description: 'Delicious traditional koeksisters made fresh daily. Perfect for special occasions',
-      price: 'R25 per dozen',
-      seller: 'Sweet Treats Bakery',
-      location: 'Mitchells Plain',
-      category: 'food',
-      rating: 4.9,
-      reviews: 89,
-      image: 'https://images.pexels.com/photos/1126728/pexels-photo-1126728.jpeg?auto=compress&cs=tinysrgb&w=400',
-      featured: true,
-      inStock: true
-    },
-    {
-      id: 6,
-      title: 'Natural Hair Care Products',
-      description: 'Organic hair care products made with natural ingredients for African hair',
-      price: 'R65',
-      seller: 'Natural Beauty Co',
-      location: 'Umlazi',
-      category: 'beauty',
-      rating: 4.8,
-      reviews: 56,
-      image: 'https://images.pexels.com/photos/3685530/pexels-photo-3685530.jpeg?auto=compress&cs=tinysrgb&w=400',
-      featured: false,
-      inStock: true
-    }
+    { id: 'mdantsane', name: 'Mdantsane' },
+    { id: 'other', name: 'Other' }
   ];
 
   const filteredProducts = products.filter(product => {
@@ -310,13 +309,28 @@ const Marketplace: React.FC = () => {
               </button>
             </div>
             
-            <form className="space-y-4">
+            <form onSubmit={handleListProduct} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
                 <input
                   type="text"
+                  value={newProduct.title}
+                  onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                   placeholder="Enter product name"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+                <input
+                  type="text"
+                  value={newProduct.businessName}
+                  onChange={(e) => setNewProduct({...newProduct, businessName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  placeholder="Enter your business name"
+                  required
                 />
               </div>
               
@@ -324,8 +338,11 @@ const Marketplace: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
                   rows={3}
+                  value={newProduct.description}
+                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                   placeholder="Describe your product"
+                  required
                 />
               </div>
               
@@ -334,14 +351,21 @@ const Marketplace: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
                   <input
                     type="text"
+                    value={newProduct.price}
+                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                     placeholder="R 0.00"
+                    required
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm">
+                  <select 
+                    value={newProduct.category}
+                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  >
                     {categories.slice(1).map(category => (
                       <option key={category.id} value={category.id}>{category.name}</option>
                     ))}
@@ -351,7 +375,11 @@ const Marketplace: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm">
+                <select 
+                  value={newProduct.location}
+                  onChange={(e) => setNewProduct({...newProduct, location: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                >
                   {locations.slice(1).map(location => (
                     <option key={location.id} value={location.id}>{location.name}</option>
                   ))}
@@ -360,9 +388,34 @@ const Marketplace: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Photos</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Click to upload photos</p>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center relative">
+                  {uploadedImage ? (
+                    <div className="relative">
+                      <img 
+                        src={uploadedImage} 
+                        alt="Product preview" 
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setUploadedImage(null)}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 mb-2">Click to upload photos</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
               

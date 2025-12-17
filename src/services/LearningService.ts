@@ -1,4 +1,5 @@
 // src/services/LearningService.ts
+import axiosClient from '../api/axiosClient';
 import type { 
   UserLearningModule, 
   LearningStats,
@@ -6,20 +7,15 @@ import type {
 } from '../interfaces/LearningData';
 
 class LearningService {
-  private baseUrl = '/api/learning-materials';
+  private baseUrl = '/learning-materials';
 
   /**
    * Get all learning materials
    */
   async getAllLearningMaterials(): Promise<UserLearningModule[]> {
     try {
-      const response = await fetch(`${this.baseUrl}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch learning materials');
-      }
-      
-      const data = await response.json();
-      return this.transformBackendToUserModules(data);
+      const response = await axiosClient.get(`${this.baseUrl}`);
+      return this.transformBackendToUserModules(response.data);
     } catch (error) {
       console.error('Error fetching learning materials:', error);
       return this.getMockUserModules();
@@ -31,13 +27,8 @@ class LearningService {
    */
   async getLearningMaterialsByCategory(category: string): Promise<UserLearningModule[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/category/${category}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch learning materials by category');
-      }
-      
-      const data = await response.json();
-      return this.transformBackendToUserModules(data);
+      const response = await axiosClient.get(`${this.baseUrl}/category/${category}`);
+      return this.transformBackendToUserModules(response.data);
     } catch (error) {
       console.error('Error fetching learning materials by category:', error);
       return this.getMockUserModules({ category: category as any });
@@ -49,13 +40,8 @@ class LearningService {
    */
   async getLearningMaterialsByCreator(userEmail: string): Promise<UserLearningModule[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/creator/${userEmail}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch learning materials by creator');
-      }
-      
-      const data = await response.json();
-      return this.transformBackendToUserModules(data);
+      const response = await axiosClient.get(`${this.baseUrl}/creator/${userEmail}`);
+      return this.transformBackendToUserModules(response.data);
     } catch (error) {
       console.error('Error fetching learning materials by creator:', error);
       return this.getMockUserModules();
@@ -67,13 +53,8 @@ class LearningService {
    */
   async searchLearningMaterials(query: string): Promise<UserLearningModule[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/search?query=${encodeURIComponent(query)}`);
-      if (!response.ok) {
-        throw new Error('Failed to search learning materials');
-      }
-      
-      const data = await response.json();
-      return this.transformBackendToUserModules(data);
+      const response = await axiosClient.get(`${this.baseUrl}/search?query=${encodeURIComponent(query)}`);
+      return this.transformBackendToUserModules(response.data);
     } catch (error) {
       console.error('Error searching learning materials:', error);
       return this.getMockUserModules({ search: query });
@@ -91,22 +72,17 @@ class LearningService {
       
       if (filter?.category && filter.category !== 'all') {
         if (filter?.search) {
-          response = await fetch(`${this.baseUrl}/category/${filter.category}/search?query=${encodeURIComponent(filter.search)}`);
+          response = await axiosClient.get(`${this.baseUrl}/category/${filter.category}/search?query=${encodeURIComponent(filter.search)}`);
         } else {
-          response = await fetch(`${this.baseUrl}/category/${filter.category}`);
+          response = await axiosClient.get(`${this.baseUrl}/category/${filter.category}`);
         }
       } else if (filter?.search) {
-        response = await fetch(`${this.baseUrl}/search?query=${encodeURIComponent(filter.search)}`);
+        response = await axiosClient.get(`${this.baseUrl}/search?query=${encodeURIComponent(filter.search)}`);
       } else {
-        response = await fetch(`${this.baseUrl}`);
+        response = await axiosClient.get(`${this.baseUrl}`);
       }
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch learning modules');
-      }
-      
-      const data = await response.json();
-      const modules = this.transformBackendToUserModules(data);
+      const modules = this.transformBackendToUserModules(response.data);
       
       // Apply additional client-side filtering if needed
       return this.applyClientSideFilters(modules, filter);
@@ -130,13 +106,8 @@ class LearningService {
    */
   async getModuleById(moduleId: string): Promise<UserLearningModule | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/${moduleId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch learning material');
-      }
-      
-      const data = await response.json();
-      const modules = this.transformBackendToUserModules([data]);
+      const response = await axiosClient.get(`${this.baseUrl}/${moduleId}`);
+      const modules = this.transformBackendToUserModules([response.data]);
       return modules[0] || null;
     } catch (error) {
       console.error('Error fetching learning material:', error);
@@ -153,7 +124,7 @@ class LearningService {
       id: item.materialId || item.id,
       title: item.title,
       description: item.description || '',
-      category: item.category?.toLowerCase() || 'general',
+      category: this.mapBackendCategoryToFrontend(item.category),
       duration: item.estimatedDuration || '60 min',
       lessons: 1, // Backend doesn't have lessons, default to 1
       difficulty: 'Beginner', // Backend doesn't have difficulty, default to Beginner
@@ -165,6 +136,26 @@ class LearningService {
       isCompleted: false,
       isLocked: false
     }));
+  }
+
+  /**
+   * Map backend category names to frontend category format
+   */
+  private mapBackendCategoryToFrontend(backendCategory: string): string {
+    const categoryMap: Record<string, string> = {
+      'BUSINESS_PLANNING': 'business-plan',
+      'BUSINESS': 'business-plan',
+      'MARKETING': 'marketing',
+      'FINANCE': 'finance',
+      'FINANCIAL_MANAGEMENT': 'finance',
+      'OPERATIONS': 'operations',
+      'LEADERSHIP': 'leadership',
+      'STANDARD_BANK': 'standardbank',
+      'TECHNICAL': 'business-plan', // Map technical to business-plan for now
+      'GENERAL': 'business-plan'
+    };
+    
+    return categoryMap[backendCategory] || 'business-plan';
   }
 
   /**

@@ -18,7 +18,8 @@ const LearningModules: React.FC = () => {
     { id: 'marketing', name: 'Marketing & Sales' },
     { id: 'finance', name: 'Financial Management' },
     { id: 'operations', name: 'Operations' },
-    { id: 'leadership', name: 'Leadership' }
+    { id: 'leadership', name: 'Leadership' },
+    { id: 'standardbank', name: 'Standard Bank' }
   ];
 
   useEffect(() => {

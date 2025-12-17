@@ -4,7 +4,7 @@ import axiosClient from '../../../api/axiosClient';
 interface LearningItem {
     id: string;
     title: string;
-    type: 'ARTICLE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'LINK';
+    type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
     category: string;
     resourceUrl?: string;
     fileName?: string;
@@ -27,16 +27,18 @@ export default function LearningTab() {
     const [showAddLearning, setShowAddLearning] = useState(false);
     const [newLearning, setNewLearning] = useState<{ 
         title: string; 
-        type: 'ARTICLE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'LINK'; 
+        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK'; 
         category: string;
         resourceUrl: string;
         description: string;
+        file?: File;
     }>({ 
         title: '', 
         type: 'ARTICLE',
         category: 'BUSINESS',
         resourceUrl: '',
-        description: ''
+        description: '',
+        file: undefined
     });
     const [loading, setLoading] = useState(true);
 
@@ -99,15 +101,45 @@ export default function LearningTab() {
             return;
         }
         
+        // For DOCUMENT and VIDEO types, require file upload
+        if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && !newLearning.file) {
+            alert('Please select a file to upload');
+            return;
+        }
+        
+        // For ARTICLE and LINK types, require URL
+        if ((newLearning.type === 'ARTICLE' || newLearning.type === 'LINK') && !newLearning.resourceUrl.trim()) {
+            alert('Please enter a resource URL');
+            return;
+        }
+        
         try {
-            await axiosClient.post('/learning-materials', {
-                title: newLearning.title,
-                type: newLearning.type,
-                category: learningSection,
-                resourceUrl: newLearning.resourceUrl,
-                description: newLearning.description,
-                createdBy: 'admin@72x.co.za'
-            });
+            if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && newLearning.file) {
+                // Use multipart/form-data for file upload
+                const formData = new FormData();
+                formData.append('title', newLearning.title);
+                formData.append('description', newLearning.description);
+                formData.append('category', learningSection);
+                formData.append('type', newLearning.type);
+                formData.append('createdBy', 'admin@72x.co.za');
+                formData.append('file', newLearning.file);
+                
+                await axiosClient.post('/learning-materials', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+            } else {
+                // Use JSON for URL-based materials
+                await axiosClient.post('/learning-materials', {
+                    title: newLearning.title,
+                    type: newLearning.type,
+                    category: learningSection,
+                    resourceUrl: newLearning.resourceUrl,
+                    description: newLearning.description,
+                    createdBy: 'admin@72x.co.za'
+                });
+            }
             
             fetchLearningMaterials(); // Refresh data
             setShowAddLearning(false);
@@ -116,7 +148,8 @@ export default function LearningTab() {
                 type: 'ARTICLE',
                 category: learningSection,
                 resourceUrl: '',
-                description: ''
+                description: '',
+                file: undefined
             });
         } catch (error) {
             console.error('Error adding learning material:', error);
@@ -257,25 +290,41 @@ export default function LearningTab() {
                                 <label className="block text-sm text-gray-700 mb-1">Type</label>
                                 <select 
                                     value={newLearning.type} 
-                                    onChange={e => setNewLearning({...newLearning, type: e.target.value as any})} 
+                                    onChange={e => setNewLearning({...newLearning, type: e.target.value as any, file: undefined, resourceUrl: ''})} 
                                     className="w-full px-3 py-2 border rounded-lg"
                                 >
                                     <option value="ARTICLE">Article</option>
                                     <option value="VIDEO">Video</option>
-                                    <option value="PDF">PDF</option>
                                     <option value="DOCUMENT">Document</option>
                                     <option value="LINK">Link</option>
                                 </select>
                             </div>
-                            <div>
-                                <label className="block text-sm text-gray-700 mb-1">Resource URL</label>
-                                <input 
-                                    value={newLearning.resourceUrl} 
-                                    onChange={e => setNewLearning({...newLearning, resourceUrl: e.target.value})} 
-                                    className="w-full px-3 py-2 border rounded-lg" 
-                                    placeholder="https://..."
-                                />
-                            </div>
+                            {(newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') ? (
+                                <div>
+                                    <label className="block text-sm text-gray-700 mb-1">Upload File *</label>
+                                    <input 
+                                        type="file" 
+                                        onChange={e => setNewLearning({...newLearning, file: e.target.files?.[0]})} 
+                                        className="w-full px-3 py-2 border rounded-lg" 
+                                        accept={newLearning.type === 'VIDEO' ? '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv' : '.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx'}
+                                        required
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Supported formats: {newLearning.type === 'VIDEO' ? 'MP4, AVI, MOV, WMV, FLV, WebM, MKV' : 'PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX'}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-sm text-gray-700 mb-1">Resource URL *</label>
+                                    <input 
+                                        value={newLearning.resourceUrl} 
+                                        onChange={e => setNewLearning({...newLearning, resourceUrl: e.target.value})} 
+                                        className="w-full px-3 py-2 border rounded-lg" 
+                                        placeholder="https://..."
+                                        required
+                                    />
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-sm text-gray-700 mb-1">Description</label>
                                 <textarea 

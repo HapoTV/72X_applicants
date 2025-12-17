@@ -103,6 +103,10 @@ export interface UserLearningModule {
   isCompleted: boolean;
   isLocked: boolean;
   lastAccessed?: string;
+  // Resource information for file/URL access
+  resourceUrl?: string;
+  fileName?: string;
+  type?: string;
 }
 
 /**
