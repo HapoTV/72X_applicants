@@ -12,12 +12,6 @@ import RoadmapGenerator from './pages/RoadmapGenerator';
 import Profile from './pages/Profile';
 import DataInput from './pages/DataInput';
 import LearningModules from './pages/LearningModules';
-import BusinessPlanning from './pages/learning/BusinessPlanning';
-import MarketingSales from './pages/learning/MarketingSales';
-import FinancialManagement from './pages/learning/FinancialManagement';
-import Operations from './pages/learning/Operations';
-import Leadership from './pages/learning/Leadership';
-import StandardBankLM from './pages/learning/StandardBankLM';
 import Community from './pages/Community';
 import CommunityDiscussions from './pages/community/Discussions';
 import CommunityNetworking from './pages/community/Networking';
@@ -99,12 +93,7 @@ function App() {
                 
                 {/* Learning Routes */}
                 <Route path="/learning" element={<LearningModules />} />
-                <Route path="/learning/business-planning" element={<BusinessPlanning />} />
-                <Route path="/learning/marketing-sales" element={<MarketingSales />} />
-                <Route path="/learning/financial-management" element={<FinancialManagement />} />
-                <Route path="/learning/operations" element={<Operations />} />
-                <Route path="/learning/leadership" element={<Leadership />} />
-                <Route path="/learning/standardbank-lm" element={<StandardBankLM />} />
+                <Route path="/learning/:category" element={<LearningModules />} />
                 
                 {/* Community Routes */}
                 <Route path="/community" element={<Community />} />

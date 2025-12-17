@@ -280,7 +280,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   className="relative group"
                 >
                   <NavLink
-                    to="/learning/business-planning"
+                    to="/learning?category=business-plan"
                     onClick={() => {
                       onClose?.();
                       // Close other secondary sidebars

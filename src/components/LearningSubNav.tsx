@@ -7,12 +7,12 @@ interface LearningSubNavProps {
 
 const LearningSubNav: React.FC<LearningSubNavProps> = ({ onClose }) => {
   const learningSections = [
-    { path: '/learning/business-planning', label: 'Business Planning' },
-    { path: '/learning/marketing-sales', label: 'Marketing & Sales' },
-    { path: '/learning/financial-management', label: 'Financial Management' },
-    { path: '/learning/operations', label: 'Operations' },
-    { path: '/learning/leadership', label: 'Leadership' },
-    { path: '/learning/standardbank-lm', label: 'StandardBank' },
+    { path: '/learning?category=business-plan', label: 'Business Planning' },
+    { path: '/learning?category=marketing', label: 'Marketing & Sales' },
+    { path: '/learning?category=finance', label: 'Financial Management' },
+    { path: '/learning?category=operations', label: 'Operations' },
+    { path: '/learning?category=leadership', label: 'Leadership' },
+    { path: '/learning?category=standardbank', label: 'StandardBank' },
   ];
 
   return (

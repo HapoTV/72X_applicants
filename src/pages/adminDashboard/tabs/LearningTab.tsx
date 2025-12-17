@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { learningService } from '../../../services/LearningService';
+import { useAuth } from '../../../context/AuthContext';
 import axiosClient from '../../../api/axiosClient';
 
 interface LearningItem {
@@ -12,14 +14,14 @@ interface LearningItem {
     createdBy: string;
 }
 
-type LearningSection = 'BUSINESS' | 'MARKETING' | 'FINANCE' | 'OPERATIONS' | 'LEADERSHIP' | 'STANDARD_BANK';
+type LearningSection = 'BUSINESS_PLANNING' | 'MARKETING_SALES' | 'FINANCIAL_MANAGEMENT' | 'OPERATIONS' | 'LEADERSHIP' | 'STANDARD_BANK';
 
 export default function LearningTab() {
-    const [learningSection, setLearningSection] = useState<LearningSection>('BUSINESS');
+    const [learningSection, setLearningSection] = useState<LearningSection>('BUSINESS_PLANNING');
     const [learningData, setLearningData] = useState<Record<LearningSection, LearningItem[]>>({
-        BUSINESS: [],
-        MARKETING: [],
-        FINANCE: [],
+        BUSINESS_PLANNING: [],
+        MARKETING_SALES: [],
+        FINANCIAL_MANAGEMENT: [],
         OPERATIONS: [],
         LEADERSHIP: [],
         STANDARD_BANK: [],
@@ -28,14 +30,14 @@ export default function LearningTab() {
     const [newLearning, setNewLearning] = useState<{ 
         title: string; 
         type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK'; 
-        category: string;
+        category: LearningSection;
         resourceUrl: string;
         description: string;
         file?: File;
     }>({ 
         title: '', 
         type: 'ARTICLE',
-        category: 'BUSINESS',
+        category: learningSection,
         resourceUrl: '',
         description: '',
         file: undefined
@@ -43,9 +45,9 @@ export default function LearningTab() {
     const [loading, setLoading] = useState(true);
 
     const sectionTitles = {
-        BUSINESS: 'Business Planning',
-        MARKETING: 'Marketing & Sales',
-        FINANCE: 'Financial Management',
+        BUSINESS_PLANNING: 'Business Planning',
+        MARKETING_SALES: 'Marketing & Sales',
+        FINANCIAL_MANAGEMENT: 'Financial Management',
         OPERATIONS: 'Operations',
         LEADERSHIP: 'Leadership',
         STANDARD_BANK: 'StandardBank'
@@ -58,35 +60,67 @@ export default function LearningTab() {
     const fetchLearningMaterials = async () => {
         try {
             setLoading(true);
-            const response = await axiosClient.get('/learning-materials');
+            console.log('Fetching learning materials...');
+            // Use LearningService to get all learning materials
+            const allMaterials = await learningService.getAllLearningMaterials();
+            console.log('Fetched materials:', allMaterials);
             
-            // Transform API response
+            // Transform API response to admin format
             const transformedData: Record<LearningSection, LearningItem[]> = {
-                BUSINESS: [],
-                MARKETING: [],
-                FINANCE: [],
+                BUSINESS_PLANNING: [],
+                MARKETING_SALES: [],
+                FINANCIAL_MANAGEMENT: [],
                 OPERATIONS: [],
                 LEADERSHIP: [],
                 STANDARD_BANK: [],
             };
             
             // Group by category
-            response.data.forEach((material: any) => {
-                const category = material.category as LearningSection;
+            allMaterials.forEach((material) => {
+                console.log('Existing material category:', material.category, 'Title:', material.title);
+                // Map backend category format to frontend category format
+                let category: LearningSection;
+                switch (material.category) {
+                    case 'business-plan':
+                        category = 'BUSINESS_PLANNING';
+                        break;
+                    case 'marketing':
+                        category = 'MARKETING_SALES';
+                        break;
+                    case 'finance':
+                        category = 'FINANCIAL_MANAGEMENT';
+                        break;
+                    case 'operations':
+                        category = 'OPERATIONS';
+                        break;
+                    case 'leadership':
+                        category = 'LEADERSHIP';
+                        break;
+                    case 'standardbank':
+                        category = 'STANDARD_BANK';
+                        break;
+                    default:
+                        console.warn('Unknown category:', material.category);
+                        return; // Skip this material
+                }
+                
+                console.log('Processing material:', material, 'Mapped category:', category);
                 if (transformedData[category]) {
                     transformedData[category].push({
-                        id: material.materialId,
+                        id: material.id,
                         title: material.title,
-                        type: material.type,
+                        type: (material.type as 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK') || 'ARTICLE',
                         category: material.category,
                         resourceUrl: material.resourceUrl,
                         fileName: material.fileName,
-                        updated: material.updatedAt ? new Date(material.updatedAt).toLocaleDateString() : undefined,
-                        createdBy: material.createdBy
+                        updated: new Date().toLocaleDateString(), // Use current date as fallback
+                        createdBy: 'admin@72x.co.za' // Default creator
                     });
+                    console.log('Added to category:', category, 'Items now:', transformedData[category].length);
                 }
             });
             
+            console.log('Final transformed data:', transformedData);
             setLearningData(transformedData);
         } catch (error) {
             console.error('Error fetching learning materials:', error);
@@ -114,31 +148,57 @@ export default function LearningTab() {
         }
         
         try {
+            // Map frontend category to backend enum format (use exact enum values)
+            const backendCategoryMap: Record<LearningSection, string> = {
+                'BUSINESS_PLANNING': 'BUSINESS_PLANNING',
+                'MARKETING_SALES': 'MARKETING_SALES', 
+                'FINANCIAL_MANAGEMENT': 'FINANCIAL_MANAGEMENT',
+                'OPERATIONS': 'OPERATIONS',
+                'LEADERSHIP': 'LEADERSHIP',
+                'STANDARD_BANK': 'LEADERSHIP' // Use LEADERSHIP as fallback since STANDARD_BANK not in enum
+            };
+            
+            const backendCategory = backendCategoryMap[learningSection];
+            
+            console.log('Attempting to create learning material:', {
+                title: newLearning.title,
+                type: newLearning.type,
+                category: backendCategory,
+                resourceUrl: newLearning.resourceUrl,
+                description: newLearning.description,
+                createdBy: 'admin@72x.co.za'
+            });
+            
             if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && newLearning.file) {
                 // Use multipart/form-data for file upload
                 const formData = new FormData();
                 formData.append('title', newLearning.title);
                 formData.append('description', newLearning.description);
-                formData.append('category', learningSection);
+                formData.append('category', backendCategory);
                 formData.append('type', newLearning.type);
                 formData.append('createdBy', 'admin@72x.co.za');
                 formData.append('file', newLearning.file);
                 
-                await axiosClient.post('/learning-materials', formData, {
+                console.log('Sending file upload request with backend category:', backendCategory);
+                const response = await axiosClient.post('/learning-materials', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     }
                 });
+                console.log('File upload successful:', response.data);
             } else {
                 // Use JSON for URL-based materials
-                await axiosClient.post('/learning-materials', {
+                const requestData = {
                     title: newLearning.title,
                     type: newLearning.type,
-                    category: learningSection,
+                    category: backendCategory,
                     resourceUrl: newLearning.resourceUrl,
                     description: newLearning.description,
                     createdBy: 'admin@72x.co.za'
-                });
+                };
+                console.log('Sending JSON request with backend category:', backendCategory, 'data:', requestData);
+                const response = await axiosClient.post('/learning-materials', requestData);
+                console.log('JSON request successful:', response.data);
             }
             
             fetchLearningMaterials(); // Refresh data
@@ -153,6 +213,11 @@ export default function LearningTab() {
             });
         } catch (error) {
             console.error('Error adding learning material:', error);
+            if (error.response) {
+                console.error('Backend error response:', error.response.data);
+                console.error('Status:', error.response.status);
+                console.error('Headers:', error.response.headers);
+            }
             alert('Error adding learning material. Please try again.');
         }
     };
