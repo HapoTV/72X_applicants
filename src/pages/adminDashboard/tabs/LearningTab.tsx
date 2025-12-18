@@ -14,17 +14,17 @@ interface LearningItem {
     createdBy: string;
 }
 
-type LearningSection = 'BUSINESS_PLANNING' | 'MARKETING_SALES' | 'FINANCIAL_MANAGEMENT' | 'OPERATIONS' | 'LEADERSHIP' | 'STANDARD_BANK';
+type LearningSection = 'business-plan' | 'marketing' | 'finance' | 'operations' | 'leadership' | 'standardbank';
 
 export default function LearningTab() {
-    const [learningSection, setLearningSection] = useState<LearningSection>('BUSINESS_PLANNING');
+    const [learningSection, setLearningSection] = useState<LearningSection>('business-plan');
     const [learningData, setLearningData] = useState<Record<LearningSection, LearningItem[]>>({
-        BUSINESS_PLANNING: [],
-        MARKETING_SALES: [],
-        FINANCIAL_MANAGEMENT: [],
-        OPERATIONS: [],
-        LEADERSHIP: [],
-        STANDARD_BANK: [],
+        'business-plan': [],
+        'marketing': [],
+        'finance': [],
+        'operations': [],
+        'leadership': [],
+        'standardbank': [],
     });
     const [showAddLearning, setShowAddLearning] = useState(false);
     const [newLearning, setNewLearning] = useState<{ 
@@ -45,12 +45,12 @@ export default function LearningTab() {
     const [loading, setLoading] = useState(true);
 
     const sectionTitles = {
-        BUSINESS_PLANNING: 'Business Planning',
-        MARKETING_SALES: 'Marketing & Sales',
-        FINANCIAL_MANAGEMENT: 'Financial Management',
-        OPERATIONS: 'Operations',
-        LEADERSHIP: 'Leadership',
-        STANDARD_BANK: 'StandardBank'
+        'business-plan': 'Business Planning',
+        'marketing': 'Marketing & Sales',
+        'finance': 'Financial Management',
+        'operations': 'Operations',
+        'leadership': 'Leadership',
+        'standardbank': 'StandardBank'
     };
 
     useEffect(() => {
@@ -67,44 +67,21 @@ export default function LearningTab() {
             
             // Transform API response to admin format
             const transformedData: Record<LearningSection, LearningItem[]> = {
-                BUSINESS_PLANNING: [],
-                MARKETING_SALES: [],
-                FINANCIAL_MANAGEMENT: [],
-                OPERATIONS: [],
-                LEADERSHIP: [],
-                STANDARD_BANK: [],
+                'business-plan': [],
+                'marketing': [],
+                'finance': [],
+                'operations': [],
+                'leadership': [],
+                'standardbank': [],
             };
             
-            // Group by category
+            // Group by category - use the same format as backend returns
             allMaterials.forEach((material) => {
                 console.log('Existing material category:', material.category, 'Title:', material.title);
-                // Map backend category format to frontend category format
-                let category: LearningSection;
-                switch (material.category) {
-                    case 'business-plan':
-                        category = 'BUSINESS_PLANNING';
-                        break;
-                    case 'marketing':
-                        category = 'MARKETING_SALES';
-                        break;
-                    case 'finance':
-                        category = 'FINANCIAL_MANAGEMENT';
-                        break;
-                    case 'operations':
-                        category = 'OPERATIONS';
-                        break;
-                    case 'leadership':
-                        category = 'LEADERSHIP';
-                        break;
-                    case 'standardbank':
-                        category = 'STANDARD_BANK';
-                        break;
-                    default:
-                        console.warn('Unknown category:', material.category);
-                        return; // Skip this material
-                }
+                // Use the category directly from backend since LearningService already transforms it
+                const category = material.category as LearningSection;
                 
-                console.log('Processing material:', material, 'Mapped category:', category);
+                console.log('Processing material:', material, 'Using category:', category);
                 if (transformedData[category]) {
                     transformedData[category].push({
                         id: material.id,
@@ -117,6 +94,8 @@ export default function LearningTab() {
                         createdBy: 'admin@72x.co.za' // Default creator
                     });
                     console.log('Added to category:', category, 'Items now:', transformedData[category].length);
+                } else {
+                    console.warn('Category not found in transformedData:', category);
                 }
             });
             
@@ -150,12 +129,12 @@ export default function LearningTab() {
         try {
             // Map frontend category to backend enum format (use exact enum values)
             const backendCategoryMap: Record<LearningSection, string> = {
-                'BUSINESS_PLANNING': 'BUSINESS_PLANNING',
-                'MARKETING_SALES': 'MARKETING_SALES', 
-                'FINANCIAL_MANAGEMENT': 'FINANCIAL_MANAGEMENT',
-                'OPERATIONS': 'OPERATIONS',
-                'LEADERSHIP': 'LEADERSHIP',
-                'STANDARD_BANK': 'LEADERSHIP' // Use LEADERSHIP as fallback since STANDARD_BANK not in enum
+                'business-plan': 'BUSINESS_PLANNING',
+                'marketing': 'MARKETING_SALES', 
+                'finance': 'FINANCIAL_MANAGEMENT',
+                'operations': 'OPERATIONS',
+                'leadership': 'LEADERSHIP',
+                'standardbank': 'STANDARD_BANK'
             };
             
             const backendCategory = backendCategoryMap[learningSection];

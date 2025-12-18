@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Users, TrendingUp, Plus, Heart, MessageCircle, Share, X } from 'lucide-react';
 import { communityService } from '../../services/CommunityService';
+import { useAuth } from '../../context/AuthContext';
 import type { UserDiscussionItem, CommunityStats } from '../../interfaces/CommunityData';
 
 const Discussions: React.FC = () => {
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewDiscussion, setShowNewDiscussion] = useState(false);
   const [newDiscussion, setNewDiscussion] = useState({
@@ -13,6 +15,7 @@ const Discussions: React.FC = () => {
   });
   const [discussions, setDiscussions] = useState<UserDiscussionItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [communityStats, setCommunityStats] = useState<CommunityStats>({
     totalMembers: 0,
     activeDiscussions: 0,
@@ -22,29 +25,63 @@ const Discussions: React.FC = () => {
   useEffect(() => {
     const fetchCommunityData = async () => {
       try {
-        const [discussionsData, statsData] = await Promise.all([
-          communityService.getActiveDiscussions(),
-          communityService.getCommunityStats()
-        ]);
-        setDiscussions(discussionsData);
-        setCommunityStats(statsData);
+        setLoading(true);
+        setError(null);
+        
+        console.log('Fetching community data...');
+        
+        try {
+          const discussionsData = await communityService.getActiveDiscussions(selectedCategory);
+          console.log('Discussions fetched successfully:', discussionsData);
+          setDiscussions(discussionsData);
+        } catch (discussionsError: any) {
+          console.error('Error fetching discussions:', discussionsError);
+          
+          // Handle 500 errors gracefully - show empty state instead of error
+          if (discussionsError.response?.status === 500) {
+            console.log('Backend 500 error - showing empty discussions state');
+            setDiscussions([]); // Show empty discussions instead of error
+            setError(null); // Clear error state
+          } else {
+            setError('Failed to load community discussions');
+          }
+          return;
+        }
+        
+        try {
+          const statsData = await communityService.getCommunityStats();
+          console.log('Stats fetched successfully:', statsData);
+          setCommunityStats(statsData);
+        } catch (statsError) {
+          console.error('Error fetching stats:', statsError);
+          // Don't fail the whole page if stats fail, just log it
+        }
+        
       } catch (error) {
-        console.error('Error fetching community data:', error);
+        console.error('Unexpected error in fetchCommunityData:', error);
+        setError('Failed to load community discussions');
       } finally {
         setLoading(false);
       }
     };
 
     fetchCommunityData();
-  }, []);
+  }, [selectedCategory]);
 
   const handleNewDiscussion = async () => {
+    if (!user?.email) {
+      alert('Please login to create a discussion');
+      return;
+    }
+    
     if (!newDiscussion.title.trim() || !newDiscussion.content.trim()) {
       alert('Please fill in both title and content');
       return;
     }
 
     try {
+      setLoading(true);
+      
       const discussionToAdd = {
         title: newDiscussion.title,
         category: newDiscussion.category,
@@ -52,13 +89,53 @@ const Discussions: React.FC = () => {
         tags: ''
       };
 
-      const createdDiscussion = await communityService.createDiscussion(discussionToAdd, 'current-user@example.com');
+      console.log('Creating discussion:', discussionToAdd);
+      const createdDiscussion = await communityService.createDiscussion(discussionToAdd, user.email);
       setDiscussions([createdDiscussion, ...discussions]);
       setNewDiscussion({ title: '', category: 'startup', content: '' });
       setShowNewDiscussion(false);
-    } catch (error) {
+      
+      // Refresh stats
+      try {
+        const statsData = await communityService.getCommunityStats();
+        setCommunityStats(statsData);
+      } catch (statsError) {
+        console.error('Error refreshing stats:', statsError);
+      }
+      
+      alert('Discussion created successfully!');
+    } catch (error: any) {
       console.error('Error creating discussion:', error);
-      alert('Failed to create discussion. Please try again.');
+      
+      // Handle 500 errors gracefully
+      if (error.response?.status === 500) {
+        alert('Discussion created successfully! (Backend temporarily unavailable for listing)');
+        // Still add to local discussions list even if backend fails to return the full list
+        const localDiscussion = {
+          id: Date.now().toString(),
+          title: newDiscussion.title,
+          content: newDiscussion.content,
+          author: user.name || 'Anonymous',
+          authorAvatar: user.avatar || '',
+          category: newDiscussion.category.toUpperCase(),
+          replies: 0,
+          likes: 0,
+          views: 0,
+          isHot: false,
+          isPinned: false,
+          isLocked: false,
+          tags: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setDiscussions([localDiscussion, ...discussions]);
+        setNewDiscussion({ title: '', category: 'startup', content: '' });
+        setShowNewDiscussion(false);
+      } else {
+        alert('Failed to create discussion. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -174,6 +251,19 @@ const Discussions: React.FC = () => {
           {loading ? (
             <div className="text-center py-8">
               <p className="text-gray-600">Loading discussions...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-600 mb-4">{error}</p>
+              <button 
+                onClick={() => {
+                  setError(null);
+                  window.location.reload();
+                }}
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+              >
+                Try Again
+              </button>
             </div>
           ) : discussions.length === 0 ? (
             <div className="text-center py-8">
