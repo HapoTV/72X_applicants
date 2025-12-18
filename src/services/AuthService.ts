@@ -34,6 +34,61 @@ class AuthService {
   }
 
   /**
+   * Request password reset (sends verification code)
+   * Falls back to localStorage for development/testing when backend is unavailable
+   */
+  async requestPasswordReset(email: string, businessReference?: string): Promise<{ sent: boolean } | { code?: string; sent: boolean }> {
+    try {
+      const response = await axiosClient.post('/authentication/request-password-reset', {
+        email,
+        businessReference
+      });
+      return response.data;
+    } catch (error) {
+      // Fallback: generate a 6-digit code and store it locally for dev
+      console.warn('Request password reset (fallback) — backend unavailable, storing code locally');
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = Date.now() + 1000 * 60 * 15; // 15 minutes
+      localStorage.setItem(`passwordResetCode:${email}`, JSON.stringify({ code, expiresAt }));
+      // In a real system we wouldn't expose the code; return it here only for dev convenience
+      console.info(`Password reset code for ${email}: ${code}`);
+      return { code, sent: true };
+    }
+  }
+
+  /**
+   * Reset password using code
+   * Falls back to localStorage verification for dev
+   */
+  async resetPasswordWithCode(email: string, code: string, newPassword: string, businessReference?: string): Promise<void> {
+    try {
+      await axiosClient.post('/authentication/reset-password', {
+        email,
+        code,
+        newPassword,
+        businessReference
+      });
+    } catch (error) {
+      console.warn('Reset password (fallback) — backend unavailable, verifying locally');
+      const raw = localStorage.getItem(`passwordResetCode:${email}`);
+      if (!raw) throw new Error('No reset request found for this email.');
+      const { code: storedCode, expiresAt } = JSON.parse(raw);
+      if (Date.now() > expiresAt) {
+        localStorage.removeItem(`passwordResetCode:${email}`);
+        throw new Error('Verification code expired. Please request a new code.');
+      }
+      if (storedCode !== code) {
+        throw new Error('Invalid verification code.');
+      }
+
+      // Create or update the password locally for dev convenience
+      localStorage.setItem(`userPassword:${email}`, newPassword);
+      // Remove the reset code
+      localStorage.removeItem(`passwordResetCode:${email}`);
+    }
+  }
+
+  /**
    * Change password
    */
   async changePassword(userId: string, passwords: ChangePasswordRequest): Promise<void> {

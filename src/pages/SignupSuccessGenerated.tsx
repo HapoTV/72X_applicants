@@ -1,18 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 
-const SignupSuccess: React.FC = () => {
+const SignupSuccessGenerated: React.FC = () => {
   const navigate = useNavigate();
-  const [reference, setReference] = useState<string>('');
-  const [userProvided, setUserProvided] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const ref = localStorage.getItem('lastGeneratedReference') || localStorage.getItem('businessReference') || '';
-    setReference(ref);
-    const provided = localStorage.getItem('userProvidedBusinessReference');
-    setUserProvided(provided === 'true' ? true : provided === 'false' ? false : null);
-  }, []);
+  const reference = localStorage.getItem('lastGeneratedReference') || localStorage.getItem('businessReference') || '';
 
   const copyRef = async () => {
     try {
@@ -35,22 +27,15 @@ const SignupSuccess: React.FC = () => {
       <div className="w-full max-w-xl bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
         <div className="flex items-center justify-center mb-4">
           <img src={Logo} alt="SeventyTwoX Logo" className="w-20 h-20" />
-        </div>
+          </div>
         <h1 className="text-xl font-semibold text-gray-900 mb-2">You have signed up</h1>
         <p className="text-gray-700 mb-4">Check your email to verify your account.</p>
 
-        {userProvided === true && (
-          <div className="mb-3 text-sm text-green-700">You may log in — a verification code has been sent to your email.</div>
-        )}
-
-        {userProvided === false && (
-          <div className="mb-3 text-sm text-gray-700">Account created: we generated a business reference for you.</div>
-        )}
-
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
           <div className="text-sm text-gray-600 mb-1">Your reference number</div>
           <div className="text-2xl font-mono font-semibold text-gray-900">{reference || '—'}</div>
           <p className="text-xs text-gray-600 mt-2">Make sure to copy your reference number before closing this page.</p>
+
           <div className="mt-3 flex justify-center gap-2">
             <button
               onClick={copyRef}
@@ -68,7 +53,7 @@ const SignupSuccess: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-sm text-gray-700">
+        <div className="text-sm text-gray-700 mt-4">
           Use the email you signed up with, your reference number above, and the password you created to log in.
         </div>
       </div>
@@ -76,4 +61,4 @@ const SignupSuccess: React.FC = () => {
   );
 };
 
-export default SignupSuccess;
+export default SignupSuccessGenerated;

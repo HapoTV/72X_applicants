@@ -28,12 +28,7 @@ const Analytics: React.FC = () => {
     }
   }, []);
 
-  const filterDataByTimeRange = useCallback((data: any[], range: string): any[] => {
-    const limit = range === '3months' ? 3 : range === '6months' ? 6 : 12;
-    return data.slice(-limit);
-  }, []);
-
-  const transformCustomerData = useCallback((dashboardData: any): any[] => {
+  const transformCustomerData = useCallback((_dashboardData?: any): any[] => {
     // This would transform the customer metrics into chart data format
     // For now, return mock data
     return [
@@ -299,7 +294,7 @@ const Analytics: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value, name, props) => [`${value}%`, props.payload.name]}
+                  formatter={(value, _name, props) => [`${value}%`, props.payload.name]}
                   contentStyle={{ 
                     backgroundColor: 'white', 
                     border: '1px solid #e5e7eb',

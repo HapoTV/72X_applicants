@@ -5,6 +5,7 @@ export interface User {
   email: string;
   mobileNumber?: string;
   businessReference?: string;
+  hasReference?: boolean;
   companyName?: string;
   industry?: string;
   location?: string;
@@ -22,6 +23,7 @@ export interface LoginRequest {
   email: string;
   password: string;
   businessReference?: string;
+  hasReference?: boolean;
   loginType: 'user' | 'admin';
 }
 

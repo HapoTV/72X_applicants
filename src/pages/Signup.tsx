@@ -29,19 +29,44 @@ const Signup: React.FC = () => {
     if (form.password !== form.confirmPassword) return alert('Passwords do not match.');
     setIsLoading(true);
     try {
-      // Generate a business reference like 72XXXXX
-      const ref = '72' + Math.floor(10000 + Math.random() * 90000).toString();
+      // Decide which business reference to use
+      let ref = '';
+      if (form.hasBankReference) {
+        // If user provided a reference, use that and mark it as user-provided
+        if (form.businessReference && form.businessReference.trim()) {
+          ref = form.businessReference.trim();
+          localStorage.setItem('businessReference', ref);
+          localStorage.setItem('userProvidedBusinessReference', 'true');
+          // keep lastGeneratedReference absent since user provided their own
+          localStorage.removeItem('lastGeneratedReference');
+        } else {
+          // User indicated they have a bank reference but didn't provide it — generate one
+          ref = '72' + Math.floor(10000 + Math.random() * 90000).toString();
+          localStorage.setItem('businessReference', ref);
+          localStorage.setItem('lastGeneratedReference', ref);
+          localStorage.setItem('userProvidedBusinessReference', 'false');
+        }
+      } else {
+        // User does not have a bank reference — generate one and record it
+        ref = '72' + Math.floor(10000 + Math.random() * 90000).toString();
+        localStorage.setItem('businessReference', ref);
+        localStorage.setItem('lastGeneratedReference', ref);
+        localStorage.setItem('userProvidedBusinessReference', 'false');
+      }
+
+      // Save user info and token
       localStorage.setItem('userEmail', form.email);
       localStorage.setItem('userFirstName', form.firstName);
       localStorage.setItem('userPhone', form.phone);
       localStorage.setItem('companyName', form.companyName);
-      localStorage.setItem('businessReference', ref);
-      localStorage.setItem('lastGeneratedReference', ref);
       localStorage.setItem('authToken', `user-token-${Date.now()}`);
       localStorage.setItem('userType', 'user');
       localStorage.setItem('userPackage', form.plan);
-      // Show success page with reference and verification instructions
-      navigate('/signup/success');
+
+      // Navigate to the appropriate success page which will read the stored reference
+      const providedFlag = localStorage.getItem('userProvidedBusinessReference');
+      if (providedFlag === 'true') navigate('/signup/success/provided');
+      else navigate('/signup/success/generated');
     } finally {
       setIsLoading(false);
     }
@@ -164,12 +189,26 @@ const Signup: React.FC = () => {
             {form.hasBankReference && (
               <div className="mt-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">If yes, please provide your business reference number</label>
-                <input
-                  value={form.businessReference}
-                  onChange={e => update('businessReference', e.target.value)}
-                  placeholder="Business Reference Number"
-                  className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
+                <div>
+                  <input
+                    value={form.businessReference}
+                    onChange={e => update('businessReference', e.target.value)}
+                    placeholder="Business Reference Number"
+                    className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+
+                {form.businessReference.trim() && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => (document.querySelector('form') as HTMLFormElement)?.requestSubmit?.()}
+                      className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+                    >
+                      Continue with this reference
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

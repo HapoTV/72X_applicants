@@ -31,10 +31,14 @@ import Login from './pages/Login';
 import BizBoostChatbot from './components/Chatbot';
 import LandingPage from './pages/LandingPage';
 import Signup from './pages/Signup';
-import SignupSuccess from './pages/SignupSuccess';
+import SignupSuccessProvided from './pages/SignupSuccessProvided';
+import SignupSuccessGenerated from './pages/SignupSuccessGenerated';
+import SignupSuccessRouter from './pages/SignupSuccessRouter';
 import RequestDemo from './pages/RequestDemo';
 import Pricing from './pages/Pricing';
 import TenderlyAI from './pages/applications/TenderlyAI';
+import ResetPasswordRequest from './pages/ResetPasswordRequest';
+import ResetPasswordVerify from './pages/ResetPasswordVerify';
 
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
@@ -65,7 +69,11 @@ function App() {
         <Route path="/request-demo" element={<RequestDemo />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/signup/success" element={<SignupSuccess />} />
+        <Route path="/signup/success" element={<SignupSuccessRouter />} />
+        <Route path="/signup/success/provided" element={<SignupSuccessProvided />} />
+        <Route path="/signup/success/generated" element={<SignupSuccessGenerated />} />
+        <Route path="/reset-password" element={<ResetPasswordRequest />} />
+        <Route path="/reset-password/verify" element={<ResetPasswordVerify />} />
         
         {/* Admin routes - outside of main layout to avoid sidebar and chatbot */}
         <Route path="/admin/login" element={<Navigate to="/login" replace />} />
