@@ -205,6 +205,15 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -255,6 +264,15 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -305,6 +323,15 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -355,6 +382,15 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -380,7 +416,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   className="relative group"
                 >
                   <NavLink
-                    to="/applications/crm"
+                    to="/applications"
                     onClick={() => {
                       onClose?.();
                       // Close other secondary sidebars
@@ -407,6 +443,15 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();

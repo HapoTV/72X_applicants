@@ -83,20 +83,43 @@ const Analytics: React.FC = () => {
       try {
         const userId = dataInputService.getCurrentUserId();
         
-        // Fetch all data in parallel
-        const [dashboardData, revenueChartData, expenseData] = await Promise.allSettled([
-          analyticsService.getDashboardAnalytics(userId, timeRange),
-          analyticsService.getRevenueChartData(userId, timeRange),
-          analyticsService.getExpenseBreakdown(userId, timeRange)
-        ]);
+        // Use fallback data immediately for better UX
+        const fallback = getFallbackData(timeRange);
+        setRevenueData(fallback.revenueData);
+        setCustomerData(fallback.customerData);
+        setExpenseBreakdown(fallback.expenseData);
+        setKeyMetrics({
+          totalRevenue: 245000,
+          totalCustomers: 1247,
+          avgCustomerValue: 196,
+          revenueGrowth: 12.5,
+          customerGrowth: 8.3
+        });
 
-        // Handle dashboard data
-        if (dashboardData.status === 'fulfilled') {
-          const data = dashboardData.value;
-          
-          // Transform customer data from dashboard
-          const customerChartData = transformCustomerData(data);
-          setCustomerData(customerChartData);
+        // Try to fetch real data in background with timeout
+        try {
+          const [dashboardData, revenueChartData, expenseData] = await Promise.allSettled([
+            Promise.race([
+              analyticsService.getDashboardAnalytics(userId, timeRange),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+            ]),
+            Promise.race([
+              analyticsService.getRevenueChartData(userId, timeRange),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+            ]),
+            Promise.race([
+              analyticsService.getExpenseBreakdown(userId, timeRange),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+            ])
+          ]);
+
+          // Handle dashboard data
+          if (dashboardData.status === 'fulfilled') {
+            const data = dashboardData.value;
+            
+            // Transform customer data from dashboard
+            const customerChartData = transformCustomerData(data);
+            setCustomerData(customerChartData);
 
           // Set key metrics
           setKeyMetrics({
@@ -126,6 +149,10 @@ const Analytics: React.FC = () => {
           setExpenseBreakdown(fallback.expenseData);
         }
 
+      } catch (innerError) {
+        console.log('Background API calls timed out or failed, using fallback data');
+      }
+
       } catch (error) {
         console.error('Error fetching analytics data:', error);
         // Use fallback data
@@ -139,7 +166,7 @@ const Analytics: React.FC = () => {
     };
 
     fetchAnalyticsData();
-  }, [timeRange, transformCustomerData, getFallbackData]);
+  }, [timeRange]);
 
   if (isLoading) {
     return (

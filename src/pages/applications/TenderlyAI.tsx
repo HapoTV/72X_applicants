@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Loader2, TrendingUp, Calendar, Building, MapPin } from 'lucide-react'
+import { Loader2, TrendingUp, Calendar, Building, MapPin, Zap } from 'lucide-react'
 import { Header } from '../../components/tenderly/Header'
 import { Sidebar } from '../../components/tenderly/Sidebar'
 import { TenderCard } from '../../components/tenderly/TenderCard'
@@ -8,8 +8,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Badge } from '../../components/ui/badge'
 import { tenderService } from '../../services/tenderly/tenders'
 import type { Tender } from '../../types/tenderly'
+import UpgradePage from '../../components/UpgradePage'
+
+type PackageType = 'startup' | 'essential' | 'premium';
 
 export default function TenderlyAI() {
+  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+  const hasAccess = userPackage === 'essential' || userPackage === 'premium';
+
+  if (!hasAccess) {
+    return (
+      <UpgradePage
+        featureName="TenderlyAI"
+        featureIcon={Zap}
+        packageType="essential"
+        description="AI-powered tender management system that helps you create, manage, and track tender applications efficiently."
+        benefits={[
+          "AI-powered tender creation and optimization",
+          "Tender tracking and deadline management",
+          "Document management and organization",
+          "Collaboration tools for team members",
+          "Analytics and reporting on tender success",
+          "Automated tender matching and recommendations"
+        ]}
+      />
+    );
+  }
   const [loading, setLoading] = useState(true)
   const [tenders, setTenders] = useState<Tender[]>([])
   const [allTenders, setAllTenders] = useState<Tender[]>([])

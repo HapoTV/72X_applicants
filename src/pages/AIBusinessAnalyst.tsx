@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Send, Sparkles, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react';
 import { aiBusinessAnalyticsService } from '../services/AIBusinessAnalyticsService';
+import UpgradePage from '../components/UpgradePage';
+
+type PackageType = 'startup' | 'essential' | 'premium';
 
 const AIBusinessAnalyst: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -11,6 +14,32 @@ const AIBusinessAnalyst: React.FC = () => {
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [quickPrompts, setQuickPrompts] = useState<string[]>([]);
   const [analysisHistory, setAnalysisHistory] = useState<any[]>([]);
+
+  // Get user package from localStorage
+  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+
+  // Check if user has access to this feature (requires premium package)
+  const hasAccess = userPackage === 'premium';
+
+  // If user doesn't have access, show upgrade page
+  if (!hasAccess) {
+    return (
+      <UpgradePage
+        featureName="AI Business Analyst"
+        featureIcon={Brain}
+        packageType="premium"
+        description="Get intelligent insights and recommendations powered by AI to grow your business. Our AI Business Analyst provides comprehensive analysis, strategic recommendations, and data-driven insights to help you make informed decisions."
+        benefits={[
+          "AI-powered business analysis and insights",
+          "Strategic recommendations tailored to your business",
+          "Real-time data analysis and trend identification",
+          "Comprehensive market and competitive analysis",
+          "Personalized growth strategies and action plans",
+          "Expert-level business intelligence at your fingertips"
+        ]}
+      />
+    );
+  }
 
   useEffect(() => {
     // Load quick prompts

@@ -35,6 +35,7 @@ import ResetPasswordRequest from './pages/ResetPasswordRequest';
 import ResetPasswordVerify from './pages/ResetPasswordVerify';
 import CRM from './pages/applications/CRM';
 import FinanceManager from './pages/applications/FinanceManager';
+import AppStore from './pages/AppStore';
 
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
@@ -110,7 +111,7 @@ function App() {
                 <Route path="/community/mentorship" element={<CommunityMentorship />} />
                 
                 {/* Other Protected Routes */}
-                <Route path="/applications" element={<Navigate to="/applications/crm" replace />} />
+                <Route path="/applications" element={<AppStore />} />
                 <Route path="/applications/crm/*" element={<CRM />} />
                 <Route path="/applications/finance-manager" element={<FinanceManager />} />
                 <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
