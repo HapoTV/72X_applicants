@@ -4,8 +4,33 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, DollarSign, Users, Loader2 } from 'lucide-react';
 import { analyticsService } from '../services/AnalyticsService';
 import { dataInputService } from '../services/DataInputService';
+import UpgradePage from '../components/UpgradePage';
+
+type PackageType = 'startup' | 'essential' | 'premium';
 
 const Analytics: React.FC = () => {
+  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+  const hasAccess = userPackage === 'premium';
+
+  if (!hasAccess) {
+    return (
+      <UpgradePage
+        featureName="Analytics"
+        featureIcon={TrendingUp}
+        packageType="premium"
+        description="Comprehensive business analytics and insights to track your performance and make data-driven decisions."
+        benefits={[
+          "Revenue and expense tracking",
+          "Customer growth analytics",
+          "Interactive charts and graphs",
+          "Custom time range reports",
+          "Performance metrics dashboard",
+          "Exportable analytics reports"
+        ]}
+      />
+    );
+  }
+
   const [timeRange, setTimeRange] = useState<'3months' | '6months' | '1year'>('6months');
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [customerData, setCustomerData] = useState<any[]>([]);
@@ -115,7 +140,7 @@ const Analytics: React.FC = () => {
 
           // Handle dashboard data
           if (dashboardData.status === 'fulfilled') {
-            const data = dashboardData.value;
+            const data = dashboardData.value as any;
             
             // Transform customer data from dashboard
             const customerChartData = transformCustomerData(data);
@@ -133,7 +158,7 @@ const Analytics: React.FC = () => {
 
         // Handle revenue chart data
         if (revenueChartData.status === 'fulfilled') {
-          setRevenueData(revenueChartData.value);
+          setRevenueData(revenueChartData.value as any[]);
         } else {
           // Use fallback data
           const fallback = getFallbackData(timeRange);
@@ -142,7 +167,7 @@ const Analytics: React.FC = () => {
 
         // Handle expense breakdown
         if (expenseData.status === 'fulfilled') {
-          setExpenseBreakdown(expenseData.value);
+          setExpenseBreakdown(expenseData.value as any[]);
         } else {
           // Use fallback data
           const fallback = getFallbackData(timeRange);

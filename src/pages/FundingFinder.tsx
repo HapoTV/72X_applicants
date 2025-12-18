@@ -3,8 +3,33 @@ import React, { useState, useEffect } from 'react';
 import { Search, Banknote, Calendar, ExternalLink, Bookmark, Building2, Tag } from 'lucide-react';
 import { fundingService } from '../services/FundingService';
 import type { UserFundingItem } from '../interfaces/FundingData';
+import UpgradePage from '../components/UpgradePage';
+
+type PackageType = 'startup' | 'essential' | 'premium';
 
 const FundingFinder: React.FC = () => {
+  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+  const hasAccess = userPackage === 'essential' || userPackage === 'premium';
+
+  if (!hasAccess) {
+    return (
+      <UpgradePage
+        featureName="Funding"
+        featureIcon={Banknote}
+        packageType="essential"
+        description="Discover funding opportunities tailored to your business needs, from grants to loans and investments."
+        benefits={[
+          "Access to curated funding opportunities",
+          "Advanced filtering by type and industry",
+          "Real-time funding opportunity updates",
+          "Save and track favorite opportunities",
+          "Direct application links and contacts",
+          "Personalized funding recommendations"
+        ]}
+      />
+    );
+  }
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedIndustry, setSelectedIndustry] = useState('all');

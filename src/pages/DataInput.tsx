@@ -2,8 +2,33 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, DollarSign, TrendingUp } from 'lucide-react';
 import { dataInputService } from '../services/DataInputService';
+import UpgradePage from '../components/UpgradePage';
+
+type PackageType = 'startup' | 'essential' | 'premium';
 
 const DataInput: React.FC = () => {
+  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+  const hasAccess = userPackage === 'essential' || userPackage === 'premium';
+
+  if (!hasAccess) {
+    return (
+      <UpgradePage
+        featureName="Data Input"
+        featureIcon={Upload}
+        packageType="essential"
+        description="Input and manage your business data to track performance metrics and generate insights."
+        benefits={[
+          "Financial data entry and tracking",
+          "Customer data management",
+          "Sales and revenue input tools",
+          "Automated data validation",
+          "Historical data storage",
+          "Export data for analysis"
+        ]}
+      />
+    );
+  }
+
   const [activeTab, setActiveTab] = useState('financial');
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
