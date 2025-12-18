@@ -45,13 +45,25 @@ class CommunityService {
    */
   async getActiveDiscussions(category?: string): Promise<UserDiscussionItem[]> {
     try {
-      const params = category ? { category } : {};
-      const response = await axiosClient.get('/community/discussions/active', { params });
-      return response.data.map((discussion: DiscussionApiResponse) => 
-        this.transformToUserDiscussionItem(discussion)
-      );
+      if (category && category !== 'all') {
+        const response = await axiosClient.get(`/community/discussions/category/${category}`);
+        return response.data.map((discussion: DiscussionApiResponse) => 
+          this.transformToUserDiscussionItem(discussion)
+        );
+      } else {
+        const response = await axiosClient.get('/community/discussions');
+        return response.data.map((discussion: DiscussionApiResponse) => 
+          this.transformToUserDiscussionItem(discussion)
+        );
+      }
     } catch (error) {
       console.error('Error fetching active discussions:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        console.error('Response status:', axiosError.response?.status);
+        console.error('Response data:', axiosError.response?.data);
+        console.error('Response headers:', axiosError.response?.headers);
+      }
       throw new Error('Failed to fetch discussions');
     }
   }
@@ -76,11 +88,47 @@ class CommunityService {
    */
   async createDiscussion(discussionData: DiscussionFormData, createdBy: string): Promise<UserDiscussionItem> {
     try {
-      const discussionRequest: DiscussionRequest = this.transformToDiscussionRequest(discussionData, createdBy);
-      const response = await axiosClient.post('/community/discussions', discussionRequest);
+      // Map frontend categories to backend enum values
+      const categoryMapping: { [key: string]: string } = {
+        'startup': 'STARTUP',
+        'marketing': 'MARKETING',
+        'finance': 'FINANCE',
+        'legal': 'LEGAL',
+        'operations': 'OPERATIONS',
+        'business': 'BUSINESS'
+      };
+
+      // Simplify the request payload to match typical Spring Boot expectations
+      const discussionRequest = {
+        title: discussionData.title,
+        content: discussionData.content,
+        category: categoryMapping[discussionData.category] || 'STARTUP', // Default to STARTUP if not found
+        createdBy: createdBy
+        // Omit tags for now to see if this is causing the issue
+      };
+      
+      console.log('Creating discussion with data:', JSON.stringify(discussionRequest, null, 2));
+      console.log('Request URL:', '/community/discussions');
+      
+      const response = await axiosClient.post('/community/discussions', discussionRequest, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Discussion created successfully:', response.data);
       return this.transformToUserDiscussionItem(response.data);
     } catch (error) {
       console.error('Error creating discussion:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+      }
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        console.error('Response status:', axiosError.response?.status);
+        console.error('Response data:', axiosError.response?.data);
+        console.error('Response headers:', axiosError.response?.headers);
+      }
       throw new Error('Failed to create discussion');
     }
   }
@@ -91,7 +139,7 @@ class CommunityService {
   async updateDiscussion(discussionId: string, discussionData: DiscussionFormData, createdBy: string): Promise<AdminDiscussionItem> {
     try {
       const discussionRequest: DiscussionRequest = this.transformToDiscussionRequest(discussionData, createdBy);
-      const response = await axiosClient.put(`/community/discussions/${discussionId}`, discussionRequest);
+      const response = await axiosClient.put(`/community/discussions/${discussionId}?userEmail=${createdBy}`, discussionRequest);
       return this.transformToAdminDiscussionItem(response.data);
     } catch (error) {
       console.error('Error updating discussion:', error);
@@ -104,9 +152,7 @@ class CommunityService {
    */
   async deleteDiscussion(discussionId: string, userEmail: string): Promise<void> {
     try {
-      await axiosClient.delete(`/community/discussions/${discussionId}`, {
-        params: { userEmail }
-      });
+      await axiosClient.delete(`/community/discussions/${discussionId}?userEmail=${userEmail}`);
     } catch (error) {
       console.error('Error deleting discussion:', error);
       throw new Error('Failed to delete discussion');
@@ -238,7 +284,7 @@ class CommunityService {
    */
   async getCommunityStats(): Promise<CommunityStats> {
     try {
-      const response = await axiosClient.get('/community/stats');
+      const response = await axiosClient.get('/community/discussions/stats');
       return response.data;
     } catch (error) {
       console.error('Error fetching community stats:', error);
@@ -285,9 +331,7 @@ class CommunityService {
    */
   async likeDiscussion(discussionId: string, userEmail: string): Promise<void> {
     try {
-      await axiosClient.post(`/community/discussions/${discussionId}/like`, {
-        userEmail
-      });
+      await axiosClient.post(`/community/discussions/${discussionId}/like?userEmail=${userEmail}`);
     } catch (error) {
       console.error('Error liking discussion:', error);
       throw new Error('Failed to like discussion');
@@ -407,7 +451,9 @@ class CommunityService {
       title: formData.title,
       content: formData.content,
       category: formData.category,
-      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
+      tags: formData.tags && formData.tags.trim() 
+        ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+        : [],
       createdBy: createdBy
     };
   }

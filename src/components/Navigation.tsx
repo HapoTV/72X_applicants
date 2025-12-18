@@ -20,7 +20,6 @@ import {
   Users,
   Calendar
 } from 'lucide-react';
-import Logo from '../assets/Logo.svg';
 
 type PackageType = 'startup' | 'essential' | 'premium';
 
@@ -128,7 +127,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
       <div className="p-4 flex-shrink-0 relative min-h-[88px]">
         <div className="flex items-center justify-between mb-0">
           <div className="flex items-center justify-center flex-1">
-            {!collapsed && <img src={Logo} alt="SeventyTwoX Logo" className="w-36 h-36" />}
+            {!collapsed && <img src="/Logo2.png" alt="SeventyTwoX Logo" className="w-24 h-24" />}
           </div>
           {onClose && (
             <button
@@ -151,7 +150,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
         </div>
 
         {/* User Profile Section */}
-        <div className="flex flex-col items-center py-4 border-b border-gray-200">
+        <div className="flex flex-col items-center pt-2 pb-4 border-b border-gray-200">
           <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-3 shadow-md ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
             <span className="text-white text-xl font-bold">
               {userInitials}
@@ -281,7 +280,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   className="relative group"
                 >
                   <NavLink
-                    to="/learning/business-planning"
+                    to="/learning?category=business-plan"
                     onClick={() => {
                       onClose?.();
                       // Close other secondary sidebars

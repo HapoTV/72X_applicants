@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { learningService } from '../../../services/LearningService';
+import { useAuth } from '../../../context/AuthContext';
 import axiosClient from '../../../api/axiosClient';
 
 interface LearningItem {
     id: string;
     title: string;
-    type: 'ARTICLE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'LINK';
+    type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
     category: string;
     resourceUrl?: string;
     fileName?: string;
@@ -12,39 +14,43 @@ interface LearningItem {
     createdBy: string;
 }
 
-type LearningSection = 'BUSINESS' | 'MARKETING' | 'FINANCE' | 'OPERATIONS' | 'LEADERSHIP';
+type LearningSection = 'business-plan' | 'marketing' | 'finance' | 'operations' | 'leadership' | 'standardbank';
 
 export default function LearningTab() {
-    const [learningSection, setLearningSection] = useState<LearningSection>('BUSINESS');
+    const [learningSection, setLearningSection] = useState<LearningSection>('business-plan');
     const [learningData, setLearningData] = useState<Record<LearningSection, LearningItem[]>>({
-        BUSINESS: [],
-        MARKETING: [],
-        FINANCE: [],
-        OPERATIONS: [],
-        LEADERSHIP: [],
+        'business-plan': [],
+        'marketing': [],
+        'finance': [],
+        'operations': [],
+        'leadership': [],
+        'standardbank': [],
     });
     const [showAddLearning, setShowAddLearning] = useState(false);
     const [newLearning, setNewLearning] = useState<{ 
         title: string; 
-        type: 'ARTICLE' | 'VIDEO' | 'PDF' | 'DOCUMENT' | 'LINK'; 
-        category: string;
+        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK'; 
+        category: LearningSection;
         resourceUrl: string;
         description: string;
+        file?: File;
     }>({ 
         title: '', 
         type: 'ARTICLE',
-        category: 'BUSINESS',
+        category: learningSection,
         resourceUrl: '',
-        description: ''
+        description: '',
+        file: undefined
     });
     const [loading, setLoading] = useState(true);
 
     const sectionTitles = {
-        BUSINESS: 'Business Planning',
-        MARKETING: 'Marketing & Sales',
-        FINANCE: 'Financial Management',
-        OPERATIONS: 'Operations',
-        LEADERSHIP: 'Leadership'
+        'business-plan': 'Business Planning',
+        'marketing': 'Marketing & Sales',
+        'finance': 'Financial Management',
+        'operations': 'Operations',
+        'leadership': 'Leadership',
+        'standardbank': 'StandardBank'
     };
 
     useEffect(() => {
@@ -54,34 +60,46 @@ export default function LearningTab() {
     const fetchLearningMaterials = async () => {
         try {
             setLoading(true);
-            const response = await axiosClient.get('/learning-materials');
+            console.log('Fetching learning materials...');
+            // Use LearningService to get all learning materials
+            const allMaterials = await learningService.getAllLearningMaterials();
+            console.log('Fetched materials:', allMaterials);
             
-            // Transform API response
+            // Transform API response to admin format
             const transformedData: Record<LearningSection, LearningItem[]> = {
-                BUSINESS: [],
-                MARKETING: [],
-                FINANCE: [],
-                OPERATIONS: [],
-                LEADERSHIP: [],
+                'business-plan': [],
+                'marketing': [],
+                'finance': [],
+                'operations': [],
+                'leadership': [],
+                'standardbank': [],
             };
             
-            // Group by category
-            response.data.forEach((material: any) => {
+            // Group by category - use the same format as backend returns
+            allMaterials.forEach((material) => {
+                console.log('Existing material category:', material.category, 'Title:', material.title);
+                // Use the category directly from backend since LearningService already transforms it
                 const category = material.category as LearningSection;
+                
+                console.log('Processing material:', material, 'Using category:', category);
                 if (transformedData[category]) {
                     transformedData[category].push({
-                        id: material.materialId,
+                        id: material.id,
                         title: material.title,
-                        type: material.type,
+                        type: (material.type as 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK') || 'ARTICLE',
                         category: material.category,
                         resourceUrl: material.resourceUrl,
                         fileName: material.fileName,
-                        updated: material.updatedAt ? new Date(material.updatedAt).toLocaleDateString() : undefined,
-                        createdBy: material.createdBy
+                        updated: new Date().toLocaleDateString(), // Use current date as fallback
+                        createdBy: 'admin@72x.co.za' // Default creator
                     });
+                    console.log('Added to category:', category, 'Items now:', transformedData[category].length);
+                } else {
+                    console.warn('Category not found in transformedData:', category);
                 }
             });
             
+            console.log('Final transformed data:', transformedData);
             setLearningData(transformedData);
         } catch (error) {
             console.error('Error fetching learning materials:', error);
@@ -96,15 +114,71 @@ export default function LearningTab() {
             return;
         }
         
+        // For DOCUMENT and VIDEO types, require file upload
+        if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && !newLearning.file) {
+            alert('Please select a file to upload');
+            return;
+        }
+        
+        // For ARTICLE and LINK types, require URL
+        if ((newLearning.type === 'ARTICLE' || newLearning.type === 'LINK') && !newLearning.resourceUrl.trim()) {
+            alert('Please enter a resource URL');
+            return;
+        }
+        
         try {
-            await axiosClient.post('/learning-materials', {
+            // Map frontend category to backend enum format (use exact enum values)
+            const backendCategoryMap: Record<LearningSection, string> = {
+                'business-plan': 'BUSINESS_PLANNING',
+                'marketing': 'MARKETING_SALES', 
+                'finance': 'FINANCIAL_MANAGEMENT',
+                'operations': 'OPERATIONS',
+                'leadership': 'LEADERSHIP',
+                'standardbank': 'STANDARD_BANK'
+            };
+            
+            const backendCategory = backendCategoryMap[learningSection];
+            
+            console.log('Attempting to create learning material:', {
                 title: newLearning.title,
                 type: newLearning.type,
-                category: learningSection,
+                category: backendCategory,
                 resourceUrl: newLearning.resourceUrl,
                 description: newLearning.description,
                 createdBy: 'admin@72x.co.za'
             });
+            
+            if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && newLearning.file) {
+                // Use multipart/form-data for file upload
+                const formData = new FormData();
+                formData.append('title', newLearning.title);
+                formData.append('description', newLearning.description);
+                formData.append('category', backendCategory);
+                formData.append('type', newLearning.type);
+                formData.append('createdBy', 'admin@72x.co.za');
+                formData.append('file', newLearning.file);
+                
+                console.log('Sending file upload request with backend category:', backendCategory);
+                const response = await axiosClient.post('/learning-materials', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+                console.log('File upload successful:', response.data);
+            } else {
+                // Use JSON for URL-based materials
+                const requestData = {
+                    title: newLearning.title,
+                    type: newLearning.type,
+                    category: backendCategory,
+                    resourceUrl: newLearning.resourceUrl,
+                    description: newLearning.description,
+                    createdBy: 'admin@72x.co.za'
+                };
+                console.log('Sending JSON request with backend category:', backendCategory, 'data:', requestData);
+                const response = await axiosClient.post('/learning-materials', requestData);
+                console.log('JSON request successful:', response.data);
+            }
             
             fetchLearningMaterials(); // Refresh data
             setShowAddLearning(false);
@@ -113,10 +187,16 @@ export default function LearningTab() {
                 type: 'ARTICLE',
                 category: learningSection,
                 resourceUrl: '',
-                description: ''
+                description: '',
+                file: undefined
             });
         } catch (error) {
             console.error('Error adding learning material:', error);
+            if (error.response) {
+                console.error('Backend error response:', error.response.data);
+                console.error('Status:', error.response.status);
+                console.error('Headers:', error.response.headers);
+            }
             alert('Error adding learning material. Please try again.');
         }
     };
@@ -254,25 +334,41 @@ export default function LearningTab() {
                                 <label className="block text-sm text-gray-700 mb-1">Type</label>
                                 <select 
                                     value={newLearning.type} 
-                                    onChange={e => setNewLearning({...newLearning, type: e.target.value as any})} 
+                                    onChange={e => setNewLearning({...newLearning, type: e.target.value as any, file: undefined, resourceUrl: ''})} 
                                     className="w-full px-3 py-2 border rounded-lg"
                                 >
                                     <option value="ARTICLE">Article</option>
                                     <option value="VIDEO">Video</option>
-                                    <option value="PDF">PDF</option>
                                     <option value="DOCUMENT">Document</option>
                                     <option value="LINK">Link</option>
                                 </select>
                             </div>
-                            <div>
-                                <label className="block text-sm text-gray-700 mb-1">Resource URL</label>
-                                <input 
-                                    value={newLearning.resourceUrl} 
-                                    onChange={e => setNewLearning({...newLearning, resourceUrl: e.target.value})} 
-                                    className="w-full px-3 py-2 border rounded-lg" 
-                                    placeholder="https://..."
-                                />
-                            </div>
+                            {(newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') ? (
+                                <div>
+                                    <label className="block text-sm text-gray-700 mb-1">Upload File *</label>
+                                    <input 
+                                        type="file" 
+                                        onChange={e => setNewLearning({...newLearning, file: e.target.files?.[0]})} 
+                                        className="w-full px-3 py-2 border rounded-lg" 
+                                        accept={newLearning.type === 'VIDEO' ? '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv' : '.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx'}
+                                        required
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Supported formats: {newLearning.type === 'VIDEO' ? 'MP4, AVI, MOV, WMV, FLV, WebM, MKV' : 'PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX'}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-sm text-gray-700 mb-1">Resource URL *</label>
+                                    <input 
+                                        value={newLearning.resourceUrl} 
+                                        onChange={e => setNewLearning({...newLearning, resourceUrl: e.target.value})} 
+                                        className="w-full px-3 py-2 border rounded-lg" 
+                                        placeholder="https://..."
+                                        required
+                                    />
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-sm text-gray-700 mb-1">Description</label>
                                 <textarea 

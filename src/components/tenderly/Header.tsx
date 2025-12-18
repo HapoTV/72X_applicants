@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Bell, User } from 'lucide-react'
+import { Search, Bell, User, ArrowLeft } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Badge } from '../ui/badge'
@@ -23,8 +23,17 @@ export function Header({ user, onSearch, onSignOut, notificationCount = 0 }: Hea
   return (
     <header className="border-b bg-white shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
+        {/* Left side - Back button and Logo */}
         <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.location.href = '/dashboard'}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Go back to main application</span>
+          </Button>
           <h1 className="text-2xl font-bold text-blue-600">TenderlyAI</h1>
         </div>
 

@@ -1,14 +1,71 @@
 import React, { useState } from 'react';
 import { Play, Clock, Star, BookOpen, CheckCircle, Lock, Award, Flame, Calendar } from 'lucide-react';
+import CelebrationModal from '../../components/learning/CelebrationModal';
+import QuizModal from '../../components/learning/QuizModal';
+import QuizService from '../../services/QuizService';
 
 const BusinessPlanning: React.FC = () => {
   const [completedModules] = useState(['1']);
+  
+  // Gamification states
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [completedModule, setCompletedModule] = useState<any>(null);
+  const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   
   // Additional progress metrics
   const totalTimeSpent = 45; // minutes
   const learningStreak = 3; // days
   const certificatesEarned = 1;
   const lastAccessed = 'Today';
+
+  // Gamification handlers
+  const handleModuleCompletion = (module: any) => {
+    if (module.progress === 100 && !completedModules.includes(module.id)) {
+      setCompletedModule(module);
+      setShowCelebration(true);
+      
+      // Generate quiz questions for this module
+      const questions = QuizService.generateQuizQuestions(
+        module.title, 
+        module.description, 
+        module.category
+      );
+      setQuizQuestions(questions);
+    }
+  };
+
+  const handleStartQuiz = () => {
+    setShowCelebration(false);
+    setShowQuiz(true);
+  };
+
+  const handleQuizComplete = (score: number, totalQuestions: number) => {
+    setShowQuiz(false);
+    
+    // Update module completion status
+    if (completedModule) {
+      setCompletedModules([...completedModules, completedModule.id]);
+      
+      // Show success message
+      const percentage = QuizService.calculateScorePercentage(score, totalQuestions);
+      const message = QuizService.getPerformanceMessage(score, totalQuestions);
+      
+      alert(`${message} Score: ${score}/${totalQuestions} (${percentage}%)`);
+    }
+    
+    setCompletedModule(null);
+  };
+
+  const handleCloseCelebration = () => {
+    setShowCelebration(false);
+    setCompletedModule(null);
+  };
+
+  const handleCloseQuiz = () => {
+    setShowQuiz(false);
+    setCompletedModule(null);
+  };
 
   // Original modules from LearningModules, filtered by business-plan category
   const allModules = [
@@ -112,6 +169,52 @@ const BusinessPlanning: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Test Button - Always visible */}
+      <div className="bg-gradient-to-r from-yellow-100 to-orange-100 border-2 border-orange-300 rounded-xl p-6 mb-6 shadow-lg">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center animate-pulse">
+                <span className="text-white text-lg font-bold">🧪</span>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-orange-900 mb-1">Test Gamified Q&A System</h3>
+                <p className="text-sm text-orange-700">Simulate completing a Business Planning module to test celebration and quiz flow</p>
+              </div>
+            </div>
+            <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+              Click to test complete flow
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const testModule = {
+                id: 'test-bp-001',
+                title: 'Complete Business Planning Guide',
+                description: 'Master of fundamentals of business planning with this comprehensive guide covering strategy, financial planning, and operational excellence.',
+                category: 'business-plan',
+                duration: '45 min',
+                lessons: 8,
+                difficulty: 'Intermediate',
+                rating: 4.7,
+                students: 1250,
+                isPremium: false,
+                progress: 100,
+                thumbnail: 'https://images.unsplash.com/photo-1560473676-56e936e0f8b3?w=400',
+                isCompleted: false,
+                isLocked: false,
+                type: 'ARTICLE',
+                resourceUrl: 'https://example.com/business-planning-guide'
+              };
+              handleModuleCompletion(testModule);
+            }}
+            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg hover:from-orange-600 hover:to-red-700 transition-all transform hover:scale-105 shadow-lg text-base font-bold animate-bounce"
+          >
+            🎯 Test Business Planning Completion
+          </button>
+        </div>
+      </div>
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Business Planning</h1>
         <p className="text-gray-600">Master the essentials of planning and structuring your business</p>
@@ -307,6 +410,22 @@ const BusinessPlanning: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Gamification Modals */}
+      <CelebrationModal
+        isOpen={showCelebration}
+        moduleTitle={completedModule?.title || ''}
+        onClose={handleCloseCelebration}
+        onStartQuiz={handleStartQuiz}
+      />
+
+      <QuizModal
+        isOpen={showQuiz}
+        moduleTitle={completedModule?.title || ''}
+        questions={quizQuestions}
+        onClose={handleCloseQuiz}
+        onComplete={handleQuizComplete}
+      />
     </div>
   );
 };

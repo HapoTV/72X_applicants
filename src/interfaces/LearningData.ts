@@ -32,6 +32,7 @@ export type LearningCategory =
   | 'finance'
   | 'operations'
   | 'leadership'
+  | 'standardbank'
   | 'technology'
   | 'sales'
   | 'strategy';
@@ -53,6 +54,7 @@ export const LearningCategoryDisplay: Record<LearningCategory, string> = {
   'finance': 'Financial Management',
   'operations': 'Operations',
   'leadership': 'Leadership',
+  'standardbank': 'StandardBank',
   'technology': 'Technology',
   'sales': 'Sales',
   'strategy': 'Strategy'
@@ -67,6 +69,7 @@ export const LearningCategoryOptions: { value: LearningCategory; label: string }
   { value: 'finance', label: 'Financial Management' },
   { value: 'operations', label: 'Operations' },
   { value: 'leadership', label: 'Leadership' },
+  { value: 'standardbank', label: 'StandardBank' },
   { value: 'technology', label: 'Technology' },
   { value: 'sales', label: 'Sales' },
   { value: 'strategy', label: 'Strategy' }
@@ -100,6 +103,10 @@ export interface UserLearningModule {
   isCompleted: boolean;
   isLocked: boolean;
   lastAccessed?: string;
+  // Resource information for file/URL access
+  resourceUrl?: string;
+  fileName?: string;
+  type?: string;
 }
 
 /**
@@ -125,7 +132,7 @@ export interface LearningSession {
   userId: string;
   startTime: string;
   endTime?: string;
-  duration?: number; // in minutes
+  duration?: number; //in minutes
   lessonsCompleted: number;
   progressBefore: number;
   progressAfter: number;
