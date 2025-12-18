@@ -46,48 +46,91 @@ const PeerSupportGroups: React.FC<PeerSupportGroupsProps> = ({
     'Services'
   ];
 
-  useEffect(() => {
-    // Get user ID from localStorage or context
-    const user = localStorage.getItem('user');
-    if (user) {
-      try {
-        const userData = JSON.parse(user);
-        setUserId(userData.userId || userData.id || '');
-      } catch (e) {
-        console.error('Error parsing user data:', e);
+  // Function to extract user ID from localStorage
+  const extractUserId = (): string | null => {
+    try {
+      // Try to get user from localStorage
+      const userDataString = localStorage.getItem('user');
+      if (!userDataString) {
+        console.log('No user data found in localStorage');
+        return null;
       }
+
+      const userData = JSON.parse(userDataString);
+      console.log('User data from localStorage:', userData);
+
+      // Try different possible user ID properties
+      const userId = userData.userId || userData.id || userData._id || userData.user_id;
+      
+      if (userId) {
+        console.log('Extracted user ID:', userId);
+        return userId;
+      } else {
+        console.warn('No user ID found in user data. Available keys:', Object.keys(userData));
+        return null;
+      }
+    } catch (error) {
+      console.error('Error extracting user ID:', error);
+      return null;
     }
-    
-    fetchGroups();
+  };
+
+  useEffect(() => {
+    // Extract user ID on component mount
+    const extractedUserId = extractUserId();
+    if (extractedUserId) {
+      setUserId(extractedUserId);
+    } else {
+      setLoading(false);
+      setError('Please login to view groups');
+    }
   }, []);
 
   useEffect(() => {
+    // Fetch groups when userId is available
+    if (userId) {
+      console.log('User ID available, fetching groups:', userId);
+      fetchGroups();
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    // Filter groups whenever dependencies change
     filterGroups();
   }, [searchQuery, selectedCategory, groups]);
 
-const fetchGroups = async () => {
-  if (!userId) {
-    console.log('No userId found, cannot fetch groups');
-    setLoading(false);
-    return;
-  }
-  
-  console.log('Fetching groups for userId:', userId);
-  
-  setLoading(true);
-  setError(null);
-  try {
-    const groupsData = await mentorshipService.getPeerSupportGroups(userId);
-    console.log('Received groups data:', groupsData);
-    setGroups(groupsData);
-  } catch (err: any) {
-    console.error('Error fetching groups:', err);
-    const errorMessage = err.response?.data?.message || err.message || 'Failed to load groups. Please try again later.';
-    setError(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchGroups = async () => {
+    if (!userId) {
+      console.log('No user ID available');
+      setLoading(false);
+      return;
+    }
+
+    console.log('Starting to fetch groups for user:', userId);
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const groupsData = await mentorshipService.getPeerSupportGroups(userId);
+      console.log('Fetched groups data:', groupsData);
+      
+      if (groupsData && Array.isArray(groupsData)) {
+        setGroups(groupsData);
+        console.log(`Successfully loaded ${groupsData.length} groups`);
+      } else {
+        console.warn('Received invalid groups data:', groupsData);
+        setGroups([]);
+      }
+    } catch (err: any) {
+      console.error('Error fetching groups:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to load groups. Please try again later.';
+      setError(errorMessage);
+      setGroups([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filterGroups = () => {
     let filtered = groups;
@@ -95,7 +138,7 @@ const fetchGroups = async () => {
     // Apply category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(group => 
-        group.category.toLowerCase().includes(selectedCategory.toLowerCase())
+        group.category && group.category.toLowerCase().includes(selectedCategory.toLowerCase())
       );
     }
 
@@ -103,14 +146,15 @@ const fetchGroups = async () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(group =>
-        group.name.toLowerCase().includes(query) ||
-        group.description.toLowerCase().includes(query) ||
-        group.category.toLowerCase().includes(query) ||
-        group.location.toLowerCase().includes(query)
+        (group.name && group.name.toLowerCase().includes(query)) ||
+        (group.description && group.description.toLowerCase().includes(query)) ||
+        (group.category && group.category.toLowerCase().includes(query)) ||
+        (group.location && group.location.toLowerCase().includes(query))
       );
     }
 
     setFilteredGroups(filtered);
+    console.log(`Filtered ${filtered.length} groups from ${groups.length} total`);
   };
 
   const handleSearchGroups = async () => {
@@ -165,9 +209,9 @@ const fetchGroups = async () => {
       });
 
       alert(`Group "${newGroup.name}" created successfully!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating group:', error);
-      alert('Failed to create group. Please try again.');
+      alert(`Failed to create group: ${error.message}`);
     }
   };
 
@@ -198,9 +242,9 @@ const fetchGroups = async () => {
       // Call parent handler
       onJoinGroup(groupId);
       alert('Successfully joined the group!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error joining group:', error);
-      alert('Failed to join group. Please try again.');
+      alert(`Failed to join group: ${error.message}`);
     }
   };
 
@@ -233,9 +277,9 @@ const fetchGroups = async () => {
       // Call parent handler
       onLeaveGroup(groupId);
       alert('Successfully left the group.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error leaving group:', error);
-      alert('Failed to leave group. Please try again.');
+      alert(`Failed to leave group: ${error.message}`);
     }
   };
 
@@ -251,21 +295,25 @@ const fetchGroups = async () => {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="inline-block w-12 h-12 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-600">Loading groups...</p>
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <div className="inline-block w-12 h-12 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-600">Loading groups...</p>
+        </div>
       </div>
     );
   }
 
   if (!userId) {
     return (
-      <div className="text-center py-12">
-        <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Please Login</h3>
-        <p className="text-gray-600 max-w-md mx-auto mb-6">
-          You need to login to view and join peer support groups.
-        </p>
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Please Login</h3>
+          <p className="text-gray-600 max-w-md mx-auto mb-6">
+            You need to login to view and join peer support groups.
+          </p>
+        </div>
       </div>
     );
   }

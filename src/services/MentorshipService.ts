@@ -114,7 +114,7 @@ class MentorshipService {
     try {
       console.log('Fetching peer groups for user:', userId);
       
-      // Make sure userId is properly formatted as UUID
+      // Make sure userId is properly formatted
       if (!userId || userId.trim() === '') {
         console.error('Invalid userId:', userId);
         return [];
@@ -123,9 +123,6 @@ class MentorshipService {
       const response = await axiosClient.get('/peer-support/groups/public', {
         params: { 
           currentUserId: userId 
-        },
-        headers: {
-          'Content-Type': 'application/json'
         }
       });
       
@@ -152,7 +149,7 @@ class MentorshipService {
         console.error('Request setup error:', error.message);
       }
       
-      return []; // Return empty array instead of throwing
+      return [];
     }
   }
 
@@ -373,167 +370,162 @@ class MentorshipService {
 
   // ==================== DATA TRANSFORMATION METHODS ====================
 
-/**
- * Transform API response to Mentor
- */
-private transformToMentor(apiMentor: any): Mentor {
-  return {
-    mentorId: apiMentor.mentorId || apiMentor.id,
-    name: apiMentor.name,
-    expertise: apiMentor.expertise || '',
-    contactInfo: apiMentor.contactInfo,
-    experience: apiMentor.experience,
-    background: apiMentor.background,
-    availability: apiMentor.availability,
-    rating: apiMentor.rating || 4.0,
-    sessionsCompleted: apiMentor.sessionsCompleted || 0,
-    bio: apiMentor.bio || 'No bio available',
-    sessionDuration: apiMentor.sessionDuration || '60 minutes',
-    sessionPrice: apiMentor.sessionPrice || 'Free',
-    languages: apiMentor.languages || '',
-    imageUrl: apiMentor.imageUrl,
-    createdBy: apiMentor.createdBy?.name || apiMentor.createdBy,
-    createdAt: apiMentor.createdAt,
-    updatedAt: apiMentor.updatedAt
-  };
-}
-
-/**
- * Transform API response to PeerSupportGroup
- */
-private transformToPeerGroup(apiGroup: any): PeerSupportGroup {
-  // Get current user ID for member status check
-  const currentUser = localStorage.getItem('user');
-  let userId = '';
-  if (currentUser) {
-    try {
-      const userData = JSON.parse(currentUser);
-      userId = userData.userId || userData.id || '';
-    } catch (e) {
-      console.error('Error parsing user data:', e);
-    }
+  /**
+   * Transform API response to Mentor
+   */
+  private transformToMentor(apiMentor: any): Mentor {
+    return {
+      mentorId: apiMentor.mentorId || apiMentor.id,
+      name: apiMentor.name,
+      expertise: apiMentor.expertise || '',
+      contactInfo: apiMentor.contactInfo,
+      experience: apiMentor.experience,
+      background: apiMentor.background,
+      availability: apiMentor.availability,
+      rating: apiMentor.rating || 4.0,
+      sessionsCompleted: apiMentor.sessionsCompleted || 0,
+      bio: apiMentor.bio || 'No bio available',
+      sessionDuration: apiMentor.sessionDuration || '60 minutes',
+      sessionPrice: apiMentor.sessionPrice || 'Free',
+      languages: apiMentor.languages || '',
+      imageUrl: apiMentor.imageUrl,
+      createdBy: apiMentor.createdBy?.name || apiMentor.createdBy,
+      createdAt: apiMentor.createdAt,
+      updatedAt: apiMentor.updatedAt
+    };
   }
-  
-  // Extract createdBy information - backend returns separate fields
-  const createdById = apiGroup.createdById;
-  const createdByName = apiGroup.createdByName || 'Unknown';
-  const createdByEmail = apiGroup.createdByEmail;
-  
-  // Combine into a display string
-  const createdBy = createdByName || createdById || 'Unknown';
-  
-  // Check if current user is a member
-  const isMember = apiGroup.isMember || false;
-  const isOwner = createdById === userId || apiGroup.isOwner || false;
-  
-  return {
-    groupId: apiGroup.groupId,
-    name: apiGroup.name,
-    description: apiGroup.description || '',
-    category: apiGroup.category || 'General Business',
-    location: apiGroup.location || 'Online',
-    maxMembers: apiGroup.maxMembers || 100,
-    createdBy: createdBy,
-    isPublic: apiGroup.isPublic !== false,
-    isActive: apiGroup.isActive !== false,
-    memberCount: apiGroup.memberCount || 0,
-    recentActivity: apiGroup.recentActivity || 'No recent activity',
-    imageUrl: apiGroup.imageUrl || this.getDefaultImage(apiGroup.name),
-    createdAt: apiGroup.createdAt,
-    updatedAt: apiGroup.updatedAt,
-    isMember: isMember,
-    isOwner: isOwner,
-    joinedAt: apiGroup.joinedAt
-  };
-}
 
-/**
- * Transform API response to GroupMember
- */
-private transformToGroupMember(apiMember: any): GroupMember {
-  const user = apiMember.user || {};
-  
-  return {
-    memberId: apiMember.memberId || apiMember.id,
-    groupId: apiMember.groupId,
-    userId: apiMember.userId || user.id,
-    userName: user.name || 'Unknown',
-    userEmail: user.email,
-    role: apiMember.role || 'MEMBER',
-    joinedAt: apiMember.joinedAt,
-    lastActiveAt: apiMember.lastActiveAt
-  };
-}
+  /**
+   * Transform API response to PeerSupportGroup
+   */
+  private transformToPeerGroup(apiGroup: any): PeerSupportGroup {
+    console.log('Transforming group data:', apiGroup);
+    
+    // Get current user ID for member/owner check
+    const currentUser = localStorage.getItem('user');
+    let currentUserId = '';
+    if (currentUser) {
+      try {
+        const userData = JSON.parse(currentUser);
+        currentUserId = userData.userId || userData.id || userData._id || '';
+      } catch (e) {
+        console.error('Error parsing current user:', e);
+      }
+    }
+    
+    // Handle createdBy - backend returns createdByName, createdByEmail, createdById
+    const createdByName = apiGroup.createdByName || 'Unknown';
+    const createdByEmail = apiGroup.createdByEmail || '';
+    const createdById = apiGroup.createdById || '';
+    
+    // Create display string
+    const createdBy = createdByName || createdByEmail || createdById || 'Unknown';
+    
+    // Check if current user is owner (compare with createdById from backend)
+    const isOwner = createdById === currentUserId || apiGroup.isOwner === true;
+    
+    // Check if current user is member (use isMember flag from backend)
+    const isMember = apiGroup.isMember === true;
+    
+    return {
+      groupId: apiGroup.groupId,
+      name: apiGroup.name || '',
+      description: apiGroup.description || '',
+      category: apiGroup.category || 'General Business',
+      location: apiGroup.location || 'Online',
+      maxMembers: apiGroup.maxMembers || 100,
+      createdBy: createdBy,
+      isPublic: apiGroup.isPublic !== false,
+      isActive: apiGroup.isActive !== false,
+      memberCount: apiGroup.memberCount || 0,
+      recentActivity: apiGroup.recentActivity || 'No recent activity',
+      imageUrl: apiGroup.imageUrl,
+      createdAt: apiGroup.createdAt,
+      updatedAt: apiGroup.updatedAt,
+      isMember: isMember,
+      isOwner: isOwner,
+      joinedAt: apiGroup.joinedAt
+    };
+  }
 
-/**
- * Transform API response to Message
- */
-private transformToMessage(apiMsg: any): Message {
-  return {
-    messageId: apiMsg.messageId || apiMsg.id,
-    senderId: apiMsg.sender?.id || apiMsg.senderId,
-    receiverId: apiMsg.receiver?.id || apiMsg.receiverId,
-    content: apiMsg.content,
-    messageType: apiMsg.messageType || 'TEXT',
-    timestamp: apiMsg.createdAt || apiMsg.timestamp,
-    isRead: apiMsg.isRead || false,
-    readAt: apiMsg.readAt
-  };
-}
+  /**
+   * Transform API response to GroupMember
+   */
+  private transformToGroupMember(apiMember: any): GroupMember {
+    const user = apiMember.user || {};
+    
+    return {
+      memberId: apiMember.memberId || apiMember.id,
+      groupId: apiMember.groupId,
+      userId: apiMember.userId || user.id,
+      userName: user.name || 'Unknown',
+      userEmail: user.email,
+      role: apiMember.role || 'MEMBER',
+      joinedAt: apiMember.joinedAt,
+      lastActiveAt: apiMember.lastActiveAt
+    };
+  }
 
-/**
- * Transform API response to Conversation
- */
-private transformToConversation(apiConv: any): Conversation {
-  const user1 = apiConv.user1 || {};
-  const user2 = apiConv.user2 || {};
-  
-  return {
-    conversationId: apiConv.conversationId || apiConv.id,
-    user1Id: user1.id || apiConv.user1Id,
-    user2Id: user2.id || apiConv.user2Id,
-    lastMessage: apiConv.lastMessage,
-    lastMessageAt: apiConv.lastMessageAt,
-    unreadCountUser1: apiConv.unreadCountUser1 || 0,
-    unreadCountUser2: apiConv.unreadCountUser2 || 0,
-    createdAt: apiConv.createdAt,
-    updatedAt: apiConv.updatedAt,
-    user1Name: user1.name,
-    user2Name: user2.name,
-    user1Email: user1.email,
-    user2Email: user2.email
-  };
-}
+  /**
+   * Transform API response to Message
+   */
+  private transformToMessage(apiMsg: any): Message {
+    return {
+      messageId: apiMsg.messageId || apiMsg.id,
+      senderId: apiMsg.sender?.id || apiMsg.senderId,
+      receiverId: apiMsg.receiver?.id || apiMsg.receiverId,
+      content: apiMsg.content,
+      messageType: apiMsg.messageType || 'TEXT',
+      timestamp: apiMsg.createdAt || apiMsg.timestamp,
+      isRead: apiMsg.isRead || false,
+      readAt: apiMsg.readAt
+    };
+  }
 
-/**
- * Transform form data to API request format
- */
-private transformToMentorRequest(formData: MentorshipFormData): any {
-  return {
-    name: formData.name,
-    expertise: formData.expertise,
-    contactInfo: formData.contactInfo,
-    experience: formData.experience,
-    background: formData.background,
-    availability: formData.availability,
-    rating: parseFloat(formData.rating.toString()),
-    sessionsCompleted: parseInt(formData.sessionsCompleted.toString()),
-    bio: formData.bio,
-    sessionDuration: formData.sessionDuration,
-    sessionPrice: formData.sessionPrice,
-    languages: formData.languages,
-    imageUrl: formData.imageUrl || this.getDefaultImage(formData.name)
-  };
-}
+  /**
+   * Transform API response to Conversation
+   */
+  private transformToConversation(apiConv: any): Conversation {
+    const user1 = apiConv.user1 || {};
+    const user2 = apiConv.user2 || {};
+    
+    return {
+      conversationId: apiConv.conversationId || apiConv.id,
+      user1Id: user1.id || apiConv.user1Id,
+      user2Id: user2.id || apiConv.user2Id,
+      lastMessage: apiConv.lastMessage,
+      lastMessageAt: apiConv.lastMessageAt,
+      unreadCountUser1: apiConv.unreadCountUser1 || 0,
+      unreadCountUser2: apiConv.unreadCountUser2 || 0,
+      createdAt: apiConv.createdAt,
+      updatedAt: apiConv.updatedAt,
+      user1Name: user1.name,
+      user2Name: user2.name,
+      user1Email: user1.email,
+      user2Email: user2.email
+    };
+  }
 
-// Add helper methods for display
-formatRating(rating?: number): string {
-  return rating ? rating.toFixed(1) : 'N/A';
-}
-
-formatSessionsCount(sessions?: number): string {
-  return sessions ? `${sessions} sessions` : 'No sessions';
-}
+  /**
+   * Transform form data to API request format
+   */
+  private transformToMentorRequest(formData: MentorshipFormData): any {
+    return {
+      name: formData.name,
+      expertise: formData.expertise,
+      contactInfo: formData.contactInfo,
+      experience: formData.experience,
+      background: formData.background,
+      availability: formData.availability,
+      rating: parseFloat(formData.rating.toString()),
+      sessionsCompleted: parseInt(formData.sessionsCompleted.toString()),
+      bio: formData.bio,
+      sessionDuration: formData.sessionDuration,
+      sessionPrice: formData.sessionPrice,
+      languages: formData.languages,
+      imageUrl: formData.imageUrl || this.getDefaultImage(formData.name)
+    };
+  }
 
   // ==================== UTILITY METHODS ====================
 
@@ -635,6 +627,20 @@ formatSessionsCount(sessions?: number): string {
     } catch (error) {
       return 'Invalid date';
     }
+  }
+
+  /**
+   * Format rating for display
+   */
+  formatRating(rating?: number): string {
+    return rating ? rating.toFixed(1) : 'N/A';
+  }
+
+  /**
+   * Format sessions count for display
+   */
+  formatSessionsCount(sessions?: number): string {
+    return sessions ? `${sessions} sessions` : 'No sessions';
   }
 
   /**

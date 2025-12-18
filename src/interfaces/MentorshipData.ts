@@ -43,16 +43,16 @@ export interface PeerSupportGroup {
   location: string;
   maxMembers: number;
   createdBy: string;  
-  isActive: boolean;
-  memberCount: number;
-  recentActivity: string;
-  imageUrl?: string;
   isPublic: boolean;
+  isActive: boolean;  // Make sure this is here
+  memberCount: number;
+  recentActivity?: string;
+  imageUrl?: string;
   createdAt: string;
   updatedAt?: string;
-  isMember?: boolean;     // Added as optional
-  isOwner?: boolean;      // Added as optional
-  joinedAt?: string;      // Added as optional
+  isMember?: boolean;
+  isOwner?: boolean;
+  joinedAt?: string;
 }
 
 export interface PeerSupportGroupFormData {
