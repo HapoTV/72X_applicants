@@ -4,9 +4,11 @@ import type {
   FinancialData,
   CustomerData,
   DataInputFormData,
-  DataValidationRule,
   DataInputValidation,
-  DataInputApiResponse
+  DataInputApiResponse,
+  FileUploadMetadata,
+  UploadResponse,
+  UploadedDocument
 } from '../interfaces/DataInputData';
 
 class DataInputService {
@@ -217,7 +219,178 @@ class DataInputService {
     }
   }
 
+  // ==================== FILE UPLOAD METHODS ====================
+
+  async uploadFinancialDocument(file: File, metadata: FileUploadMetadata): Promise<UploadResponse> {
+    try {
+      const userId = this.getCurrentUserId();
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', this.getDocumentTypeFromFile(file.name));
+      formData.append('description', `Uploaded financial document: ${file.name}`);
+      formData.append('userId', userId);
+      
+      // Use the correct endpoint that exists in the backend
+      const response = await axiosClient.post(`${this.baseURL}/documents/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        document: response.data.data ? this.mapToUploadedDocument(response.data.data, userId) : undefined
+      };
+    } catch (error: any) {
+      console.error('Error uploading financial document:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to upload document',
+        errors: [error.response?.data?.message || 'Network error occurred']
+      };
+    }
+  }
+
+  async uploadAndProcessFinancialDocument(file: File, metadata: FileUploadMetadata): Promise<UploadResponse> {
+    try {
+      const userId = this.getCurrentUserId();
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', this.getDocumentTypeFromFile(file.name));
+      formData.append('description', `Uploaded financial document: ${file.name}`);
+      formData.append('userId', userId);
+      
+      // Use the upload and process endpoint
+      const response = await axiosClient.post(`${this.baseURL}/documents/upload-and-process`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        document: response.data.data ? this.mapToUploadedDocument(response.data.data, userId) : undefined
+      };
+    } catch (error: any) {
+      console.error('Error uploading and processing financial document:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to upload and process document',
+        errors: [error.response?.data?.message || 'Network error occurred']
+      };
+    }
+  }
+
+  async getUploadedDocuments(userId: string): Promise<UploadedDocument[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/documents/${userId}`);
+      
+      return (response.data.data || []).map((doc: any) => 
+        this.mapToUploadedDocument(doc, userId)
+      );
+    } catch (error) {
+      console.error('Error fetching uploaded documents:', error);
+      return [];
+    }
+  }
+
+  async deleteDocument(documentId: string, userId: string): Promise<UploadResponse> {
+    try {
+      const response = await axiosClient.delete(`${this.baseURL}/documents/${documentId}`, {
+        params: { userId }
+      });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to delete document',
+        errors: [error.response?.data?.message || 'Network error occurred']
+      };
+    }
+  }
+
+  async extractDataFromDocument(documentId: string): Promise<any> {
+    try {
+      // Note: This endpoint doesn't exist yet, but we'll create it
+      const userId = this.getCurrentUserId();
+      const response = await axiosClient.post(`${this.baseURL}/documents/${documentId}/extract`, {
+        userId
+      });
+      
+      return {
+        success: response.data.success,
+        data: response.data.extractedData,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('Error extracting data from document:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to extract data',
+        errors: [error.response?.data?.message || 'Network error occurred']
+      };
+    }
+  }
+
   // ==================== UTILITY METHODS ====================
+
+  private getDocumentTypeFromFile(fileName: string): string {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    switch (extension) {
+      case 'pdf':
+        return 'financial_statement';
+      case 'xlsx':
+      case 'xls':
+      case 'xlsm':
+        return 'excel_report';
+      case 'csv':
+        return 'csv_data';
+      default:
+        return 'financial_document';
+    }
+  }
+
+  private mapToUploadedDocument(doc: any, userId: string): UploadedDocument {
+    return {
+      id: doc.documentId || doc.id,
+      fileName: doc.fileName || doc.originalFileName,
+      fileType: this.getFileTypeFromMime(doc.fileType || doc.mimeType),
+      fileSize: doc.fileSize || 0,
+      fileUrl: doc.fileUrl || '',
+      uploadDate: doc.uploadedAt || doc.createdAt || new Date().toISOString(),
+      status: this.mapDocumentStatus(doc.status, doc.processingStatus),
+      userId: userId,
+      extractedData: doc.extractedData ? JSON.parse(doc.extractedData) : undefined
+    };
+  }
+
+  private getFileTypeFromMime(mimeType: string): 'pdf' | 'excel' | 'csv' | 'image' | 'other' {
+    if (mimeType.includes('pdf')) return 'pdf';
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'excel';
+    if (mimeType.includes('csv')) return 'csv';
+    if (mimeType.includes('image')) return 'image';
+    return 'other';
+  }
+
+  private mapDocumentStatus(status: string, processingStatus: string): 'uploading' | 'processing' | 'completed' | 'failed' {
+    if (status === 'failed' || processingStatus === 'failed') return 'failed';
+    if (processingStatus === 'processing') return 'processing';
+    if (processingStatus === 'completed' && status === 'active') return 'completed';
+    if (processingStatus === 'pending') return 'uploading';
+    return 'uploading';
+  }
 
   transformToFinancialData(formData: DataInputFormData, userId: string): FinancialData {
     return {

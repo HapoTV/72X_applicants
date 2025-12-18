@@ -1,11 +1,14 @@
 // src/services/MentorshipService.ts
 import axiosClient from '../api/axiosClient';
 import type { 
-  MentorshipFormData, 
-  AdminMentorshipItem, 
-  UserMentorshipItem, 
-  MentorshipApiResponse, 
-  MentorshipRequest 
+  Mentor,
+  MentorshipFormData,
+  PeerSupportGroup,
+  PeerSupportGroupFormData,
+  Connection,
+  Conversation,
+  Message,
+  GroupMember
 } from '../interfaces/MentorshipData';
 
 /**
@@ -13,31 +16,33 @@ import type {
  */
 class MentorshipService {
   
-  // ==================== ADMIN OPERATIONS ====================
+  // ==================== MENTOR OPERATIONS ====================
 
   /**
-   * Get all mentors (Admin only)
+   * Get all mentors
    */
-  async getAllMentorship(): Promise<AdminMentorshipItem[]> {
+  async getAllMentors(): Promise<Mentor[]> {
     try {
       const response = await axiosClient.get('/mentors');
-      return response.data.map((mentorship: MentorshipApiResponse) => 
-        this.transformToAdminMentorshipItem(mentorship)
-      );
+      return response.data.map((mentor: any) => this.transformToMentor(mentor));
     } catch (error) {
       console.error('Error fetching all mentors:', error);
-      throw new Error('Failed to fetch mentors');
+      return []; // Return empty array instead of throwing
     }
   }
 
   /**
-   * Create a new mentor (Admin only)
+   * Create a new mentor
    */
-  async createMentorship(mentorshipData: MentorshipFormData, createdBy: string): Promise<AdminMentorshipItem> {
+  async createMentor(mentorData: MentorshipFormData, userEmail: string): Promise<Mentor | null> {
     try {
-      const mentorshipRequest: MentorshipRequest = this.transformToMentorshipRequest(mentorshipData, createdBy);
-      const response = await axiosClient.post('/mentors', mentorshipRequest);
-      return this.transformToAdminMentorshipItem(response.data);
+      const mentorRequest = this.transformToMentorRequest(mentorData);
+      
+      const response = await axiosClient.post('/mentors', mentorRequest, {
+        params: { userEmail }
+      });
+      
+      return this.transformToMentor(response.data);
     } catch (error) {
       console.error('Error creating mentor:', error);
       throw new Error('Failed to create mentor');
@@ -45,235 +50,605 @@ class MentorshipService {
   }
 
   /**
-   * Update an existing mentor (Admin only)
-   */
-  async updateMentorship(mentorshipId: string, mentorshipData: MentorshipFormData, createdBy: string): Promise<AdminMentorshipItem> {
-    try {
-      const mentorshipRequest: MentorshipRequest = this.transformToMentorshipRequest(mentorshipData, createdBy);
-      const response = await axiosClient.put(`/mentors/${mentorshipId}`, mentorshipRequest);
-      return this.transformToAdminMentorshipItem(response.data);
-    } catch (error) {
-      console.error('Error updating mentor:', error);
-      throw new Error('Failed to update mentor');
-    }
-  }
-
-  /**
-   * Delete a mentor (Admin only)
-   */
-  async deleteMentorship(mentorshipId: string, userEmail: string): Promise<void> {
-    try {
-      await axiosClient.delete(`/mentors/${mentorshipId}`, {
-        params: { userEmail }
-      });
-    } catch (error) {
-      console.error('Error deleting mentor:', error);
-      throw new Error('Failed to delete mentor');
-    }
-  }
-
-  /**
    * Get mentor by ID
    */
-  async getMentorById(mentorshipId: string): Promise<AdminMentorshipItem> {
+  async getMentorById(mentorId: string): Promise<Mentor | null> {
     try {
-      const response = await axiosClient.get(`/mentors/${mentorshipId}`);
-      return this.transformToAdminMentorshipItem(response.data);
+      const response = await axiosClient.get(`/mentors/${mentorId}`);
+      return this.transformToMentor(response.data);
     } catch (error) {
       console.error('Error fetching mentor by ID:', error);
-      throw new Error('Failed to fetch mentor');
-    }
-  }
-
-  // ==================== USER OPERATIONS ====================
-
-  /**
-   * Get all mentors for users
-   */
-  async getActiveMentorship(): Promise<UserMentorshipItem[]> {
-    try {
-      const response = await axiosClient.get('/mentors');
-      return response.data.map((mentorship: MentorshipApiResponse) => 
-        this.transformToUserMentorshipItem(mentorship)
-      );
-    } catch (error) {
-      console.error('Error fetching mentors:', error);
-      throw new Error('Failed to fetch mentors');
+      return null;
     }
   }
 
   /**
    * Get mentors by expertise
    */
-  async getMentorsByExpertise(expertise: string): Promise<UserMentorshipItem[]> {
+  async getMentorsByExpertise(expertise: string): Promise<Mentor[]> {
     try {
-      const response = await axiosClient.get(`/mentors/expertise/${expertise}`);
-      return response.data.map((mentorship: MentorshipApiResponse) => 
-        this.transformToUserMentorshipItem(mentorship)
-      );
+      const response = await axiosClient.get(`/mentors/expertise/${encodeURIComponent(expertise)}`);
+      return response.data.map((mentor: any) => this.transformToMentor(mentor));
     } catch (error) {
       console.error('Error fetching mentors by expertise:', error);
-      throw new Error('Failed to fetch mentors by expertise');
+      return [];
     }
   }
 
   /**
    * Search mentors
    */
-  async searchMentorship(query: string): Promise<UserMentorshipItem[]> {
+  async searchMentors(query: string): Promise<Mentor[]> {
     try {
       const response = await axiosClient.get('/mentors/search', {
         params: { query }
       });
-      return response.data.map((mentorship: MentorshipApiResponse) => 
-        this.transformToUserMentorshipItem(mentorship)
-      );
+      return response.data.map((mentor: any) => this.transformToMentor(mentor));
     } catch (error) {
       console.error('Error searching mentors:', error);
-      throw new Error('Failed to search mentors');
+      return [];
+    }
+  }
+
+  /**
+   * Delete a mentor
+   */
+  async deleteMentor(mentorId: string, userEmail: string): Promise<boolean> {
+    try {
+      await axiosClient.delete(`/mentors/${mentorId}`, {
+        params: { userEmail }
+      });
+      return true;
+    } catch (error) {
+      console.error('Error deleting mentor:', error);
+      throw new Error('Failed to delete mentor');
+    }
+  }
+
+  // ==================== PEER SUPPORT GROUPS ====================
+
+  /**
+   * Get all public peer support groups
+   */
+  async getPeerSupportGroups(userId: string): Promise<PeerSupportGroup[]> {
+    try {
+      console.log('Fetching peer groups for user:', userId);
+      
+      // Make sure userId is properly formatted as UUID
+      if (!userId || userId.trim() === '') {
+        console.error('Invalid userId:', userId);
+        return [];
+      }
+      
+      const response = await axiosClient.get('/peer-support/groups/public', {
+        params: { 
+          currentUserId: userId 
+        },
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('API Response for peer groups:', response.data);
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error('Invalid response format:', response.data);
+        return [];
+      }
+      
+      const groups = response.data.map((group: any) => this.transformToPeerGroup(group));
+      console.log('Transformed groups:', groups);
+      return groups;
+      
+    } catch (error: any) {
+      console.error('Error fetching peer groups:', error);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('Response error:', error.response.status, error.response.data);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Request setup error:', error.message);
+      }
+      
+      return []; // Return empty array instead of throwing
+    }
+  }
+
+  /**
+   * Get groups by category
+   */
+  async getGroupsByCategory(category: string, userId: string): Promise<PeerSupportGroup[]> {
+    try {
+      const response = await axiosClient.get(`/peer-support/groups/category/${encodeURIComponent(category)}`, {
+        params: { currentUserId: userId }
+      });
+      return response.data.map((group: any) => this.transformToPeerGroup(group));
+    } catch (error) {
+      console.error('Error fetching groups by category:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user's groups
+   */
+  async getMyGroups(userId: string): Promise<PeerSupportGroup[]> {
+    try {
+      const response = await axiosClient.get('/peer-support/groups/my', {
+        params: { userId }
+      });
+      return response.data.map((group: any) => this.transformToPeerGroup(group));
+    } catch (error) {
+      console.error('Error fetching user groups:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Create a new peer support group
+   */
+  async createPeerGroup(groupData: PeerSupportGroupFormData, creatorId: string): Promise<PeerSupportGroup> {
+    try {
+      const groupRequest = {
+        ...groupData,
+        name: groupData.name,
+        description: groupData.description,
+        category: groupData.category,
+        location: groupData.location,
+        maxMembers: groupData.maxMembers || 100,
+        isPublic: groupData.isPublic !== false
+      };
+      
+      const response = await axiosClient.post('/peer-support/groups', groupRequest, {
+        params: { creatorId }
+      });
+      return this.transformToPeerGroup(response.data);
+    } catch (error) {
+      console.error('Error creating peer group:', error);
+      throw new Error('Failed to create peer group');
+    }
+  }
+
+  /**
+   * Join a peer support group
+   */
+  async joinPeerGroup(groupId: string, userId: string): Promise<GroupMember> {
+    try {
+      const response = await axiosClient.post(`/peer-support/groups/${groupId}/join`, {
+        userId
+      });
+      return this.transformToGroupMember(response.data);
+    } catch (error) {
+      console.error('Error joining peer group:', error);
+      throw new Error('Failed to join peer group');
+    }
+  }
+
+  /**
+   * Leave a peer support group
+   */
+  async leavePeerGroup(groupId: string, userId: string): Promise<void> {
+    try {
+      await axiosClient.post(`/peer-support/groups/${groupId}/leave`, {
+        userId
+      });
+    } catch (error) {
+      console.error('Error leaving peer group:', error);
+      throw new Error('Failed to leave peer group');
+    }
+  }
+
+  /**
+   * Get group members
+   */
+  async getGroupMembers(groupId: string): Promise<GroupMember[]> {
+    try {
+      const response = await axiosClient.get(`/peer-support/groups/${groupId}/members`);
+      return response.data.map((member: any) => this.transformToGroupMember(member));
+    } catch (error) {
+      console.error('Error fetching group members:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Search groups
+   */
+  async searchGroups(query: string, userId: string): Promise<PeerSupportGroup[]> {
+    try {
+      const response = await axiosClient.get('/peer-support/groups/search', {
+        params: { query, currentUserId: userId }
+      });
+      return response.data.map((group: any) => this.transformToPeerGroup(group));
+    } catch (error) {
+      console.error('Error searching groups:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get trending groups
+   */
+  async getTrendingGroups(userId: string): Promise<PeerSupportGroup[]> {
+    try {
+      const response = await axiosClient.get('/peer-support/groups/trending', {
+        params: { currentUserId: userId }
+      });
+      return response.data.map((group: any) => this.transformToPeerGroup(group));
+    } catch (error) {
+      console.error('Error fetching trending groups:', error);
+      return [];
+    }
+  }
+
+  // ==================== MESSAGING & CONNECTIONS ====================
+
+  /**
+   * Send a message
+   */
+  async sendMessage(messageData: Message): Promise<Message> {
+    try {
+      const messageRequest = {
+        senderId: messageData.senderId,
+        receiverId: messageData.receiverId,
+        content: messageData.content,
+        messageType: messageData.messageType || 'text'
+      };
+      
+      const response = await axiosClient.post('/messaging/send', messageRequest);
+      return this.transformToMessage(response.data);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw new Error('Failed to send message');
+    }
+  }
+
+  /**
+   * Get conversations for user
+   */
+  async getConversations(userId: string): Promise<Conversation[]> {
+    try {
+      const response = await axiosClient.get(`/messaging/conversations/${userId}`);
+      return response.data.map((conv: any) => this.transformToConversation(conv));
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get messages between users
+   */
+  async getMessagesBetweenUsers(userId1: string, userId2: string): Promise<Message[]> {
+    try {
+      const response = await axiosClient.get(`/messaging/messages/${userId1}/${userId2}`);
+      return response.data.map((msg: any) => this.transformToMessage(msg));
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Mark messages as read
+   */
+  async markMessagesAsRead(senderId: string, receiverId: string): Promise<void> {
+    try {
+      await axiosClient.post(`/messaging/mark-read/${senderId}/${receiverId}`);
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      throw new Error('Failed to mark messages as read');
+    }
+  }
+
+  /**
+   * Get unread message count
+   */
+  async getUnreadMessageCount(userId: string): Promise<number> {
+    try {
+      const response = await axiosClient.get(`/messaging/unread-count/${userId}`);
+      return response.data.count || 0;
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get recent messages
+   */
+  async getRecentMessages(userId: string, limit: number = 10): Promise<Message[]> {
+    try {
+      const response = await axiosClient.get(`/messaging/recent/${userId}`, {
+        params: { limit }
+      });
+      return response.data.map((msg: any) => this.transformToMessage(msg));
+    } catch (error) {
+      console.error('Error fetching recent messages:', error);
+      return [];
     }
   }
 
   // ==================== DATA TRANSFORMATION METHODS ====================
 
-  /**
-   * Transform API response to AdminMentorshipItem
-   */
-  private transformToAdminMentorshipItem(apiMentorship: MentorshipApiResponse): AdminMentorshipItem {
-    return {
-      id: apiMentorship.mentorshipId,
-      mentorName: apiMentorship.mentorName,
-      mentorTitle: apiMentorship.mentorTitle,
-      mentorEmail: apiMentorship.mentorEmail,
-      expertise: apiMentorship.expertise,
-      experience: apiMentorship.experience,
-      background: apiMentorship.background,
-      availability: apiMentorship.availability,
-      rating: apiMentorship.rating,
-      sessionsCompleted: apiMentorship.sessionsCompleted,
-      bio: apiMentorship.bio,
-      sessionDuration: apiMentorship.sessionDuration,
-      sessionPrice: apiMentorship.sessionPrice,
-      languages: apiMentorship.languages,
-      createdBy: apiMentorship.createdBy
-    };
-  }
+/**
+ * Transform API response to Mentor
+ */
+private transformToMentor(apiMentor: any): Mentor {
+  return {
+    mentorId: apiMentor.mentorId || apiMentor.id,
+    name: apiMentor.name,
+    expertise: apiMentor.expertise || '',
+    contactInfo: apiMentor.contactInfo,
+    experience: apiMentor.experience,
+    background: apiMentor.background,
+    availability: apiMentor.availability,
+    rating: apiMentor.rating || 4.0,
+    sessionsCompleted: apiMentor.sessionsCompleted || 0,
+    bio: apiMentor.bio || 'No bio available',
+    sessionDuration: apiMentor.sessionDuration || '60 minutes',
+    sessionPrice: apiMentor.sessionPrice || 'Free',
+    languages: apiMentor.languages || '',
+    imageUrl: apiMentor.imageUrl,
+    createdBy: apiMentor.createdBy?.name || apiMentor.createdBy,
+    createdAt: apiMentor.createdAt,
+    updatedAt: apiMentor.updatedAt
+  };
+}
 
-  /**
-   * Transform API response to UserMentorshipItem
-   */
-  private transformToUserMentorshipItem(apiMentorship: MentorshipApiResponse): UserMentorshipItem {
-    return {
-      id: apiMentorship.mentorshipId,
-      mentorName: apiMentorship.mentorName,
-      mentorTitle: apiMentorship.mentorTitle,
-      expertise: apiMentorship.expertise,
-      experience: apiMentorship.experience,
-      background: apiMentorship.background,
-      rating: apiMentorship.rating,
-      sessionsCompleted: apiMentorship.sessionsCompleted,
-      sessionDuration: apiMentorship.sessionDuration,
-      sessionPrice: apiMentorship.sessionPrice,
-      languages: apiMentorship.languages,
-      availability: apiMentorship.availability,
-      isAvailable: this.isMentorAvailable(apiMentorship.availability)
-    };
+/**
+ * Transform API response to PeerSupportGroup
+ */
+private transformToPeerGroup(apiGroup: any): PeerSupportGroup {
+  // Get current user ID for member status check
+  const currentUser = localStorage.getItem('user');
+  let userId = '';
+  if (currentUser) {
+    try {
+      const userData = JSON.parse(currentUser);
+      userId = userData.userId || userData.id || '';
+    } catch (e) {
+      console.error('Error parsing user data:', e);
+    }
   }
+  
+  // Extract createdBy information - backend returns separate fields
+  const createdById = apiGroup.createdById;
+  const createdByName = apiGroup.createdByName || 'Unknown';
+  const createdByEmail = apiGroup.createdByEmail;
+  
+  // Combine into a display string
+  const createdBy = createdByName || createdById || 'Unknown';
+  
+  // Check if current user is a member
+  const isMember = apiGroup.isMember || false;
+  const isOwner = createdById === userId || apiGroup.isOwner || false;
+  
+  return {
+    groupId: apiGroup.groupId,
+    name: apiGroup.name,
+    description: apiGroup.description || '',
+    category: apiGroup.category || 'General Business',
+    location: apiGroup.location || 'Online',
+    maxMembers: apiGroup.maxMembers || 100,
+    createdBy: createdBy,
+    isPublic: apiGroup.isPublic !== false,
+    isActive: apiGroup.isActive !== false,
+    memberCount: apiGroup.memberCount || 0,
+    recentActivity: apiGroup.recentActivity || 'No recent activity',
+    imageUrl: apiGroup.imageUrl || this.getDefaultImage(apiGroup.name),
+    createdAt: apiGroup.createdAt,
+    updatedAt: apiGroup.updatedAt,
+    isMember: isMember,
+    isOwner: isOwner,
+    joinedAt: apiGroup.joinedAt
+  };
+}
 
-  /**
-   * Transform form data to API request format
-   */
-  private transformToMentorshipRequest(formData: MentorshipFormData, createdBy: string): MentorshipRequest {
-    return {
-      mentorName: formData.mentorName,
-      mentorTitle: formData.mentorTitle,
-      mentorEmail: formData.mentorEmail || undefined,
-      expertise: formData.expertise.split(',').map(skill => skill.trim()).filter(skill => skill.length > 0),
-      experience: formData.experience || undefined,
-      background: formData.background || undefined,
-      availability: formData.availability || undefined,
-      rating: formData.rating || undefined,
-      sessionsCompleted: formData.sessionsCompleted || undefined,
-      bio: formData.bio || undefined,
-      sessionDuration: formData.sessionDuration || undefined,
-      sessionPrice: formData.sessionPrice || undefined,
-      languages: formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0),
-      createdBy: createdBy
-    };
-  }
+/**
+ * Transform API response to GroupMember
+ */
+private transformToGroupMember(apiMember: any): GroupMember {
+  const user = apiMember.user || {};
+  
+  return {
+    memberId: apiMember.memberId || apiMember.id,
+    groupId: apiMember.groupId,
+    userId: apiMember.userId || user.id,
+    userName: user.name || 'Unknown',
+    userEmail: user.email,
+    role: apiMember.role || 'MEMBER',
+    joinedAt: apiMember.joinedAt,
+    lastActiveAt: apiMember.lastActiveAt
+  };
+}
 
-  /**
-   * Transform AdminMentorshipItem back to form data for editing
-   */
-  transformToFormData(mentorship: AdminMentorshipItem): MentorshipFormData {
-    return {
-      mentorName: mentorship.mentorName,
-      mentorTitle: mentorship.mentorTitle,
-      mentorEmail: mentorship.mentorEmail || '',
-      expertise: mentorship.expertise.join(', '),
-      experience: mentorship.experience || '',
-      background: mentorship.background || '',
-      availability: mentorship.availability || '',
-      rating: mentorship.rating || 0,
-      sessionsCompleted: mentorship.sessionsCompleted || 0,
-      bio: mentorship.bio || '',
-      sessionDuration: mentorship.sessionDuration || '',
-      sessionPrice: mentorship.sessionPrice || '',
-      languages: mentorship.languages ? mentorship.languages.join(', ') : ''
-    };
-  }
+/**
+ * Transform API response to Message
+ */
+private transformToMessage(apiMsg: any): Message {
+  return {
+    messageId: apiMsg.messageId || apiMsg.id,
+    senderId: apiMsg.sender?.id || apiMsg.senderId,
+    receiverId: apiMsg.receiver?.id || apiMsg.receiverId,
+    content: apiMsg.content,
+    messageType: apiMsg.messageType || 'TEXT',
+    timestamp: apiMsg.createdAt || apiMsg.timestamp,
+    isRead: apiMsg.isRead || false,
+    readAt: apiMsg.readAt
+  };
+}
+
+/**
+ * Transform API response to Conversation
+ */
+private transformToConversation(apiConv: any): Conversation {
+  const user1 = apiConv.user1 || {};
+  const user2 = apiConv.user2 || {};
+  
+  return {
+    conversationId: apiConv.conversationId || apiConv.id,
+    user1Id: user1.id || apiConv.user1Id,
+    user2Id: user2.id || apiConv.user2Id,
+    lastMessage: apiConv.lastMessage,
+    lastMessageAt: apiConv.lastMessageAt,
+    unreadCountUser1: apiConv.unreadCountUser1 || 0,
+    unreadCountUser2: apiConv.unreadCountUser2 || 0,
+    createdAt: apiConv.createdAt,
+    updatedAt: apiConv.updatedAt,
+    user1Name: user1.name,
+    user2Name: user2.name,
+    user1Email: user1.email,
+    user2Email: user2.email
+  };
+}
+
+/**
+ * Transform form data to API request format
+ */
+private transformToMentorRequest(formData: MentorshipFormData): any {
+  return {
+    name: formData.name,
+    expertise: formData.expertise,
+    contactInfo: formData.contactInfo,
+    experience: formData.experience,
+    background: formData.background,
+    availability: formData.availability,
+    rating: parseFloat(formData.rating.toString()),
+    sessionsCompleted: parseInt(formData.sessionsCompleted.toString()),
+    bio: formData.bio,
+    sessionDuration: formData.sessionDuration,
+    sessionPrice: formData.sessionPrice,
+    languages: formData.languages,
+    imageUrl: formData.imageUrl || this.getDefaultImage(formData.name)
+  };
+}
+
+// Add helper methods for display
+formatRating(rating?: number): string {
+  return rating ? rating.toFixed(1) : 'N/A';
+}
+
+formatSessionsCount(sessions?: number): string {
+  return sessions ? `${sessions} sessions` : 'No sessions';
+}
 
   // ==================== UTILITY METHODS ====================
 
   /**
-   * Check if mentor is available based on availability string
+   * Get default image URL
    */
-  private isMentorAvailable(availability?: string): boolean {
-    if (!availability) return false;
-    const availableKeywords = ['available', 'open', 'accepting', 'weekdays', 'weekends'];
-    return availableKeywords.some(keyword => 
-      availability.toLowerCase().includes(keyword.toLowerCase())
-    );
+  getDefaultImage(name: string): string {
+    const nameHash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const imageIndex = (nameHash % 3) + 1;
+    
+    const defaultImages = [
+      'https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400',
+      'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400',
+      'https://images.pexels.com/photos/590022/pexels-photo-590022.jpeg?auto=compress&cs=tinysrgb&w=400'
+    ];
+    
+    return defaultImages[imageIndex];
   }
 
   /**
-   * Format expertise array for display
+   * Get group image URL
    */
-  formatExpertise(expertise: string[]): string[] {
-    return expertise.map(skill => skill.charAt(0).toUpperCase() + skill.slice(1));
+  getGroupImageUrl(group: PeerSupportGroup): string {
+    return group.imageUrl || this.getDefaultImage(group.name);
   }
 
   /**
-   * Format rating for display
+   * Get user image URL
    */
-  formatRating(rating?: number): string {
-    if (!rating) return 'N/A';
-    return rating.toFixed(1);
+  getUserImageUrl(name: string): string {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0ea5e9&color=fff`;
   }
 
   /**
-   * Format sessions count for display
+   * Format date for display
    */
-  formatSessionsCount(sessions?: number): string {
-    if (!sessions) return '0 sessions';
-    return sessions === 1 ? '1 session' : `${sessions} sessions`;
+  formatDate(dateString: string): string {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
+  }
+
+  /**
+   * Format date-time for display
+   */
+  formatDateTime(dateString: string): string {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
+  }
+
+  /**
+   * Format relative time (e.g., "2 days ago")
+   */
+  formatDateRelative(dateString: string): string {
+    if (!dateString) return 'Never';
+    
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        if (diffHours === 0) {
+          const diffMinutes = Math.floor(diffMs / (1000 * 60));
+          return diffMinutes === 0 ? 'Just now' : `${diffMinutes}m ago`;
+        }
+        return `${diffHours}h ago`;
+      } else if (diffDays === 1) {
+        return 'Yesterday';
+      } else if (diffDays < 7) {
+        return `${diffDays}d ago`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks}w ago`;
+      } else {
+        return this.formatDate(dateString);
+      }
+    } catch (error) {
+      return 'Invalid date';
+    }
   }
 
   /**
    * Validate mentorship form data
    */
   validateMentorshipForm(formData: MentorshipFormData): string | null {
-    if (!formData.mentorName.trim()) {
+    if (!formData.name.trim()) {
       return 'Mentor name is required';
-    }
-    if (!formData.mentorTitle.trim()) {
-      return 'Mentor title is required';
     }
     if (!formData.expertise.trim()) {
       return 'Expertise is required';
     }
     
-    if (formData.mentorEmail && !this.isValidEmail(formData.mentorEmail)) {
+    if (formData.contactInfo && !this.isValidEmail(formData.contactInfo)) {
       return 'Please enter a valid email address';
     }
     
@@ -285,7 +660,7 @@ class MentorshipService {
       return 'Sessions completed cannot be negative';
     }
     
-    return null; // No errors
+    return null;
   }
 
   /**
@@ -297,14 +672,21 @@ class MentorshipService {
   }
 
   /**
-   * Get mentor initials for avatar
+   * Check if mentor is available
    */
-  getMentorInitials(name: string): string {
-    const names = name.trim().split(' ');
-    if (names.length === 1) {
-      return names[0].charAt(0).toUpperCase();
-    }
-    return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+  isMentorAvailable(availability?: string): boolean {
+    if (!availability) return false;
+    const availableKeywords = ['available', 'open', 'accepting'];
+    return availableKeywords.some(keyword => 
+      availability.toLowerCase().includes(keyword.toLowerCase())
+    );
+  }
+
+  /**
+   * Check if group has available spots
+   */
+  hasGroupAvailability(group: PeerSupportGroup): boolean {
+    return group.memberCount < group.maxMembers;
   }
 }
 

@@ -254,17 +254,6 @@ const FundingFinder: React.FC = () => {
         </div>
       )}
 
-      {/* Debug info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
-          <div className="font-medium text-yellow-800">Debug Info:</div>
-          <div className="text-yellow-700">
-            Total opportunities: {fundingOpportunities.length} | 
-            Filtered: {filteredOpportunities.length}
-          </div>
-        </div>
-      )}
-
       {/* Search and Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="space-y-4">

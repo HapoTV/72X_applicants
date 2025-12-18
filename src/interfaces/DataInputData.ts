@@ -141,3 +141,34 @@ export interface DataInputStats {
   averageRevenue: number;
   averageCustomers: number;
 }
+
+export interface FileUploadMetadata {
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  uploadDate: string;
+}
+
+export interface UploadedDocument {
+  id: string;
+  fileName: string;
+  fileType: 'pdf' | 'excel' | 'csv' | 'image' | 'other';
+  fileSize: number;
+  fileUrl: string;
+  uploadDate: string;
+  status: 'uploading' | 'processing' | 'completed' | 'failed';
+  userId: string;
+  extractedData?: {
+    revenue?: number;
+    expenses?: number;
+    customers?: number;
+    period?: string;
+  };
+}
+
+export interface UploadResponse {
+  success: boolean;
+  message: string;
+  document?: UploadedDocument;
+  errors?: string[];
+}
