@@ -1,20 +1,33 @@
-import React, { useState } from 'react';
-import { Map, ArrowRight, CheckCircle, Clock, Download, FileText, Trash2 } from 'lucide-react';
+// src/pages/RoadmapGenerator.tsx
+import React, { useState, useEffect } from 'react';
+import { Map, ArrowRight, CheckCircle, Clock, Download, FileText, Trash2, Loader2 } from 'lucide-react';
 import { roadmapService } from '../services/RoadmapService';
+import type { 
+  RoadmapGenerationRequest,
+  RoadmapFormData,
+  UserRoadmapItem 
+} from '../interfaces/RoadmapData';
+
+interface FormData {
+  businessType: string;
+  industry: string;
+  stage: string;
+  revenue: string;
+  employees: string;
+  goals: string[];
+  timeline: string;
+}
+
+interface SavedRoadmap {
+  id: string;
+  title: string;
+  formData: FormData;
+  createdAt: string;
+  isExpanded?: boolean;
+}
 
 const RoadmapGenerator: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  
-  interface FormData {
-    businessType: string;
-    industry: string;
-    stage: string;
-    revenue: string;
-    employees: string;
-    goals: string[];
-    timeline: string;
-  }
-
   const [formData, setFormData] = useState<FormData>({
     businessType: '',
     industry: '',
@@ -25,55 +38,27 @@ const RoadmapGenerator: React.FC = () => {
     timeline: ''
   });
   
-  const [generatedRoadmap, setGeneratedRoadmap] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [roadmapHistory, setRoadmapHistory] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [roadmapHistory, setRoadmapHistory] = useState<SavedRoadmap[]>([]);
+  const [userRoadmaps, setUserRoadmaps] = useState<UserRoadmapItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
-
-  interface SavedRoadmap {
-    id: string;
-    title: string;
-    formData: FormData;
-    roadmap: any;
-    createdAt: string;
-    isExpanded?: boolean;
-  }
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const businessTypes = [
-    'Retail',
-    'Food & Beverage',
-    'Hospitality',
-    'Beauty & Wellness',
-    'Healthcare',
-    'Service-Based',
-    'Transportation & Logistics',
-    'Agriculture',
-    'Manufacturing & Production',
-    'Event & Rental Services',
-    'Automotive Services',
-    'Technology & Repair',
-    'Corporate & Professional Services',
-    'Community & Public Sector',
-    'Other'
+    'Retail', 'Food & Beverage', 'Hospitality', 'Beauty & Wellness', 'Healthcare',
+    'Service-Based', 'Transportation & Logistics', 'Agriculture', 'Manufacturing & Production',
+    'Event & Rental Services', 'Automotive Services', 'Technology & Repair',
+    'Corporate & Professional Services', 'Community & Public Sector', 'Other'
   ];
 
   const industries = [
-    'Fast Food/Confectioners',
-    'Street Vendor/Spaza Shop',
-    'Farming',
-    'Hair Salon and Nail Salon',
-    'Catering services',
-    'Butcher/Meat Cutter',
-    'NPOs & NGOs',
-    'Marketing & advertising',
-    'Tent renters, Mobile Toilet and Fridge',
-    'Car washes',
-    'Phone Sellers/Repairers',
-    'Craft and handmade goods',
-    'Internet cafés',
-    'Mechanic and Tyre Services',
-    'Grass Cutter',
-    'Other'
+    'Fast Food/Confectioners', 'Street Vendor/Spaza Shop', 'Farming', 'Hair Salon and Nail Salon',
+    'Catering services', 'Butcher/Meat Cutter', 'NPOs & NGOs', 'Marketing & advertising',
+    'Tent renters, Mobile Toilet and Fridge', 'Car washes', 'Phone Sellers/Repairers',
+    'Craft and handmade goods', 'Internet cafés', 'Mechanic and Tyre Services', 'Grass Cutter', 'Other'
   ];
 
   const stages = [
@@ -88,7 +73,42 @@ const RoadmapGenerator: React.FC = () => {
     'Customer Retention', 'Cost Reduction'
   ];
 
-  const handleInputChange = (field: string, value: any) => {
+  // Get user ID from localStorage
+  const getUserId = (): string | null => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        return userData.userId || userData.id || null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  // Load user's roadmaps
+  useEffect(() => {
+    const userId = getUserId();
+    if (userId) {
+      loadUserRoadmaps(userId);
+    }
+  }, []);
+
+  const loadUserRoadmaps = async (userId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const roadmaps = await roadmapService.getUserRoadmaps(userId);
+      setUserRoadmaps(roadmaps);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load your roadmaps');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -102,11 +122,24 @@ const RoadmapGenerator: React.FC = () => {
   };
 
   const generateRoadmap = async () => {
+    const userId = getUserId();
+    if (!userId) {
+      setError('Please login to generate a roadmap');
+      return;
+    }
+
+    // Validate form data
+    if (!formData.businessType || !formData.industry || !formData.stage || formData.goals.length === 0 || !formData.timeline) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
     setIsGenerating(true);
-    
+    setError(null);
+    setSuccessMessage(null);
+
     try {
-      // Create roadmap request from form data
-      const roadmapRequest = {
+      const generationRequest: RoadmapGenerationRequest = {
         businessType: formData.businessType,
         industry: formData.industry,
         stage: formData.stage,
@@ -114,229 +147,78 @@ const RoadmapGenerator: React.FC = () => {
         employees: formData.employees,
         goals: formData.goals,
         timeline: formData.timeline,
-        createdBy: 'current-user' // This would come from auth context
+        createdBy: userId
       };
 
-      // Generate roadmap using the service
-      const generated = await roadmapService.generateRoadmap(roadmapRequest);
+      // Generate roadmap using backend
+      await roadmapService.generateRoadmap(generationRequest);
       
-      // Save to history
+      // Save to local history
       const newRoadmap: SavedRoadmap = {
         id: Date.now().toString(),
-        title: `Roadmap ${roadmapHistory.length + 1}`,
+        title: `Roadmap for ${formData.businessType}`,
         formData: { ...formData },
-        roadmap: generated,
         createdAt: new Date().toISOString(),
         isExpanded: false
       };
       
-      setRoadmapHistory(prev => [...prev, newRoadmap]);
-      setGeneratedRoadmap(generated);
-    } catch (error) {
-      console.error('Error generating roadmap:', error);
-      // Fallback to mock data if service fails
-      const fallbackRoadmap = generateMockRoadmap();
+      setRoadmapHistory(prev => [newRoadmap, ...prev]);
+      setSuccessMessage('Roadmap generated successfully! You can now save it.');
       
-      // Save fallback to history
-      const newRoadmap: SavedRoadmap = {
-        id: Date.now().toString(),
-        title: `Roadmap ${roadmapHistory.length + 1}`,
-        formData: { ...formData },
-        roadmap: fallbackRoadmap,
-        createdAt: new Date().toISOString(),
-        isExpanded: false
-      };
-      
-      setRoadmapHistory(prev => [...prev, newRoadmap]);
-      setGeneratedRoadmap(fallbackRoadmap);
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate roadmap');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const generateMockRoadmap = () => {
-    // Generate dynamic mock roadmap based on user data
-    const stage = formData.stage;
-    const goals = formData.goals;
-    const timeline = formData.timeline;
-    
-    let phase1Title = 'Foundation & Quick Wins';
-    let phase2Title = 'Growth Acceleration';
-    let phase3Title = 'Scale & Optimize';
-    let phase1Duration = '0-3 months';
-    let phase2Duration = '3-6 months';
-    let phase3Duration = '6-12 months';
-    
-    // Adjust phases based on business stage
-    if (stage === 'startup') {
-      phase1Title = 'Foundation Setup';
-      phase2Title = 'Initial Growth';
-      phase3Title = 'Scaling Preparation';
-    } else if (stage === 'established') {
-      phase1Title = 'Optimization Quick Wins';
-      phase2Title = 'Expansion & Innovation';
-      phase3Title = 'Market Leadership';
+  const saveRoadmap = async () => {
+    const userId = getUserId();
+    if (!userId) {
+      setError('Please login to save roadmap');
+      return;
     }
 
-    // Adjust phase durations based on timeline
-    if (timeline === '3months') {
-      phase1Duration = '0-1 month';
-      phase2Duration = '1-2 months';
-      phase3Duration = '2-3 months';
-    } else if (timeline === '6months') {
-      phase1Duration = '0-2 months';
-      phase2Duration = '2-4 months';
-      phase3Duration = '4-6 months';
-    } else if (timeline === '2years') {
-      phase1Duration = '0-6 months';
-      phase2Duration = '6-12 months';
-      phase3Duration = '12-24 months';
-    }
+    const title = prompt('Enter a name for your roadmap:', `My ${formData.businessType} Roadmap`);
+    if (!title) return;
 
-    // Generate tasks based on user goals
-    const generateTasks = (phase: number) => {
-      const tasks = [];
-      
-      // Base tasks for all phases
-      if (phase === 1) {
-        tasks.push({ task: 'Optimize your online presence', priority: 'High', duration: '2 weeks' });
-        tasks.push({ task: 'Implement basic analytics tracking', priority: 'High', duration: '1 week' });
-        
-        if (goals.includes('Increase Revenue')) {
-          tasks.push({ task: 'Develop revenue optimization strategy', priority: 'High', duration: '3 weeks' });
-        }
-        if (goals.includes('Customer Retention')) {
-          tasks.push({ task: 'Create customer feedback system', priority: 'Medium', duration: '2 weeks' });
-        }
-        if (goals.includes('Improve Operations')) {
-          tasks.push({ task: 'Streamline core operations', priority: 'High', duration: '4 weeks' });
-        }
-      } else if (phase === 2) {
-        tasks.push({ task: 'Launch targeted marketing campaigns', priority: 'High', duration: '6 weeks' });
-        
-        if (goals.includes('Expand Market Reach')) {
-          tasks.push({ task: 'Expand to new market segments', priority: 'High', duration: '8 weeks' });
-        }
-        if (goals.includes('Build Team')) {
-          tasks.push({ task: 'Build strategic partnerships', priority: 'Medium', duration: '4 weeks' });
-        }
-        if (goals.includes('Digital Transformation')) {
-          tasks.push({ task: 'Implement automation tools', priority: 'High', duration: '3 weeks' });
-        }
-      } else if (phase === 3) {
-        if (goals.includes('Secure Funding')) {
-          tasks.push({ task: 'Explore funding opportunities', priority: 'Low', duration: '6 weeks' });
-        }
-        if (goals.includes('Expand Market Reach')) {
-          tasks.push({ task: 'Enter new geographic markets', priority: 'High', duration: '12 weeks' });
-        }
-        if (goals.includes('Build Team')) {
-          tasks.push({ task: 'Build advanced team structure', priority: 'Medium', duration: '8 weeks' });
-        }
-        tasks.push({ task: 'Implement advanced analytics', priority: 'Medium', duration: '4 weeks' });
-      }
-      
-      return tasks;
-    };
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
 
-    return {
-      phase1: {
-        title: `${phase1Title} (${phase1Duration})`,
-        tasks: generateTasks(1)
-      },
-      phase2: {
-        title: `${phase2Title} (${phase2Duration})`,
-        tasks: generateTasks(2)
-      },
-      phase3: {
-        title: `${phase3Title} (${phase3Duration})`,
-        tasks: generateTasks(3)
-      }
-    };
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Export roadmap as PDF
-  const exportToPDF = async (roadmap: any, title: string) => {
     try {
-      // Create HTML content for the PDF
-      const htmlContent = `
-        <html>
-          <head>
-            <title>${title}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              h1 { color: #333; text-align: center; }
-              h2 { color: #666; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
-              .task { margin: 10px 0; padding: 10px; background: #f9f9f9; border-left: 4px solid #007bff; }
-              .priority-high { border-left-color: #dc3545; }
-              .priority-medium { border-left-color: #ffc107; }
-              .priority-low { border-left-color: #28a745; }
-              .duration { color: #666; font-size: 0.9em; }
-              .generated-date { text-align: center; color: #999; margin-top: 30px; }
-            </style>
-          </head>
-          <body>
-            <h1>${title}</h1>
-            ${Object.entries(roadmap).map(([, phase]: [string, any]) => `
-              <h2>${phase.title}</h2>
-              ${phase.tasks.map((task: any, index: number) => `
-                <div class="task priority-${task.priority.toLowerCase()}">
-                  <strong>${index + 1}. ${task.task}</strong>
-                  <div class="duration">⏱️ ${task.duration} | Priority: ${task.priority}</div>
-                </div>
-              `).join('')}
-            `).join('')}
-            <div class="generated-date">Generated on ${new Date().toLocaleDateString()}</div>
-          </body>
-        </html>
-      `;
+      const roadmapData: RoadmapFormData = {
+        title: title,
+        businessType: formData.businessType,
+        industry: formData.industry,
+        stage: formData.stage,
+        revenue: formData.revenue,
+        employees: formData.employees,
+        goals: formData.goals,
+        timeline: formData.timeline,
+        isPublic: false,
+        isTemplate: false
+      };
 
-      // Create a blob and download
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${title.replace(/\s+/g, '_')}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error exporting roadmap:', error);
-      alert('Failed to export roadmap. Please try again.');
+      // Save to backend
+      await roadmapService.createRoadmap(roadmapData, userId);
+      
+      setSuccessMessage('Roadmap saved successfully!');
+      // Refresh user roadmaps
+      loadUserRoadmaps(userId);
+      
+    } catch (err: any) {
+      setError(err.message || 'Failed to save roadmap');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // Load roadmap from history
-  const loadRoadmapFromHistory = (savedRoadmap: SavedRoadmap) => {
-    setGeneratedRoadmap(savedRoadmap.roadmap);
-    setShowHistory(false);
-  };
-
-  // Delete roadmap from history
   const deleteRoadmapFromHistory = (roadmapId: string) => {
     setRoadmapHistory(prev => prev.filter(r => r.id !== roadmapId));
   };
 
-  // Toggle roadmap expansion in history
-  const toggleRoadmapExpansion = (roadmapId: string) => {
-    setRoadmapHistory(prev => prev.map(r => 
-      r.id === roadmapId ? { ...r, isExpanded: !r.isExpanded } : r
-    ));
-  };
-
-  // Generate new roadmap
   const generateNewRoadmap = () => {
-    setGeneratedRoadmap(null);
     setCurrentStep(1);
     setFormData({
       businessType: '',
@@ -347,7 +229,29 @@ const RoadmapGenerator: React.FC = () => {
       goals: [],
       timeline: ''
     });
+    setError(null);
+    setSuccessMessage(null);
   };
+
+  // Clear messages after 5 seconds
+  useEffect(() => {
+    if (error || successMessage) {
+      const timer = setTimeout(() => {
+        setError(null);
+        setSuccessMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, successMessage]);
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <Loader2 className="w-12 h-12 text-primary-500 animate-spin mx-auto mb-4" />
+        <p className="text-gray-600">Loading your roadmaps...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -356,16 +260,80 @@ const RoadmapGenerator: React.FC = () => {
         <p className="text-gray-600">Get a personalized roadmap to accelerate your business growth</p>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 animate-fade-in">
+          <div className="flex items-center space-x-3">
+            <div className="text-red-600">⚠️</div>
+            <span className="text-red-800">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-fade-in">
+          <div className="flex items-center space-x-3">
+            <div className="text-green-600">✓</div>
+            <span className="text-green-800">{successMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* User's Saved Roadmaps */}
+      {userRoadmaps.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Your Saved Roadmaps</h2>
+            <div className="text-sm text-gray-600">{userRoadmaps.length} roadmaps</div>
+          </div>
+          
+          <div className="space-y-3">
+            {userRoadmaps.slice(0, 3).map((roadmap) => (
+              <div key={roadmap.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="w-5 h-5 text-primary-500" />
+                    <div>
+                      <h3 className="font-medium text-gray-900">{roadmap.title}</h3>
+                      <p className="text-sm text-gray-600">
+                        {roadmap.businessType} • {roadmap.stage} • {roadmapService.formatDate(roadmap.createdAt || '')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 text-xs rounded-full ${roadmapService.getStatusColor(roadmap.status)}`}>
+                      {roadmap.status}
+                    </span>
+                    <div className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                      {roadmap.progress}% Complete
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {userRoadmaps.length > 3 && (
+              <div className="text-center pt-2">
+                <button 
+                  onClick={() => window.location.href = '/roadmaps'}
+                  className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                >
+                  View all {userRoadmaps.length} roadmaps →
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Roadmap History */}
       {roadmapHistory.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Previous Roadmaps</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Recently Generated</h2>
             <button
               onClick={() => setShowHistory(!showHistory)}
               className="text-primary-600 hover:text-primary-700 text-sm font-medium"
             >
-              {showHistory ? 'Hide' : 'Show'} History ({roadmapHistory.length})
+              {showHistory ? 'Hide' : 'Show'} ({roadmapHistory.length})
             </button>
           </div>
           
@@ -379,24 +347,20 @@ const RoadmapGenerator: React.FC = () => {
                       <div>
                         <h3 className="font-medium text-gray-900">{savedRoadmap.title}</h3>
                         <p className="text-sm text-gray-600">
-                          Generated on {new Date(savedRoadmap.createdAt).toLocaleDateString()} • 
+                          {roadmapService.formatDate(savedRoadmap.createdAt)} • 
                           {savedRoadmap.formData.businessType} • {savedRoadmap.formData.stage}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => loadRoadmapFromHistory(savedRoadmap)}
+                        onClick={() => {
+                          setFormData(savedRoadmap.formData);
+                          setCurrentStep(3);
+                        }}
                         className="px-3 py-1 text-sm bg-primary-500 text-white rounded hover:bg-primary-600 transition-colors"
                       >
-                        View
-                      </button>
-                      <button
-                        onClick={() => exportToPDF(savedRoadmap.roadmap, savedRoadmap.title)}
-                        className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors flex items-center space-x-1"
-                      >
-                        <Download className="w-3 h-3" />
-                        <span>Export</span>
+                        Reuse
                       </button>
                       <button
                         onClick={() => deleteRoadmapFromHistory(savedRoadmap.id)}
@@ -405,37 +369,8 @@ const RoadmapGenerator: React.FC = () => {
                         <Trash2 className="w-3 h-3" />
                         <span>Delete</span>
                       </button>
-                      <button
-                        onClick={() => toggleRoadmapExpansion(savedRoadmap.id)}
-                        className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-                      >
-                        {savedRoadmap.isExpanded ? 'Collapse' : 'Expand'}
-                      </button>
                     </div>
                   </div>
-                  
-                  {savedRoadmap.isExpanded && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {Object.entries(savedRoadmap.roadmap).map(([key, phase]: [string, any]) => (
-                          <div key={key} className="border border-gray-200 rounded-lg p-3">
-                            <h4 className="font-medium text-gray-900 text-sm mb-2">{phase.title}</h4>
-                            <div className="space-y-2">
-                              {phase.tasks.slice(0, 2).map((task: any, index: number) => (
-                                <div key={index} className="p-2 bg-gray-50 rounded text-xs">
-                                  <div className="font-medium text-gray-700">{task.task}</div>
-                                  <div className="text-gray-500">{task.duration} • {task.priority}</div>
-                                </div>
-                              ))}
-                              {phase.tasks.length > 2 && (
-                                <div className="text-xs text-gray-500 text-center">+{phase.tasks.length - 2} more tasks</div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -443,207 +378,216 @@ const RoadmapGenerator: React.FC = () => {
         </div>
       )}
 
-      {!generatedRoadmap ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          {/* Progress Steps */}
-          <div className="flex items-center justify-between mb-8">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  currentStep >= step ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {currentStep > step ? <CheckCircle className="w-5 h-5" /> : step}
-                </div>
-                {step < 3 && (
-                  <div className={`w-16 h-1 mx-2 ${
-                    currentStep > step ? 'bg-primary-500' : 'bg-gray-200'
-                  }`} />
-                )}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        {/* Progress Steps */}
+        <div className="flex items-center justify-between mb-8">
+          {[1, 2, 3].map((step) => (
+            <div key={step} className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                currentStep >= step ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-600'
+              }`}>
+                {currentStep > step ? <CheckCircle className="w-5 h-5" /> : step}
               </div>
-            ))}
-          </div>
-
-          {/* Step 1: Business Basics */}
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Tell us about your business</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Business Type
-                  </label>
-                  <select
-                    value={formData.businessType}
-                    onChange={(e) => handleInputChange('businessType', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    <option value="">Select business type</option>
-                    {businessTypes.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Industry
-                  </label>
-                  <select
-                    value={formData.industry}
-                    onChange={(e) => handleInputChange('industry', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    <option value="">Select industry</option>
-                    {industries.map(industry => (
-                      <option key={industry} value={industry}>{industry}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Business Stage
-                </label>
-                <div className="space-y-3">
-                  {stages.map(stage => (
-                    <label key={stage.id} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="stage"
-                        value={stage.id}
-                        checked={formData.stage === stage.id}
-                        onChange={(e) => handleInputChange('stage', e.target.value)}
-                        className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-                      />
-                      <div>
-                        <div className="font-medium text-gray-900">{stage.name}</div>
-                        <div className="text-sm text-gray-600">{stage.desc}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              {step < 3 && (
+                <div className={`w-16 h-1 mx-2 ${
+                  currentStep > step ? 'bg-primary-500' : 'bg-gray-200'
+                }`} />
+              )}
             </div>
-          )}
+          ))}
+        </div>
 
-          {/* Step 2: Current Metrics */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Current business metrics</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Annual Revenue Range
-                  </label>
-                  <select
-                    value={formData.revenue}
-                    onChange={(e) => handleInputChange('revenue', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    <option value="">Select revenue range</option>
-                    <option value="0-50k">R0 - R50,000</option>
-                    <option value="50k-100k">R50,000 - R100,000</option>
-                    <option value="100k-500k">R100,000 - R500,000</option>
-                    <option value="500k-1m">R500,000 - R1,000,000</option>
-                    <option value="1m+">R1,000,000+</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Number of Employees
-                  </label>
-                  <select
-                    value={formData.employees}
-                    onChange={(e) => handleInputChange('employees', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    <option value="">Select team size</option>
-                    <option value="1">Just me (solopreneur)</option>
-                    <option value="2-5">2-5 employees</option>
-                    <option value="6-20">6-20 employees</option>
-                    <option value="21-50">21-50 employees</option>
-                    <option value="50+">50+ employees</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Goals & Timeline */}
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Your growth goals</h3>
-              
+        {/* Step 1: Business Basics */}
+        {currentStep === 1 && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Tell us about your business</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Select your primary goals (choose up to 4)
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Business Type *
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {goals.map(goal => (
-                    <label key={goal} className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.goals.includes(goal)}
-                        onChange={() => handleGoalToggle(goal)}
-                        disabled={formData.goals.length >= 4 && !formData.goals.includes(goal)}
-                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                      />
-                      <span className="text-sm text-gray-700">{goal}</span>
-                    </label>
+                <select
+                  value={formData.businessType}
+                  onChange={(e) => handleInputChange('businessType', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  required
+                >
+                  <option value="">Select business type</option>
+                  {businessTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
                   ))}
-                </div>
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Timeline for achieving goals
+                  Industry *
                 </label>
                 <select
-                  value={formData.timeline}
-                  onChange={(e) => handleInputChange('timeline', e.target.value)}
+                  value={formData.industry}
+                  onChange={(e) => handleInputChange('industry', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                  required
                 >
-                  <option value="">Select timeline</option>
-                  <option value="3months">3 months</option>
-                  <option value="6months">6 months</option>
-                  <option value="1year">1 year</option>
-                  <option value="2years">2+ years</option>
+                  <option value="">Select industry</option>
+                  {industries.map(industry => (
+                    <option key={industry} value={industry}>{industry}</option>
+                  ))}
                 </select>
               </div>
             </div>
-          )}
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
-            <button
-              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-              disabled={currentStep === 1}
-              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Business Stage *
+              </label>
+              <div className="space-y-3">
+                {stages.map(stage => (
+                  <label key={stage.id} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="stage"
+                      value={stage.id}
+                      checked={formData.stage === stage.id}
+                      onChange={(e) => handleInputChange('stage', e.target.value)}
+                      className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                      required
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">{stage.name}</div>
+                      <div className="text-sm text-gray-600">{stage.desc}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Current Metrics */}
+        {currentStep === 2 && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Current business metrics</h3>
             
-            {currentStep < 3 ? (
-              <button
-                onClick={() => setCurrentStep(currentStep + 1)}
-                className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Annual Revenue Range
+                </label>
+                <select
+                  value={formData.revenue}
+                  onChange={(e) => handleInputChange('revenue', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                >
+                  <option value="">Select revenue range</option>
+                  <option value="0-50k">R0 - R50,000</option>
+                  <option value="50k-100k">R50,000 - R100,000</option>
+                  <option value="100k-500k">R100,000 - R500,000</option>
+                  <option value="500k-1m">R500,000 - R1,000,000</option>
+                  <option value="1m+">R1,000,000+</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Number of Employees
+                </label>
+                <select
+                  value={formData.employees}
+                  onChange={(e) => handleInputChange('employees', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                >
+                  <option value="">Select team size</option>
+                  <option value="1">Just me (solopreneur)</option>
+                  <option value="2-5">2-5 employees</option>
+                  <option value="6-20">6-20 employees</option>
+                  <option value="21-50">21-50 employees</option>
+                  <option value="50+">50+ employees</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Goals & Timeline */}
+        {currentStep === 3 && (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold text-gray-900">Your growth goals *</h3>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Select your primary goals (choose at least 1)
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {goals.map(goal => (
+                  <label key={goal} className="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.goals.includes(goal)}
+                      onChange={() => handleGoalToggle(goal)}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700">{goal}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Timeline for achieving goals *
+              </label>
+              <select
+                value={formData.timeline}
+                onChange={(e) => handleInputChange('timeline', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                required
               >
-                <span>Next</span>
-                <ArrowRight className="w-4 h-4" />
+                <option value="">Select timeline</option>
+                <option value="3months">3 months</option>
+                <option value="6months">6 months</option>
+                <option value="1year">1 year</option>
+                <option value="2years">2+ years</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between mt-8">
+          <button
+            onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+            disabled={currentStep === 1}
+            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Previous
+          </button>
+          
+          {currentStep < 3 ? (
+            <button
+              onClick={() => setCurrentStep(currentStep + 1)}
+              className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+            >
+              <span>Next</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <div className="flex space-x-3">
+              <button
+                onClick={generateNewRoadmap}
+                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Start Over
               </button>
-            ) : (
               <button
                 onClick={generateRoadmap}
-                disabled={isGenerating}
+                disabled={isGenerating || formData.goals.length === 0}
                 className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
               >
                 {isGenerating ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Generating...</span>
                   </>
                 ) : (
@@ -653,58 +597,27 @@ const RoadmapGenerator: React.FC = () => {
                   </>
                 )}
               </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* Generated Roadmap */
-        <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Your Personalized Growth Roadmap</h2>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => exportToPDF(generatedRoadmap, 'Your Personalized Growth Roadmap')}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Export PDF</span>
-                </button>
-                <button
-                  onClick={generateNewRoadmap}
-                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-                >
-                  Generate New
-                </button>
-              </div>
+              <button
+                onClick={saveRoadmap}
+                disabled={isSaving}
+                className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    <span>Save Roadmap</span>
+                  </>
+                )}
+              </button>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {Object.entries(generatedRoadmap).map(([key, phase]: [string, any]) => (
-                <div key={key} className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-4">{phase.title}</h3>
-                  <div className="space-y-3">
-                    {phase.tasks.map((task: any, index: number) => (
-                      <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium text-gray-900 text-sm">{task.task}</h4>
-                          <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(task.priority)}`}>
-                            {task.priority}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-xs text-gray-600">
-                          <Clock className="w-3 h-3 mr-1" />
-                          {task.duration}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
