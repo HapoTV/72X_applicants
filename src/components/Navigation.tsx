@@ -3,26 +3,25 @@ import { NavLink } from 'react-router-dom';
 import { 
   Home, 
   BarChart3, 
-  Map,
-  BookOpen, 
-  User, 
-  Upload,
-  X,
-  GraduationCap,
-  Users,
-  DollarSign,
-  Video,
-  ShoppingBag,
   MessageCircle,
   AppWindow,
   Brain,
-  Calendar,
   Lock,
   Star,
   Zap,
-  ChevronRight
+  ChevronRight,
+  X,
+  User,
+  DollarSign,
+  Video,
+  BookOpen,
+  Upload,
+  ShoppingBag,
+  Users,
+  Calendar
 } from 'lucide-react';
-import Logo from '../assets/Logo.svg';
+
+type PackageType = 'startup' | 'essential' | 'premium';
 
 interface NavigationProps {
   onClose?: () => void;
@@ -30,43 +29,55 @@ interface NavigationProps {
   onScheduleToggle?: (isOpen: boolean) => void;
   onLearningToggle?: (isOpen: boolean) => void;
   onCommunityToggle?: (isOpen: boolean) => void;
+  onAppStoreToggle?: (isOpen: boolean) => void;
 }
 
-type PackageType = 'startup' | 'essential' | 'premium';
-
-interface NavItem {
-  path: string;
-  icon: any;
-  label: string;
-  package: PackageType;
-}
-
-const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle }) => {
+const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle, onAppStoreToggle }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
   const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
   const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
   const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
   const [isCommunitySubNavOpen, setIsCommunitySubNavOpen] = useState(false);
+  const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
-  const userPackage = (localStorage.getItem('userPackage') as PackageType) || 'premium';
+  const userPackage = (localStorage.getItem('userPackage') as PackageType) || 'startup';
   const userName = userEmail.split('@')[0].replace('.', ' ').split(' ').map(word => 
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
 
-  const navItems: NavItem[] = [
-    // Startup Package Features
-    { path: '/', icon: Home, label: 'Dashboard', package: 'startup' },
-    { path: '/roadmap', icon: Map, label: 'Roadmap', package: 'premium' },
-    { path: '/schedule', icon: Calendar, label: 'Schedule', package: 'startup' },
-    { path: '/learning', icon: GraduationCap, label: 'Learning', package: 'startup' },
-    { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' },
-    { path: '/community', icon: Users, label: 'Community', package: 'startup' },
-    { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' },
-    { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' },
+  const navItems: Array<{
+    path: string;
+    icon: React.ElementType;
+    label: string;
+    package: PackageType;
+  }> = [
+    // Dashboard
+    { path: '/', icon: Home, label: 'Dashboard', package: 'startup' as PackageType },
+    
+    // Roadmap
+    { path: '/roadmap', icon: BarChart3, label: 'Roadmap', package: 'premium' as PackageType },
+    
+    // Schedule
+    { path: '/schedule', icon: Calendar, label: 'Schedule', package: 'startup' as PackageType },
+    
+    // Learning
+    { path: '/learning', icon: BookOpen, label: 'Learning', package: 'startup' as PackageType },
+    
+    // Marketplace
+    { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' as PackageType },
+    
+    // Community
+    { path: '/community', icon: Users, label: 'Community', package: 'startup' as PackageType },
+    
+    // Mentorship
+    { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' as PackageType },
+    
+    // Applications
+    { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' as PackageType },
     
     // Essential Package Features (includes all startup + these)
     { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
@@ -74,7 +85,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     
     // Premium Package Features (everything)
     { path: '/analytics', icon: BarChart3, label: 'Analytics', package: 'premium' },
-    { path: '/resources', icon: BookOpen, label: 'Resources', package: 'premium' },
     { path: '/experts', icon: Video, label: 'Expert Q&A', package: 'premium' },
     { path: '/ai-analyst', icon: Brain, label: 'AI Business Analyst', package: 'premium' },
     
@@ -92,28 +102,17 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     return packageHierarchy[itemPackage] > packageHierarchy[userPackage];
   };
 
-  const getPackageIcon = (itemPackage: PackageType) => {
-    if (itemPackage === 'essential') return <Star className="w-3 h-3 text-blue-500" />;
-    if (itemPackage === 'premium') return <Zap className="w-3 h-3 text-purple-500" />;
-    return null;
-  };
-
-  const getTooltipMessage = (packageType: string) => {
-    if (packageType === 'essential') {
-      return 'This feature is for Essential package. You need to upgrade to unlock it!';
-    }
-    return 'This feature is for Premium package. You need to upgrade to unlock it!';
-  };
-
   const closeAllSecondaryNavs = () => {
     setIsDashboardSubNavOpen(false);
     setIsScheduleSubNavOpen(false);
     setIsLearningSubNavOpen(false);
     setIsCommunitySubNavOpen(false);
+    setIsAppStoreSubNavOpen(false);
     onDashboardToggle?.(false);
     onScheduleToggle?.(false);
     onLearningToggle?.(false);
     onCommunityToggle?.(false);
+    onAppStoreToggle?.(false);
   };
 
   const toggleCollapsed = () => {
@@ -128,7 +127,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
       <div className="p-4 flex-shrink-0 relative min-h-[88px]">
         <div className="flex items-center justify-between mb-0">
           <div className="flex items-center justify-center flex-1">
-            {!collapsed && <img src={Logo} alt="SeventyTwoX Logo" className="w-36 h-36" />}
+            {!collapsed && <img src="/Logo2.png" alt="SeventyTwoX Logo" className="w-24 h-24" />}
           </div>
           {onClose && (
             <button
@@ -151,7 +150,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
         </div>
 
         {/* User Profile Section */}
-        <div className="flex flex-col items-center py-4 border-b border-gray-200">
+        <div className="flex flex-col items-center pt-2 pb-4 border-b border-gray-200">
           <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-3 shadow-md ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
             <span className="text-white text-xl font-bold">
               {userInitials}
@@ -170,7 +169,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
         <ul className="space-y-1">
           {navItems.map((item) => {
             const locked = isFeatureLocked(item.package);
-            const packageIcon = getPackageIcon(item.package);
             // Create upgrade path by removing leading slash and adding /upgrade prefix
             const upgradePath = `/upgrade${item.path}`;
 
@@ -189,9 +187,11 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       setIsScheduleSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
                       setIsCommunitySubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
                       onScheduleToggle?.(false);
                       onLearningToggle?.(false);
                       onCommunityToggle?.(false);
+                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -202,9 +202,18 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -237,9 +246,11 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       setIsDashboardSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
                       setIsCommunitySubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onLearningToggle?.(false);
                       onCommunityToggle?.(false);
+                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -250,9 +261,18 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -278,16 +298,18 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   className="relative group"
                 >
                   <NavLink
-                    to="/learning/business-planning"
+                    to="/learning?category=business-plan"
                     onClick={() => {
                       onClose?.();
                       // Close other secondary sidebars
                       setIsDashboardSubNavOpen(false);
                       setIsScheduleSubNavOpen(false);
                       setIsCommunitySubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onScheduleToggle?.(false);
                       onCommunityToggle?.(false);
+                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -298,9 +320,18 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -327,15 +358,17 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                 >
                   <NavLink
                     to="/community/discussions"
-                    onClick={(e) => {
+                    onClick={() => {
                       onClose?.();
                       // Close other secondary sidebars
                       setIsDashboardSubNavOpen(false);
                       setIsScheduleSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onScheduleToggle?.(false);
                       onLearningToggle?.(false);
+                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -346,9 +379,18 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -356,6 +398,67 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                         const newState = !isCommunitySubNavOpen;
                         setIsCommunitySubNavOpen(newState);
                         onCommunityToggle?.(newState);
+                      }}
+                      className="p-1 hover:bg-white/20 rounded transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </NavLink>
+                </li>
+              );
+            }
+
+            // Special handling for App Store - add arrow button with click
+            if (item.path === '/applications') {
+              return (
+                <li 
+                  key={item.path}
+                  className="relative group"
+                >
+                  <NavLink
+                    to="/applications"
+                    onClick={() => {
+                      onClose?.();
+                      // Close other secondary sidebars
+                      setIsDashboardSubNavOpen(false);
+                      setIsScheduleSubNavOpen(false);
+                      setIsLearningSubNavOpen(false);
+                      setIsCommunitySubNavOpen(false);
+                      setIsAppStoreSubNavOpen(false);
+                      onDashboardToggle?.(false);
+                      onScheduleToggle?.(false);
+                      onLearningToggle?.(false);
+                      onCommunityToggle?.(false);
+                      onAppStoreToggle?.(false);
+                    }}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`
+                    }
+                  >
+                    <div className="flex items-center space-x-2">
+                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
+                      {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
+                    </div>
+                    {!collapsed && (
+                      <div className="flex items-center space-x-1">
+                        {item.package === "essential" ? (
+                          <Star className="w-3 h-3 text-blue-500" />
+                        ) : item.package === "premium" ? (
+                          <Zap className="w-3 h-3 text-purple-500" />
+                        ) : null}
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newState = !isAppStoreSubNavOpen;
+                        setIsAppStoreSubNavOpen(newState);
+                        onAppStoreToggle?.(newState);
                       }}
                       className="p-1 hover:bg-white/20 rounded transition-colors"
                     >
@@ -391,12 +494,16 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   }
                 >
                   <div className="flex items-center space-x-2">
-                    <item.icon className="w-4 h-4 flex-shrink-0" />
+                    {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" })}
                     {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                   </div>
                   {!collapsed && (
                     <div className="flex items-center space-x-1">
-                      {packageIcon}
+                      {item.package === 'essential' ? (
+                      <Star className="w-3 h-3 text-blue-500" />
+                    ) : item.package === 'premium' ? (
+                      <Zap className="w-3 h-3 text-purple-500" />
+                    ) : null}
                       {locked && <Lock className="w-3 h-3" />}
                     </div>
                   )}

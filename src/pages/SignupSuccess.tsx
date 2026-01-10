@@ -5,10 +5,13 @@ import Logo from '../assets/Logo.svg';
 const SignupSuccess: React.FC = () => {
   const navigate = useNavigate();
   const [reference, setReference] = useState<string>('');
+  const [userProvided, setUserProvided] = useState<boolean | null>(null);
 
   useEffect(() => {
     const ref = localStorage.getItem('lastGeneratedReference') || localStorage.getItem('businessReference') || '';
     setReference(ref);
+    const provided = localStorage.getItem('userProvidedBusinessReference');
+    setUserProvided(provided === 'true' ? true : provided === 'false' ? false : null);
   }, []);
 
   const copyRef = async () => {
@@ -35,6 +38,14 @@ const SignupSuccess: React.FC = () => {
         </div>
         <h1 className="text-xl font-semibold text-gray-900 mb-2">You have signed up</h1>
         <p className="text-gray-700 mb-4">Check your email to verify your account.</p>
+
+        {userProvided === true && (
+          <div className="mb-3 text-sm text-green-700">You may log in — a verification code has been sent to your email.</div>
+        )}
+
+        {userProvided === false && (
+          <div className="mb-3 text-sm text-gray-700">Account created: we generated a business reference for you.</div>
+        )}
 
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
           <div className="text-sm text-gray-600 mb-1">Your reference number</div>

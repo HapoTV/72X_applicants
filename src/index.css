@@ -3,6 +3,7 @@
 @import 'tailwindcss/utilities';
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import 'boxicons/css/boxicons.min.css';
 
 * {
   box-sizing: border-box;
@@ -93,4 +94,74 @@ textarea:focus {
 .reveal-visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Right-to-left marquee-style scroll for industries strip */
+@keyframes industry-row-track-1 {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes industry-row-track-2 {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.industry-row-track-1,
+.industry-row-track-2 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+}
+
+.industry-row-track-1 {
+  animation: industry-row-track-1 35s linear infinite;
+}
+
+.industry-row-track-2 {
+  animation: industry-row-track-2 35s linear infinite;
+}
+
+.industries-paused .industry-row-track-1,
+.industries-paused .industry-row-track-2 {
+  animation-play-state: paused;
+}
+
+.industry-card {
+  perspective: 1000px;
+  min-height: 230px;
+}
+
+.industry-card-inner {
+  position: relative;
+  width: 100%;
+  min-height: 230px;
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease;
+}
+
+.industry-card--flipped .industry-card-inner {
+  transform: rotateY(180deg);
+}
+
+.industry-card-face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+}
+
+.industry-card-face--back {
+  transform: rotateY(180deg);
 }

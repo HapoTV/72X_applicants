@@ -9,6 +9,7 @@ const Signup: React.FC = () => {
     lastName: '',
     email: '',
     phone: '',
+    companyName: '',
     businessName: '',
     hasBankReference: false,
     businessReference: '',
@@ -18,30 +19,30 @@ const Signup: React.FC = () => {
     plan: 'startup' as 'startup' | 'essential' | 'premium',
   });
   const [isLoading, setIsLoading] = useState(false);
-
   const update = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.acceptTerms) return alert('Please accept the terms to continue.');
+    if (!form.companyName.trim()) return alert('Please enter your business name.');
     if (!form.phone.trim()) return alert('Please enter your contact number.');
     if (form.password !== form.confirmPassword) return alert('Passwords do not match.');
     setIsLoading(true);
     try {
-      // Use provided bank reference or generate a new one
-      const ref = form.hasBankReference && form.businessReference.trim() 
-        ? form.businessReference 
-        : '72' + Math.floor(10000 + Math.random() * 90000).toString();
+      // Generate a business reference like 72XXXXX
+      const ref = '72' + Math.floor(10000 + Math.random() * 90000).toString();
       localStorage.setItem('userEmail', form.email);
       localStorage.setItem('userFirstName', form.firstName);
       localStorage.setItem('userPhone', form.phone);
-      localStorage.setItem('businessReference', ref);
-      localStorage.setItem('lastGeneratedReference', ref);
+      localStorage.setItem('companyName', form.companyName);
       localStorage.setItem('authToken', `user-token-${Date.now()}`);
       localStorage.setItem('userType', 'user');
       localStorage.setItem('userPackage', form.plan);
-      // Show success page with reference and verification instructions
-      navigate('/signup/success');
+
+      // Navigate to the appropriate success page which will read the stored reference
+      const providedFlag = localStorage.getItem('userProvidedBusinessReference');
+      if (providedFlag === 'true') navigate('/signup/success/provided');
+      else navigate('/signup/success/generated');
     } finally {
       setIsLoading(false);
     }
@@ -59,13 +60,38 @@ const Signup: React.FC = () => {
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-              <input value={form.firstName} onChange={e => update('firstName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
-            </div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+            <input
+        value={form.firstName}
+            onChange={e => {
+        const value = e.target.value;
+                // Allow only letters and spaces
+          if (/^[A-Za-z\s]*$/.test(value)) {
+          update('firstName', value);
+          }
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+          />
+        </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-              <input value={form.lastName} onChange={e => update('lastName', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+              <input
+                value={form.lastName}
+                  onChange={e => {
+                    const value = e.target.value;
+
+                  // Allow only letters and spaces
+                      if (/^[A-Za-z\s]*$/.test(value)) {
+                        update('lastName', value);
+                }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                required
+                />
+              </div>
+
           </div>
 
           <div>
@@ -73,10 +99,43 @@ const Signup: React.FC = () => {
             <input type="email" value={form.email} onChange={e => update('email', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
           </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
-              <input value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="e.g. 082 123 4567" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" required />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+          <input
+          value={form.phone}
+            onChange={e => {
+              const value = e.target.value;
+
+                // Allow digits and spaces only
+                if (/^[0-9\s]*$/.test(value)) {
+                update("phone", value);
+              }
+            }}
+            placeholder="e.g. 082 123 4567"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            required
+            />
             </div>
+
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+            <input
+                value={form.companyName}
+                  onChange={e => {
+                    const value = e.target.value;
+
+                      // Allow only letters and spaces
+              if (/^[A-Za-z\s]*$/.test(value)) {
+              update('companyName', value);
+                }
+              }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  required
+                    />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Do you have a business reference from your bank?</label>
             <div className="flex items-center gap-6 mt-2">
@@ -106,12 +165,26 @@ const Signup: React.FC = () => {
             {form.hasBankReference && (
               <div className="mt-3">
                 <label className="block text-sm font-medium text-gray-700 mb-2">If yes, please provide your business reference number</label>
-                <input
-                  value={form.businessReference}
-                  onChange={e => update('businessReference', e.target.value)}
-                  placeholder="Business Reference Number"
-                  className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
+                <div>
+                  <input
+                    value={form.businessReference}
+                    onChange={e => update('businessReference', e.target.value)}
+                    placeholder="Business Reference Number"
+                    className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+
+                {form.businessReference.trim() && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={() => (document.querySelector('form') as HTMLFormElement)?.requestSubmit?.()}
+                      className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+                    >
+                      Continue with this reference
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

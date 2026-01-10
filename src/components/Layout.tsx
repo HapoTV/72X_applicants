@@ -6,6 +6,7 @@ import DashboardSubNav from './DashboardSubNav';
 import ScheduleSubNav from './ScheduleSubNav';
 import LearningSubNav from './LearningSubNav';
 import CommunitySubNav from './CommunitySubNav';
+import AppStoreSubNav from './AppStoreSubNav';
 import { useLocation } from 'react-router-dom';
 
 interface LayoutProps {
@@ -18,8 +19,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
   const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
   const [isCommunitySubNavOpen, setIsCommunitySubNavOpen] = useState(false);
+  const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   const location = useLocation();
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
+
+  // Check if current route is an app route (full-screen mode)
+  const isAppRoute = location.pathname.startsWith('/applications/') && location.pathname !== '/applications';
 
   // Listen for sidebar collapse toggle and update margin
   useEffect(() => {
@@ -162,6 +167,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       setIsDashboardSubNavOpen(false);
       setIsScheduleSubNavOpen(false);
       setIsCommunitySubNavOpen(false);
+      setIsAppStoreSubNavOpen(false);
     }
   };
 
@@ -172,51 +178,75 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       setIsDashboardSubNavOpen(false);
       setIsScheduleSubNavOpen(false);
       setIsLearningSubNavOpen(false);
+      setIsAppStoreSubNavOpen(false);
+    }
+  };
+
+  // Handle App Store toggle - close others
+  const handleAppStoreToggle = (isOpen: boolean) => {
+    setIsAppStoreSubNavOpen(isOpen);
+    if (isOpen) {
+      setIsDashboardSubNavOpen(false);
+      setIsScheduleSubNavOpen(false);
+      setIsLearningSubNavOpen(false);
+      setIsCommunitySubNavOpen(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Desktop Navigation */}
-      <div className="hidden md:flex">
-        <Navigation 
-          onDashboardToggle={handleDashboardToggle}
-          onScheduleToggle={handleScheduleToggle}
-          onLearningToggle={handleLearningToggle}
-          onCommunityToggle={handleCommunityToggle}
-        />
-        {isDashboardSubNavOpen && <DashboardSubNav onClose={() => setIsDashboardSubNavOpen(false)} />}
-        {isScheduleSubNavOpen && <ScheduleSubNav onClose={() => setIsScheduleSubNavOpen(false)} />}
-        {isLearningSubNavOpen && <LearningSubNav onClose={() => setIsLearningSubNavOpen(false)} />}
-        {isCommunitySubNavOpen && <CommunitySubNav onClose={() => setIsCommunitySubNavOpen(false)} />}
-        <div className={`flex-1 ${navCollapsed ? 'ml-20' : 'ml-56'} transition-all duration-200`}>
-          <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
-          <main className="p-6">
-            {children}
-          </main>
-        </div>
-      </div>
-
-      {/* Mobile Layout */}
-      <div className="md:hidden">
-        <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
-        <main className="pb-20 px-4 pt-4">
+      {/* Full-screen app mode - no navigation or sidebar */}
+      {isAppRoute ? (
+        <main className="p-6">
           {children}
         </main>
-        <MobileNav />
-      </div>
-
-      {/* Mobile Navigation Overlay */}
-      {isMobileNavOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50"
-            onClick={() => setIsMobileNavOpen(false)}
-          />
-          <div className="fixed top-0 left-0 w-56 h-full bg-white shadow-lg">
-            <Navigation onClose={() => setIsMobileNavOpen(false)} />
+      ) : (
+        // Normal layout mode with navigation
+        <>
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex">
+            <Navigation 
+              onDashboardToggle={handleDashboardToggle}
+              onScheduleToggle={handleScheduleToggle}
+              onLearningToggle={handleLearningToggle}
+              onCommunityToggle={handleCommunityToggle}
+              onAppStoreToggle={handleAppStoreToggle}
+            />
+            {isDashboardSubNavOpen && <DashboardSubNav onClose={() => setIsDashboardSubNavOpen(false)} />}
+            {isScheduleSubNavOpen && <ScheduleSubNav onClose={() => setIsScheduleSubNavOpen(false)} />}
+            {isLearningSubNavOpen && <LearningSubNav onClose={() => setIsLearningSubNavOpen(false)} />}
+            {isCommunitySubNavOpen && <CommunitySubNav onClose={() => setIsCommunitySubNavOpen(false)} />}
+            {isAppStoreSubNavOpen && <AppStoreSubNav onClose={() => setIsAppStoreSubNavOpen(false)} />}
+            <div className={`flex-1 ${navCollapsed ? 'ml-20' : 'ml-56'} transition-all duration-200`}>
+              <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
+              <main className="p-6">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
+
+          {/* Mobile Layout */}
+          <div className="md:hidden">
+            <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
+            <main className="pb-20 px-4 pt-4">
+              {children}
+            </main>
+            <MobileNav />
+          </div>
+
+          {/* Mobile Navigation Overlay */}
+          {isMobileNavOpen && (
+            <div className="fixed inset-0 z-50 md:hidden">
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50"
+                onClick={() => setIsMobileNavOpen(false)}
+              />
+              <div className="fixed top-0 left-0 w-56 h-full bg-white shadow-lg">
+                <Navigation onClose={() => setIsMobileNavOpen(false)} />
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

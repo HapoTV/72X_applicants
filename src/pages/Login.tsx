@@ -1,10 +1,14 @@
+// src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2 } from 'lucide-react';
+import { authService } from '../services/AuthService';
+import { useAuth } from '../context/AuthContext';
 import Logo from '../assets/Logo.svg';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [loginType, setLoginType] = useState<'user' | 'admin'>('user');
     const [formData, setFormData] = useState({
         email: '',
@@ -15,12 +19,6 @@ const Login: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Development credentials
-    const devCredentials = {
-        user: { email: 'user@72X.co.za', businessReference: '72001', password: 'user123' },
-        admin: { email: 'admin@72X.co.za', businessReference: undefined, password: 'admin123' }
-    };
-
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
@@ -30,59 +28,69 @@ const Login: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const credentials = devCredentials[loginType];
-            let isValid = false;
+            const loginRequest = {
+                email: formData.email,
+                password: formData.password,
+                businessReference: loginType === 'user' ? formData.businessReference : undefined,
+                loginType: loginType
+            };
 
+            const userData = await authService.login(loginRequest);
+            
+            // Store auth info
+            localStorage.setItem('authToken', `token-${Date.now()}`);
+            localStorage.setItem('userType', loginType);
+            localStorage.setItem('userEmail', userData.email);
+            localStorage.setItem('userId', userData.userId);
+            
+            if (userData.businessReference) {
+                localStorage.setItem('businessReference', userData.businessReference);
+            }
+            if (userData.userPackage) {
+                localStorage.setItem('userPackage', userData.userPackage);
+            }
+
+            // Update auth context
+            login(userData);
+            
+            console.log('Login successful, redirecting...');
+            
+            // Redirect based on user type
             if (loginType === 'admin') {
-                // Admin login - no business reference required
-                isValid = formData.email === credentials.email && formData.password === credentials.password;
+                window.location.replace('/admin/dashboard/overview');
             } else {
-                // User login - business reference required
-                isValid = formData.email === credentials.email && 
-                         formData.businessReference === credentials.businessReference && 
-                         formData.password === credentials.password;
+                window.location.replace('/dashboard/overview');
             }
-
-            if (isValid) {
-                // Store auth info in localStorage
-                localStorage.setItem('authToken', `${loginType}-token-${Date.now()}`);
-                localStorage.setItem('userType', loginType);
-                localStorage.setItem('userEmail', formData.email);
-                
-                if (loginType === 'user') {
-                    localStorage.setItem('businessReference', formData.businessReference);
-                    // Set default package to startup for new users
-                    if (!localStorage.getItem('userPackage')) {
-                        localStorage.setItem('userPackage', 'startup');
-                    }
-                    // Navigate to user dashboard
-                    window.location.href = '/dashboard';
-                } else {
-                    // Admins get premium package
-                    localStorage.setItem('userPackage', 'premium');
-                    // Force full page reload for admin to ensure clean state
-                    window.location.href = '/admin/dashboard';
-                }
-            } else {
-                const errorMsg = loginType === 'admin' 
-                    ? 'Invalid credentials. Please check your email and password.'
-                    : 'Invalid credentials. Please check your email, business reference, and password.';
-                alert(errorMsg);
-            }
+            
         } catch (error) {
             console.error('Login error:', error);
-            alert('An error occurred during login. Please try again.');
+            const errorMessage = error instanceof Error ? error.message : 'An error occurred during login. Please try again.';
+            alert(errorMessage);
         } finally {
             setIsLoading(false);
         }
     };
 
     const fillDemoCredentials = () => {
-        const credentials = devCredentials[loginType];
+        // Updated development credentials
+        const demoCredentials = {
+            user: { 
+                email: 'asandile.nkala@example.com', 
+                businessReference: '7272002', 
+                password: '@TesterAsandile123' 
+            },
+            admin: { 
+                email: 'asavela.mbengashe@example.com', 
+                businessReference: '', 
+                password: '@TesterAsavela123' 
+            }
+        };
+
+        const credentials = demoCredentials[loginType];
         setFormData(prev => ({
             ...prev,
             email: credentials.email,
-            businessReference: credentials.businessReference || '',
+            businessReference: credentials.businessReference,
             password: credentials.password
         }));
     };
@@ -201,6 +209,7 @@ const Login: React.FC = () => {
                             </label>
                             <button
                                 type="button"
+                                onClick={() => navigate('/reset-password')}
                                 className="text-sm text-primary-600 hover:text-primary-700"
                             >
                                 Forgot password?
@@ -225,12 +234,12 @@ const Login: React.FC = () => {
                         <h4 className="font-medium text-gray-900 mb-2">Development Credentials:</h4>
                         <div className="text-sm text-gray-600 space-y-1">
                             <p><strong>User:</strong></p>
-                            <p className="ml-4">Email: user@72X.co.za</p>
-                            <p className="ml-4">Business Ref: 72001</p>
-                            <p className="ml-4">Password: user123</p>
+                            <p className="ml-4">Email: asandile.nkala@example.com</p>
+                            <p className="ml-4">Business Ref: 7272002</p>
+                            <p className="ml-4">Password: @TesterAsandile123</p>
                             <p className="mt-2"><strong>Admin:</strong></p>
-                            <p className="ml-4">Email: admin@72X.co.za</p>
-                            <p className="ml-4">Password: admin123</p>
+                            <p className="ml-4">Email: asavela.mbengashe@example.com</p>
+                            <p className="ml-4">Password: @TesterAsavela123</p>
                         </div>
                         <button
                             type="button"

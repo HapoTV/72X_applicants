@@ -1,7 +1,33 @@
 import React, { useState } from 'react';
-import { Video, Calendar, Clock, Star, Users, Play, BookOpen, Filter } from 'lucide-react';
+import { Video, Calendar, Clock, Star, Users, Play } from 'lucide-react';
+import UpgradePage from '../components/UpgradePage';
+
+type CategoryType = 'startup' | 'marketing' | 'finance' | 'operations' | 'leadership' | 'legal' | string;
+type PackageType = 'startup' | 'essential' | 'premium';
 
 const ExpertSessions: React.FC = () => {
+  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+  const hasAccess = userPackage === 'premium';
+
+  if (!hasAccess) {
+    return (
+      <UpgradePage
+        featureName="Expert Q&A"
+        featureIcon={Video}
+        packageType="premium"
+        description="Connect with industry experts and get personalized guidance to accelerate your business growth."
+        benefits={[
+          "Live expert sessions and Q&A",
+          "One-on-one consultations with industry leaders",
+          "Access to recorded expert content",
+          "Personalized business advice and strategies",
+          "Networking with successful entrepreneurs",
+          "Exclusive expert-led workshops and masterclasses"
+        ]}
+      />
+    );
+  }
+
   const [activeTab, setActiveTab] = useState('upcoming');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -156,8 +182,8 @@ const ExpertSessions: React.FC = () => {
     }
   ];
 
-  const getCategoryColor = (category: string) => {
-    const colors = {
+  const getCategoryColor = (category: CategoryType) => {
+    const colors: Record<CategoryType, string> = {
       startup: 'bg-blue-100 text-blue-800',
       marketing: 'bg-green-100 text-green-800',
       finance: 'bg-purple-100 text-purple-800',

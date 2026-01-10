@@ -1,29 +1,124 @@
-import React, { useState } from 'react';
+// src/pages/AIBusinessAnalyst.tsx (Updated version)
+import React, { useState, useEffect } from 'react';
 import { Brain, Send, Sparkles, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react';
+import { aiBusinessAnalyticsService } from '../services/AIBusinessAnalyticsService';
+import UpgradePage from '../components/UpgradePage';
+
+type PackageType = 'startup' | 'essential' | 'premium';
 
 const AIBusinessAnalyst: React.FC = () => {
   const [query, setQuery] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const [showTermsModal, setShowTermsModal] = useState(true);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+  const [quickPrompts, setQuickPrompts] = useState<string[]>([]);
+  const [analysisHistory, setAnalysisHistory] = useState<any[]>([]);
+
+  // Get user package from localStorage
+  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+
+  // Check if user has access to this feature (requires premium package)
+  const hasAccess = userPackage === 'premium';
+
+  // If user doesn't have access, show upgrade page
+  if (!hasAccess) {
+    return (
+      <UpgradePage
+        featureName="AI Business Analyst"
+        featureIcon={Brain}
+        packageType="premium"
+        description="Get intelligent insights and recommendations powered by AI to grow your business. Our AI Business Analyst provides comprehensive analysis, strategic recommendations, and data-driven insights to help you make informed decisions."
+        benefits={[
+          "AI-powered business analysis and insights",
+          "Strategic recommendations tailored to your business",
+          "Real-time data analysis and trend identification",
+          "Comprehensive market and competitive analysis",
+          "Personalized growth strategies and action plans",
+          "Expert-level business intelligence at your fingertips"
+        ]}
+      />
+    );
+  }
+
+  useEffect(() => {
+    // Load quick prompts
+    const loadQuickPrompts = async () => {
+      try {
+        const prompts = await aiBusinessAnalyticsService.getQuickPrompts();
+        setQuickPrompts(prompts.slice(0, 4).map(p => p.text));
+      } catch (error) {
+        console.error('Error loading quick prompts:', error);
+        // Use default prompts
+        setQuickPrompts([
+          "Analyze my business performance",
+          "What are growth opportunities?",
+          "How can I improve cash flow?",
+          "Market expansion strategies"
+        ]);
+      }
+    };
+
+    // Load analysis history
+    const loadAnalysisHistory = async () => {
+      try {
+        const userId = 'demo-user'; // Get from auth context
+        const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
+        setAnalysisHistory(history);
+      } catch (error) {
+        console.error('Error loading analysis history:', error);
+      }
+    };
+
+    loadQuickPrompts();
+    loadAnalysisHistory();
+  }, []);
 
   const handleAnalyze = async () => {
+    if (!hasAcceptedTerms) {
+      setShowTermsModal(true);
+      return;
+    }
     if (!query.trim()) return;
 
     setIsAnalyzing(true);
+    setAnalysis(null);
     
-    // Simulate AI analysis
-    setTimeout(() => {
-      setAnalysis(`Based on your query: "${query}", here's my analysis:\n\n• Market trends indicate strong growth potential\n• Consider diversifying your revenue streams\n• Focus on customer retention strategies\n• Optimize operational efficiency`);
+    try {
+      const userId = 'demo-user'; // Get from auth context
+      
+      const response = await aiBusinessAnalyticsService.submitAnalysis({
+        query: query,
+        analysisType: 'business_performance',
+        userId: userId
+      });
+      
+      // Display the analysis
+      setAnalysis(response.detailedAnalysis || response.summary || 'Analysis completed successfully.');
+      
+      // Refresh history
+      const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
+      setAnalysisHistory(history);
+      
+    } catch (error) {
+      console.error('Error analyzing:', error);
+      setAnalysis('Sorry, I encountered an error while analyzing your query. Please try again.');
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
-  const quickPrompts = [
-    "Analyze my business performance",
-    "What are growth opportunities?",
-    "How can I improve cash flow?",
-    "Market expansion strategies"
-  ];
+  const handleQuickPrompt = (prompt: string) => {
+    setQuery(prompt);
+    // Auto-submit after a short delay
+    setTimeout(() => {
+      if (hasAcceptedTerms) {
+        handleAnalyze();
+      } else {
+        setShowTermsModal(true);
+      }
+    }, 300);
+  };
 
   return (
     <div className="space-y-6">
@@ -38,24 +133,76 @@ const AIBusinessAnalyst: React.FC = () => {
         </p>
       </div>
 
-      {/* Quick Prompts */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <Sparkles className="w-5 h-5 text-primary-500" />
-          <h2 className="text-lg font-semibold text-gray-900">Quick Prompts</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {quickPrompts.map((prompt, index) => (
-            <button
-              key={index}
-              onClick={() => setQuery(prompt)}
-              className="text-left p-3 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
-            >
-              <span className="text-sm text-gray-700">{prompt}</span>
-            </button>
-          ))}
+      {/* Disclaimer Banner */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+        <div className="flex items-start space-x-3">
+          <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-medium text-yellow-900 mb-1">Disclaimer</h3>
+            <p className="text-sm text-yellow-700">
+              Results generated by this AI tool are suggestions only. Users are responsible for verifying the accuracy, 
+              completeness, and suitability of any output for their specific business needs.
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Terms & Conditions Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 space-y-4">
+            <h2 className="text-xl font-semibold text-gray-900">Terms and Conditions for Using the AI Tool</h2>
+            <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4 bg-gray-50 text-sm text-gray-700 space-y-3">
+              <p>
+                72X shall not be liable for indirect, incidental, special, punitive, or consequential damages, including loss of
+                profits, lost data, lost funds, personal injury, property damage related to, in connection with, or otherwise
+                resulting from any use of 72X, or reliance on AI generated advice.
+              </p>
+              <p>
+                You agree to indemnify and hold 72X and its affiliates and their officers, directors, employees, and agents
+                harmless from any and all claims, demands, losses, liabilities, and expenses (including attorneys' fees), arising
+                out of or in connection with your use of 72X and its Services, specifically its AI tool.
+              </p>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-xs text-gray-500 mr-4">
+                By clicking "I Agree" you confirm that you have read and accept these terms and conditions.
+              </p>
+              <button
+                type="button"
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
+                onClick={() => {
+                  setHasAcceptedTerms(true);
+                  setShowTermsModal(false);
+                }}
+              >
+                I Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Prompts */}
+      {quickPrompts.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Sparkles className="w-5 h-5 text-primary-500" />
+            <h2 className="text-lg font-semibold text-gray-900">Quick Prompts</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {quickPrompts.map((prompt, index) => (
+              <button
+                key={index}
+                onClick={() => handleQuickPrompt(prompt)}
+                className="text-left p-3 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
+              >
+                <span className="text-sm text-gray-700">{prompt}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Query Input */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -71,23 +218,30 @@ const AIBusinessAnalyst: React.FC = () => {
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
             rows={4}
           />
-          <button
-            onClick={handleAnalyze}
-            disabled={!query.trim() || isAnalyzing}
-            className="w-full md:w-auto px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
-          >
-            {isAnalyzing ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5" />
-                <span>Analyze</span>
-              </>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <button
+              onClick={handleAnalyze}
+              disabled={!query.trim() || isAnalyzing || !hasAcceptedTerms}
+              className="w-full sm:w-auto px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+            >
+              {isAnalyzing ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-5 h-5" />
+                  <span>Analyze</span>
+                </>
+              )}
+            </button>
+            {!hasAcceptedTerms && (
+              <span className="text-sm text-gray-500 text-center sm:text-left">
+                Please accept the terms and conditions to use the AI analyst
+              </span>
             )}
-          </button>
+          </div>
         </div>
       </div>
 
@@ -106,19 +260,41 @@ const AIBusinessAnalyst: React.FC = () => {
         </div>
       )}
 
-      {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <div className="flex items-start space-x-3">
-          <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-medium text-blue-900 mb-1">How it works</h3>
-            <p className="text-sm text-blue-700">
-              Our AI Business Analyst uses advanced algorithms to analyze your business data and provide 
-              personalized recommendations. Ask questions about strategy, operations, marketing, or finances.
-            </p>
+      {/* Recent Analysis History */}
+      {analysisHistory.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Brain className="w-5 h-5 text-primary-500" />
+            <h2 className="text-lg font-semibold text-gray-900">Recent Analysis</h2>
+          </div>
+          <div className="space-y-3">
+            {analysisHistory.slice(0, 3).map((item, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 line-clamp-1">{item.query}</h3>
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.summary}</p>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        item.status === 'completed' 
+                          ? 'bg-green-100 text-green-800'
+                          : item.status === 'processing'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {item.status}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

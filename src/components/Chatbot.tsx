@@ -233,7 +233,7 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
   default: {
     keywords: [],
     response: [
-      "That's an interesting question! For complex queries try asking our OpenAI assistant. Click on this link: https://chat.openai.com/",
+      "That's an interesting question! For complex queries try to contact our support team.",
     ],
   },
 };
@@ -406,6 +406,31 @@ export default function BizBoostChatbot() {
     );
   }
 
+  // Add this style for the bouncing animation
+  const bounceAnimation = `
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .bounce {
+      animation: bounce 2s infinite;
+    }
+  `;
+
+  if (!isOpen) {
+    return (
+      <div className="fixed right-6 bottom-6 z-50">
+        <style>{bounceAnimation}</style>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-600 to-sky-500 text-white flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300 bounce"
+        >
+          <span className="text-xl font-bold">72X</span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed right-6 bottom-6 z-50">
       <div className="w-[300px] md:w-[360px] shadow-2xl rounded-2xl overflow-hidden bg-white border">
@@ -419,10 +444,10 @@ export default function BizBoostChatbot() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsOpen((s) => !s)}
-              className="text-xs bg-white/20 px-2 py-1 rounded-md"
+              onClick={() => setIsOpen(false)}
+              className="text-xs bg-white/20 px-2 py-1 rounded-md hover:bg-white/30 transition-colors"
             >
-              {isOpen ? "Hide" : "Open"}
+              Close
             </button>
           </div>
         </div>

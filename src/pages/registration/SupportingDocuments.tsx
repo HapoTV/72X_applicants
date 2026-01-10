@@ -2,16 +2,32 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, FileText, CreditCard, Building } from 'lucide-react';
 
+type UploadedFile = {
+    name: string;
+    type: string;
+    size: number;
+    lastModified: number;
+    webkitRelativePath: string;
+} | null;
+
+type UploadedFiles = {
+    companyRegistration: UploadedFile;
+    idDocument: UploadedFile;
+    bankConfirmation: UploadedFile;
+    beeeCertificate: UploadedFile;
+    [key: string]: UploadedFile; // Add index signature
+};
+
 const SupportingDocuments: React.FC = () => {
     const navigate = useNavigate();
-    const [uploadedFiles, setUploadedFiles] = useState({
+    const [uploadedFiles, setUploadedFiles] = useState<UploadedFiles>({
         companyRegistration: null,
         idDocument: null,
         bankConfirmation: null,
         beeeCertificate: null
     });
 
-    const handleFileUpload = (type: string, file: File | null) => {
+    const handleFileUpload = (type: keyof UploadedFiles, file: File | null) => {
         setUploadedFiles(prev => ({ ...prev, [type]: file }));
     };
 
@@ -33,7 +49,7 @@ const SupportingDocuments: React.FC = () => {
         title: string;
         description: string;
         icon: React.ReactNode;
-        type: string;
+        type: keyof UploadedFiles;
         required?: boolean;
     }> = ({ title, description, icon, type, required = false }) => (
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-primary-400 transition-colors">
@@ -63,7 +79,7 @@ const SupportingDocuments: React.FC = () => {
 
                 {uploadedFiles[type] && (
                     <p className="text-sm text-green-600 mt-2">
-                        ✓ {uploadedFiles[type].name}
+                        ✓ {uploadedFiles[type]?.name}
                     </p>
                 )}
             </div>

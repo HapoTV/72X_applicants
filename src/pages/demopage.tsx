@@ -4,37 +4,49 @@ import logoSvg from "../assets/Logo.svg";
 import wp3819576 from "../assets/wp3819576.jpg";
 import 'boxicons'
 import istock from "../assets/istockphoto-1321547410-170667a.jpg";
-import { AlignCenter } from "lucide-react";
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [showAllApps, setShowAllApps] = React.useState(false);
+
+  // re-run reveal observer when apps toggle changes
+  React.useEffect(() => {
+    const elements = Array.from(document.querySelectorAll('.reveal-up'));
+    elements.forEach((el) => {
+      const already = el.classList.contains('reveal-visible');
+      if (!already) {
+        const rect = (el as HTMLElement).getBoundingClientRect();
+        if (rect.top < window.innerHeight * 0.95) {
+          el.classList.add('reveal-visible');
+        }
+      }
+    });
+  }, [showAllApps]);
 
   const features = [
     {
       title: "AI Business Advisor",
       description: "Get personalized growth recommendations powered by artificial intelligence",
-      icon: <box-icon type='solid' color='white' name='bot'></box-icon>,
+      icon: <i className="bx bx-bot" style={{color: 'white'}}></i>,
     },
     {
       title: "Multi-language Support",
       description: "Available in all 11 official South African languages",
-      icon: <box-icon color='white' name='globe'></box-icon>,
+      icon: <i className="bx bx-globe" style={{color: 'white'}}></i>,
     },
     {
       title: "Business Management Tools",
       description: "Inventory, POS, and service desk solutions in one platform",
-      icon: <box-icon type='solid' color='white' name='cog'></box-icon>,
+      icon: <i className="bx bx-cog" style={{color: 'white'}}></i>,
     },
     {
       title: "Community & Mentorship",
       description: "Connect with successful entrepreneurs and business experts",
-      icon: <box-icon  color='white' type='solid' name='group'></box-icon>,
+      icon: <i className="bx bx-group" style={{color: 'white'}}></i>,
     },
   ];
 
   // Industries content rendered in stacked sections below
-
-  const gradientBlue =
-    "linear-gradient(135deg, #353bb6ff 0%, #3135beff 25%, #2258A6 50%, #1C90E6 75%, #33B0FF 100%)";
 
   const handleLoginClick = () => {
     navigate("/login");
@@ -430,27 +442,13 @@ const LandingPage: React.FC = () => {
 
             {(() => {
               const apps = [
-                { icon: <box-icon type='solid' name='package' color='white'></box-icon>, title: "Inventory Management", desc: "Track stock levels, manage suppliers, and automate reordering" },
-                { icon: <box-icon name='credit-card' color='white'></box-icon>, title: "POS System", desc: "Modern point-of-sale with multiple payment options" },
-                { icon: <box-icon name='target-lock' color='white'></box-icon>, title: "AI Business Advisor", desc: "Get personalized growth recommendations and insights" },
-                { icon: <box-icon type='solid' name='bar-chart-square' color='white'></box-icon>, title: "Analytics Dashboard", desc: "Real-time business performance tracking and reporting" },
-                { icon: <box-icon type='solid' name='bell' color='white'></box-icon>, title: "Service Desk", desc: "Manage customer service and support tickets efficiently" },
-                { icon: <box-icon type='solid' name='user' color='white'></box-icon>, title: "CRM", desc: "Build better customer relationships and increase sales" },
+                { icon: <i className="bx bxs-package" style={{color: 'white'}}></i>, title: "Inventory Management", desc: "Track stock levels, manage suppliers, and automate reordering" },
+                { icon: <i className="bx bx-credit-card" style={{color: 'white'}}></i>, title: "POS System", desc: "Modern point-of-sale with multiple payment options" },
+                { icon: <i className="bx bx-target-lock" style={{color: 'white'}}></i>, title: "AI Business Advisor", desc: "Get personalized growth recommendations and insights" },
+                { icon: <i className="bx bxs-bar-chart-square" style={{color: 'white'}}></i>, title: "Analytics Dashboard", desc: "Real-time business performance tracking and reporting" },
+                { icon: <i className="bx bxs-bell" style={{color: 'white'}}></i>, title: "Service Desk", desc: "Manage customer service and support tickets efficiently" },
+                { icon: <i className="bx bxs-user" style={{color: 'white'}}></i>, title: "CRM", desc: "Build better customer relationships and increase sales" },
               ];
-              const [showAllApps, setShowAllApps] = React.useState(false);
-              // re-run reveal observer when toggled
-              React.useEffect(() => {
-                const elements = Array.from(document.querySelectorAll('.reveal-up'));
-                elements.forEach((el) => {
-                  const already = el.classList.contains('reveal-visible');
-                  if (!already) {
-                    const rect = (el as HTMLElement).getBoundingClientRect();
-                    if (rect.top < window.innerHeight * 0.95) {
-                      el.classList.add('reveal-visible');
-                    }
-                  }
-                });
-              }, [showAllApps]);
 
               return (
                 <>
@@ -498,9 +496,9 @@ const LandingPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
-                { icon: <box-icon name='trending-up' type='solid' color='white' ></box-icon> , title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
-                { icon: <box-icon type='solid' name='graduation' color='white' ></box-icon>, title: "Learn & Grow", desc: "Access exclusive workshops, webinars, and mentorship programs" },
-                { icon: <box-icon name='group' color='white' ></box-icon>, title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
+                { icon: <i className="bx bxs-trending-up" style={{color: 'white'}}></i>, title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
+                { icon: <i className="bx bxs-graduation" style={{color: 'white'}}></i>, title: "Learn & Grow", desc: "Access exclusive workshops, webinars, and mentorship programs" },
+                { icon: <i className="bx bx-group" style={{color: 'white'}}></i>, title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
               ].map((item, i) => (
                 <div key={i} className="text-center">
                   <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#60A5FA' }}>
@@ -526,10 +524,10 @@ const LandingPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { icon: <box-icon name='book' color='white' ></box-icon>, title: "Help Center", desc: "Comprehensive guides and documentation" },
-                { icon: <box-icon name='camera-movie' color='white' ></box-icon>, title: "Video Tutorials", desc: "Step-by-step video guides" },
-                { icon: <box-icon name='conversation' type='solid' color='white' ></box-icon>, title: "Live Chat", desc: "Instant help from our support team" },
-                { icon: <box-icon name='phone-call' type='solid' color='white' ></box-icon>, title: "Phone Support", desc: "Talk directly with our experts" },
+                { icon: <i className="bx bx-book" style={{color: 'white'}}></i>, title: "Help Center", desc: "Comprehensive guides and documentation" },
+                { icon: <i className="bx bx-camera-movie" style={{color: 'white'}}></i>, title: "Video Tutorials", desc: "Step-by-step video guides" },
+                { icon: <i className="bx bxs-conversation" style={{color: 'white'}}></i>, title: "Live Chat", desc: "Instant help from our support team" },
+                { icon: <i className="bx bxs-phone-call" style={{color: 'white'}}></i>, title: "Phone Support", desc: "Talk directly with our experts" },
               ].map((help, h) => (
                 <div key={h} className="text-center">
                   <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#60A5FA' }}>

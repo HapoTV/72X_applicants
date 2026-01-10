@@ -1,48 +1,59 @@
-import React, { useState, useEffect } from 'react';
- 
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import DailyTip from '../../components/DailyTip';
 import QuickActions from '../../components/QuickActions';
 
+type Language = 'en' | 'af' | 'zu';
+
+interface TranslationKeys {
+  welcome: string;
+  subtitle: string;
+  [key: string]: string;
+}
+
+const translations: Record<Language, TranslationKeys> = {
+  en: {
+    welcome: "Welcome to SeventyTwoX",
+    subtitle: "Empowering South African entrepreneurs to build thriving businesses",
+  },
+  af: {
+    welcome: "Welkom by SeventyTwoX",
+    subtitle: "Bemagtiging van Suid-Afrikaanse entrepreneurs om florerende besighede te bou",
+  },
+  zu: {
+    welcome: "Siyakwamukela ku-SeventyTwoX",
+    subtitle: "Sinikeza amandla osomabhizinisi baseNingizimu Afrika ukuthi bakhe amabhizinisi aphumelelayo",
+  }
+};
+
+const languages = [
+  { code: 'en' as const, name: 'English' },
+  { code: 'af' as const, name: 'Afrikaans' },
+  { code: 'zu' as const, name: 'isiZulu' },
+  { code: 'xh' as const, name: 'isiXhosa' },
+  { code: 'st' as const, name: 'Sesotho' },
+  { code: 'tn' as const, name: 'Setswana' },
+];
+
 const Overview: React.FC = () => {
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'af', name: 'Afrikaans' },
-    { code: 'zu', name: 'isiZulu' },
-    { code: 'xh', name: 'isiXhosa' },
-    { code: 'st', name: 'Sesotho' },
-    { code: 'tn', name: 'Setswana' },
-  ];
-
-  const translations = {
-    en: {
-      welcome: "Welcome to SeventyTwoX",
-      subtitle: "Empowering South African entrepreneurs to build thriving businesses",
-    },
-    af: {
-      welcome: "Welkom by SeventyTwoX",
-      subtitle: "Bemagtiging van Suid-Afrikaanse entrepreneurs om florerende besighede te bou",
-    },
-    zu: {
-      welcome: "Siyakwamukela ku-SeventyTwoX",
-      subtitle: "Sinikeza amandla osomabhizinisi baseNingizimu Afrika ukuthi bakhe amabhizinisi aphumelelayo",
+  const engagement = useMemo(() => {
+    try { 
+      return JSON.parse(localStorage.getItem('engagement') || 'null'); 
+    } catch { 
+      return null; 
     }
-  };
+  }, []);
 
-  const engagement = (() => {
-    try { return JSON.parse(localStorage.getItem('engagement') || 'null'); } catch { return null; }
-  })();
+  const t = useMemo(() => translations[selectedLanguage], [selectedLanguage]);
 
-  const t = translations[selectedLanguage] || translations.en;
-
-  const getGreeting = () => {
+  const getGreeting = useCallback((): string => {
     const hour = currentTime.getHours();
     if (selectedLanguage === 'zu') {
       if (hour < 12) return 'Sawubona';
@@ -52,11 +63,12 @@ const Overview: React.FC = () => {
       if (hour < 12) return 'Goeie môre';
       if (hour < 17) return 'Goeie middag';
       return 'Goeie aand';
+    } else {
+      if (hour < 12) return 'Good morning';
+      if (hour < 17) return 'Good afternoon';
+      return 'Good evening';
     }
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  };
+  }, [currentTime, selectedLanguage]);
 
   const getFirstName = () => {
     const stored = (localStorage.getItem('firstName') || localStorage.getItem('userFirstName') || '').trim();
@@ -70,13 +82,17 @@ const Overview: React.FC = () => {
     return 'User';
   };
 
+  const handleLanguageChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedLanguage(e.target.value as Language);
+  }, []);
+
   return (
     <div className="space-y-3 animate-fade-in px-2 sm:px-0">
       {/* Language Selector */}
       <div className="flex justify-end mb-2">
         <select
           value={selectedLanguage}
-          onChange={(e) => setSelectedLanguage(e.target.value)}
+          onChange={handleLanguageChange}
           className="px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
         >
           {languages.map(lang => (
@@ -148,7 +164,7 @@ const Overview: React.FC = () => {
 
       {/* Daily Tip & Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <DailyTip language={selectedLanguage} />
+        <DailyTip language={selectedLanguage as 'en' | 'af' | 'zu'} />
         <QuickActions />
       </div>
     </div>
