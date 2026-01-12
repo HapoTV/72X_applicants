@@ -43,7 +43,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
   
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
-  const userPackage = (localStorage.getItem('userPackage') as PackageType) || 'startup';
   const userName = userEmail.split('@')[0].replace('.', ' ').split(' ').map(word => 
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
@@ -92,14 +91,11 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     { path: '/profile', icon: User, label: 'Profile', package: 'startup' },
   ];
 
-  const packageHierarchy = { startup: 0, essential: 1, premium: 2 };
-
-  const isFeatureLocked = (itemPackage: PackageType): boolean => {
+  const isFeatureLocked = (_itemPackage: PackageType): boolean => {
+    void _itemPackage;
     // By default, everything is unlocked. If you want to re-enable gating,
     // set localStorage.lockFeatures = '1' or set a lower userPackage.
-    const lockingOn = localStorage.getItem('lockFeatures') === '1';
-    if (!lockingOn) return false;
-    return packageHierarchy[itemPackage] > packageHierarchy[userPackage];
+    return false;
   };
 
   const closeAllSecondaryNavs = () => {
@@ -416,7 +412,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                   className="relative group"
                 >
                   <NavLink
-                    to="/applications"
+                    to="/applications/crm"
                     onClick={() => {
                       onClose?.();
                       // Close other secondary sidebars

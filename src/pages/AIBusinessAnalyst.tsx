@@ -2,48 +2,28 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Send, Sparkles, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react';
 import { aiBusinessAnalyticsService } from '../services/AIBusinessAnalyticsService';
-import UpgradePage from '../components/UpgradePage';
 
-type PackageType = 'startup' | 'essential' | 'premium';
+type AnalysisHistoryItem = {
+  query: string;
+  summary: string;
+  status: string;
+  createdAt: string;
+};
 
 const AIBusinessAnalyst: React.FC = () => {
+
   const [query, setQuery] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [showTermsModal, setShowTermsModal] = useState(true);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [quickPrompts, setQuickPrompts] = useState<string[]>([]);
-  const [analysisHistory, setAnalysisHistory] = useState<any[]>([]);
-
-  // Get user package from localStorage
-  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
-
-  // Check if user has access to this feature (requires premium package)
-  const hasAccess = userPackage === 'premium';
-
-  // If user doesn't have access, show upgrade page
-  if (!hasAccess) {
-    return (
-      <UpgradePage
-        featureName="AI Business Analyst"
-        featureIcon={Brain}
-        packageType="premium"
-        description="Get intelligent insights and recommendations powered by AI to grow your business. Our AI Business Analyst provides comprehensive analysis, strategic recommendations, and data-driven insights to help you make informed decisions."
-        benefits={[
-          "AI-powered business analysis and insights",
-          "Strategic recommendations tailored to your business",
-          "Real-time data analysis and trend identification",
-          "Comprehensive market and competitive analysis",
-          "Personalized growth strategies and action plans",
-          "Expert-level business intelligence at your fingertips"
-        ]}
-      />
-    );
-  }
+  const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistoryItem[]>([]);
 
   useEffect(() => {
     // Load quick prompts
     const loadQuickPrompts = async () => {
+
       try {
         const prompts = await aiBusinessAnalyticsService.getQuickPrompts();
         setQuickPrompts(prompts.slice(0, 4).map(p => p.text));
@@ -64,7 +44,7 @@ const AIBusinessAnalyst: React.FC = () => {
       try {
         const userId = 'demo-user'; // Get from auth context
         const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
-        setAnalysisHistory(history);
+        setAnalysisHistory(history as AnalysisHistoryItem[]);
       } catch (error) {
         console.error('Error loading analysis history:', error);
       }
@@ -98,7 +78,7 @@ const AIBusinessAnalyst: React.FC = () => {
       
       // Refresh history
       const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
-      setAnalysisHistory(history);
+      setAnalysisHistory(history as AnalysisHistoryItem[]);
       
     } catch (error) {
       console.error('Error analyzing:', error);

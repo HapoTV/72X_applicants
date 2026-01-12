@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, DollarSign, TrendingUp, FileText, X, CheckCircle, AlertCircle, FileIcon } from 'lucide-react';
 import { dataInputService } from '../services/DataInputService';
-import UpgradePage from '../components/UpgradePage';
-
-type PackageType = 'startup' | 'essential' | 'premium';
 
 // File type configuration
 const FILE_TYPES = {
@@ -30,28 +27,6 @@ const FILE_TYPES = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const DataInput: React.FC = () => {
-  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
-  const hasAccess = userPackage === 'essential' || userPackage === 'premium';
-
-  if (!hasAccess) {
-    return (
-      <UpgradePage
-        featureName="Data Input"
-        featureIcon={Upload}
-        packageType="essential"
-        description="Input and manage your business data to track performance metrics and generate insights."
-        benefits={[
-          "Financial data entry and tracking",
-          "Customer data management",
-          "Sales and revenue input tools",
-          "Automated data validation",
-          "Historical data storage",
-          "Export data for analysis"
-        ]}
-      />
-    );
-  }
-
   const [activeTab, setActiveTab] = useState('financial');
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -300,7 +275,7 @@ const DataInput: React.FC = () => {
         const validation = await dataInputService.validateFinancialData({
           revenue: parseFloat(formData.revenue),
           expenses: parseFloat(formData.expenses),
-          period: formData.period
+          period: formData.period as 'monthly' | 'quarterly' | 'yearly'
         });
         
         if (!validation.isValid) {
@@ -322,7 +297,6 @@ const DataInput: React.FC = () => {
         } else {
           setErrorMessage(result.message || 'Failed to save financial data');
         }
-
       } else if (activeTab === 'customers') {
         const validation = await dataInputService.validateCustomerData({
           totalCustomers: parseInt(formData.customers),

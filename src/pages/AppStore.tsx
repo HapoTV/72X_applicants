@@ -1,32 +1,7 @@
 import React from 'react';
 import { AppWindow, Package, Zap, Shield, TrendingUp } from 'lucide-react';
-import UpgradePage from '../components/UpgradePage';
-
-type PackageType = 'startup' | 'essential' | 'premium';
 
 const AppStore: React.FC = () => {
-  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
-  const hasAccess = userPackage === 'essential' || userPackage === 'premium';
-
-  if (!hasAccess) {
-    return (
-      <UpgradePage
-        featureName="App Store"
-        featureIcon={AppWindow}
-        packageType="essential"
-        description="Access our comprehensive App Store with powerful business applications to streamline your operations and boost productivity."
-        benefits={[
-          "Customer Relationship Management (CRM) system",
-          "Finance Manager for tracking and managing finances",
-          "AI-powered Tender Management with TenderlyAI",
-          "Seamless integration with existing workflows",
-          "Professional-grade business tools",
-          "Regular updates and new feature releases"
-        ]}
-      />
-    );
-  }
-
   return (
     <div className="flex-1 p-6 bg-gray-50 overflow-auto">
       <div className="max-w-7xl mx-auto">

@@ -4,37 +4,44 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TrendingUp, DollarSign, Users, Loader2 } from 'lucide-react';
 import { analyticsService } from '../services/AnalyticsService';
 import { dataInputService } from '../services/DataInputService';
-import UpgradePage from '../components/UpgradePage';
 
-type PackageType = 'startup' | 'essential' | 'premium';
+type TimeRange = '3months' | '6months' | '1year';
+
+type RevenuePoint = {
+  month: string;
+  revenue: number;
+  expenses: number;
+  profit: number;
+};
+
+type CustomerPoint = {
+  month: string;
+  customers: number;
+};
+
+type ExpenseSlice = {
+  name: string;
+  value: number;
+  color: string;
+};
+
+type DashboardAnalytics = {
+  revenueMetrics?: {
+    totalRevenue?: number;
+    revenueGrowth?: number;
+  };
+  customerMetrics?: {
+    totalCustomers?: number;
+    averageCustomerValue?: number;
+    customerGrowth?: number;
+  };
+};
 
 const Analytics: React.FC = () => {
-  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
-  const hasAccess = userPackage === 'premium';
-
-  if (!hasAccess) {
-    return (
-      <UpgradePage
-        featureName="Analytics"
-        featureIcon={TrendingUp}
-        packageType="premium"
-        description="Comprehensive business analytics and insights to track your performance and make data-driven decisions."
-        benefits={[
-          "Revenue and expense tracking",
-          "Customer growth analytics",
-          "Interactive charts and graphs",
-          "Custom time range reports",
-          "Performance metrics dashboard",
-          "Exportable analytics reports"
-        ]}
-      />
-    );
-  }
-
-  const [timeRange, setTimeRange] = useState<'3months' | '6months' | '1year'>('6months');
-  const [revenueData, setRevenueData] = useState<any[]>([]);
-  const [customerData, setCustomerData] = useState<any[]>([]);
-  const [expenseBreakdown, setExpenseBreakdown] = useState<any[]>([]);
+  const [timeRange, setTimeRange] = useState<TimeRange>('6months');
+  const [revenueData, setRevenueData] = useState<RevenuePoint[]>([]);
+  const [customerData, setCustomerData] = useState<CustomerPoint[]>([]);
+  const [expenseBreakdown, setExpenseBreakdown] = useState<ExpenseSlice[]>([]);
   const [keyMetrics, setKeyMetrics] = useState({
     totalRevenue: 0,
     totalCustomers: 0,
@@ -53,7 +60,8 @@ const Analytics: React.FC = () => {
     }
   }, []);
 
-  const transformCustomerData = useCallback((_dashboardData?: any): any[] => {
+  const transformCustomerData = useCallback((dashboardData?: DashboardAnalytics): CustomerPoint[] => {
+    void dashboardData;
     // This would transform the customer metrics into chart data format
     // For now, return mock data
     return [
@@ -66,7 +74,7 @@ const Analytics: React.FC = () => {
     ];
   }, []);
 
-  const getFallbackData = useCallback((timeRange: string) => {
+  const getFallbackData = useCallback((timeRangeValue: string) => {
     const baseRevenue = [
       { month: 'Jan', revenue: 18000, expenses: 12000, profit: 6000 },
       { month: 'Feb', revenue: 22000, expenses: 14000, profit: 8000 },
@@ -93,7 +101,7 @@ const Analytics: React.FC = () => {
       { name: 'Other', value: 8, color: '#8b5cf6' },
     ];
 
-    const limit = timeRange === '3months' ? 3 : timeRange === '6months' ? 6 : 12;
+    const limit = timeRangeValue === '3months' ? 3 : timeRangeValue === '6months' ? 6 : 12;
     
     return {
       revenueData: baseRevenue.slice(-limit),
@@ -140,7 +148,7 @@ const Analytics: React.FC = () => {
 
           // Handle dashboard data
           if (dashboardData.status === 'fulfilled') {
-            const data = dashboardData.value as any;
+            const data = dashboardData.value as DashboardAnalytics;
             
             // Transform customer data from dashboard
             const customerChartData = transformCustomerData(data);
@@ -158,7 +166,7 @@ const Analytics: React.FC = () => {
 
         // Handle revenue chart data
         if (revenueChartData.status === 'fulfilled') {
-          setRevenueData(revenueChartData.value as any[]);
+          setRevenueData(revenueChartData.value as RevenuePoint[]);
         } else {
           // Use fallback data
           const fallback = getFallbackData(timeRange);
@@ -167,14 +175,14 @@ const Analytics: React.FC = () => {
 
         // Handle expense breakdown
         if (expenseData.status === 'fulfilled') {
-          setExpenseBreakdown(expenseData.value as any[]);
+          setExpenseBreakdown(expenseData.value as ExpenseSlice[]);
         } else {
           // Use fallback data
           const fallback = getFallbackData(timeRange);
           setExpenseBreakdown(fallback.expenseData);
         }
 
-      } catch (innerError) {
+      } catch {
         console.log('Background API calls timed out or failed, using fallback data');
       }
 
@@ -191,7 +199,7 @@ const Analytics: React.FC = () => {
     };
 
     fetchAnalyticsData();
-  }, [timeRange]);
+  }, [timeRange, getFallbackData, transformCustomerData]);
 
   if (isLoading) {
     return (
@@ -213,7 +221,7 @@ const Analytics: React.FC = () => {
         <div className="mt-4 sm:mt-0">
           <select
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value as any)}
+            onChange={(e) => setTimeRange(e.target.value as TimeRange)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="3months">Last 3 months</option>
