@@ -79,16 +79,16 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' as PackageType },
     
     // Essential Package Features (includes all startup + these)
-    { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
-    { path: '/data-input', icon: Upload, label: 'Data Input', package: 'essential' },
+    { path: '/funding', icon: DollarSign, label: 'Funding Done', package: 'essential' },
+    { path: '/data-input', icon: Upload, label: 'Data Input Done', package: 'essential' },
     
     // Premium Package Features (everything)
-    { path: '/analytics', icon: BarChart3, label: 'Analytics', package: 'premium' },
+    { path: '/analytics', icon: BarChart3, label: 'Analytics Done', package: 'premium' },
     { path: '/experts', icon: Video, label: 'Expert Q&A', package: 'premium' },
     { path: '/ai-analyst', icon: Brain, label: 'AI Business Analyst', package: 'premium' },
     
     // Profile (available in all packages)
-    { path: '/profile', icon: User, label: 'Profile', package: 'startup' },
+    { path: '/profile', icon: User, label: 'Profile Done', package: 'startup' },
   ];
 
   const isFeatureLocked = (_itemPackage: PackageType): boolean => {

@@ -5,12 +5,13 @@ import {
     BookOpen, 
     Handshake, 
     DollarSign,
-    User 
+    User,
+    Megaphone
 } from 'lucide-react';
 
 interface AdminSidebarProps {
-    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'profile';
-    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'profile') => void;
+    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile';
+    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile') => void;
 }
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
@@ -21,6 +22,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
         { id: 'mentorship' as const, label: 'Mentorship', icon: Handshake },
         { id: 'funding' as const, label: 'Funding', icon: DollarSign },
         { id: 'profile' as const, label: 'Profile', icon: User },
+        { id: 'ad' as const, label: 'Ads', icon: Megaphone },
     ];
 
     return (
