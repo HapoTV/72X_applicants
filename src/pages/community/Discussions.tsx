@@ -13,7 +13,39 @@ const Discussions: React.FC = () => {
     category: 'startup',
     content: ''
   });
-  const [discussions, setDiscussions] = useState<UserDiscussionItem[]>([]);
+
+  const readLocalDiscussions = (): UserDiscussionItem[] => {
+    try {
+      const raw = localStorage.getItem('communityDiscussionsLocal');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as UserDiscussionItem[]) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeLocalDiscussions = (items: UserDiscussionItem[]) => {
+    try {
+      localStorage.setItem('communityDiscussionsLocal', JSON.stringify(items));
+    } catch {
+      // ignore
+    }
+  };
+
+  const mergeDiscussions = (primary: UserDiscussionItem[], secondary: UserDiscussionItem[]) => {
+    const seen = new Set<string>();
+    const merged: UserDiscussionItem[] = [];
+    for (const item of [...primary, ...secondary]) {
+      if (!item?.id) continue;
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      merged.push(item);
+    }
+    return merged;
+  };
+
+  const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() => readLocalDiscussions());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [communityStats, setCommunityStats] = useState<CommunityStats>({
@@ -33,14 +65,18 @@ const Discussions: React.FC = () => {
         try {
           const discussionsData = await communityService.getActiveDiscussions(selectedCategory);
           console.log('Discussions fetched successfully:', discussionsData);
-          setDiscussions(discussionsData);
+          const local = readLocalDiscussions();
+          const merged = mergeDiscussions(discussionsData, local);
+          setDiscussions(merged);
+          writeLocalDiscussions(merged);
         } catch (discussionsError: any) {
           console.error('Error fetching discussions:', discussionsError);
           
           // Handle 500 errors gracefully - show empty state instead of error
           if (discussionsError.response?.status === 500) {
             console.log('Backend 500 error - showing empty discussions state');
-            setDiscussions([]); // Show empty discussions instead of error
+            const local = readLocalDiscussions();
+            setDiscussions(local);
             setError(null); // Clear error state
           } else {
             setError('Failed to load community discussions');
@@ -91,7 +127,9 @@ const Discussions: React.FC = () => {
 
       console.log('Creating discussion:', discussionToAdd);
       const createdDiscussion = await communityService.createDiscussion(discussionToAdd, user.email);
-      setDiscussions([createdDiscussion, ...discussions]);
+      const nextDiscussions = [createdDiscussion, ...discussions];
+      setDiscussions(nextDiscussions);
+      writeLocalDiscussions(nextDiscussions);
       setNewDiscussion({ title: '', category: 'startup', content: '' });
       setShowNewDiscussion(false);
       
@@ -111,24 +149,24 @@ const Discussions: React.FC = () => {
       if (error.response?.status === 500) {
         alert('Discussion created successfully! (Backend temporarily unavailable for listing)');
         // Still add to local discussions list even if backend fails to return the full list
-        const localDiscussion = {
+        const localDiscussion: UserDiscussionItem = {
           id: Date.now().toString(),
           title: newDiscussion.title,
-          content: newDiscussion.content,
-          author: user.name || 'Anonymous',
-          authorAvatar: user.avatar || '',
-          category: newDiscussion.category.toUpperCase(),
+          preview: newDiscussion.content,
+          author: user.fullName || user.email || 'Anonymous',
+          authorAvatar: user.profileImageUrl || '',
+          category: newDiscussion.category,
           replies: 0,
           likes: 0,
-          views: 0,
+          timeAgo: 'Just now',
           isHot: false,
           isPinned: false,
           isLocked: false,
-          tags: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          tags: []
         };
-        setDiscussions([localDiscussion, ...discussions]);
+        const nextDiscussions = [localDiscussion, ...discussions];
+        setDiscussions(nextDiscussions);
+        writeLocalDiscussions(nextDiscussions);
         setNewDiscussion({ title: '', category: 'startup', content: '' });
         setShowNewDiscussion(false);
       } else {
@@ -187,7 +225,7 @@ const Discussions: React.FC = () => {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900">{communityStats.totalMembers.toLocaleString()}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">{(communityStats.totalMembers ?? 0).toLocaleString()}</h3>
               <p className="text-gray-600 text-sm">Active Members</p>
             </div>
           </div>
@@ -199,7 +237,7 @@ const Discussions: React.FC = () => {
               <MessageSquare className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900">{communityStats.activeDiscussions.toLocaleString()}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">{(communityStats.activeDiscussions ?? 0).toLocaleString()}</h3>
               <p className="text-gray-600 text-sm">Discussions</p>
             </div>
           </div>
@@ -211,7 +249,7 @@ const Discussions: React.FC = () => {
               <TrendingUp className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900">{communityStats.totalMentors.toLocaleString()}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">{(communityStats.totalMentors ?? 0).toLocaleString()}</h3>
               <p className="text-gray-600 text-sm">Expert Mentors</p>
             </div>
           </div>

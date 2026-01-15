@@ -85,7 +85,7 @@ const Marketplace: React.FC = () => {
       console.log('Sending product data to backend:', productData);
       
       // Create product via service
-      await marketplaceService.createProduct(productData, user.email);
+      await marketplaceService.createProduct(productData, user.email, newProduct.businessName);
       
       // Refresh products list
       await fetchMarketplaceData();
@@ -106,7 +106,6 @@ const Marketplace: React.FC = () => {
       alert('Product listed successfully!');
     } catch (error) {
       console.error('Error listing product:', error);
-      setError('Failed to list product');
       alert('Failed to list product. Please try again.');
     } finally {
       setLoading(false);
@@ -294,7 +293,7 @@ const Marketplace: React.FC = () => {
             <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
               <div className="relative">
                 <img 
-                  src={product.image} 
+                  src={product.images?.[0] || 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400'} 
                   alt={product.title}
                   className="w-full h-40 object-cover"
                 />

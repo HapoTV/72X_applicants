@@ -50,16 +50,41 @@ class MarketplaceService {
    */
   async getActiveProducts(params?: ProductSearchParams): Promise<ProductSearchResponse> {
     try {
-      const response = await axiosClient.get('/marketplace/products/active', { params });
+      const response = await axiosClient.get('/marketplace/products', { params });
+
+      const data = response.data as any;
+
+      const rawProducts: ProductApiResponse[] = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.products)
+          ? data.products
+          : Array.isArray(data?.content)
+            ? data.content
+            : [];
+
+      const total =
+        typeof data?.total === 'number'
+          ? data.total
+          : typeof data?.totalElements === 'number'
+            ? data.totalElements
+            : rawProducts.length;
+
+      const page = typeof params?.page === 'number' ? params.page : 0;
+      const limit = typeof params?.limit === 'number' ? params.limit : rawProducts.length;
+      const totalPages =
+        typeof data?.totalPages === 'number'
+          ? data.totalPages
+          : limit > 0
+            ? Math.max(1, Math.ceil(total / limit))
+            : 1;
+
       return {
-        products: response.data.products.map((product: ProductApiResponse) => 
-          this.transformToUserProductItem(product)
-        ),
-        total: response.data.total,
-        page: response.data.page,
-        limit: response.data.limit,
-        totalPages: response.data.totalPages,
-        hasMore: response.data.hasMore
+        products: rawProducts.map((product: ProductApiResponse) => this.transformToUserProductItem(product)),
+        total,
+        page,
+        limit,
+        totalPages,
+        hasMore: page + 1 < totalPages
       };
     } catch (error) {
       console.error('Error fetching active products:', error);
@@ -98,14 +123,21 @@ class MarketplaceService {
   /**
    * Create a new product
    */
-  async createProduct(productData: ProductFormData, createdBy: string): Promise<AdminProductItem> {
+  async createProduct(productData: ProductFormData, createdBy: string, seller?: string): Promise<AdminProductItem> {
     try {
-      const productDTO = this.transformToProductDTO(productData, createdBy);
+      const productDTO = this.transformToProductDTO(productData, createdBy, seller);
       console.log('Sending product data to backend:', productDTO);
       const response = await axiosClient.post('/marketplace/products', productDTO);
       return this.transformToAdminProductItem(response.data);
     } catch (error) {
-      console.error('Error creating product:', error);
+      const err = error as any;
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      if (status !== undefined || data !== undefined) {
+        console.error('Error creating product:', { status, data });
+      } else {
+        console.error('Error creating product:', error);
+      }
       throw new Error('Failed to create product');
     }
   }
@@ -169,8 +201,18 @@ class MarketplaceService {
    */
   async getCategories(): Promise<MarketplaceCategory[]> {
     try {
-      const response = await axiosClient.get('/marketplace/categories');
-      return response.data;
+      return [
+        { id: 'all', name: 'All Categories' },
+        { id: 'food', name: 'Food & Beverages' },
+        { id: 'crafts', name: 'Arts & Crafts' },
+        { id: 'clothing', name: 'Clothing & Fashion' },
+        { id: 'services', name: 'Services' },
+        { id: 'agriculture', name: 'Agriculture' },
+        { id: 'beauty', name: 'Beauty & Personal Care' },
+        { id: 'electronics', name: 'Electronics & Repairs' },
+        { id: 'home', name: 'Home & Garden' },
+        { id: 'other', name: 'Other' }
+      ];
     } catch (error) {
       console.error('Error fetching categories:', error);
       throw new Error('Failed to fetch categories');
@@ -184,8 +226,17 @@ class MarketplaceService {
    */
   async getLocations(): Promise<MarketplaceLocation[]> {
     try {
-      const response = await axiosClient.get('/marketplace/locations');
-      return response.data;
+      return [
+        { id: 'all', name: 'All Locations' },
+        { id: 'soweto', name: 'Soweto' },
+        { id: 'alexandra', name: 'Alexandra' },
+        { id: 'khayelitsha', name: 'Khayelitsha' },
+        { id: 'mitchells-plain', name: 'Mitchells Plain' },
+        { id: 'mamelodi', name: 'Mamelodi' },
+        { id: 'umlazi', name: 'Umlazi' },
+        { id: 'mdantsane', name: 'Mdantsane' },
+        { id: 'other', name: 'Other' }
+      ];
     } catch (error) {
       console.error('Error fetching locations:', error);
       throw new Error('Failed to fetch locations');
@@ -518,7 +569,7 @@ class MarketplaceService {
   /**
    * Transform form data to match backend ProductDTO expectations
    */
-  private transformToProductDTO(formData: ProductFormData, createdBy: string): any {
+  private transformToProductDTO(formData: ProductFormData, createdBy: string, seller?: string): any {
     return {
       title: formData.title,
       description: formData.description,
@@ -526,13 +577,16 @@ class MarketplaceService {
       category: formData.category,
       location: formData.location,
       condition: formData.condition || 'new',
-      tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : [],
-      specifications: formData.specifications ? this.parseSpecifications(formData.specifications) : {},
+      status: 'active',
+      tags: formData.tags || null,
+      specifications: formData.specifications || null,
       shippingInfo: formData.shippingInfo || null,
       returnPolicy: formData.returnPolicy || null,
       negotiable: formData.negotiable || false,
-      images: formData.images || [],
-      createdBy: createdBy
+      images: Array.isArray(formData.images) && formData.images.length > 0 ? formData.images[0] : null,
+      createdBy: createdBy,
+      sellerName: seller || undefined,
+      sellerId: createdBy
     };
   }
 

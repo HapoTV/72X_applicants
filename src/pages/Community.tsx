@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Users, TrendingUp, Clock, Heart, MessageCircle, Share, Plus } from 'lucide-react';
+import { MessageSquare, Users, TrendingUp, Heart, MessageCircle, Share, Plus } from 'lucide-react';
 
 const Community: React.FC = () => {
   const [activeTab, setActiveTab] = useState('discussions');
@@ -7,7 +7,6 @@ const Community: React.FC = () => {
 
   const tabs = [
     { id: 'discussions', name: 'Discussions', icon: MessageSquare },
-    { id: 'networking', name: 'Networking', icon: Users },
     { id: 'mentorship', name: 'Mentorship', icon: TrendingUp }
   ];
 
@@ -81,36 +80,6 @@ const Community: React.FC = () => {
       timeAgo: '1 day ago',
       isHot: false,
       preview: 'Trying to decide between LLC and C-Corp for my tech startup...'
-    }
-  ];
-
-  const networkingEvents = [
-    {
-      id: 1,
-      title: 'Virtual Startup Pitch Night',
-      date: 'March 15, 2024',
-      time: '7:00 PM EST',
-      attendees: 45,
-      type: 'Virtual Event',
-      description: 'Present your startup idea and get feedback from experienced entrepreneurs.'
-    },
-    {
-      id: 2,
-      title: 'E-commerce Entrepreneurs Meetup',
-      date: 'March 20, 2024',
-      time: '6:30 PM EST',
-      attendees: 32,
-      type: 'Industry Specific',
-      description: 'Connect with fellow e-commerce business owners and share strategies.'
-    },
-    {
-      id: 3,
-      title: 'Women in Business Leadership Forum',
-      date: 'March 25, 2024',
-      time: '2:00 PM EST',
-      attendees: 67,
-      type: 'Community Focus',
-      description: 'Empowering women entrepreneurs through networking and mentorship.'
     }
   ];
 
@@ -311,44 +280,6 @@ const Community: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'networking' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {networkingEvents.map(event => (
-                  <div key={event.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                    <div className="mb-4">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                        {event.type}
-                      </span>
-                    </div>
-                    
-                    <h3 className="font-semibold text-gray-900 mb-2">{event.title}</h3>
-                    <p className="text-gray-600 text-sm mb-4">{event.description}</p>
-                    
-                    <div className="space-y-2 text-sm text-gray-600 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4" />
-                        <span>{event.date} at {event.time}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Users className="w-4 h-4" />
-                        <span>{event.attendees} attending</span>
-                      </div>
-                    </div>
-                    
-                    <button className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
-                      Join Event
-                    </button>
                   </div>
                 ))}
               </div>

@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { Play, Clock, Star, BookOpen, CheckCircle, Lock, Award, Flame, Calendar } from 'lucide-react';
 import CelebrationModal from '../../components/learning/CelebrationModal';
-import QuizModal from '../../components/learning/QuizModal';
+import FlipCardQuizModal from '../../components/learning/FlipCardQuizModal';
 import QuizService from '../../services/QuizService';
 
 const BusinessPlanning: React.FC = () => {
-  const [completedModules] = useState(['1']);
-  
+  const [completedModules, setCompletedModules] = useState<string[]>(['1']);
+  const [quizPassedModules, setQuizPassedModules] = useState<string[]>(['1']);
+
   // Gamification states
   const [showCelebration, setShowCelebration] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [completedModule, setCompletedModule] = useState<any>(null);
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
-  
+
   // Additional progress metrics
   const totalTimeSpent = 45; // minutes
   const learningStreak = 3; // days
@@ -24,7 +25,7 @@ const BusinessPlanning: React.FC = () => {
     if (module.progress === 100 && !completedModules.includes(module.id)) {
       setCompletedModule(module);
       setShowCelebration(true);
-      
+
       // Generate quiz questions for this module
       const questions = QuizService.generateQuizQuestions(
         module.title, 
@@ -40,20 +41,17 @@ const BusinessPlanning: React.FC = () => {
     setShowQuiz(true);
   };
 
-  const handleQuizComplete = (score: number, totalQuestions: number) => {
+  const handleQuizPass = (score: number, totalQuestions: number, percentage: number) => {
     setShowQuiz(false);
-    
-    // Update module completion status
+
     if (completedModule) {
-      setCompletedModules([...completedModules, completedModule.id]);
-      
-      // Show success message
-      const percentage = QuizService.calculateScorePercentage(score, totalQuestions);
+      setCompletedModules((prev) => (prev.includes(completedModule.id) ? prev : [...prev, completedModule.id]));
+      setQuizPassedModules((prev) => (prev.includes(completedModule.id) ? prev : [...prev, completedModule.id]));
+
       const message = QuizService.getPerformanceMessage(score, totalQuestions);
-      
       alert(`${message} Score: ${score}/${totalQuestions} (${percentage}%)`);
     }
-    
+
     setCompletedModule(null);
   };
 
@@ -82,6 +80,20 @@ const BusinessPlanning: React.FC = () => {
       isPremium: false,
       progress: 100,
       thumbnail: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400'
+    },
+    {
+      id: '7',
+      title: 'Business Model Canvas: From Idea to Structure',
+      description: 'Turn your idea into a structured business model using the Business Model Canvas framework.',
+      category: 'business-plan',
+      duration: '35 min',
+      lessons: 6,
+      difficulty: 'Beginner',
+      rating: 4.6,
+      students: 980,
+      isPremium: false,
+      progress: 0,
+      thumbnail: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400'
     },
     {
       id: '2',
@@ -157,6 +169,7 @@ const BusinessPlanning: React.FC = () => {
 
   // Filter to show only business-plan category
   const modules = allModules.filter(m => m.category === 'business-plan');
+  const orderedModules = [...modules].sort((a, b) => Number(a.id) - Number(b.id));
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -306,7 +319,12 @@ const BusinessPlanning: React.FC = () => {
 
       {/* Learning Modules Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {modules.map(module => (
+        {orderedModules.map((module, index) => {
+          const prevModuleId = index > 0 ? orderedModules[index - 1]?.id : null;
+          const isLockedByGate = prevModuleId ? !quizPassedModules.includes(prevModuleId) : false;
+          const gateText = prevModuleId ? `Complete the quiz for the previous material to unlock this.` : '';
+
+          return (
           <div key={module.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
             <div className="relative">
               <img 
@@ -335,8 +353,16 @@ const BusinessPlanning: React.FC = () => {
               )}
 
               <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <button className="p-3 bg-white rounded-full hover:bg-gray-100 transition-colors">
-                  {module.isPremium && module.progress === 0 ? (
+                <button
+                  className="p-3 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                  onClick={() => {
+                    if (isLockedByGate) return;
+                    if (module.progress === 100) {
+                      handleModuleCompletion(module);
+                    }
+                  }}
+                >
+                  {isLockedByGate ? (
                     <Lock className="w-6 h-6 text-gray-600" />
                   ) : (
                     <Play className="w-6 h-6 text-gray-600" />
@@ -388,8 +414,35 @@ const BusinessPlanning: React.FC = () => {
                 </div>
               )}
 
-              <button className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center space-x-2">
-                {module.progress === 0 ? (
+              {isLockedByGate && (
+                <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="text-sm font-semibold text-blue-900">
+                    To continue to the next learning material, you must first answer this quiz.
+                  </div>
+                  <div className="text-xs text-blue-800 mt-1">{gateText}</div>
+                </div>
+              )}
+
+              <button
+                disabled={isLockedByGate}
+                className={`w-full py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 ${
+                  isLockedByGate
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-primary-500 text-white hover:bg-primary-600'
+                }`}
+                onClick={() => {
+                  if (isLockedByGate) return;
+                  if (module.progress === 100) {
+                    handleModuleCompletion(module);
+                  }
+                }}
+              >
+                {isLockedByGate ? (
+                  <>
+                    <Lock className="w-4 h-4" />
+                    <span>Locked</span>
+                  </>
+                ) : module.progress === 0 ? (
                   <>
                     <Play className="w-4 h-4" />
                     <span>Start Learning</span>
@@ -397,7 +450,7 @@ const BusinessPlanning: React.FC = () => {
                 ) : module.progress === 100 ? (
                   <>
                     <CheckCircle className="w-4 h-4" />
-                    <span>Review</span>
+                    <span>Take Quiz to Continue</span>
                   </>
                 ) : (
                   <>
@@ -408,7 +461,8 @@ const BusinessPlanning: React.FC = () => {
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Gamification Modals */}
@@ -419,12 +473,13 @@ const BusinessPlanning: React.FC = () => {
         onStartQuiz={handleStartQuiz}
       />
 
-      <QuizModal
+      <FlipCardQuizModal
         isOpen={showQuiz}
         moduleTitle={completedModule?.title || ''}
         questions={quizQuestions}
+        passPercentage={50}
         onClose={handleCloseQuiz}
-        onComplete={handleQuizComplete}
+        onPass={handleQuizPass}
       />
     </div>
   );

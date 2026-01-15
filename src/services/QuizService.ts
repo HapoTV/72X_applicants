@@ -2,13 +2,36 @@
 
 export interface QuizQuestion {
   id: string;
+  type?: 'multiple_choice' | 'match_pairs' | 'order_steps' | 'categorize' | 'fill_blank';
   question: string;
   options: string[];
   correctAnswer: number;
   explanation?: string;
+
+  pairs?: { term: string; definition: string }[];
+
+  steps?: string[];
+
+  categories?: string[];
+  items?: { label: string; category: string }[];
+
+  template?: string;
+  wordBank?: string[];
+  correctWord?: string;
 }
 
 class QuizService {
+  private static normalizeCategory(category: string): string {
+    const normalized = (category || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[_\s]+/g, '-');
+
+    if (normalized === 'business-planning' || normalized === 'businessplanning') return 'business-plan';
+
+    return normalized;
+  }
+
   /**
    * Generate quiz questions based on learning material content
    */
@@ -17,6 +40,7 @@ class QuizService {
     const baseQuestions: QuizQuestion[] = [
       {
         id: 'q1',
+        type: 'multiple_choice',
         question: `What is the main purpose of ${this.extractMainTopic(moduleTitle)}?`,
         options: [
           'To understand key concepts',
@@ -29,6 +53,7 @@ class QuizService {
       },
       {
         id: 'q2',
+        type: 'multiple_choice',
         question: `Which of the following best describes your understanding of ${this.extractMainTopic(moduleTitle)}?`,
         options: [
           'I need more practice',
@@ -41,6 +66,7 @@ class QuizService {
       },
       {
         id: 'q3',
+        type: 'multiple_choice',
         question: `How would you rate the difficulty level of this ${this.extractMainTopic(moduleTitle)} material?`,
         options: [
           'Very Easy',
@@ -77,12 +103,14 @@ class QuizService {
    */
   private static getCategorySpecificQuestions(category: string, moduleTitle: string): QuizQuestion[] {
     const topic = this.extractMainTopic(moduleTitle);
-    
-    switch (category.toLowerCase()) {
+
+    const normalizedCategory = this.normalizeCategory(category);
+    switch (normalizedCategory) {
       case 'business-plan':
         return [
           {
             id: 'cat1',
+            type: 'multiple_choice',
             question: `What's the most important takeaway from this ${topic} module for business planning?`,
             options: [
               'Strategic thinking skills',
@@ -92,6 +120,54 @@ class QuizService {
             ],
             correctAnswer: 0,
             explanation: 'Business planning requires strategic thinking to create sustainable competitive advantages.'
+          },
+          {
+            id: 'cat2',
+            type: 'match_pairs',
+            question: 'Match the business planning term to its definition.',
+            options: [],
+            correctAnswer: 0,
+            pairs: [
+              { term: 'Value Proposition', definition: 'The unique value you offer customers' },
+              { term: 'Target Market', definition: 'The specific group you serve' },
+              { term: 'Revenue Stream', definition: 'How the business earns money' }
+            ],
+            explanation: 'These concepts form the foundation of a clear and actionable business plan.'
+          },
+          {
+            id: 'cat3',
+            type: 'order_steps',
+            question: 'Put the steps in order for building a basic business plan outline.',
+            options: [],
+            correctAnswer: 0,
+            steps: ['Define goals', 'Research the market', 'Draft the plan', 'Validate assumptions'],
+            explanation: 'A good flow is goals → research → draft → validate.'
+          },
+          {
+            id: 'cat4',
+            type: 'categorize',
+            question: 'Categorize the items into the correct business plan section.',
+            options: [],
+            correctAnswer: 0,
+            categories: ['Market', 'Finance'],
+            items: [
+              { label: 'Customer personas', category: 'Market' },
+              { label: 'Competitor analysis', category: 'Market' },
+              { label: 'Cash flow forecast', category: 'Finance' },
+              { label: 'Break-even point', category: 'Finance' }
+            ],
+            explanation: 'Market items describe demand and competition; Finance items describe money and sustainability.'
+          },
+          {
+            id: 'cat5',
+            type: 'fill_blank',
+            question: 'Fill in the blank using the word bank.',
+            options: [],
+            correctAnswer: 0,
+            template: 'A business plan should include clear ____ and measurable milestones.',
+            wordBank: ['objectives', 'advertising', 'discounts', 'headcount'],
+            correctWord: 'objectives',
+            explanation: 'Objectives and milestones help align execution with strategy.'
           }
         ];
       
@@ -99,6 +175,7 @@ class QuizService {
         return [
           {
             id: 'cat1',
+            type: 'multiple_choice',
             question: `Which marketing principle from the ${topic} module will you apply first?`,
             options: [
               'Customer segmentation',
@@ -115,6 +192,7 @@ class QuizService {
         return [
           {
             id: 'cat1',
+            type: 'multiple_choice',
             question: `What financial concept from ${topic} is most valuable for your role?`,
             options: [
               'Budget management',
@@ -131,6 +209,7 @@ class QuizService {
         return [
           {
             id: 'cat1',
+            type: 'multiple_choice',
             question: `Which operational efficiency tip from ${topic} will you implement?`,
             options: [
               'Process automation',
@@ -147,6 +226,7 @@ class QuizService {
         return [
           {
             id: 'cat1',
+            type: 'multiple_choice',
             question: `What leadership skill from ${topic} resonates most with your style?`,
             options: [
               'Communication',
@@ -163,6 +243,7 @@ class QuizService {
         return [
           {
             id: 'cat1',
+            type: 'multiple_choice',
             question: `How will you use what you learned about ${topic}?`,
             options: [
               'In my current role',

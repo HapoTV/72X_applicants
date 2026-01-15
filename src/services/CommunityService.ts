@@ -63,6 +63,12 @@ class CommunityService {
         console.error('Response status:', axiosError.response?.status);
         console.error('Response data:', axiosError.response?.data);
         console.error('Response headers:', axiosError.response?.headers);
+
+        // If backend can't serialize discussions yet (common when lazy-loaded relations
+        // like tags/replies are returned), don't break the UI.
+        if (axiosError.response?.status === 500) {
+          return [];
+        }
       }
       throw new Error('Failed to fetch discussions');
     }
@@ -285,7 +291,38 @@ class CommunityService {
   async getCommunityStats(): Promise<CommunityStats> {
     try {
       const response = await axiosClient.get('/community/discussions/stats');
-      return response.data;
+      const data = response.data as any;
+
+      // Backend may return a different stats shape (e.g. totalUsers/totalDiscussions).
+      // Normalize it to the UI's CommunityStats contract.
+      return {
+        totalMembers:
+          typeof data?.totalMembers === 'number'
+            ? data.totalMembers
+            : typeof data?.totalUsers === 'number'
+              ? data.totalUsers
+              : 0,
+        activeDiscussions:
+          typeof data?.activeDiscussions === 'number'
+            ? data.activeDiscussions
+            : typeof data?.totalDiscussions === 'number'
+              ? data.totalDiscussions
+              : 0,
+        totalMentors:
+          typeof data?.totalMentors === 'number'
+            ? data.totalMentors
+            : typeof data?.totalMentorsCount === 'number'
+              ? data.totalMentorsCount
+              : typeof data?.mentors === 'number'
+                ? data.mentors
+                : typeof data?.totalExperts === 'number'
+                  ? data.totalExperts
+                  : 0,
+        monthlyActiveUsers: typeof data?.monthlyActiveUsers === 'number' ? data.monthlyActiveUsers : undefined,
+        newMembersThisMonth: typeof data?.newMembersThisMonth === 'number' ? data.newMembersThisMonth : undefined,
+        totalEvents: typeof data?.totalEvents === 'number' ? data.totalEvents : undefined,
+        upcomingEvents: typeof data?.upcomingEvents === 'number' ? data.upcomingEvents : undefined,
+      };
     } catch (error) {
       console.error('Error fetching community stats:', error);
       throw new Error('Failed to fetch community stats');
@@ -370,6 +407,9 @@ class CommunityService {
   private transformToUserDiscussionItem(apiDiscussion: DiscussionApiResponse): UserDiscussionItem {
     const preview = this.generatePreview(apiDiscussion.content);
     const timeAgo = this.formatTimeAgo(apiDiscussion.createdAt);
+    const normalizedCategory = typeof apiDiscussion.category === 'string'
+      ? apiDiscussion.category.toLowerCase()
+      : apiDiscussion.category;
     
     return {
       id: apiDiscussion.discussionId,
@@ -377,7 +417,7 @@ class CommunityService {
       preview: preview,
       author: apiDiscussion.author,
       authorAvatar: apiDiscussion.authorAvatar,
-      category: apiDiscussion.category,
+      category: normalizedCategory,
       replies: apiDiscussion.replies,
       likes: apiDiscussion.likes,
       timeAgo: timeAgo,

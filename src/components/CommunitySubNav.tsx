@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { MessageSquare, Users, MessageCircle, Lock } from 'lucide-react';
+import { MessageSquare, MessageCircle, Lock } from 'lucide-react';
 
 interface CommunitySubNavProps {
   onClose: () => void;
@@ -14,7 +14,6 @@ const CommunitySubNav: React.FC<CommunitySubNavProps> = ({ onClose }) => {
 
   const subNavItems = [
     { path: '/community/discussions', icon: MessageSquare, label: 'Discussions', package: 'startup' },
-    { path: '/community/networking', icon: Users, label: 'Networking', package: 'startup' },
     { path: '/community/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' }
   ];
 
