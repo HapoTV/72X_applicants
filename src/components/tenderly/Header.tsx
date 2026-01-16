@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Search, Bell, User, ArrowLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Badge } from '../ui/badge'
@@ -13,6 +14,7 @@ interface HeaderProps {
 }
 
 export function Header({ user, onSearch, onSignOut, notificationCount = 0 }: HeaderProps) {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
 
   const handleSearch = (e: React.FormEvent) => {
@@ -54,7 +56,13 @@ export function Header({ user, onSearch, onSignOut, notificationCount = 0 }: Hea
         {/* Right side actions */}
         <div className="flex items-center space-x-4">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative"
+            onClick={() => navigate('/notifications')}
+            title="View notifications"
+          >
             <Bell className="h-5 w-5" />
             {notificationCount > 0 && (
               <Badge 

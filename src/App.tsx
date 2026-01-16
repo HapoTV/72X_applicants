@@ -21,6 +21,7 @@ import ExpertSessions from './pages/ExpertSessions';
 import Marketplace from './pages/Marketplace';
 import MentorshipHub from './pages/MentorshipHub';
 import AIBusinessAnalyst from './pages/AIBusinessAnalyst';
+import Notifications from './pages/Notifications';
 import Login from './pages/Login';
 import BizBoostChatbot from './components/Chatbot';
 import LandingPage from './pages/LandingPage';
@@ -49,6 +50,7 @@ import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
 
 // Admin Dashboard
 import AdminDashboard from './pages/adminDashboard/AdminDashboard';
+import AdminNotifications from './pages/adminDashboard/AdminNotifications';
 
 import { AuthProvider } from './context/AuthContext';
 
@@ -82,6 +84,11 @@ function App() {
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<AdminDashboard />} />
         </Route>
+        <Route path="/admin/notifications" element={
+          <ProtectedRoute requireAdmin={true}>
+            <AdminNotifications />
+          </ProtectedRoute>
+        } />
         
         {/* All other routes with Layout - protected */}
         <Route path="/*" element={
@@ -116,6 +123,7 @@ function App() {
                 <Route path="/applications/finance-manager" element={<FinanceManager />} />
                 <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/notifications" element={<Notifications />} />
                 
                 {/* Essential Package Features */}
                 <Route path="/marketplace" element={<Marketplace />} />

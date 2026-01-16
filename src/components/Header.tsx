@@ -16,6 +16,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const index = useMemo(
     () => [
       { title: 'Dashboard', path: '/', keywords: ['home', 'overview', 'metrics'] },
+      { title: 'Notifications', path: '/notifications', keywords: ['alerts', 'messages', 'updates', 'bell'] },
       { title: 'Schedule', path: '/schedule', keywords: ['calendar', 'events'] },
       { title: 'Learning', path: '/learning', keywords: ['modules', 'courses'] },
       { title: 'Community', path: '/community', keywords: ['discussions', 'networking', 'mentorship'] },
@@ -116,7 +117,11 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <button 
+              onClick={() => navigate('/notifications')}
+              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              title="View notifications"
+            >
               <Bell className="w-5 h-5 text-gray-600" />
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
             </button>

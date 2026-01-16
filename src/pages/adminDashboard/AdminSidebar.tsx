@@ -1,19 +1,22 @@
 // src/components/admin/AdminSidebar.tsx
+import { useNavigate } from 'react-router-dom';
 import { 
     Users, 
     Calendar, 
     BookOpen, 
     Handshake, 
     DollarSign,
-    User 
+    User,
+    Bell
 } from 'lucide-react';
 
 interface AdminSidebarProps {
-    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'profile';
-    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'profile') => void;
+    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'profile' | 'notifications';
+    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'profile' | 'notifications') => void;
 }
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
+    const navigate = useNavigate();
     const menuItems = [
         { id: 'applicants' as const, label: 'Applicants', icon: Users },
         { id: 'events' as const, label: 'Events', icon: Calendar },
@@ -43,6 +46,19 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                         </button>
                     );
                 })}
+                
+                {/* Notifications Management */}
+                <button 
+                    onClick={() => onTabChange('notifications')} 
+                    className={`w-full text-left px-3 py-3 rounded-lg flex items-center space-x-3 transition-colors border-t border-gray-200 mt-4 pt-4 ${
+                        activeTab === 'notifications' 
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                            : 'hover:bg-gray-50 text-gray-700'
+                    }`}
+                >
+                    <Bell className={`w-5 h-5 ${activeTab === 'notifications' ? 'text-blue-600' : 'text-gray-500'}`} />
+                    <span className="font-medium">Notifications</span>
+                </button>
             </nav>
         </aside>
     );

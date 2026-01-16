@@ -1,228 +1,303 @@
-// src/pages/AIBusinessAnalyst.tsx (Updated version)
 import React, { useState, useEffect } from 'react';
-import { Brain, Send, Sparkles, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react';
-import { aiBusinessAnalyticsService } from '../services/AIBusinessAnalyticsService';
-import UpgradePage from '../components/UpgradePage';
-
-type PackageType = 'startup' | 'essential' | 'premium';
+import { 
+  Brain, Send, Sparkles, TrendingUp, AlertCircle, Lightbulb, 
+  Database, Shield, Target, BarChart, Globe 
+} from 'lucide-react';
 
 const AIBusinessAnalyst: React.FC = () => {
   const [query, setQuery] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [showTermsModal, setShowTermsModal] = useState(true);
-  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
-  const [quickPrompts, setQuickPrompts] = useState<string[]>([]);
-  const [analysisHistory, setAnalysisHistory] = useState<any[]>([]);
+  const [analysisType, setAnalysisType] = useState('REQUIREMENT_ANALYSIS');
+  const [tokensUsed, setTokensUsed] = useState(0);
+  const [usageStats, setUsageStats] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get user package from localStorage
-  const userPackage = (localStorage.getItem('userPackage') || 'startup') as PackageType;
+  // API base URL - adjust to match your Spring Boot backend
+  const API_BASE = 'http://localhost:8080/api/ai-analyst';
 
-  // Check if user has access to this feature (requires premium package)
-  const hasAccess = userPackage === 'premium';
-
-  // If user doesn't have access, show upgrade page
-  if (!hasAccess) {
-    return (
-      <UpgradePage
-        featureName="AI Business Analyst"
-        featureIcon={Brain}
-        packageType="premium"
-        description="Get intelligent insights and recommendations powered by AI to grow your business. Our AI Business Analyst provides comprehensive analysis, strategic recommendations, and data-driven insights to help you make informed decisions."
-        benefits={[
-          "AI-powered business analysis and insights",
-          "Strategic recommendations tailored to your business",
-          "Real-time data analysis and trend identification",
-          "Comprehensive market and competitive analysis",
-          "Personalized growth strategies and action plans",
-          "Expert-level business intelligence at your fingertips"
-        ]}
-      />
-    );
-  }
-
+  // Fetch token usage on component mount
   useEffect(() => {
-    // Load quick prompts
-    const loadQuickPrompts = async () => {
-      try {
-        const prompts = await aiBusinessAnalyticsService.getQuickPrompts();
-        setQuickPrompts(prompts.slice(0, 4).map(p => p.text));
-      } catch (error) {
-        console.error('Error loading quick prompts:', error);
-        // Use default prompts
-        setQuickPrompts([
-          "Analyze my business performance",
-          "What are growth opportunities?",
-          "How can I improve cash flow?",
-          "Market expansion strategies"
-        ]);
-      }
-    };
-
-    // Load analysis history
-    const loadAnalysisHistory = async () => {
-      try {
-        const userId = 'demo-user'; // Get from auth context
-        const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
-        setAnalysisHistory(history);
-      } catch (error) {
-        console.error('Error loading analysis history:', error);
-      }
-    };
-
-    loadQuickPrompts();
-    loadAnalysisHistory();
+    fetchUsageStats();
   }, []);
 
-  const handleAnalyze = async () => {
-    if (!hasAcceptedTerms) {
-      setShowTermsModal(true);
-      return;
+  const fetchUsageStats = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/usage`); // Fixed: added backticks
+      if (response.ok) {
+        const data = await response.json();
+        setUsageStats(data);
+        setTokensUsed(data.tokensUsed || 0);
+      }
+    } catch (err) {
+      console.error('Failed to fetch usage stats:', err);
     }
+  };
+
+  const handleAnalyze = async () => {
     if (!query.trim()) return;
 
     setIsAnalyzing(true);
     setAnalysis(null);
+    setError(null);
+    
+    console.log('🔍 Sending request to:', `${API_BASE}/analyze`); // Fixed: added backticks
     
     try {
-      const userId = 'demo-user'; // Get from auth context
-      
-      const response = await aiBusinessAnalyticsService.submitAnalysis({
-        query: query,
-        analysisType: 'business_performance',
-        userId: userId
+      const response = await fetch(`${API_BASE}/analyze`, { // Fixed: added backticks
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: query,
+          analysisType: analysisType,
+        }),
       });
+
+      console.log('📊 Response status:', response.status);
+      console.log('📊 Response ok?', response.ok);
       
-      // Display the analysis
-      setAnalysis(response.detailedAnalysis || response.summary || 'Analysis completed successfully.');
+      // Check if response has content
+      const contentType = response.headers.get('content-type');
+      console.log('📊 Content-Type:', contentType);
       
-      // Refresh history
-      const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
-      setAnalysisHistory(history);
+      if (!response.ok) {
+        let errorText = await response.text();
+        console.error('❌ Response text:', errorText);
+        throw new Error(`Server error: ${response.status} ${response.statusText}`); // Fixed: added backticks
+      }
       
-    } catch (error) {
-      console.error('Error analyzing:', error);
-      setAnalysis('Sorry, I encountered an error while analyzing your query. Please try again.');
+      if (!contentType || !contentType.includes('application/json')) {
+        let text = await response.text();
+        console.warn('⚠️ Response is not JSON:', text);
+        throw new Error(`Server returned non-JSON: ${text.substring(0, 100)}`); // Fixed: added backticks
+      }
+      
+      const data = await response.json();
+      console.log('✅ Response data:', data);
+      
+      if (!data) {
+        throw new Error('Server returned empty response');
+      }
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      if (!data.analysis) {
+        throw new Error('Analysis field missing in response');
+      }
+      
+      setAnalysis(data.analysis);
+      setTokensUsed(data.totalTokensUsed || data.tokensUsed || 0);
+      
+      // Refresh usage stats
+      fetchUsageStats();
+      
+    } catch (err: any) {
+      console.error('💥 Analysis error:', err);
+      setError(err.message);
+      
+      // Provide helpful error message
+      if (err.message && err.message.includes('Failed to fetch')) {
+        setError('Cannot connect to backend. Make sure Spring Boot is running on port 8080.');
+      } else if (err.message && err.message.includes('Unexpected end of JSON')) {
+        setError('Backend returned empty response. Check server logs for errors.');
+      }
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const handleQuickPrompt = (prompt: string) => {
-    setQuery(prompt);
-    // Auto-submit after a short delay
-    setTimeout(() => {
-      if (hasAcceptedTerms) {
-        handleAnalyze();
-      } else {
-        setShowTermsModal(true);
-      }
-    }, 300);
+  const quickPrompts = [
+    { 
+      text: "Analyze requirements for a mobile banking app", 
+      type: "REQUIREMENT_ANALYSIS",
+      icon: Lightbulb
+    },
+    { 
+      text: "Generate user stories for an e-commerce checkout", 
+      type: "USER_STORY",
+      icon: Database
+    },
+    { 
+      text: "SWOT analysis for a food delivery startup", 
+      type: "SWOT_ANALYSIS",
+      icon: TrendingUp
+    },
+    { 
+      text: "Market research for fitness tech products", 
+      type: "MARKET_RESEARCH",
+      icon: Globe
+    },
+    { 
+      text: "Financial projections for SaaS business", 
+      type: "FINANCIAL_PROJECTION",
+      icon: BarChart
+    },
+    { 
+      text: "Risk assessment for cloud migration", 
+      type: "RISK_ASSESSMENT",
+      icon: Shield
+    }
+  ];
+
+  const analysisTypes = [
+    { id: 'REQUIREMENT_ANALYSIS', label: 'Requirements', icon: Lightbulb, color: 'from-blue-500 to-blue-600' },
+    { id: 'USER_STORY', label: 'User Stories', icon: Database, color: 'from-green-500 to-green-600' },
+    { id: 'SWOT_ANALYSIS', label: 'SWOT', icon: TrendingUp, color: 'from-purple-500 to-purple-600' },
+    { id: 'MARKET_RESEARCH', label: 'Market Research', icon: Globe, color: 'from-amber-500 to-amber-600' },
+    { id: 'FINANCIAL_PROJECTION', label: 'Financial', icon: BarChart, color: 'from-emerald-500 to-emerald-600' },
+    { id: 'RISK_ASSESSMENT', label: 'Risk Assessment', icon: Shield, color: 'from-rose-500 to-rose-600' },
+  ];
+
+  const handleQuickPrompt = (text: string, type: string) => {
+    setQuery(text);
+    setAnalysisType(type);
+  };
+
+  const getTypeLabel = (typeId: string) => {
+    const type = analysisTypes.find(t => t.id === typeId);
+    return type ? type.label : 'Analysis';
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl p-6 text-white">
-        <div className="flex items-center space-x-3 mb-2">
-          <Brain className="w-8 h-8" />
-          <h1 className="text-2xl font-bold">AI Business Analyst</h1>
-        </div>
-        <p className="text-primary-100">
-          Get intelligent insights and recommendations powered by AI to grow your business
-        </p>
-      </div>
-
-      {/* Disclaimer Banner */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-        <div className="flex items-start space-x-3">
-          <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-medium text-yellow-900 mb-1">Disclaimer</h3>
-            <p className="text-sm text-yellow-700">
-              Results generated by this AI tool are suggestions only. Users are responsible for verifying the accuracy, 
-              completeness, and suitability of any output for their specific business needs.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Terms & Conditions Modal */}
-      {showTermsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full mx-4 p-6 space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">Terms and Conditions for Using the AI Tool</h2>
-            <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4 bg-gray-50 text-sm text-gray-700 space-y-3">
-              <p>
-                72X shall not be liable for indirect, incidental, special, punitive, or consequential damages, including loss of
-                profits, lost data, lost funds, personal injury, property damage related to, in connection with, or otherwise
-                resulting from any use of 72X, or reliance on AI generated advice.
-              </p>
-              <p>
-                You agree to indemnify and hold 72X and its affiliates and their officers, directors, employees, and agents
-                harmless from any and all claims, demands, losses, liabilities, and expenses (including attorneys' fees), arising
-                out of or in connection with your use of 72X and its Services, specifically its AI tool.
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Brain className="w-10 h-10" />
+            <div>
+              <h1 className="text-3xl font-bold">AI Business Analyst</h1>
+              <p className="text-blue-100 mt-1">
+                Powered by Google Flan-T5-Base • Spring Boot Backend
               </p>
             </div>
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-gray-500 mr-4">
-                By clicking "I Agree" you confirm that you have read and accept these terms and conditions.
-              </p>
+          </div>
+          {usageStats && (
+            <div className="text-right bg-white/20 backdrop-blur-sm rounded-lg p-3">
+              <div className="text-2xl font-bold">{usageStats.tokensUsed?.toLocaleString() || 0}</div>
+              <div className="text-sm opacity-90">tokens used</div>
+              <div className="text-xs mt-1">
+                {usageStats.tokensRemaining?.toLocaleString() || 30000} remaining
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="mt-4 text-blue-100 text-sm">
+          Get intelligent business insights powered by AI. 30,000 free tokens/month.
+        </div>
+      </div>
+
+      {/* Analysis Type Selector */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Analysis Type</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {analysisTypes.map((type) => {
+            const Icon = type.icon;
+            const isSelected = analysisType === type.id;
+            return (
               <button
-                type="button"
-                className="px-4 py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
-                onClick={() => {
-                  setHasAcceptedTerms(true);
-                  setShowTermsModal(false);
-                }}
+                key={type.id}
+                onClick={() => setAnalysisType(type.id)}
+                className={`p-4 rounded-lg transition-all transform hover:scale-105 ${
+                  isSelected
+                    ? `bg-gradient-to-r ${type.color} text-white shadow-md`
+                    : 'border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
+                }`} // Fixed: added backticks and $ for template string
               >
-                I Agree
+                <Icon className="w-6 h-6 mb-2 mx-auto" />
+                <span className="text-sm font-medium">{type.label}</span>
               </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
-      )}
+        <div className="mt-4 text-center text-sm text-gray-500">
+          Selected: <span className="font-semibold text-blue-600">{getTypeLabel(analysisType)}</span>
+        </div>
+      </div>
 
       {/* Quick Prompts */}
-      {quickPrompts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <Sparkles className="w-5 h-5 text-primary-500" />
-            <h2 className="text-lg font-semibold text-gray-900">Quick Prompts</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {quickPrompts.map((prompt, index) => (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <Sparkles className="w-5 h-5 text-blue-500" />
+          <h2 className="text-lg font-semibold text-gray-900">Quick Prompts</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {quickPrompts.map((prompt, index) => {
+            const Icon = prompt.icon;
+            return (
               <button
                 key={index}
-                onClick={() => handleQuickPrompt(prompt)}
-                className="text-left p-3 border border-gray-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors"
+                onClick={() => handleQuickPrompt(prompt.text, prompt.type)}
+                className="text-left p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all hover:bg-blue-50 group"
               >
-                <span className="text-sm text-gray-700">{prompt}</span>
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100">
+                    <Icon className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
+                      {prompt.text}
+                    </span>
+                    <div className="mt-1">
+                      <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                        {prompt.type.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Query Input */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center space-x-2 mb-4">
-          <Lightbulb className="w-5 h-5 text-primary-500" />
+          <Target className="w-5 h-5 text-blue-500" />
           <h2 className="text-lg font-semibold text-gray-900">Ask the AI Analyst</h2>
         </div>
         <div className="space-y-4">
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Analysis Type: <span className="font-semibold text-blue-600">{getTypeLabel(analysisType)}</span>
+            </label>
+          </div>
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ask me anything about your business... (e.g., How can I increase my revenue? What are the best marketing strategies for my industry?)"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+            placeholder={`Describe your business scenario for ${getTypeLabel(analysisType).toLowerCase()}...`} // Fixed: added backticks
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-700"
             rows={4}
           />
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="flex items-center space-x-2 text-red-700">
+                <AlertCircle className="w-5 h-5" />
+                <span className="text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex flex-col md:flex-row gap-3 justify-between items-center">
+            <div className="text-sm text-gray-500">
+              {usageStats && (
+                <>
+                  Token usage: <span className="font-medium">{usageStats.percentageUsed?.toFixed(1)}%</span>
+                  <span className="mx-2">•</span>
+                  Requests today: <span className="font-medium">{usageStats.requestsToday || 0}</span>
+                </>
+              )}
+            </div>
             <button
               onClick={handleAnalyze}
-              disabled={!query.trim() || isAnalyzing || !hasAcceptedTerms}
-              className="w-full sm:w-auto px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+              disabled={!query.trim() || isAnalyzing}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 shadow-md flex items-center justify-center space-x-2 min-w-[140px]"
             >
               {isAnalyzing ? (
                 <>
@@ -236,11 +311,6 @@ const AIBusinessAnalyst: React.FC = () => {
                 </>
               )}
             </button>
-            {!hasAcceptedTerms && (
-              <span className="text-sm text-gray-500 text-center sm:text-left">
-                Please accept the terms and conditions to use the AI analyst
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -248,53 +318,86 @@ const AIBusinessAnalyst: React.FC = () => {
       {/* Analysis Results */}
       {analysis && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-green-500" />
-            <h2 className="text-lg font-semibold text-gray-900">AI Analysis Results</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">AI Analysis Results</h2>
+                <p className="text-sm text-gray-500">
+                  Generated with {getTypeLabel(analysisType)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                {getTypeLabel(analysisType)}
+              </span>
+              {tokensUsed > 0 && (
+                <span className="text-sm text-gray-500">
+                  {tokensUsed} tokens
+                </span>
+              )}
+            </div>
           </div>
-          <div className="prose max-w-none">
-            <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-line text-gray-700">
+          
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-lg p-6 border border-gray-200">
+            <div className="whitespace-pre-line text-gray-700 leading-relaxed font-medium">
               {analysis}
+            </div>
+          </div>
+          
+          <div className="mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500 flex flex-wrap justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>Generated by Flan-T5-Base AI Model</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span>Spring Boot Backend</span>
+              <span>•</span>
+              <span>Hugging Face API</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Recent Analysis History */}
-      {analysisHistory.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <Brain className="w-5 h-5 text-primary-500" />
-            <h2 className="text-lg font-semibold text-gray-900">Recent Analysis</h2>
+      {/* Info Banner */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
+        <div className="flex items-start space-x-4">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <AlertCircle className="w-6 h-6 text-blue-600" />
           </div>
-          <div className="space-y-3">
-            {analysisHistory.slice(0, 3).map((item, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900 line-clamp-1">{item.query}</h3>
-                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.summary}</p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                        item.status === 'completed' 
-                          ? 'bg-green-100 text-green-800'
-                          : item.status === 'processing'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {item.status}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(item.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+          <div>
+            <h3 className="font-bold text-blue-900 mb-2 text-lg">How It Works</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="text-sm text-blue-800">
+                <div className="font-semibold mb-1">Backend Technology</div>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Spring Boot REST API</li>
+                  <li>Google Flan-T5-Base AI Model</li>
+                  <li>Hugging Face Inference API</li>
+                  <li>30,000 free tokens/month</li>
+                </ul>
               </div>
-            ))}
+              <div className="text-sm text-blue-800">
+                <div className="font-semibold mb-1">Capabilities</div>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Business requirement analysis</li>
+                  <li>User story generation</li>
+                  <li>SWOT & market analysis</li>
+                  <li>Financial projections</li>
+                  <li>Risk assessment</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-4 text-xs text-blue-600 bg-white/50 rounded-lg p-3">
+              <strong>Note:</strong> The AI uses your Hugging Face API key (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). 
+              Token usage is tracked automatically. Reset occurs monthly.
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
