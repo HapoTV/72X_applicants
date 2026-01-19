@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Brain, Sparkles, X, ChevronDown, ChevronUp, Trophy, Flame, Star } from 'lucide-react';
+import { Brain, Check, ChevronDown, ChevronUp, ChevronsRight, Flame, Sparkles, Star, Trophy, X } from 'lucide-react';
+import Confetti from 'react-confetti';
 
 interface QuizQuestion {
   id: string;
@@ -43,6 +44,25 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState>('idle');
   const [revealedExplanation, setRevealedExplanation] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+  });
+
+  // moved confetti trigger effect below, after 'completed' and 'passed' are defined
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [score, setScore] = useState(0);
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -127,6 +147,15 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
   }, [score, totalQuestions]);
 
   const passed = percentage >= passPercentage;
+
+  // Trigger confetti once when the quiz is completed and passed
+  useEffect(() => {
+    if (completed && passed) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [completed, passed]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -429,7 +458,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
                       return copy;
                     });
                   }}
-                  className={`px-3 py-1 text-sm border rounded-lg ${idx === 0 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'hover:bg-white border-gray-300 text-gray-700'}`}
+                  className={`px-3 py-1 text-sm rounded-lg ${idx === 0 ? 'bg-blue-300 text-white cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
                   disabled={idx === 0}
                 >
                   Up
@@ -446,7 +475,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
                       return copy;
                     });
                   }}
-                  className={`px-3 py-1 text-sm border rounded-lg ${idx === orderedSteps.length - 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'hover:bg-white border-gray-300 text-gray-700'}`}
+                  className={`px-3 py-1 text-sm rounded-lg ${idx === orderedSteps.length - 1 ? 'bg-orange-300 text-white cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}
                   disabled={idx === orderedSteps.length - 1}
                 >
                   Down
@@ -570,13 +599,22 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {showConfetti && (
+        <Confetti
+          width={windowSize.width}
+          height={windowSize.height}
+          recycle={false}
+          numberOfPieces={500}
+          gravity={0.2}
+        />
+      )}
       <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Brain className="w-6 h-6 text-primary-600" />
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Flip-Card Quiz</h2>
-              <p className="text-sm text-gray-600">Unlock the next learning material by passing this checkpoint.</p>
+              <h2 className="text-xl font-bold text-gray-900">Knowledge Check</h2>
+              <p className="text-sm text-gray-600">Complete this checkpoint to continue your learning journey.</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
@@ -616,46 +654,67 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
             <p className="text-gray-600 mb-2">You finished:</p>
             <p className="text-gray-900 font-semibold mb-6">"{moduleTitle}"</p>
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-left max-w-lg mx-auto mb-6">
-              <p className="text-blue-900 font-semibold">To continue to the next learning material, you must first answer this quiz.</p>
+              <p className="text-blue-900 font-semibold">Complete this quiz to continue to the next learning material.</p>
               <p className="text-blue-800 text-sm mt-1">No answers are revealed on incorrect attempts. You must demonstrate mastery.</p>
             </div>
             <button
               onClick={handleStart}
               className="px-8 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all transform hover:scale-105 text-lg font-semibold"
             >
-              Start Flip-Card Challenge
+              Start Knowledge Check
             </button>
           </div>
         ) : completed ? (
-          <div className="text-center py-8">
-            <div className="mb-4 flex justify-center">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-gray-50 border border-gray-200">
-                <Trophy className="w-10 h-10 text-yellow-500" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Checkpoint Complete</h3>
-            <p className="text-gray-700 mb-4">
-              Score: <span className="font-bold text-primary-600">{score}</span>/<span className="font-bold">{totalQuestions}</span> ({percentage}%)
-            </p>
-            <p className="text-gray-600 mb-6">
-              {passed ? `Unlocked! You may continue. (Pass mark: ${passPercentage}%)` : `Not passed yet. Review the material and try again. (Pass mark: ${passPercentage}%)`}
-            </p>
-            <div className="flex gap-3 justify-center">
-              {!passed && (
-                <button
-                  onClick={handleRetry}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Review & Retry
-                </button>
-              )}
-              <button
-                onClick={passed ? handlePass : onClose}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-              >
-                {passed ? 'Continue Learning' : 'Close'}
-              </button>
-            </div>
+          <div className={`text-center py-8 transition-all duration-500 ${passed ? 'bg-gradient-to-b from-green-50 to-white' : 'bg-gradient-to-b from-blue-50 to-white'}`}>
+            {passed ? (
+              <>
+                <div className="mb-6">
+                  <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-100 mb-4">
+                    <Trophy className="w-12 h-12 text-yellow-500 animate-bounce" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-green-800 mb-3">Awesome! 🎉</h3>
+                  <p className="text-green-700 mb-2 text-lg">You've passed with {percentage}%!</p>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    Great job! You've unlocked the next learning material.
+                  </p>
+                </div>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={handlePass}
+                    className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+                  >
+                    Continue Learning →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 mb-4">
+                    <div className="text-4xl">💡</div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-blue-800 mb-3">Keep Going! 🌱</h3>
+                  <p className="text-blue-700 mb-2">You scored {score} out of {totalQuestions} ({percentage}%)</p>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    You're making progress! Review the material and try again. Every attempt helps you learn.
+                  </p>
+                </div>
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={handleRetry}
+                    className="px-6 py-3 border border-blue-300 text-blue-700 bg-white hover:bg-blue-50 rounded-lg font-medium transition-colors"
+                  >
+                    ↻ Try Again
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Review Material
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div>

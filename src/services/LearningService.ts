@@ -8,6 +8,14 @@ import type {
 
 class LearningService {
   private baseUrl = '/learning-materials';
+  private normalizeCategory(category: string): string {
+    const normalized = (category || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[_\s]+/g, '-');
+    if (normalized === 'business-planning' || normalized === 'businessplanning') return 'business-plan';
+    return normalized;
+  }
 
   /**
    * Get all learning materials
@@ -76,7 +84,8 @@ class LearningService {
       
       // Apply category filter if specified
       if (filter?.category && filter.category !== 'all') {
-        allModules = allModules.filter(module => module.category === filter.category);
+        const target = this.normalizeCategory(filter.category);
+        allModules = allModules.filter(module => this.normalizeCategory(module.category) === target);
         console.log('Filtered modules for category', filter.category, ':', allModules);
       }
       
@@ -171,8 +180,7 @@ class LearningService {
    * Transform backend category to frontend category
    */
   private transformCategory(backendCategory: string): string {
-    // Backend returns lowercase hyphenated format, return as-is for frontend
-    return backendCategory;
+    return this.normalizeCategory(backendCategory);
   }
 
 }
