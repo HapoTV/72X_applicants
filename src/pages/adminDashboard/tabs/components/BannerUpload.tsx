@@ -27,9 +27,9 @@ const BannerUpload: React.FC<BannerUploadProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
+      // Validate file size (max 500MB)
+      if (file.size > 500 * 1024 * 1024) {
+        alert('File size must be less than 500MB');
         return;
       }
       

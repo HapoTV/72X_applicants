@@ -49,6 +49,8 @@ import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
 // Admin Dashboard
 import AdminDashboard from './pages/adminDashboard/AdminDashboard';
 
+import MyConnections from './pages/MyConnections';
+
 import { AuthProvider } from './context/AuthContext';
 
 
@@ -137,6 +139,8 @@ function App() {
                 <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
                 <Route path="/upgrade/experts" element={<ExpertsUpgrade />} />
                 <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
+
+                <Route path="/connections" element={<MyConnections />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

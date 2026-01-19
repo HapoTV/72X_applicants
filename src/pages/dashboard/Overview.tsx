@@ -23,6 +23,7 @@ const Overview: React.FC = () => {
   const [adError, setAdError] = useState<string | null>(null);
   const [showAdRequestModal, setShowAdRequestModal] = useState<boolean>(false);
   const [adImpressions, setAdImpressions] = useState<Set<string>>(new Set());
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const carouselTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -45,16 +46,17 @@ const Overview: React.FC = () => {
       setLoadingAds(true);
       setAdError(null);
       
-      console.log('🚀 Loading ads for user...');
+      console.group('🚀 Loading Ads Process');
+      console.log('📅 Timestamp:', new Date().toISOString());
       
-      // First, let's get user info from localStorage to debug
+      // Get user info for debugging
       const userId = localStorage.getItem('userId');
       const userIndustry = localStorage.getItem('industry');
       const userPackage = localStorage.getItem('userPackage');
       const userRole = localStorage.getItem('role');
       const businessRef = localStorage.getItem('business_reference');
       
-      console.log('👤 User Info:', {
+      console.log('👤 User Context:', {
         userId,
         industry: userIndustry,
         userPackage,
@@ -63,83 +65,100 @@ const Overview: React.FC = () => {
       });
       
       const fetchedAds = await adService.getAdsForUser();
-      console.log('📊 Ads fetched from API:', fetchedAds);
-      console.log('📈 Total ads received:', fetchedAds.length);
+      console.log('📊 Raw API Response:', fetchedAds);
+      console.log('📈 Total ads in response:', fetchedAds?.length || 0);
       
-      if (fetchedAds && fetchedAds.length > 0) {
+      if (fetchedAds && Array.isArray(fetchedAds) && fetchedAds.length > 0) {
         console.log('🔍 Filtering active ads...');
         
-        // Filter only active ads - but first let's see what we have
+        // Filter only active ads
         const activeAds = fetchedAds.filter(ad => {
           const isStatusActive = ad.status === 'ACTIVE';
-          const isActive = ad.isActive;
+          const isActive = ad.isActive === true;
           const isEndDateValid = !ad.endDate || new Date(ad.endDate) > new Date();
           const isStartDateValid = !ad.startDate || new Date(ad.startDate) <= new Date();
-          
-          console.log(`📝 Ad: ${ad.title}`, {
-            status: ad.status,
-            isActive: ad.isActive,
-            endDate: ad.endDate,
-            startDate: ad.startDate,
-            targetingType: ad.targetingType,
-            targetValue: ad.targetValue,
-            passesFilter: isStatusActive && isActive && isEndDateValid && isStartDateValid
-          });
           
           return isStatusActive && isActive && isEndDateValid && isStartDateValid;
         });
         
         console.log('✅ Active ads after filtering:', activeAds.length);
+        console.log('🎯 Filtered ads:');
+        activeAds.forEach((ad, index) => {
+          console.log(`  ${index + 1}. ${ad.title}`, {
+            status: ad.status,
+            isActive: ad.isActive,
+            priority: ad.priority,
+            mediaType: ad.mediaType,
+            targeting: ad.targetingType,
+            targetValue: ad.targetValue,
+            clicks: ad.totalClicks
+          });
+        });
         
-        // Sort by priority (highest first)
-        const sortedAds = activeAds.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+        // Sort by priority (highest first), then by creation date
+        const sortedAds = activeAds.sort((a, b) => {
+          // First by priority
+          const priorityDiff = (b.priority || 0) - (a.priority || 0);
+          if (priorityDiff !== 0) return priorityDiff;
+          
+          // Then by creation date (newest first)
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
         
-        console.log('🎯 Sorted ads by priority:', sortedAds);
+        console.log('📊 Final sorted ads:', sortedAds.map(ad => ({
+          title: ad.title,
+          priority: ad.priority,
+          mediaType: ad.mediaType
+        })));
+        
         setAds(sortedAds);
         
-        // Record impression for first ad
-        if (sortedAds.length > 0 && !adImpressions.has(sortedAds[0].adId)) {
-          console.log('📸 Recording impression for ad:', sortedAds[0].title);
-          await adService.recordAdImpression(sortedAds[0].adId);
-          setAdImpressions(prev => new Set(prev).add(sortedAds[0].adId));
+        // Update debug info
+        setDebugInfo(`
+          Total Ads: ${fetchedAds.length}
+          Active Ads: ${activeAds.length}
+          User ID: ${userId}
+          Industry: ${userIndustry}
+          Package: ${userPackage}
+          Last Updated: ${new Date().toLocaleTimeString()}
+        `);
+        
+        // Record impression for first ad if exists
+        if (sortedAds.length > 0) {
+          const firstAd = sortedAds[0];
+          if (!adImpressions.has(firstAd.adId)) {
+            console.log('📸 Recording impression for first ad:', firstAd.title);
+            await adService.recordAdImpression(firstAd.adId);
+            setAdImpressions(prev => new Set(prev).add(firstAd.adId));
+          }
         }
         
-        // Start carousel if we have ads
-        if (sortedAds.length > 1) {
-          console.log('🔄 Starting carousel with', sortedAds.length, 'ads');
-          startCarousel();
-        } else if (sortedAds.length === 1) {
-          console.log('📢 Single ad loaded, no carousel needed');
-        }
       } else {
         console.log('❌ No ads available for user');
         setAds([]);
+        setDebugInfo(`
+          No ads available
+          User ID: ${userId}
+          Industry: ${userIndustry}
+          Package: ${userPackage}
+        `);
       }
-    } catch (error) {
+      
+      console.groupEnd();
+    } catch (error: any) {
       console.error('❌ Error loading ads:', error);
-      setAdError('Unable to load advertisements');
+      console.error('Error details:', error.response?.data || error.message);
+      setAdError(`Unable to load advertisements: ${error.message}`);
       setAds([]);
+      
+      setDebugInfo(`
+        Error loading ads
+        ${error.message}
+        ${new Date().toLocaleTimeString()}
+      `);
     } finally {
       setLoadingAds(false);
     }
-  };
-
-  const startCarousel = () => {
-    if (carouselTimerRef.current) {
-      clearInterval(carouselTimerRef.current);
-    }
-    
-    carouselTimerRef.current = setInterval(() => {
-      // Trigger carousel rotation
-      setAds(prevAds => {
-        if (prevAds.length > 1) {
-          // Rotate ads by moving first to last
-          const [first, ...rest] = prevAds;
-          return [...rest, first];
-        }
-        return prevAds;
-      });
-    }, 10000); // Rotate every 10 seconds
   };
 
   const loadEngagementData = async () => {
@@ -232,7 +251,7 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
       `;
       
       // Create mailto link for admin
-      const adminEmail = 'admin@seventytwox.com';
+      const adminEmail = 'asandilenkala@gmail.com';
       const mailtoLink = `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       
       // Open default email client
@@ -283,6 +302,25 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
     refreshEngagementData();
   };
 
+  // Debug panel component
+  const DebugPanel = () => (
+    <div className="fixed bottom-20 right-4 bg-black bg-opacity-80 text-white text-xs p-2 rounded-lg shadow-lg z-20 max-w-xs">
+      <div className="font-bold mb-1">Ad Debug Info</div>
+      <div className="space-y-1">
+        <div>Total Ads: {ads.length}</div>
+        <div>Loading: {loadingAds ? 'Yes' : 'No'}</div>
+        <div>Error: {adError || 'None'}</div>
+        <div>Last Refresh: {new Date().toLocaleTimeString()}</div>
+        <button 
+          onClick={refreshAds}
+          className="mt-2 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
+        >
+          Force Refresh
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="space-y-3 animate-fade-in px-2 sm:px-0">
@@ -319,11 +357,14 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
         {/* Debug Button - Remove in production */}
         <button 
           onClick={refreshAds}
-          className="fixed bottom-4 right-4 bg-gray-800 text-white p-2 rounded-full shadow-lg z-10 hover:bg-gray-700"
+          className="fixed bottom-4 right-4 bg-gray-800 text-white p-2 rounded-full shadow-lg z-10 hover:bg-gray-700 flex items-center justify-center w-10 h-10"
           title="Debug: Refresh Ads"
         >
           🔄
         </button>
+
+        {/* Debug Panel - Remove in production */}
+        {process.env.NODE_ENV === 'development' && <DebugPanel />}
 
         {/* Daily Tip & Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

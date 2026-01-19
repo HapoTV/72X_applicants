@@ -1,43 +1,23 @@
 // src/pages/adminDashboard/tabs/MentorshipTab.tsx
 import { useState, useEffect } from 'react';
 import { mentorshipService } from '../../../services/MentorshipService';
-
-interface Mentor {
-    id: string;
-    name: string;
-    expertise: string;
-    contact?: string;
-    experience?: string;
-    availability?: string;
-    rating?: number;
-    sessionsCompleted?: number;
-    bio?: string;
-    languages?: string;
-    createdBy?: string;
-}
+import type { Mentor } from '../../../interfaces/MentorshipData';
 
 export default function MentorshipTab() {
     const [mentors, setMentors] = useState<Mentor[]>([]);
     const [showAddMentor, setShowAddMentor] = useState(false);
-    const [newMentor, setNewMentor] = useState<{
-        name: string;
-        expertise: string;
-        contact: string;
-        experience: string;
-        availability: string;
-        rating: string;
-        sessionsCompleted: string;
-        bio: string;
-        languages: string;
-    }>({
+    const [newMentor, setNewMentor] = useState({
         name: '',
         expertise: '',
-        contact: '',
+        contactInfo: '',
         experience: '',
+        background: '',
         availability: '',
         rating: '4.0',
         sessionsCompleted: '0',
         bio: '',
+        sessionDuration: '60 minutes',
+        sessionPrice: 'Free',
         languages: ''
     });
     const [loading, setLoading] = useState(true);
@@ -54,23 +34,7 @@ export default function MentorshipTab() {
             setError(null);
             
             const mentorsData = await mentorshipService.getAllMentors();
-            
-            // Transform to table format
-            const transformedMentors: Mentor[] = mentorsData.map(mentor => ({
-                id: mentor.mentorshipId,
-                name: mentor.mentorName,
-                expertise: mentor.expertise.join(', '),
-                contact: mentor.mentorEmail,
-                experience: mentor.experience,
-                availability: mentor.availability,
-                rating: mentor.rating,
-                sessionsCompleted: mentor.sessionsCompleted,
-                bio: mentor.bio,
-                languages: mentor.languages?.join(', '),
-                createdBy: mentor.createdBy
-            }));
-            
-            setMentors(transformedMentors);
+            setMentors(mentorsData);
         } catch (err) {
             setError('Failed to load mentors. Please try again.');
             console.error('Error fetching mentors:', err);
@@ -89,21 +53,23 @@ export default function MentorshipTab() {
             setError(null);
             setSuccess(null);
             
-            const userEmail = localStorage.getItem('userEmail') || 'admin@example.com';
+            // Get current user email
+            const currentUser = mentorshipService.getCurrentUser();
+            const userEmail = currentUser?.email || 'admin@example.com';
             
+            // Create mentor data
             const mentorFormData = {
-                mentorName: newMentor.name,
-                mentorTitle: newMentor.expertise,
-                mentorEmail: newMentor.contact,
+                name: newMentor.name,
                 expertise: newMentor.expertise,
+                contactInfo: newMentor.contactInfo,
                 experience: newMentor.experience,
-                background: newMentor.bio,
+                background: newMentor.background,
                 availability: newMentor.availability,
                 rating: parseFloat(newMentor.rating),
                 sessionsCompleted: parseInt(newMentor.sessionsCompleted),
                 bio: newMentor.bio,
-                sessionDuration: '60 minutes',
-                sessionPrice: 'Free',
+                sessionDuration: newMentor.sessionDuration,
+                sessionPrice: newMentor.sessionPrice,
                 languages: newMentor.languages,
                 imageUrl: ''
             };
@@ -112,22 +78,27 @@ export default function MentorshipTab() {
             
             setSuccess('Mentor added successfully!');
             setShowAddMentor(false);
+            
+            // Reset form
             setNewMentor({
                 name: '',
                 expertise: '',
-                contact: '',
+                contactInfo: '',
                 experience: '',
+                background: '',
                 availability: '',
                 rating: '4.0',
                 sessionsCompleted: '0',
                 bio: '',
+                sessionDuration: '60 minutes',
+                sessionPrice: 'Free',
                 languages: ''
             });
             
             // Refresh the list
             fetchMentors();
-        } catch (err) {
-            setError('Error adding mentor. Please try again.');
+        } catch (err: any) {
+            setError(`Error adding mentor: ${err.message || 'Please try again.'}`);
             console.error('Error adding mentor:', err);
         }
     };
@@ -141,7 +112,9 @@ export default function MentorshipTab() {
             setError(null);
             setSuccess(null);
             
-            const userEmail = localStorage.getItem('userEmail') || 'admin@example.com';
+            // Get current user email
+            const currentUser = mentorshipService.getCurrentUser();
+            const userEmail = currentUser?.email || 'admin@example.com';
             
             await mentorshipService.deleteMentor(mentorId, userEmail);
             
@@ -149,10 +122,20 @@ export default function MentorshipTab() {
             
             // Refresh the list
             fetchMentors();
-        } catch (err) {
-            setError('Error deleting mentor. Please try again.');
+        } catch (err: any) {
+            setError(`Error deleting mentor: ${err.message || 'Please try again.'}`);
             console.error('Error deleting mentor:', err);
         }
+    };
+
+    const formatExpertise = (expertise: string) => {
+        if (!expertise) return '—';
+        return expertise.split(',').map(e => e.trim()).join(', ');
+    };
+
+    const formatLanguages = (languages: string) => {
+        if (!languages) return '—';
+        return languages.split(',').map(l => l.trim()).join(', ');
     };
 
     return (
@@ -219,23 +202,46 @@ export default function MentorshipTab() {
                                 </tr>
                             ) : (
                                 mentors.map(mentor => (
-                                    <tr key={mentor.id}>
+                                    <tr key={mentor.mentorId} className="hover:bg-gray-50">
                                         <td className="px-6 py-3">
                                             <div className="text-sm font-medium text-gray-900">{mentor.name}</div>
+                                            {mentor.bio && (
+                                                <div className="text-xs text-gray-500 mt-1 line-clamp-1">{mentor.bio}</div>
+                                            )}
                                         </td>
-                                        <td className="px-6 py-3 text-sm text-gray-600 max-w-xs truncate">{mentor.expertise}</td>
-                                        <td className="px-6 py-3 text-sm text-gray-600">{mentor.experience || '—'}</td>
+                                        <td className="px-6 py-3 text-sm text-gray-600">
+                                            {formatExpertise(mentor.expertise)}
+                                        </td>
+                                        <td className="px-6 py-3 text-sm text-gray-600">
+                                            {mentor.experience || '—'}
+                                        </td>
                                         <td className="px-6 py-3 text-sm text-gray-600">
                                             <div className="flex items-center">
                                                 <span className="text-yellow-500 mr-1">★</span>
-                                                <span>{mentor.rating?.toFixed(1) || '—'}</span>
+                                                <span>{mentorshipService.formatRating(mentor.rating)}</span>
+                                                {mentor.sessionsCompleted !== undefined && mentor.sessionsCompleted > 0 && (
+                                                    <span className="ml-2 text-xs text-gray-400">
+                                                        ({mentor.sessionsCompleted} sessions)
+                                                    </span>
+                                                )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-3 text-sm text-gray-600">{mentor.availability || '—'}</td>
+                                        <td className="px-6 py-3 text-sm">
+                                            <span className={`px-2 py-1 rounded-full text-xs ${
+                                                mentorshipService.isMentorAvailable(mentor.availability)
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-red-100 text-red-800'
+                                            }`}>
+                                                {mentor.availability || 'Not specified'}
+                                            </span>
+                                        </td>
                                         <td className="px-6 py-3 text-sm text-gray-600">
-                                            {mentor.contact ? (
-                                                <a href={`mailto:${mentor.contact}`} className="text-blue-600 hover:text-blue-800">
-                                                    {mentor.contact}
+                                            {mentor.contactInfo ? (
+                                                <a 
+                                                    href={`mailto:${mentor.contactInfo}`} 
+                                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                                >
+                                                    {mentor.contactInfo}
                                                 </a>
                                             ) : '—'}
                                         </td>
@@ -243,12 +249,23 @@ export default function MentorshipTab() {
                                             {mentor.createdBy || '—'}
                                         </td>
                                         <td className="px-6 py-3 text-sm">
-                                            <button 
-                                                className="text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50"
-                                                onClick={() => handleDeleteMentor(mentor.id)}
-                                            >
-                                                Delete
-                                            </button>
+                                            <div className="flex space-x-2">
+                                                <button 
+                                                    className="text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 text-sm"
+                                                    onClick={() => {
+                                                        // View details action
+                                                        alert(`Mentor Details:\n\nName: ${mentor.name}\nExpertise: ${mentor.expertise}\nExperience: ${mentor.experience || 'N/A'}\nBio: ${mentor.bio || 'N/A'}\nLanguages: ${formatLanguages(mentor.languages || '')}\nCreated: ${mentorshipService.formatDate(mentor.createdAt || '')}`);
+                                                    }}
+                                                >
+                                                    View
+                                                </button>
+                                                <button 
+                                                    className="text-red-600 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 text-sm"
+                                                    onClick={() => handleDeleteMentor(mentor.mentorId)}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -280,6 +297,7 @@ export default function MentorshipTab() {
                                         onChange={e => setNewMentor({...newMentor, name: e.target.value})} 
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
                                         required
+                                        placeholder="e.g., John Smith"
                                     />
                                 </div>
                                 <div>
@@ -289,6 +307,18 @@ export default function MentorshipTab() {
                                         onChange={e => setNewMentor({...newMentor, expertise: e.target.value})} 
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
                                         required
+                                        placeholder="e.g., Marketing, Business Strategy"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-700 mb-1">Contact Email *</label>
+                                    <input 
+                                        type="email"
+                                        value={newMentor.contactInfo} 
+                                        onChange={e => setNewMentor({...newMentor, contactInfo: e.target.value})} 
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
+                                        required
+                                        placeholder="mentor@example.com"
                                     />
                                 </div>
                                 <div>
@@ -301,22 +331,21 @@ export default function MentorshipTab() {
                                     />
                                 </div>
                                 <div>
+                                    <label className="block text-sm text-gray-700 mb-1">Background</label>
+                                    <input 
+                                        value={newMentor.background} 
+                                        onChange={e => setNewMentor({...newMentor, background: e.target.value})} 
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
+                                        placeholder="e.g., Former Marketing Director at ABC Corp"
+                                    />
+                                </div>
+                                <div>
                                     <label className="block text-sm text-gray-700 mb-1">Availability</label>
                                     <input 
                                         value={newMentor.availability} 
                                         onChange={e => setNewMentor({...newMentor, availability: e.target.value})} 
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
                                         placeholder="e.g., Weekdays 9am-5pm"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm text-gray-700 mb-1">Contact Email</label>
-                                    <input 
-                                        type="email"
-                                        value={newMentor.contact} 
-                                        onChange={e => setNewMentor({...newMentor, contact: e.target.value})} 
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
-                                        placeholder="mentor@email.com"
                                     />
                                 </div>
                                 <div>
@@ -344,6 +373,35 @@ export default function MentorshipTab() {
                                     />
                                 </div>
                                 <div>
+                                    <label className="block text-sm text-gray-700 mb-1">Session Duration</label>
+                                    <select 
+                                        value={newMentor.sessionDuration} 
+                                        onChange={e => setNewMentor({...newMentor, sessionDuration: e.target.value})} 
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    >
+                                        <option value="30 minutes">30 minutes</option>
+                                        <option value="45 minutes">45 minutes</option>
+                                        <option value="60 minutes">60 minutes</option>
+                                        <option value="90 minutes">90 minutes</option>
+                                        <option value="120 minutes">2 hours</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-gray-700 mb-1">Session Price</label>
+                                    <select 
+                                        value={newMentor.sessionPrice} 
+                                        onChange={e => setNewMentor({...newMentor, sessionPrice: e.target.value})} 
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    >
+                                        <option value="Free">Free</option>
+                                        <option value="R50">R50</option>
+                                        <option value="R100">R100</option>
+                                        <option value="R200">R200</option>
+                                        <option value="R500">R500</option>
+                                        <option value="Custom">Custom</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label className="block text-sm text-gray-700 mb-1">Languages</label>
                                     <input 
                                         value={newMentor.languages} 
@@ -354,14 +412,19 @@ export default function MentorshipTab() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm text-gray-700 mb-1">Bio/Background</label>
+                                <label className="block text-sm text-gray-700 mb-1">Bio *</label>
                                 <textarea 
                                     value={newMentor.bio} 
                                     onChange={e => setNewMentor({...newMentor, bio: e.target.value})} 
                                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
                                     rows={3}
-                                    placeholder="Brief description of the mentor's background and experience..."
+                                    required
+                                    placeholder="Brief description of the mentor's background, expertise, and what they can help with..."
                                 />
+                            </div>
+                            <div className="text-sm text-gray-600">
+                                <p className="mb-2">Note: The mentor will be created under your account ({mentorshipService.getCurrentUser()?.email || 'current user'}).</p>
+                                <p>Mentors created here will appear in the mentorship hub for users to connect with.</p>
                             </div>
                             <div className="flex gap-2 pt-2 justify-end">
                                 <button 

@@ -1,9 +1,9 @@
 // src/interfaces/MentorshipData.ts
 export interface Mentor {
-  mentorId: string;  // Changed from mentorshipId
-  name: string;      // Changed from mentorName
-  expertise: string; // Changed from mentorTitle
-  contactInfo?: string; // Changed from mentorEmail
+  mentorId: string;
+  name: string;
+  expertise: string;
+  contactInfo?: string;
   experience?: string;
   background?: string;
   availability?: string;
@@ -14,15 +14,16 @@ export interface Mentor {
   sessionPrice?: string;
   languages?: string;
   imageUrl?: string;
-  createdBy: string;
+  createdBy: string; // User email
+  createdById?: string; // User ID who created the mentor
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface MentorshipFormData {
-  name: string;           // Changed from mentorName
-  expertise: string;      // Changed from expertise (array to string)
-  contactInfo: string;    // Changed from mentorEmail
+  name: string;
+  expertise: string;
+  contactInfo: string;
   experience: string;
   background: string;
   availability: string;
@@ -31,7 +32,7 @@ export interface MentorshipFormData {
   bio: string;
   sessionDuration: string;
   sessionPrice: string;
-  languages: string;      // Changed from array to string
+  languages: string;
   imageUrl?: string;
 }
 
@@ -43,8 +44,9 @@ export interface PeerSupportGroup {
   location: string;
   maxMembers: number;
   createdBy: string;  
+  createdById: string; // Added: User ID of creator
   isPublic: boolean;
-  isActive: boolean;  // Make sure this is here
+  isActive: boolean;
   memberCount: number;
   recentActivity?: string;
   imageUrl?: string;
@@ -69,9 +71,9 @@ export interface GroupMember {
   memberId: string;
   groupId: string;
   userId: string;
-  userName?: string;      // Added as optional
-  userEmail?: string;     // Added as optional
-  role: 'OWNER' | 'ADMIN' | 'MODERATOR' | 'MEMBER'; // Changed case
+  userName?: string;
+  userEmail?: string;
+  role: 'OWNER' | 'ADMIN' | 'MODERATOR' | 'MEMBER';
   joinedAt: string;
   lastActiveAt?: string;
 }
@@ -86,7 +88,8 @@ export interface Connection {
   nextSession?: string;
   status: 'Active' | 'Connected' | 'Pending' | 'Inactive';
   conversationId?: string;
-  groupId?: string;       // Added for group connections
+  groupId?: string;
+  mentorId?: string; // Added for mentor connections
 }
 
 export interface Conversation {
@@ -99,30 +102,72 @@ export interface Conversation {
   unreadCountUser2?: number;
   createdAt: string;
   updatedAt?: string;
-  user1Name?: string;     // Added for display
-  user2Name?: string;     // Added for display
-  user1Email?: string;    // Added for display
-  user2Email?: string;    // Added for display
+  user1Name?: string;
+  user2Name?: string;
+  user1Email?: string;
+  user2Email?: string;
 }
 
 export interface Message {
   messageId: string;
   senderId: string;
+  senderName?: string;
+  senderEmail?: string;
   receiverId: string;
+  receiverName?: string;
+  receiverEmail?: string;
   content: string;
-  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'VIDEO_CALL_INVITE' | 'AUDIO_CALL_INVITE'; // Changed case
+  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'VIDEO_CALL_INVITE' | 'AUDIO_CALL_INVITE';
   timestamp: string;
   isRead: boolean;
   readAt?: string;
 }
 
-// Group message would be separate if needed
+export interface GroupConversation {
+  groupConversationId: string;
+  groupId: string;
+  groupName: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  unreadCount?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface GroupMessage {
   messageId: string;
   groupId: string;
   senderId: string;
+  senderName?: string;
   content: string;
   messageType: 'TEXT' | 'IMAGE' | 'FILE';
   timestamp: string;
   isRead: boolean;
+}
+
+export interface MentorMessage {
+  messageId: string;
+  mentorId: string;
+  senderId: string;
+  senderName?: string;
+  senderEmail?: string;
+  content: string;
+  messageType: 'TEXT' | 'IMAGE' | 'FILE';
+  timestamp: string;
+  isRead: boolean;
+  readAt?: string;
+}
+
+export interface MentorConversation {
+  conversationId: string;
+  mentorId: string;
+  mentorName: string;
+  mentorEmail?: string;
+  userId: string;
+  userName?: string;
+  lastMessage?: string;
+  lastMessageAt?: string;
+  unreadCount?: number;
+  createdAt: string;
+  updatedAt?: string;
 }

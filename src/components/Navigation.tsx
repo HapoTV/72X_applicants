@@ -18,6 +18,7 @@ import {
   Upload,
   ShoppingBag,
   Users,
+  UserPlus,
   Calendar
 } from 'lucide-react';
 
@@ -65,6 +66,9 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     
     // Learning
     { path: '/learning', icon: BookOpen, label: 'Learning', package: 'startup' as PackageType },
+
+    // Connections
+    { path: '/connections', icon: UserPlus, label: 'Connections', package: 'startup' as PackageType },
     
     // Marketplace
     { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' as PackageType },

@@ -7,7 +7,7 @@ import type { PeerSupportGroup, PeerSupportGroupFormData } from '../../interface
 interface PeerSupportGroupsProps {
   onJoinGroup: (groupId: string) => void;
   onLeaveGroup: (groupId: string) => void;
-  onOpenGroupChat: (groupId: string) => void;
+  onOpenGroupChat: (groupId: string, groupName: string) => void;
 }
 
 const PeerSupportGroups: React.FC<PeerSupportGroupsProps> = ({
@@ -156,6 +156,21 @@ const PeerSupportGroups: React.FC<PeerSupportGroupsProps> = ({
     setFilteredGroups(filtered);
     console.log(`Filtered ${filtered.length} groups from ${groups.length} total`);
   };
+
+  const handleOpenGroupChat = (groupId: string, groupName: string) => {
+  if (!window.confirm('Open group chat? You need to be a member to participate.')) {
+    return;
+  }
+  
+  // Check if user is a member
+  const group = groups.find(g => g.groupId === groupId);
+  if (group && !group.isMember) {
+    alert('You need to join the group first to participate in the chat.');
+    return;
+  }
+  
+  onOpenGroupChat(groupId, groupName);
+};
 
   const handleSearchGroups = async () => {
     if (!searchQuery.trim()) {
@@ -516,7 +531,7 @@ const PeerSupportGroups: React.FC<PeerSupportGroupsProps> = ({
                         Leave Group
                       </button>
                       <button 
-                        onClick={() => onOpenGroupChat(group.groupId)}
+                        onClick={() => handleOpenGroupChat(group.groupId, group.name)}
                         className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-xs flex items-center justify-center space-x-1"
                       >
                         <MessageSquare className="w-4 h-4" />

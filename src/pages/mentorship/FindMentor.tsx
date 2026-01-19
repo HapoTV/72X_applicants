@@ -5,9 +5,9 @@ import { mentorshipService } from '../../services/MentorshipService';
 import type { Mentor } from '../../interfaces/MentorshipData';
 
 interface FindMentorProps {
-  onStartChat: (mentorId: string) => void;
-  onConnect: (mentorId: string) => void;
-}
+    onStartChat: (mentorId: string, mentorName: string, mentorEmail: string) => void;
+    onConnect: (mentorId: string) => void;
+  }
 
 const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -17,6 +17,7 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
   const [filteredMentors, setFilteredMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatLoading, setChatLoading] = useState<string | null>(null);
 
   const categories = [
     { id: 'all', name: 'All Categories' },
@@ -53,15 +54,12 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
   const filterMentors = () => {
     let filtered = mentors;
 
-    // Apply category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(mentor => {
-        // Check if expertise string contains the category (case-insensitive)
         return mentor.expertise?.toLowerCase().includes(selectedCategory.toLowerCase()) || false;
       });
     }
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(mentor => {
@@ -106,11 +104,24 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
   const handleConnectRequest = async (mentorId: string) => {
     try {
       await onConnect(mentorId);
-      // Show success message or update UI
     } catch (error) {
       console.error('Error connecting to mentor:', error);
     }
   };
+
+  const handleChatWithMentor = (mentor: Mentor) => {
+    if (!mentor.contactInfo) {
+      alert('This mentor has no contact information available.');
+      return;
+    }
+
+    console.log('Starting chat with mentor profile:', mentor.name);
+    
+    // We'll use mentorId for mentor-specific chat
+    // Pass the mentor's own contact info, not the creator's
+    onStartChat(mentor.mentorId, mentor.name, mentor.contactInfo);
+  };
+
 
   return (
     <div className="space-y-6">
@@ -226,6 +237,7 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
               const availability = mentorshipService.isMentorAvailable(mentor.availability);
               const ratingText = mentorshipService.formatRating(mentor.rating);
               const sessionsText = mentorshipService.formatSessionsCount(mentor.sessionsCompleted);
+              const isChatLoading = chatLoading === mentor.mentorId;
               
               return (
                 <div key={mentor.mentorId} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
@@ -311,10 +323,16 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
                       Connect
                     </button>
                     <button 
-                      onClick={() => onStartChat(mentor.mentorId)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      onClick={() => handleChatWithMentor(mentor)}
+                      disabled={isChatLoading}
+                      className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      title="Message"
                     >
-                      <MessageSquare className="w-4 h-4 text-gray-600" />
+                      {isChatLoading ? (
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <MessageSquare className="w-4 h-4 text-gray-600" />
+                      )}
                     </button>
                   </div>
                 </div>

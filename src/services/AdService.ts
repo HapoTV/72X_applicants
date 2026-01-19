@@ -8,13 +8,15 @@ import type {
   EngagementAnalytics,
   AdStatus,
   AdTargetingType,
-  
   EngagementType,
   DashboardEngagementData
 } from '../interfaces/AdData';
 import {EngagementPeriod} from '../interfaces/AdData';
 
 class AdService {
+  private clickTracker: Map<string, number> = new Map(); // Track ad clicks by adId and timestamp
+  public readonly CLICK_COOLDOWN = 3600000; // 1 hour cooldown for same ad clicks
+
   // Ad Management Methods
   async createAd(adData: AdUploadDTO): Promise<AdDTO> {
     try {
@@ -121,10 +123,24 @@ class AdService {
 
   async getAdsForUser(): Promise<AdDTO[]> {
     try {
-      const response = await axiosClient.get('/ads/for-user');
+      console.log('🔄 Fetching ads for user...');
+      const userId = localStorage.getItem('userId');
+      const response = await axiosClient.get('/ads/for-user', {
+        params: { userId, timestamp: Date.now() } // Cache busting
+      });
+      
+      console.log('📊 Ads received from API:', response.data);
+      if (Array.isArray(response.data)) {
+        console.log(`✅ Found ${response.data.length} ads`);
+        response.data.forEach((ad: AdDTO, index: number) => {
+          console.log(`  ${index + 1}. ${ad.title} - ${ad.status} - ${ad.mediaType} - Priority: ${ad.priority}`);
+        });
+      }
+      
       return response.data;
     } catch (error: any) {
-      console.error('Error fetching ads for user:', error);
+      console.error('❌ Error fetching ads for user:', error);
+      console.error('Error details:', error.response?.data || error.message);
       return [];
     }
   }
@@ -138,12 +154,33 @@ class AdService {
     }
   }
 
-  async recordAdClick(adId: string): Promise<void> {
+  async recordAdClick(adId: string): Promise<boolean> {
     try {
+      // Check if user has clicked this ad recently
+      const lastClick = this.clickTracker.get(adId);
+      const now = Date.now();
+      
+      if (lastClick && (now - lastClick) < this.CLICK_COOLDOWN) {
+        console.log(`⏳ Click cooldown active for ad ${adId}, skipping duplicate click`);
+        return false; // Click not counted
+      }
+      
+      // Record the click
       await axiosClient.post(`/ads/${adId}/click`);
+      
+      // Update click tracker
+      this.clickTracker.set(adId, now);
+      
+      // Store in localStorage for persistence
+      const clickHistory = JSON.parse(localStorage.getItem('adClickHistory') || '{}');
+      clickHistory[adId] = now;
+      localStorage.setItem('adClickHistory', JSON.stringify(clickHistory));
+      
+      console.log(`✅ Click recorded for ad ${adId}`);
+      return true; // Click counted
     } catch (error: any) {
       console.error('Error recording click:', error);
-      // Don't throw error for click tracking to avoid breaking user experience
+      return false;
     }
   }
 
@@ -377,6 +414,45 @@ class AdService {
       };
     }
   }
+
+  // Load click history from localStorage
+  loadClickHistory(): void {
+    try {
+      const clickHistory = JSON.parse(localStorage.getItem('adClickHistory') || '{}');
+      Object.entries(clickHistory).forEach(([adId, timestamp]) => {
+        this.clickTracker.set(adId, timestamp as number);
+      });
+      console.log('📝 Loaded click history:', this.clickTracker.size, 'ads');
+    } catch (error) {
+      console.error('Error loading click history:', error);
+    }
+  }
+
+  // Check if user can click an ad (not in cooldown)
+  canClickAd(adId: string): boolean {
+    const lastClick = this.clickTracker.get(adId);
+    if (!lastClick) return true;
+    
+    const now = Date.now();
+    return (now - lastClick) >= this.CLICK_COOLDOWN;
+  }
+
+  // Get remaining cooldown time
+  getCooldownRemaining(adId: string): number {
+    const lastClick = this.clickTracker.get(adId);
+    if (!lastClick) return 0;
+    
+    const now = Date.now();
+    const elapsed = now - lastClick;
+    return Math.max(0, this.CLICK_COOLDOWN - elapsed);
+  }
 }
 
 export const adService = new AdService();
+
+// Load click history on service initialization
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    adService.loadClickHistory();
+  }, 1000);
+}
