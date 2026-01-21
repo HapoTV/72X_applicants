@@ -3,11 +3,34 @@ import axiosClient from '../api/axiosClient';
 import type { 
   UserLearningModule, 
   LearningStats,
-  LearningModuleFilter
+  LearningModuleFilter,
+  LearningMaterialUserProgress,
+  LearningProgressEventRequest
 } from '../interfaces/LearningData';
 
 class LearningService {
   private baseUrl = '/learning-materials';
+
+  private async safeGet<T>(url: string, config?: any): Promise<T | null> {
+    try {
+      const res = await axiosClient.get(url, config);
+      return res.data as T;
+    } catch (error) {
+      console.warn(`LearningService.safeGet failed for ${url} (safe to ignore until backend supports it):`, error);
+      return null;
+    }
+  }
+
+  private async safePost<T>(url: string, body?: any, config?: any): Promise<T | null> {
+    try {
+      const res = await axiosClient.post(url, body, config);
+      return res.data as T;
+    } catch (error) {
+      console.warn(`LearningService.safePost failed for ${url} (safe to ignore until backend supports it):`, error);
+      return null;
+    }
+  }
+
   private normalizeCategory(category: string): string {
     const normalized = (category || '')
       .trim()
@@ -81,6 +104,34 @@ class LearningService {
       console.log('Backend response:', response.data);
       let allModules = this.transformBackendToUserModules(response.data);
       console.log('Transformed modules:', allModules);
+
+      // Try to fetch per-user progress and merge it (safe if endpoint not implemented)
+      const progress = await this.safeGet<LearningMaterialUserProgress[]>(`${this.baseUrl}/progress/${encodeURIComponent(userEmail)}`);
+      if (progress && Array.isArray(progress) && progress.length > 0) {
+        const progressById = new Map(progress.map((p) => [p.materialId, p] as const));
+        allModules = allModules.map((m) => {
+          const p = progressById.get(m.id);
+          if (!p) return m;
+          const mergedProgress = typeof p.progress === 'number' ? p.progress : m.progress;
+          const quizStartedAt = (p.quizStartedAt || undefined) as any;
+          const quizPassedAt = (p.quizPassedAt || undefined) as any;
+
+          return {
+            ...m,
+            progress: mergedProgress,
+            lastAccessed: p.lastAccessed || m.lastAccessed,
+            openedAt: p.openedAt,
+            finishedAt: p.finishedAt,
+            quizStartedAt,
+            quizPassedAt,
+            quizAttempts: p.attempts,
+            lastQuizScore: p.lastQuizScore,
+            lastQuizTotalQuestions: p.lastQuizTotalQuestions,
+            lastQuizPercentage: p.lastQuizPercentage,
+            isCompleted: Boolean(quizPassedAt || p.finishedAt || mergedProgress === 100),
+          };
+        });
+      }
       
       // Apply category filter if specified
       if (filter?.category && filter.category !== 'all') {
@@ -118,6 +169,56 @@ class LearningService {
         byDifficulty: {}
       };
     }
+  }
+
+  /**
+   * Record a progress event for a user's learning material.
+   *
+   * Proposed endpoint: POST /learning-materials/progress/event
+   * This is safe: if the endpoint is not available yet, it won't throw.
+   */
+  async recordProgressEvent(payload: LearningProgressEventRequest): Promise<void> {
+    await this.safePost(`${this.baseUrl}/progress/event`, payload);
+  }
+
+  async recordOpened(userEmail: string, materialId: string): Promise<void> {
+    await this.recordProgressEvent({
+      userEmail,
+      materialId,
+      event: 'OPENED',
+      occurredAt: new Date().toISOString(),
+    });
+  }
+
+  async recordFinished(userEmail: string, materialId: string): Promise<void> {
+    await this.recordProgressEvent({
+      userEmail,
+      materialId,
+      event: 'FINISHED',
+      occurredAt: new Date().toISOString(),
+    });
+  }
+
+  async recordQuizStarted(userEmail: string, materialId: string): Promise<void> {
+    await this.recordProgressEvent({
+      userEmail,
+      materialId,
+      event: 'QUIZ_STARTED',
+      occurredAt: new Date().toISOString(),
+    });
+  }
+
+  async recordQuizPassed(userEmail: string, materialId: string, score: number, totalQuestions: number, percentage: number): Promise<void> {
+    await this.recordProgressEvent({
+      userEmail,
+      materialId,
+      event: 'QUIZ_PASSED',
+      occurredAt: new Date().toISOString(),
+      score,
+      totalQuestions,
+      percentage,
+      progress: 100,
+    });
   }
 
   /**

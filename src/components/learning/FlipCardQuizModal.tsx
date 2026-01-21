@@ -598,7 +598,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       {showConfetti && (
         <Confetti
           width={windowSize.width}
@@ -608,7 +608,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
           gravity={0.2}
         />
       )}
-      <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl p-8 max-w-5xl w-full mx-4 max-h-[95vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Brain className="w-6 h-6 text-primary-600" />
@@ -720,7 +720,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
           <div>
             <div className="mb-6">
               <div
-                className="relative w-full h-[360px]"
+                className="relative w-full h-[460px]"
                 style={{ perspective: '1200px' }}
               >
                 <div

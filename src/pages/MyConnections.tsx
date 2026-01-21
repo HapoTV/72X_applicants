@@ -1,47 +1,43 @@
 // src/pages/MyConnections.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Search as SearchIcon } from 'lucide-react';
+
 import {
   Container,
-  Grid,
   Card,
-  CardContent,
   Typography,
-  TextField,
-  InputAdornment,
   Avatar,
   Box,
   Chip,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   CircularProgress,
   IconButton,
-  Badge,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
 } from '@mui/material';
+
 import {
-  Search,
-  FilterList,
   LocationOn,
   Business,
   Message,
   VideoCall,
   Phone,
 } from '@mui/icons-material';
+
 import MessageServices from '../services/MessageServices';
 import ChatWindow from '../components/ChatWindow';
+import { useAuth } from '../context/AuthContext';
+import type { Conversation } from '../interfaces/MessageData';
 
-interface User {
+interface ConnectionUser {
   userId: string;
   email: string;
   firstName: string;
   lastName: string;
   role: string;
+
   location?: string;
   industry?: string;
   bio?: string;
@@ -51,41 +47,94 @@ interface User {
 }
 
 const MyConnections: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const { user: authUser } = useAuth();
+  const [users, setUsers] = useState<ConnectionUser[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<ConnectionUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [chatOpen, setChatOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<ConnectionUser | null>(null);
   const [industries, setIndustries] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+
+  const DEFAULT_VISIBLE = 10;
+  const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE);
+  const [conversationMetaByUserId, setConversationMetaByUserId] = useState<Record<string, { unread: number; lastTimeMs: number }>>({});
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    setVisibleCount(DEFAULT_VISIBLE);
+  }, [searchTerm, selectedIndustry, selectedLocation]);
+
+  useEffect(() => {
+    const userId = authUser?.userId;
+    if (!userId) return;
+
+    const loadConversations = async () => {
+      try {
+        const conversations: Conversation[] = await MessageServices.getUserConversations(userId);
+        const meta: Record<string, { unread: number; lastTimeMs: number }> = {};
+        for (const c of conversations) {
+          const lastTimeMs = c.lastMessageTime ? Date.parse(c.lastMessageTime) : 0;
+          meta[c.userId] = {
+            unread: Number(c.unreadCount || 0),
+            lastTimeMs: Number.isFinite(lastTimeMs) ? lastTimeMs : 0,
+          };
+        }
+        setConversationMetaByUserId(meta);
+      } catch {
+        // ignore; list still works without conversation ordering
+      }
+    };
+
+    loadConversations();
+    const interval = window.setInterval(loadConversations, 15000);
+    return () => window.clearInterval(interval);
+  }, [authUser?.userId]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const response = await MessageServices.getChatUsers();
-      
+      const mappedUsers: ConnectionUser[] = (response as any[]).map((u) => {
+        const fullName = (u.fullName || '').trim();
+        const parts = fullName.split(/\s+/).filter(Boolean);
+        const firstName = parts[0] || '';
+        const lastName = parts.slice(1).join(' ') || '';
+
+        return {
+          userId: u.userId,
+          email: u.email,
+          firstName,
+          lastName,
+          role: u.role,
+          location: u.location,
+          industry: u.industry,
+          profileImage: u.profileImageUrl,
+        };
+      });
+
       // Don't filter on frontend if backend already filters
       // Let backend handle the filtering based on user role
-      setUsers(response);
-      setFilteredUsers(response);
-      
+      setUsers(mappedUsers);
+      setFilteredUsers(mappedUsers);
+
       // Extract unique industries and locations for filters
       const uniqueIndustries = Array.from(
-        new Set(response.map((user: any) => user.industry).filter(Boolean))
+        new Set(mappedUsers.map((user) => user.industry).filter(Boolean))
       ) as string[];
-      
+
       const uniqueLocations = Array.from(
-        new Set(response.map((user: any) => user.location).filter(Boolean))
+        new Set(mappedUsers.map((user) => user.location).filter(Boolean))
       ) as string[];
-      
+
       setIndustries(uniqueIndustries);
       setLocations(uniqueLocations);
     } catch (error) {
@@ -128,19 +177,30 @@ const MyConnections: React.FC = () => {
     setFilteredUsers(filtered);
   };
 
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-  };
+  const sortedFilteredUsers = useMemo(() => {
+    const copy = [...filteredUsers];
+    copy.sort((a, b) => {
+      const ma = conversationMetaByUserId[a.userId];
+      const mb = conversationMetaByUserId[b.userId];
 
-  const handleIndustryChange = (event: any) => {
-    setSelectedIndustry(event.target.value);
-  };
+      const ua = ma?.unread || 0;
+      const ub = mb?.unread || 0;
+      if (ua !== ub) return ub - ua;
 
-  const handleLocationChange = (event: any) => {
-    setSelectedLocation(event.target.value);
-  };
+      const ta = ma?.lastTimeMs || 0;
+      const tb = mb?.lastTimeMs || 0;
+      if (ta !== tb) return tb - ta;
 
-  const handleStartChat = (user: User) => {
+      const an = `${a.firstName || ''} ${a.lastName || ''}`.trim();
+      const bn = `${b.firstName || ''} ${b.lastName || ''}`.trim();
+      return an.localeCompare(bn);
+    });
+    return copy;
+  }, [filteredUsers, conversationMetaByUserId]);
+
+  const visibleUsers = useMemo(() => sortedFilteredUsers.slice(0, visibleCount), [sortedFilteredUsers, visibleCount]);
+
+  const handleStartChat = (user: ConnectionUser) => {
     setSelectedUser(user);
     setChatOpen(true);
   };
@@ -176,113 +236,85 @@ const MyConnections: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        My Connections
-      </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Connect with other users, search by name, industry, or location
-      </Typography>
+    <div className="space-y-6 animate-fade-in">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Connections</h1>
+        <p className="text-gray-600">Connect with fellow entrepreneurs, share experiences, and grow together</p>
+      </div>
 
-      {/* Search and Filter Bar */}
-      <Card sx={{ mb: 4, p: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Search users by name, email, industry, or location..."
-              value={searchTerm}
-              onChange={handleSearch}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
-              <InputLabel>Industry</InputLabel>
-              <Select
-                value={selectedIndustry}
-                label="Industry"
-                onChange={handleIndustryChange}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <Business />
-                  </InputAdornment>
-                }
-              >
-                <MenuItem value="all">All Industries</MenuItem>
-                {industries.map((industry) => (
-                  <MenuItem key={industry} value={industry}>
-                    {industry}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
-              <InputLabel>Location</InputLabel>
-              <Select
-                value={selectedLocation}
-                label="Location"
-                onChange={handleLocationChange}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <LocationOn />
-                  </InputAdornment>
-                }
-              >
-                <MenuItem value="all">All Locations</MenuItem>
-                {locations.map((location) => (
-                  <MenuItem key={location} value={location}>
-                    {location}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          
-          <Grid item xs={12} md={2}>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<FilterList />}
-              onClick={clearFilters}
-            >
-              Clear Filters
-            </Button>
-          </Grid>
-        </Grid>
-      </Card>
+      {/* Search and Filter Bar (Marketplace-style) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="relative">
+          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search users by name, email, industry, or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+          />
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <select
+            value={selectedIndustry}
+            onChange={(e) => setSelectedIndustry(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+          >
+            <option value="all">All Industries</option>
+            {industries.map((industry) => (
+              <option key={industry} value={industry}>
+                {industry}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+          >
+            <option value="all">All Locations</option>
+            {locations.map((location) => (
+              <option key={location} value={location}>
+                {location}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+          >
+            Clear Filters
+          </button>
+        </div>
+      </div>
 
       {/* Results Summary */}
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="subtitle1">
-          Showing {filteredUsers.length} of {users.length} users
+          Showing {visibleUsers.length} of {sortedFilteredUsers.length} users
         </Typography>
         {users.length > 0 && (
-          <Chip 
-            label={`${users.length} total users`} 
-            color="primary" 
-            variant="outlined" 
+          <Chip
+            label={`${users.length} total users`}
+            color="primary"
+            variant="outlined"
           />
         )}
       </Box>
 
-      {/* Users Grid */}
-      {filteredUsers.length === 0 ? (
+      {/* Users List */}
+      {sortedFilteredUsers.length === 0 ? (
         <Card sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary">
             No users found matching your criteria
           </Typography>
+
+
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Try adjusting your search or filters
           </Typography>
@@ -291,86 +323,102 @@ const MyConnections: React.FC = () => {
           </Button>
         </Card>
       ) : (
-        <Grid container spacing={3}>
-          {filteredUsers.map((user) => (
-            <Grid item xs={12} sm={6} md={4} key={user.userId}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Badge
-                      color="success"
-                      variant="dot"
-                      invisible={!user.isOnline}
-                      anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'right',
-                      }}
-                    >
-                      <Avatar
-                        src={user.profileImage}
-                        sx={{ width: 56, height: 56, mr: 2 }}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="divide-y divide-gray-100">
+            {visibleUsers.map((user) => {
+              const meta = conversationMetaByUserId[user.userId];
+              const unread = meta?.unread || 0;
+
+              return (
+                <div key={user.userId} className="p-1.5 hover:bg-gray-50 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="relative">
+                        <Avatar src={user.profileImage} sx={{ width: 28, height: 28 }}>
+                          {user.firstName?.[0]}{user.lastName?.[0]}
+                        </Avatar>
+                        {user.isOnline && (
+                          <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap leading-tight">
+                          <div className="font-semibold text-gray-900 truncate text-[13px]">
+                            {user.firstName} {user.lastName}
+                          </div>
+                          {unread > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full">
+                              New {unread}
+                            </span>
+                          )}
+                          {user.isOnline ? (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-green-50 border border-green-200 text-green-700 rounded-full">
+                              Online
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-gray-500">Last seen: {user.lastSeen || 'Recently'}</span>
+                          )}
+                        </div>
+
+                        <div className="text-[11px] text-gray-600 truncate leading-tight">{user.email}</div>
+
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                          {user.industry && (
+                            <div className="text-[11px] text-gray-700 inline-flex items-center gap-1">
+                              <Business fontSize="small" sx={{ color: 'text.secondary' }} />
+                              <span className="truncate">{user.industry}</span>
+                            </div>
+                          )}
+                          {user.location && (
+                            <div className="text-[11px] text-gray-700 inline-flex items-center gap-1">
+                              <LocationOn fontSize="small" sx={{ color: 'text.secondary' }} />
+                              <span className="truncate">{user.location}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="sm:ml-auto flex items-center gap-1">
+                      <button
+                        onClick={() => handleStartChat(user)}
+                        className="inline-flex items-center justify-center gap-2 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-medium"
                       >
-                        {user.firstName?.[0]}{user.lastName?.[0]}
-                      </Avatar>
-                    </Badge>
-                    <Box>
-                      <Typography variant="h6">
-                        {user.firstName} {user.lastName}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {user.email}
-                      </Typography>
-                      {user.isOnline ? (
-                        <Chip label="Online" color="success" size="small" />
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">
-                          Last seen: {user.lastSeen || 'Recently'}
-                        </Typography>
-                      )}
-                    </Box>
-                  </Box>
+                        <Message className="w-5 h-5" />
+                        Message
+                      </button>
 
-                  {user.industry && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Business fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                      <Typography variant="body2">{user.industry}</Typography>
-                    </Box>
-                  )}
-
-                  {user.location && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <LocationOn fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                      <Typography variant="body2">{user.location}</Typography>
-                    </Box>
-                  )}
+                      <IconButton color="primary" size="small">
+                        <VideoCall />
+                      </IconButton>
+                      <IconButton color="primary" size="small">
+                        <Phone />
+                      </IconButton>
+                    </div>
+                  </div>
 
                   {user.bio && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      {user.bio.length > 100 ? `${user.bio.substring(0, 100)}...` : user.bio}
-                    </Typography>
+                    <div className="mt-1 text-xs text-gray-600">
+                      {user.bio.length > 70 ? `${user.bio.substring(0, 70)}...` : user.bio}
+                    </div>
                   )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                    <Button
-                      variant="contained"
-                      startIcon={<Message />}
-                      fullWidth
-                      onClick={() => handleStartChat(user)}
-                    >
-                      Message
-                    </Button>
-                    <IconButton color="primary">
-                      <VideoCall />
-                    </IconButton>
-                    <IconButton color="primary">
-                      <Phone />
-                    </IconButton>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+      {sortedFilteredUsers.length > visibleCount && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => setVisibleCount((c) => c + DEFAULT_VISIBLE)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+          >
+            Show more users
+          </button>
+        </div>
       )}
 
       {/* Chat Dialog */}
@@ -379,7 +427,6 @@ const MyConnections: React.FC = () => {
           open={chatOpen}
           onClose={handleCloseChat}
           maxWidth="md"
-          fullWidth
         >
           <DialogTitle>
             Chat with {selectedUser.firstName} {selectedUser.lastName}
@@ -398,7 +445,7 @@ const MyConnections: React.FC = () => {
           </DialogActions>
         </Dialog>
       )}
-    </Container>
+    </div>
   );
 };
 

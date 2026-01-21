@@ -68,7 +68,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     { path: '/learning', icon: BookOpen, label: 'Learning', package: 'startup' as PackageType },
 
     // Connections
-    { path: '/connections', icon: UserPlus, label: 'Connections', package: 'startup' as PackageType },
+    { path: '/connections', icon: UserPlus, label: 'Connections', package: 'essential' as PackageType },
     
     // Marketplace
     { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' as PackageType },

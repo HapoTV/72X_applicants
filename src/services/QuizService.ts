@@ -21,6 +21,8 @@ export interface QuizQuestion {
 }
 
 class QuizService {
+  private static readonly MAX_QUESTIONS = 20;
+
   private static normalizeCategory(category: string): string {
     const normalized = (category || '')
       .trim()
@@ -35,7 +37,10 @@ class QuizService {
   /**
    * Generate quiz questions based on learning material content
    */
-  static generateQuizQuestions(moduleTitle: string, _moduleDescription: string, category: string): QuizQuestion[] {
+  static generateQuizQuestions(moduleTitle: string, moduleDescription: string, category: string): QuizQuestion[] {
+    const content = [moduleTitle, moduleDescription].filter(Boolean).join('\n');
+    const targetCount = this.computeTargetQuestionCount(content);
+
     // Base questions with category-specific logic
     const baseQuestions: QuizQuestion[] = [
       {
@@ -81,8 +86,149 @@ class QuizService {
 
     // Add category-specific questions
     const categoryQuestions = this.getCategorySpecificQuestions(category, moduleTitle);
-    
-    return [...baseQuestions, ...categoryQuestions];
+
+    // Add content-derived questions (deterministic, based on terms present in the material)
+    const contentQuestions = this.generateContentBasedQuestions(content);
+
+    const all = [...baseQuestions, ...categoryQuestions, ...contentQuestions];
+    const deduped = this.dedupeByQuestionText(all);
+    return deduped.slice(0, Math.min(targetCount, this.MAX_QUESTIONS));
+  }
+
+  private static computeTargetQuestionCount(content: string): number {
+    const wordCount = this.countWords(content);
+
+    // Balanced defaults: not too short, not too long
+    if (wordCount < 80) return 8;
+    if (wordCount < 180) return 10;
+    if (wordCount < 350) return 12;
+    if (wordCount < 600) return 15;
+    return 20;
+  }
+
+  private static countWords(text: string): number {
+    return (text || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split(' ')
+      .filter(Boolean).length;
+  }
+
+  private static dedupeByQuestionText(questions: QuizQuestion[]): QuizQuestion[] {
+    const seen = new Set<string>();
+    const out: QuizQuestion[] = [];
+    for (const q of questions) {
+      const key = (q.question || '').trim().toLowerCase();
+      if (!key) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(q);
+    }
+    return out;
+  }
+
+  private static generateContentBasedQuestions(content: string): QuizQuestion[] {
+    const keywords = this.extractKeywords(content);
+    if (keywords.length === 0) return [];
+
+    const questions: QuizQuestion[] = [];
+    const distractorPool = [...keywords];
+
+    // A few "mentioned term" MCQs
+    const mcqCount = Math.min(8, keywords.length);
+    for (let i = 0; i < mcqCount; i++) {
+      const correct = keywords[i];
+      const options = this.buildOptions(correct, distractorPool, 4);
+      questions.push({
+        id: `c_mcq_${i + 1}`,
+        type: 'multiple_choice',
+        question: 'Which term is mentioned in this learning material?',
+        options,
+        correctAnswer: options.indexOf(correct),
+        explanation: 'This question checks whether you noticed key terms and concepts from the material.'
+      });
+    }
+
+    // A few fill-in-the-blank questions based on real sentences
+    const sentences = this.extractSentences(content);
+    const fillCount = Math.min(5, keywords.length);
+    for (let i = 0; i < fillCount; i++) {
+      const kw = keywords[i];
+      const sentence = sentences.find((s) => new RegExp(`\\b${this.escapeRegExp(kw)}\\b`, 'i').test(s));
+      if (!sentence) continue;
+      const template = sentence.replace(new RegExp(`\\b${this.escapeRegExp(kw)}\\b`, 'i'), '____');
+      const wordBank = this.buildOptions(kw, distractorPool, 4);
+      questions.push({
+        id: `c_fill_${i + 1}`,
+        type: 'fill_blank',
+        question: 'Fill in the blank using the word bank.',
+        options: [],
+        correctAnswer: 0,
+        template,
+        wordBank,
+        correctWord: kw,
+        explanation: 'This question checks recall of a key term in context.'
+      });
+    }
+
+    return questions;
+  }
+
+  private static extractKeywords(content: string): string[] {
+    const stop = new Set([
+      'the','and','or','to','of','in','a','an','for','on','with','as','at','by','from','is','are','was','were','be','been','being',
+      'this','that','these','those','it','its','their','your','you','we','our','they','them','i','me','my',
+      'can','could','should','would','will','may','might','must','not','no','yes','do','does','did','done',
+      'learn','learning','module','material','video','pdf','document','lesson','lessons'
+    ]);
+
+    const words = (content || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((w) => w.length >= 4)
+      .filter((w) => !stop.has(w));
+
+    const freq = new Map<string, number>();
+    for (const w of words) freq.set(w, (freq.get(w) || 0) + 1);
+
+    return [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([w]) => w)
+      .slice(0, 20);
+  }
+
+  private static extractSentences(content: string): string[] {
+    const normalized = (content || '').replace(/\s+/g, ' ').trim();
+    if (!normalized) return [];
+    return normalized
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 40)
+      .slice(0, 50);
+  }
+
+  private static escapeRegExp(input: string): string {
+    return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private static buildOptions(correct: string, pool: string[], count: number): string[] {
+    const unique = Array.from(new Set(pool.filter(Boolean)));
+    const others = unique.filter((w) => w !== correct);
+    const options = [correct];
+    while (options.length < count && others.length > 0) {
+      const idx = Math.floor(Math.random() * others.length);
+      options.push(others.splice(idx, 1)[0]);
+    }
+    // Fallback distractors (stable)
+    while (options.length < count) options.push('none of the above');
+
+    // Shuffle
+    return options
+      .map((o) => ({ o, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ o }) => o);
   }
 
   /**

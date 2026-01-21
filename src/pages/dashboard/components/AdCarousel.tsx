@@ -272,65 +272,65 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
     }
   };
 
-  const renderLoading = () => (
-    <div className="relative bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg p-4 text-white animate-pulse overflow-hidden">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="h-4 bg-white bg-opacity-20 rounded w-32"></div>
-          <div className="h-3 bg-white bg-opacity-20 rounded w-48"></div>
-        </div>
-        <div className="h-8 bg-white bg-opacity-20 rounded w-20"></div>
+  const renderHeader = (subtitle: string) => (
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900">{t.advertisingSpace}</h3>
+        <p className="text-xs text-gray-600 mt-1 max-w-md">{subtitle}</p>
       </div>
+      <button
+        onClick={onAdvertiseClick}
+        className="px-3 py-1 bg-white border border-gray-300 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+      >
+        {t.requestAdSpace}
+      </button>
+    </div>
+  );
+
+  const renderSlot = (subtitle: string, content: React.ReactNode) => (
+    <div className="space-y-3">
+      {renderHeader(subtitle)}
+      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">{content}</div>
+    </div>
+  );
+
+  const renderLoading = () => (
+    <div className="animate-pulse">
+      {renderSlot(
+        t.advertiseWithUs,
+        <div className="h-60 p-4">
+          <div className="h-full bg-gray-100 rounded" />
+        </div>
+      )}
     </div>
   );
 
   const renderError = () => (
-    <div className="relative bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-4 text-white overflow-hidden">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold">{t.advertisingSpace}</h3>
-          <p className="text-xs opacity-80 mt-1">
-            {error}
-          </p>
+    renderSlot(
+      typeof error === 'string' ? error : t.advertiseWithUs,
+      <div className="flex items-center justify-center h-60 p-4">
+        <div className="text-center">
+          <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-xs text-gray-500">Your ad could appear here</p>
         </div>
-        <button 
-          onClick={onAdvertiseClick}
-          className="px-3 py-1 bg-white text-yellow-600 text-xs font-semibold rounded-lg hover:bg-yellow-50 transition-colors"
-        >
-          {t.requestAdSpace}
-        </button>
       </div>
-    </div>
+    )
   );
 
   const renderEmpty = () => (
-    <div className="relative bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg p-4 text-white overflow-hidden">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold">{t.advertisingSpace}</h3>
-          <p className="text-xs opacity-80 mt-1 max-w-md">
-            {t.advertiseWithUs}
-          </p>
-        </div>
-        <button 
-          onClick={onAdvertiseClick}
-          className="px-3 py-1 bg-white text-blue-600 text-xs font-semibold rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
-        >
-          {t.requestAdSpace}
-        </button>
-      </div>
-      
-      <div className="mt-3 p-3 bg-white bg-opacity-10 rounded-lg">
-        <div className="flex items-center justify-center h-24">
-          <div className="text-center">
-            <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p className="text-xs opacity-70">Your ad could appear here</p>
-          </div>
+    renderSlot(
+      t.advertiseWithUs,
+      <div className="flex items-center justify-center h-60 p-4">
+        <div className="text-center">
+          <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-xs text-gray-500">Your ad could appear here</p>
         </div>
       </div>
-    </div>
+    )
   );
 
   const renderCarousel = () => {
@@ -340,14 +340,13 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
     const cooldownRemaining = adService.getCooldownRemaining(currentAd.adId);
     const isVideo = currentAd.mediaType === 'VIDEO';
 
-    return (
-      <div className="relative overflow-hidden rounded-lg">
-        {/* Debug Info - Remove in production */}
+    return renderSlot(
+      t.advertiseWithUs,
+      <div className="relative overflow-hidden">
         <div ref={adDebugRef} className="absolute top-2 left-2 z-20 text-xs text-white bg-black bg-opacity-50 p-1 rounded">
           Debug: {ads.length} ads
         </div>
 
-        {/* Navigation Arrows - Always Visible if Multiple Ads */}
         {ads.length > 1 && (
           <>
             <button
@@ -360,7 +359,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            
+
             <button
               onClick={nextAd}
               className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full transition-all duration-200 hover:scale-110 shadow-lg"
@@ -373,10 +372,9 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
             </button>
           </>
         )}
-        
-        {/* Ad Content */}
-        <div 
-          className={`bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg overflow-hidden transform transition-all duration-300 ${
+
+        <div
+          className={`bg-gradient-to-r from-blue-500 to-cyan-500 overflow-hidden transform transition-all duration-300 ${
             isTransitioning ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'
           }`}
           role="button"
@@ -387,23 +385,18 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
         >
           <div className="p-4 text-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">
-                {t.sponsored}
-              </span>
+              <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">{t.sponsored}</span>
               <span className="text-xs opacity-80">{t.ad}</span>
             </div>
-            
-            <h3 className="text-sm font-semibold mb-3 line-clamp-1">
-              {currentAd.title}
-            </h3>
-            
-            {/* Media Section - Increased Size */}
+
+            <h3 className="text-sm font-semibold mb-3 line-clamp-1">{currentAd.title}</h3>
+
             {currentAd.mediaType === 'IMAGE' && currentAd.bannerUrl && (
               <div className="mt-2 relative bg-black bg-opacity-20 rounded-lg overflow-hidden">
-                <img 
-                  src={currentAd.bannerUrl} 
+                <img
+                  src={currentAd.bannerUrl}
                   alt={currentAd.title}
-                  className="w-full h-48 object-contain rounded-lg"
+                  className="w-full h-64 object-contain rounded-lg"
                   loading="lazy"
                   onError={(e) => {
                     console.error('Failed to load ad image:', currentAd.bannerUrl);
@@ -420,17 +413,17 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
                 )}
               </div>
             )}
-            
+
             {currentAd.mediaType === 'VIDEO' && currentAd.bannerUrl && (
               <div className="mt-2 relative bg-black bg-opacity-20 rounded-lg overflow-hidden">
-                <video 
+                <video
                   ref={(el) => {
                     if (el) {
                       videoRefs.current.set(currentAd.adId, el);
                     }
                   }}
                   src={currentAd.bannerUrl}
-                  className="w-full h-48 object-contain rounded-lg"
+                  className="w-full h-64 object-contain rounded-lg"
                   muted
                   playsInline
                   autoPlay
@@ -455,36 +448,35 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
                 )}
               </div>
             )}
-            
+
             <div className="flex items-center justify-between mt-4 text-xs">
               <div className="flex items-center">
                 <span className={`opacity-80 ${!canClick ? 'line-through' : ''}`}>
-                  {isClicking ? 'Opening...' : 
-                   canClick ? t.learnMore : t.cooldown}
+                  {isClicking ? 'Opening...' : canClick ? t.learnMore : t.cooldown}
                 </span>
                 {isClicking && (
                   <svg className="w-3 h-3 ml-1 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                   </svg>
                 )}
                 {cooldownRemaining > 0 && !isClicking && (
-                  <span className="ml-2 text-xs opacity-70">
-                    ({Math.ceil(cooldownRemaining / 60000)}m)
-                  </span>
+                  <span className="ml-2 text-xs opacity-70">({Math.ceil(cooldownRemaining / 60000)}m)</span>
                 )}
               </div>
               <span className="opacity-80">
                 {currentAd.totalClicks || 0} {t.clicks}
               </span>
             </div>
-            
-            {/* Media Type Indicator */}
+
             <div className="absolute top-12 right-4 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
               {isVideo ? 'VIDEO' : 'IMAGE'}
             </div>
-            
-            {/* Progress Indicator */}
+
             {ads.length > 1 && (
               <div className="flex justify-center space-x-1 mt-3">
                 {ads.map((_, index) => (
@@ -495,9 +487,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
                       setCurrentAdIndex(index);
                     }}
                     className={`h-2 rounded-full transition-all duration-300 focus:outline-none ${
-                      index === currentAdIndex 
-                        ? 'w-6 bg-white' 
-                        : 'w-2 bg-white bg-opacity-50 hover:bg-opacity-70'
+                      index === currentAdIndex ? 'w-6 bg-white' : 'w-2 bg-white bg-opacity-50 hover:bg-opacity-70'
                     }`}
                     aria-label={`Go to ad ${index + 1}`}
                   />
@@ -506,22 +496,25 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
             )}
           </div>
         </div>
-        
-        {/* Ad Counter */}
+
         {ads.length > 1 && (
           <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
             {currentAdIndex + 1} / {ads.length}
           </div>
         )}
-        
-        {/* Refresh Button */}
+
         <button
           onClick={onRefreshAds}
           className="absolute bottom-2 right-2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white text-xs px-2 py-1 rounded flex items-center"
           title="Refresh ads"
         >
           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
           </svg>
           Refresh
         </button>
@@ -529,7 +522,6 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
     );
   };
 
-  // Show debug info in console
   useEffect(() => {
     if (ads && ads.length > 0) {
       console.group('📊 Ad Carousel Status');

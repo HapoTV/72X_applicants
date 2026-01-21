@@ -2,8 +2,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Play, Clock, Star, BookOpen, Lock, X } from 'lucide-react';
 import { learningService } from '../services/LearningService';
+import { quizAttemptService } from '../services/QuizAttemptService';
 import { useAuth } from '../context/AuthContext';
-import type { UserLearningModule, LearningStats } from '../interfaces/LearningData';
+import type { UserLearningModule } from '../interfaces/LearningData';
 import FlipCardQuizModal from '../components/learning/FlipCardQuizModal';
 import QuizService from '../services/QuizService';
 
@@ -25,16 +26,20 @@ const LearningModules: React.FC = () => {
   }, [searchParams]);
 
   const [modules, setModules] = useState<UserLearningModule[]>([]);
-  const [learningStats, setLearningStats] = useState<LearningStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [openMaterial, setOpenMaterial] = useState<UserLearningModule | null>(null);
+  const [startedMaterialIds, setStartedMaterialIds] = useState<string[]>([]);
   const [finishedMaterialIds, setFinishedMaterialIds] = useState<string[]>([]);
+  const [quizStartedMaterialIds, setQuizStartedMaterialIds] = useState<string[]>([]);
   const [quizPassedMaterialIds, setQuizPassedMaterialIds] = useState<string[]>([]);
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizMaterial, setQuizMaterial] = useState<UserLearningModule | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
+
+  const [materialReadyForQuiz, setMaterialReadyForQuiz] = useState(false);
+  const [readTimerDone, setReadTimerDone] = useState(false);
 
   const orderedModules = useMemo(() => modules, [modules]);
 
@@ -55,7 +60,11 @@ const LearningModules: React.FC = () => {
       title: material.title,
       category: material.category,
     });
-    const questions = QuizService.generateQuizQuestions(material.title, material.description || '', material.category);
+    const questions = QuizService.generateQuizQuestions(
+      material.title,
+      [material.description || '', material.fileName || '', material.type || ''].filter(Boolean).join('\n'),
+      material.category
+    );
     console.log(
       'Generated quiz questions:',
       questions.length,
@@ -64,6 +73,17 @@ const LearningModules: React.FC = () => {
     setQuizQuestions(questions);
     setQuizMaterial(material);
     setShowQuiz(true);
+    setQuizStartedMaterialIds((prev) => (prev.includes(material.id) ? prev : [...prev, material.id]));
+
+    if (user?.email) {
+      void learningService.recordQuizStarted(user.email, material.id);
+      void quizAttemptService.recordAttempt({
+        userEmail: user.email,
+        materialId: material.id,
+        status: 'STARTED',
+        occurredAt: new Date().toISOString(),
+      });
+    }
   };
 
   const handleQuizPass = (score: number, totalQuestions: number, percentage: number) => {
@@ -73,6 +93,19 @@ const LearningModules: React.FC = () => {
       setQuizPassedMaterialIds((prev) => (prev.includes(quizMaterial.id) ? prev : [...prev, quizMaterial.id]));
       const message = QuizService.getPerformanceMessage(score, totalQuestions);
       alert(`${message} Score: ${score}/${totalQuestions} (${percentage}%)`);
+
+      if (user?.email) {
+        void learningService.recordQuizPassed(user.email, quizMaterial.id, score, totalQuestions, percentage);
+        void quizAttemptService.recordAttempt({
+          userEmail: user.email,
+          materialId: quizMaterial.id,
+          status: 'PASSED',
+          score,
+          totalQuestions,
+          percentage,
+          occurredAt: new Date().toISOString(),
+        });
+      }
     }
 
     setQuizMaterial(null);
@@ -81,6 +114,75 @@ const LearningModules: React.FC = () => {
   const handleCloseQuiz = () => {
     setShowQuiz(false);
     setQuizMaterial(null);
+  };
+
+  const openMaterialAndTrack = (material: UserLearningModule) => {
+    setOpenMaterial(material);
+    setStartedMaterialIds((prev) => (prev.includes(material.id) ? prev : [...prev, material.id]));
+
+    if (user?.email) {
+      void learningService.recordOpened(user.email, material.id);
+    }
+  };
+
+  const completedMaterialIdSet = useMemo(() => {
+    const ids = new Set<string>([...quizPassedMaterialIds, ...quizStartedMaterialIds]);
+    if (showQuiz && quizMaterial?.id) ids.add(quizMaterial.id);
+    return ids;
+  }, [quizPassedMaterialIds, quizStartedMaterialIds, showQuiz, quizMaterial?.id]);
+
+  const inProgressCount = useMemo(() => {
+    const startedSet = new Set<string>(startedMaterialIds);
+    if (openMaterial?.id) startedSet.add(openMaterial.id);
+
+    const fromBackend = modules.filter((m) => m.progress > 0 && m.progress < 100).map((m) => m.id);
+    for (const id of fromBackend) startedSet.add(id);
+
+    let count = 0;
+    for (const m of modules) {
+      if (!startedSet.has(m.id)) continue;
+      if (completedMaterialIdSet.has(m.id)) continue;
+      count += 1;
+    }
+    return count;
+  }, [modules, startedMaterialIds, openMaterial?.id, completedMaterialIdSet]);
+
+  const completedCount = useMemo(() => {
+    let count = 0;
+    for (const m of modules) {
+      if (completedMaterialIdSet.has(m.id) || m.progress === 100) count += 1;
+    }
+    return count;
+  }, [modules, completedMaterialIdSet]);
+
+  useEffect(() => {
+    if (!openMaterial) {
+      setMaterialReadyForQuiz(false);
+      setReadTimerDone(false);
+      return;
+    }
+
+    setMaterialReadyForQuiz(false);
+    setReadTimerDone(false);
+
+    const type = (openMaterial.type || '').toLowerCase();
+    const url = openMaterial.resourceUrl || '';
+    const isVideo = type.includes('video') || /\.(mp4|webm|ogg)$/i.test(url);
+
+    if (isVideo) return;
+
+    const timer = window.setTimeout(() => setReadTimerDone(true), 12000);
+    return () => window.clearTimeout(timer);
+  }, [openMaterial]);
+
+  const detectViewerKind = (material: UserLearningModule): 'video' | 'pdf' | 'doc' | 'url' | 'unknown' => {
+    const type = (material.type || '').toLowerCase();
+    const url = material.resourceUrl || '';
+    if (type.includes('video') || /\.(mp4|webm|ogg)$/i.test(url)) return 'video';
+    if (type.includes('pdf') || /\.(pdf)$/i.test(url)) return 'pdf';
+    if (type.includes('doc') || /\.(doc|docx)$/i.test(url)) return 'doc';
+    if (type.includes('url') || /^https?:\/\//i.test(url)) return 'url';
+    return 'unknown';
   };
 
   const categories = [
@@ -111,12 +213,33 @@ const LearningModules: React.FC = () => {
       setLoading(true);
       setError(null);
       console.log('Fetching learning data for category:', selectedCategory);
-      const filter = { category: selectedCategory };
+      const filter = { category: selectedCategory as any };
       const modulesData = await learningService.getUserModules(user.email, filter);
       console.log('Fetched modules:', modulesData);
       setModules(modulesData);
-      const statsData = await learningService.getUserStats(user.email);
-      setLearningStats(statsData);
+
+      // Initialize local UI tracking from backend progress fields (if available)
+      try {
+        const started = new Set<string>();
+        const finished = new Set<string>();
+        const quizStarted = new Set<string>();
+        const quizPassed = new Set<string>();
+
+        for (const m of modulesData) {
+          if (m.openedAt || (typeof m.progress === 'number' && m.progress > 0)) started.add(m.id);
+          if (m.finishedAt || m.progress === 100) finished.add(m.id);
+          if (m.quizStartedAt) quizStarted.add(m.id);
+          if (m.quizPassedAt) quizPassed.add(m.id);
+        }
+
+        setStartedMaterialIds((prev) => Array.from(new Set([...prev, ...Array.from(started)])));
+        setFinishedMaterialIds((prev) => Array.from(new Set([...prev, ...Array.from(finished)])));
+        setQuizStartedMaterialIds((prev) => Array.from(new Set([...prev, ...Array.from(quizStarted)])));
+        setQuizPassedMaterialIds((prev) => Array.from(new Set([...prev, ...Array.from(quizPassed)])));
+      } catch {
+        // ignore
+      }
+
     } catch (err) {
       setError('Failed to load learning materials');
       console.error('Error fetching learning data:', err);
@@ -181,7 +304,7 @@ const LearningModules: React.FC = () => {
               <div>
                 <p className="text-sm text-green-600 font-medium">Completed</p>
                 <p className="text-2xl font-bold text-green-800">
-                  {modules.filter(m => m.progress === 100).length}
+                  {completedCount}
                 </p>
               </div>
               <Play className="w-8 h-8 text-green-400" />
@@ -192,7 +315,7 @@ const LearningModules: React.FC = () => {
               <div>
                 <p className="text-sm text-purple-600 font-medium">In Progress</p>
                 <p className="text-2xl font-bold text-purple-800">
-                  {modules.filter(m => m.progress > 0 && m.progress < 100).length}
+                  {inProgressCount}
                 </p>
               </div>
               <Clock className="w-8 h-8 text-purple-400" />
@@ -236,7 +359,7 @@ const LearningModules: React.FC = () => {
                     type: 'URL',
                     resourceUrl: 'https://example.com',
                   };
-                  setOpenMaterial(demoMaterial);
+                  openMaterialAndTrack(demoMaterial);
                 }}
                 className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all transform hover:scale-105 text-sm font-semibold"
               >
@@ -246,11 +369,11 @@ const LearningModules: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {modules.map((module) => (
             <div key={module.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
               <div className="relative">
-                <img src={module.thumbnail} alt={module.title} className="w-full h-48 object-cover" />
+                <img src={module.thumbnail} alt={module.title} className="w-full h-32 object-cover" />
                 {module.isPremium && (
                   <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-semibold">
                     Premium
@@ -262,11 +385,11 @@ const LearningModules: React.FC = () => {
                   </div>
                 )}
               </div>
-              <div className="p-6">
-                <h3 className="text-lg font-semibold mb-2">{module.title}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{module.description}</p>
+              <div className="p-4">
+                <h3 className="text-sm font-semibold mb-1 line-clamp-1">{module.title}</h3>
+                <p className="text-gray-600 text-xs mb-3 line-clamp-2">{module.description}</p>
                 
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
                   <div className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
                     <span>{module.duration}</span>
@@ -283,21 +406,21 @@ const LearningModules: React.FC = () => {
                   return (
                     <>
                       {isLocked && (
-                        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <div className="text-sm font-semibold text-blue-900">{gateText}</div>
+                        <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-2">
+                          <div className="text-xs font-semibold text-blue-900">{gateText}</div>
                         </div>
                       )}
 
                       <button
                         className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                          module.isLocked || isLocked || finishedMaterialIds.includes(module.id)
+                          module.isLocked || isLocked
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-blue-600 text-white hover:bg-blue-700'
                         }`}
-                        disabled={module.isLocked || isLocked || finishedMaterialIds.includes(module.id)}
-                        onClick={() => setOpenMaterial(module)}
+                        disabled={module.isLocked || isLocked}
+                        onClick={() => openMaterialAndTrack(module)}
                       >
-                        {module.isLocked || isLocked || finishedMaterialIds.includes(module.id) ? (
+                        {module.isLocked || isLocked ? (
                           <span className="inline-flex items-center justify-center gap-2">
                             <Lock className="w-4 h-4" />
                             Locked
@@ -316,8 +439,8 @@ const LearningModules: React.FC = () => {
       )}
 
       {openMaterial && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-5xl w-full mx-4 max-h-[95vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{openMaterial.title}</h2>
@@ -332,27 +455,153 @@ const LearningModules: React.FC = () => {
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-              <div className="text-sm text-gray-700">
-                This is a placeholder viewer. In production you would render:
-              </div>
-              <div className="mt-3 text-sm text-gray-700">
-                - PDFs in an embedded PDF viewer
-              </div>
-              <div className="text-sm text-gray-700">- Videos in a video player</div>
-              <div className="text-sm text-gray-700">- Articles/URLs in an in-app reader</div>
-              {openMaterial.resourceUrl && (
-                <div className="mt-3 text-sm">
-                  <span className="text-gray-600">Resource:</span>{' '}
-                  <a
-                    className="text-blue-600 hover:underline break-all"
-                    href={openMaterial.resourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {openMaterial.resourceUrl}
-                  </a>
-                </div>
-              )}
+              {(() => {
+                const kind = detectViewerKind(openMaterial);
+                const url = openMaterial.resourceUrl;
+
+                if (!url) {
+                  return (
+                    <div className="text-sm text-gray-700">
+                      No resource URL found for this material.
+                    </div>
+                  );
+                }
+
+                if (kind === 'doc') {
+                  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+                  return (
+                    <div>
+                      <iframe
+                        title="Document Viewer"
+                        src={officeUrl}
+                        className="w-full h-[72vh] rounded-lg bg-white"
+                      />
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="text-xs text-gray-600">
+                          Read for a moment, then confirm when finished to unlock the quiz.
+                        </div>
+                        <button
+                          onClick={() => setMaterialReadyForQuiz(true)}
+                          disabled={!readTimerDone}
+                          className={`px-3 py-2 rounded-lg text-xs font-semibold ${
+                            readTimerDone ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          I finished reading
+                        </button>
+                      </div>
+                      <div className="mt-2 text-xs">
+                        <a className="text-blue-600 hover:underline break-all" href={url} target="_blank" rel="noreferrer">
+                          Open in new tab
+                        </a>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (kind === 'video') {
+                  return (
+                    <div>
+                      <video
+                        className="w-full rounded-lg bg-black"
+                        controls
+                        controlsList="nodownload"
+                        onEnded={() => setMaterialReadyForQuiz(true)}
+                      >
+                        <source src={url} />
+                      </video>
+                      <div className="mt-2 text-xs text-gray-600">
+                        Watch until the end to unlock the quiz.
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (kind === 'pdf') {
+                  return (
+                    <div>
+                      <iframe
+                        title="PDF Viewer"
+                        src={url}
+                        className="w-full h-[72vh] rounded-lg bg-white"
+                      />
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="text-xs text-gray-600">
+                          Read for a moment, then confirm when finished to unlock the quiz.
+                        </div>
+                        <button
+                          onClick={() => setMaterialReadyForQuiz(true)}
+                          disabled={!readTimerDone}
+                          className={`px-3 py-2 rounded-lg text-xs font-semibold ${
+                            readTimerDone ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          I finished reading
+                        </button>
+                      </div>
+                      <div className="mt-2 text-xs">
+                        <a className="text-blue-600 hover:underline break-all" href={url} target="_blank" rel="noreferrer">
+                          Open in new tab
+                        </a>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (kind === 'url') {
+                  return (
+                    <div>
+                      <iframe
+                        title="Article Viewer"
+                        src={url}
+                        className="w-full h-[72vh] rounded-lg bg-white"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                      />
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="text-xs text-gray-600">
+                          Read for a moment, then confirm when finished to unlock the quiz.
+                        </div>
+                        <button
+                          onClick={() => setMaterialReadyForQuiz(true)}
+                          disabled={!readTimerDone}
+                          className={`px-3 py-2 rounded-lg text-xs font-semibold ${
+                            readTimerDone ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          I finished reading
+                        </button>
+                      </div>
+                      <div className="mt-2 text-xs">
+                        <a className="text-blue-600 hover:underline break-all" href={url} target="_blank" rel="noreferrer">
+                          Open in new tab
+                        </a>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="text-sm text-gray-700">
+                    Unsupported material type. You can still open the resource:
+                    <div className="mt-2 text-sm">
+                      <a className="text-blue-600 hover:underline break-all" href={url} target="_blank" rel="noreferrer">
+                        {url}
+                      </a>
+                    </div>
+                    <div className="mt-3">
+                      <button
+                        onClick={() => setMaterialReadyForQuiz(true)}
+                        disabled={!readTimerDone}
+                        className={`px-3 py-2 rounded-lg text-xs font-semibold ${
+                          readTimerDone ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        I finished
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end">
@@ -366,11 +615,21 @@ const LearningModules: React.FC = () => {
                 onClick={() => {
                   setFinishedMaterialIds((prev) => (prev.includes(openMaterial.id) ? prev : [...prev, openMaterial.id]));
                   setOpenMaterial(null);
+
+                  if (user?.email) {
+                    void learningService.recordFinished(user.email, openMaterial.id);
+                  }
+
                   beginQuizForMaterial(openMaterial);
                 }}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                disabled={!materialReadyForQuiz && !finishedMaterialIds.includes(openMaterial.id)}
+                className={`px-6 py-3 rounded-lg ${
+                  materialReadyForQuiz || finishedMaterialIds.includes(openMaterial.id)
+                    ? 'bg-primary-600 text-white hover:bg-primary-700'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
               >
-                Mark as Finished → Take Quiz
+                Take Quiz
               </button>
             </div>
           </div>

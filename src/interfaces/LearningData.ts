@@ -107,6 +107,16 @@ export interface UserLearningModule {
   resourceUrl?: string;
   fileName?: string;
   type?: string;
+
+  // Backend-tracked per-user progress (optional)
+  openedAt?: string;
+  finishedAt?: string;
+  quizStartedAt?: string;
+  quizPassedAt?: string;
+  quizAttempts?: number;
+  lastQuizScore?: number;
+  lastQuizTotalQuestions?: number;
+  lastQuizPercentage?: number;
 }
 
 /**
@@ -203,4 +213,48 @@ export interface LearningModuleFilter {
   search?: string;
   sortBy?: 'title' | 'rating' | 'students' | 'duration' | 'progress';
   sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Per-user learning progress DTO (backend sync)
+ */
+export interface LearningMaterialUserProgress {
+  userEmail: string;
+  materialId: string;
+
+  openedAt?: string;
+  finishedAt?: string;
+  quizStartedAt?: string;
+  quizPassedAt?: string;
+
+  progress?: number; // 0-100
+  attempts?: number;
+
+  lastQuizScore?: number;
+  lastQuizTotalQuestions?: number;
+  lastQuizPercentage?: number;
+
+  lastAccessed?: string;
+}
+
+/**
+ * Request payload to record progress events (backend sync)
+ */
+export interface LearningProgressEventRequest {
+  userEmail: string;
+  materialId: string;
+  event:
+    | 'OPENED'
+    | 'FINISHED'
+    | 'QUIZ_STARTED'
+    | 'QUIZ_PASSED'
+    | 'QUIZ_FAILED'
+    | 'PROGRESS_UPDATED';
+
+  occurredAt?: string;
+  progress?: number;
+
+  score?: number;
+  totalQuestions?: number;
+  percentage?: number;
 }
