@@ -14,11 +14,13 @@ class AIBusinessAnalyticsService {
 
   async submitAnalysis(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
     try {
+      const userId = this.getCurrentUserId();
+      
       const payload = {
         query: request.query,
         analysisType: request.analysisType,
         language: request.language || 'en',
-        createdBy: request.userId
+        userId: userId
       };
 
       const response = await axiosClient.post(`${this.baseURL}/analyze`, payload);
@@ -65,9 +67,9 @@ class AIBusinessAnalyticsService {
     return field;
   }
 
-  async getAnalysisHistory(userId: string, limit: number = 50): Promise<AnalysisHistory[]> {
+  async getAnalysisHistory(limit: number = 50): Promise<AnalysisHistory[]> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/history/${userId}`, {
+      const response = await axiosClient.get(`${this.baseURL}/history`, {
         params: { limit }
       });
       
@@ -92,10 +94,7 @@ class AIBusinessAnalyticsService {
   async getQuickPrompts(category?: AnalysisType): Promise<QuickPrompt[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/prompts`, {
-        params: { 
-          category,
-          userId: this.getCurrentUserId()
-        }
+        params: { category }
       });
       
       return (response.data || []).map((item: any) => ({
@@ -132,9 +131,9 @@ class AIBusinessAnalyticsService {
       : defaultPrompts;
   }
 
-  async getBusinessContext(userId: string): Promise<BusinessContext> {
+  async getBusinessContext(): Promise<BusinessContext> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/context/${userId}`);
+      const response = await axiosClient.get(`${this.baseURL}/context`);
       const data = response.data;
       
       return {
@@ -170,9 +169,9 @@ class AIBusinessAnalyticsService {
     };
   }
 
-  async updateBusinessContext(context: BusinessContext, userId: string): Promise<BusinessContext> {
+  async updateBusinessContext(context: BusinessContext): Promise<BusinessContext> {
     try {
-      const response = await axiosClient.put(`${this.baseURL}/context/${userId}`, {
+      const response = await axiosClient.put(`${this.baseURL}/context`, {
         ...context,
         currentChallenges: JSON.stringify(context.currentChallenges),
         businessGoals: JSON.stringify(context.businessGoals)
@@ -192,12 +191,12 @@ class AIBusinessAnalyticsService {
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        return user.id || user.userId || 'demo-user';
+        return user.userId || user.id || '';
       } catch (e) {
         console.error('Error parsing user data:', e);
       }
     }
-    return 'demo-user';
+    throw new Error('User not authenticated');
   }
 
   formatProcessingTime(seconds?: number): string {

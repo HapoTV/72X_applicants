@@ -15,9 +15,9 @@ import type {
 class AnalyticsService {
   private baseURL = '/analytics';
 
-  async getDashboardAnalytics(userId: string, timeRange: AnalyticsTimeRange = '6months'): Promise<DashboardAnalytics> {
+  async getDashboardAnalytics(timeRange: AnalyticsTimeRange = '6months'): Promise<DashboardAnalytics> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/dashboard/${userId}`, {
+      const response = await axiosClient.get(`${this.baseURL}/dashboard`, {
         params: { timeRange }
       });
       
@@ -308,9 +308,9 @@ class AnalyticsService {
 
   // ==================== CHART DATA METHODS ====================
 
-  async getRevenueChartData(userId: string, timeRange: AnalyticsTimeRange): Promise<RevenueData[]> {
+  async getRevenueChartData(timeRange: AnalyticsTimeRange): Promise<RevenueData[]> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/revenue/chart/${userId}`, {
+      const response = await axiosClient.get(`${this.baseURL}/revenue/chart`, {
         params: { timeRange }
       });
       
@@ -346,9 +346,9 @@ class AnalyticsService {
     ];
   }
 
-  async getExpenseBreakdown(userId: string, timeRange: AnalyticsTimeRange): Promise<ExpenseCategory[]> {
+  async getExpenseBreakdown(timeRange: AnalyticsTimeRange): Promise<ExpenseCategory[]> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/expenses/breakdown/${userId}`, {
+      const response = await axiosClient.get(`${this.baseURL}/expenses/breakdown`, {
         params: { timeRange }
       });
       
@@ -368,6 +368,52 @@ class AnalyticsService {
         { name: 'Technology', value: 12, percentage: 12, color: '#ef4444', trend: 'stable' },
         { name: 'Other', value: 8, percentage: 8, color: '#8b5cf6', trend: 'stable' },
       ];
+    }
+  }
+
+  // ==================== OTHER ANALYTICS METHODS ====================
+
+  async getSalesAnalytics(timeRange: AnalyticsTimeRange): Promise<any> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/sales`, {
+        params: { timeRange }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching sales analytics:', error);
+      return {};
+    }
+  }
+
+  async getCustomerAnalytics(timeRange: AnalyticsTimeRange): Promise<any> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/customers`, {
+        params: { timeRange }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching customer analytics:', error);
+      return {};
+    }
+  }
+
+  async getAnalyticsSummary(): Promise<any> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/summary`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching analytics summary:', error);
+      return {};
+    }
+  }
+
+  async getReports(): Promise<any[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/reports`);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      return [];
     }
   }
 

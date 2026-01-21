@@ -1,18 +1,127 @@
 // src/services/AuthService.ts
 import axiosClient from '../api/axiosClient';
-import type { User, LoginRequest, ChangePasswordRequest } from '../interfaces/UserData';
+import type { User, LoginRequest, ChangePasswordRequest, LoginResponse } from '../interfaces/UserData';
 
 class AuthService {
   /**
-   * Login user or admin
+   * Login user or admin - NOW RETURNS LoginResponse WITH TOKEN
    */
-  async login(loginData: LoginRequest): Promise<User> {
+  async login(loginData: LoginRequest): Promise<LoginResponse> {
     try {
+      console.log("🔐 Attempting login...", loginData);
       const response = await axiosClient.post('/authentication/login', loginData);
+      
+      const loginResponse: LoginResponse = response.data;
+      console.log("✅ Login response received:", {
+        ...loginResponse,
+        token: loginResponse.token ? "***MASKED***" : undefined
+      });
+      
+      if (!loginResponse.token) {
+        throw new Error("No authentication token received from server");
+      }
+      
+      // Store token and user data
+      localStorage.setItem('authToken', loginResponse.token);
+      
+      // Construct user object from response
+      const user: User = {
+        userId: loginResponse.userId,
+        fullName: loginResponse.fullName,
+        email: loginResponse.email,
+        role: loginResponse.role,
+        status: 'ACTIVE',
+        businessReference: loginResponse.businessReference,
+        companyName: loginResponse.companyName,
+        profileImageUrl: loginResponse.profileImageUrl
+      };
+      
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      return loginResponse;
+    } catch (error: any) {
+      console.error('❌ Login error details:', error);
+      
+      let errorMessage = 'Login failed. Please check your credentials.';
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Get current user profile (uses JWT token)
+   */
+  async getCurrentUser(): Promise<User> {
+    try {
+      const response = await axiosClient.get('/users/me');
       return response.data;
     } catch (error) {
-      console.error('Login error:', error);
-      throw new Error('Login failed. Please check your credentials.');
+      console.error('Get current user error:', error);
+      
+      // If unauthorized, clear token and redirect
+      if (error.response?.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      
+      throw new Error('Failed to fetch user profile.');
+    }
+  }
+
+  /**
+   * Update current user profile
+   */
+  async updateUserProfile(userData: Partial<User>): Promise<User> {
+    try {
+      const response = await axiosClient.put('/users/me', userData);
+      
+      // Update stored user data
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = { ...currentUser, ...response.data };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      return response.data;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw new Error('Failed to update profile.');
+    }
+  }
+
+  /**
+   * Update profile image
+   */
+  async updateProfileImage(imageFile: File): Promise<User> {
+    try {
+      const formData = new FormData();
+      formData.append('image', imageFile);
+
+      const response = await axiosClient.put(
+        '/users/me/profile-image',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      
+      // Update stored user data
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = { ...currentUser, ...response.data };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      return response.data;
+    } catch (error) {
+      console.error('Update profile image error:', error);
+      throw new Error('Failed to update profile image.');
     }
   }
 
@@ -34,66 +143,39 @@ class AuthService {
   }
 
   /**
-   * Request password reset (sends verification code)
-   * Falls back to localStorage for development/testing when backend is unavailable
+   * Request password reset
    */
-  async requestPasswordReset(email: string, businessReference?: string): Promise<{ sent: boolean } | { code?: string; sent: boolean }> {
+  async requestPasswordReset(email: string): Promise<any> {
     try {
-      const response = await axiosClient.post('/authentication/request-password-reset', {
-        email,
-        businessReference
-      });
+      const response = await axiosClient.post('/authentication/forgot-password', { email });
       return response.data;
     } catch (error) {
-      // Fallback: generate a 6-digit code and store it locally for dev
-      console.warn('Request password reset (fallback) — backend unavailable, storing code locally');
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = Date.now() + 1000 * 60 * 15; // 15 minutes
-      localStorage.setItem(`passwordResetCode:${email}`, JSON.stringify({ code, expiresAt }));
-      // In a real system we wouldn't expose the code; return it here only for dev convenience
-      console.info(`Password reset code for ${email}: ${code}`);
-      return { code, sent: true };
+      console.error('Request password reset error:', error);
+      throw new Error('Failed to request password reset.');
     }
   }
 
   /**
-   * Reset password using code
-   * Falls back to localStorage verification for dev
+   * Reset password using token
    */
-  async resetPasswordWithCode(email: string, code: string, newPassword: string, businessReference?: string): Promise<void> {
+  async resetPasswordWithToken(token: string, newPassword: string): Promise<void> {
     try {
       await axiosClient.post('/authentication/reset-password', {
-        email,
-        code,
-        newPassword,
-        businessReference
+        token,
+        newPassword
       });
     } catch (error) {
-      console.warn('Reset password (fallback) — backend unavailable, verifying locally');
-      const raw = localStorage.getItem(`passwordResetCode:${email}`);
-      if (!raw) throw new Error('No reset request found for this email.');
-      const { code: storedCode, expiresAt } = JSON.parse(raw);
-      if (Date.now() > expiresAt) {
-        localStorage.removeItem(`passwordResetCode:${email}`);
-        throw new Error('Verification code expired. Please request a new code.');
-      }
-      if (storedCode !== code) {
-        throw new Error('Invalid verification code.');
-      }
-
-      // Create or update the password locally for dev convenience
-      localStorage.setItem(`userPassword:${email}`, newPassword);
-      // Remove the reset code
-      localStorage.removeItem(`passwordResetCode:${email}`);
+      console.error('Reset password error:', error);
+      throw new Error('Failed to reset password.');
     }
   }
 
   /**
    * Change password
    */
-  async changePassword(userId: string, passwords: ChangePasswordRequest): Promise<void> {
+  async changePassword(passwords: ChangePasswordRequest): Promise<void> {
     try {
-      await axiosClient.put(`/authentication/change-password/${userId}`, passwords);
+      await axiosClient.put('/authentication/change-password', passwords);
     } catch (error) {
       console.error('Change password error:', error);
       throw new Error('Failed to change password.');
@@ -101,58 +183,17 @@ class AuthService {
   }
 
   /**
-   * Get current user profile
+   * Deactivate current user
    */
-  async getCurrentUser(): Promise<User> {
+  async deactivateUser(): Promise<void> {
     try {
-      // This would typically get the user ID from the token or context
-      const userEmail = localStorage.getItem('userEmail');
-      if (!userEmail) {
-        throw new Error('No user email found');
-      }
+      await axiosClient.put('/users/me/deactivate');
       
-      const response = await axiosClient.get(`/users/email/${userEmail}`);
-      return response.data;
+      // Logout after deactivation
+      this.logout();
     } catch (error) {
-      console.error('Get current user error:', error);
-      throw new Error('Failed to fetch user profile.');
-    }
-  }
-
-  /**
-   * Update user profile
-   */
-  async updateUserProfile(userId: string, userData: Partial<User>): Promise<User> {
-    try {
-      const response = await axiosClient.put(`/users/${userId}`, userData);
-      return response.data;
-    } catch (error) {
-      console.error('Update profile error:', error);
-      throw new Error('Failed to update profile.');
-    }
-  }
-
-  /**
-   * Update profile image
-   */
-  async updateProfileImage(userId: string, imageFile: File): Promise<User> {
-    try {
-      const formData = new FormData();
-      formData.append('image', imageFile);
-
-      const response = await axiosClient.put(
-        `/users/${userId}/profile-image`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Update profile image error:', error);
-      throw new Error('Failed to update profile image.');
+      console.error('Deactivate user error:', error);
+      throw new Error('Failed to deactivate account.');
     }
   }
 
@@ -166,6 +207,47 @@ class AuthService {
     } catch (error) {
       console.error('Check business reference error:', error);
       throw new Error('Failed to check business reference.');
+    }
+  }
+
+  /**
+   * Logout user
+   */
+  logout(): void {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated(): boolean {
+    return !!localStorage.getItem('authToken');
+  }
+
+  /**
+   * Get auth token
+   */
+  getToken(): string | null {
+    return localStorage.getItem('authToken');
+  }
+
+  /**
+   * Refresh token (optional - implement if you have refresh token endpoint)
+   */
+  async refreshToken(): Promise<string | null> {
+    try {
+      // If you implement refresh tokens in backend
+      // const response = await axiosClient.post('/authentication/refresh');
+      // const newToken = response.data.token;
+      // localStorage.setItem('authToken', newToken);
+      // return newToken;
+      return null;
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      this.logout();
+      return null;
     }
   }
 }

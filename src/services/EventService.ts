@@ -1,5 +1,4 @@
 // src/services/EventService.ts
-
 import axiosClient from '../api/axiosClient';
 import type { 
   EventFormData, 
@@ -15,21 +14,34 @@ import {
   EventTypeDisplay
 } from '../interfaces/EventData';
 
-/**
- * Service layer for handling all event-related operations
- * Provides centralized API calls and data transformation
- */
 class EventService {
   
+  private getAuthHeader() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  private getCurrentUserEmail(): string {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.email || '';
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    return '';
+  }
+
   // ==================== ADMIN OPERATIONS ====================
 
-  /**
-   * Get all events (Admin only)
-   */
   async getAllEvents(): Promise<AdminEventItem[]> {
     try {
-      const response = await axiosClient.get('/events/all');
-      return response.data.map((event: EventApiResponse) => 
+      const response = await axiosClient.get('/events/all', {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((event: any) => 
         this.transformToAdminEventItem(event)
       );
     } catch (error) {
@@ -38,13 +50,12 @@ class EventService {
     }
   }
 
-  /**
-   * Create a new event (Admin only)
-   */
   async createEvent(eventData: EventFormData, createdBy: string): Promise<AdminEventItem> {
     try {
       const eventRequest: EventRequest = this.transformToEventRequest(eventData, createdBy);
-      const response = await axiosClient.post('/events', eventRequest);
+      const response = await axiosClient.post('/events', eventRequest, {
+        headers: this.getAuthHeader()
+      });
       return this.transformToAdminEventItem(response.data);
     } catch (error) {
       console.error('Error creating event:', error);
@@ -52,13 +63,12 @@ class EventService {
     }
   }
 
-  /**
-   * Update an existing event (Admin only)
-   */
   async updateEvent(eventId: string, eventData: EventFormData, createdBy: string): Promise<AdminEventItem> {
     try {
       const eventRequest: EventRequest = this.transformToEventRequest(eventData, createdBy);
-      const response = await axiosClient.put(`/events/${eventId}`, eventRequest);
+      const response = await axiosClient.put(`/events/${eventId}`, eventRequest, {
+        headers: this.getAuthHeader()
+      });
       return this.transformToAdminEventItem(response.data);
     } catch (error) {
       console.error('Error updating event:', error);
@@ -66,13 +76,10 @@ class EventService {
     }
   }
 
-  /**
-   * Delete an event (Admin only)
-   */
-  async deleteEvent(eventId: string, userEmail: string): Promise<void> {
+  async deleteEvent(eventId: string): Promise<void> {
     try {
       await axiosClient.delete(`/events/${eventId}`, {
-        params: { userEmail }
+        headers: this.getAuthHeader()
       });
     } catch (error) {
       console.error('Error deleting event:', error);
@@ -82,15 +89,12 @@ class EventService {
 
   // ==================== USER OPERATIONS ====================
 
-  /**
-   * Get events for a specific user
-   */
-  async getUserEvents(userEmail: string): Promise<UserEventItem[]> {
+  async getUserEvents(): Promise<UserEventItem[]> {
     try {
       const response = await axiosClient.get('/events/my-events', {
-        params: { userEmail }
+        headers: this.getAuthHeader()
       });
-      return response.data.map((event: EventApiResponse) => 
+      return response.data.map((event: any) => 
         this.transformToUserEventItem(event)
       );
     } catch (error) {
@@ -99,15 +103,12 @@ class EventService {
     }
   }
 
-  /**
-   * Get today's events for a user
-   */
-  async getTodayEvents(userEmail: string): Promise<UserEventItem[]> {
+  async getTodayEvents(): Promise<UserEventItem[]> {
     try {
       const response = await axiosClient.get('/events/today', {
-        params: { userEmail }
+        headers: this.getAuthHeader()
       });
-      return response.data.map((event: EventApiResponse) => 
+      return response.data.map((event: any) => 
         this.transformToUserEventItem(event)
       );
     } catch (error) {
@@ -116,15 +117,12 @@ class EventService {
     }
   }
 
-  /**
-   * Get upcoming events for a user
-   */
-  async getUpcomingEvents(userEmail: string): Promise<UserEventItem[]> {
+  async getUpcomingEvents(): Promise<UserEventItem[]> {
     try {
       const response = await axiosClient.get('/events/upcoming', {
-        params: { userEmail }
+        headers: this.getAuthHeader()
       });
-      return response.data.map((event: EventApiResponse) => 
+      return response.data.map((event: any) => 
         this.transformToUserEventItem(event)
       );
     } catch (error) {
@@ -133,12 +131,9 @@ class EventService {
     }
   }
 
-  /**
-   * Get events for calendar view
-   */
-  async getCalendarEvents(userEmail: string): Promise<CalendarEventItem[]> {
+  async getCalendarEvents(): Promise<CalendarEventItem[]> {
     try {
-      const userEvents = await this.getUserEvents(userEmail);
+      const userEvents = await this.getUserEvents();
       return userEvents.map(event => ({
         id: event.id,
         title: event.title,
@@ -151,12 +146,38 @@ class EventService {
     }
   }
 
+  async getEventsByType(eventType: string): Promise<UserEventItem[]> {
+    try {
+      const response = await axiosClient.get(`/events/type/${eventType}`, {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((event: any) => 
+        this.transformToUserEventItem(event)
+      );
+    } catch (error) {
+      console.error('Error fetching events by type:', error);
+      throw new Error('Failed to fetch events by type');
+    }
+  }
+
+  async searchEvents(query: string): Promise<UserEventItem[]> {
+    try {
+      const response = await axiosClient.get('/events/search', {
+        params: { query },
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((event: any) => 
+        this.transformToUserEventItem(event)
+      );
+    } catch (error) {
+      console.error('Error searching events:', error);
+      throw new Error('Failed to search events');
+    }
+  }
+
   // ==================== DATA TRANSFORMATION METHODS ====================
 
-  /**
-   * Transform API response to AdminEventItem
-   */
-  private transformToAdminEventItem(apiEvent: EventApiResponse): AdminEventItem {
+  private transformToAdminEventItem(apiEvent: any): AdminEventItem {
     const date = new Date(apiEvent.dateTime);
     
     return {
@@ -171,10 +192,7 @@ class EventService {
     };
   }
 
-  /**
-   * Transform API response to UserEventItem
-   */
-  private transformToUserEventItem(apiEvent: EventApiResponse): UserEventItem {
+  private transformToUserEventItem(apiEvent: any): UserEventItem {
     const date = new Date(apiEvent.dateTime);
     
     return {
@@ -184,13 +202,10 @@ class EventService {
       time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       location: apiEvent.location,
       type: this.getEventTypeDisplay(apiEvent.eventType as EventType),
-      hasReminder: false // This would come from a separate reminders API
+      hasReminder: false
     };
   }
 
-  /**
-   * Transform form data to API request format
-   */
   private transformToEventRequest(formData: EventFormData, createdBy: string): EventRequest {
     const dateTime = new Date(`${formData.date}T${formData.time}`);
     
@@ -201,15 +216,11 @@ class EventService {
       description: formData.description,
       eventType: formData.eventType,
       createdBy: createdBy,
-      invitees: [] // Empty for now, can be extended later
+      invitees: []
     };
   }
 
-  /**
-   * Transform AdminEventItem back to form data for editing
-   */
   transformToFormData(event: AdminEventItem): EventFormData {
-    // Parse the formatted date back to input format
     const [month, day, year] = event.date.split('/');
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     
@@ -225,23 +236,14 @@ class EventService {
 
   // ==================== UTILITY METHODS ====================
 
-  /**
-   * Get display name for event type
-   */
   getEventTypeDisplay(eventType: EventType): string {
     return EventTypeDisplay[eventType] || eventType;
   }
 
-  /**
-   * Format date for display
-   */
   formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString();
   }
 
-  /**
-   * Format time for display
-   */
   formatTime(dateString: string): string {
     return new Date(dateString).toLocaleTimeString([], { 
       hour: '2-digit', 
@@ -249,36 +251,24 @@ class EventService {
     });
   }
 
-  /**
-   * Format date for calendar (YYYY-MM-DD)
-   */
   formatDateForCalendar(dateString: string): string {
     const date = new Date(dateString);
     return date.toISOString().split('T')[0];
   }
 
-  /**
-   * Check if event is today
-   */
   isEventToday(dateString: string): boolean {
     const eventDate = new Date(dateString).toDateString();
     const today = new Date().toDateString();
     return eventDate === today;
   }
 
-  /**
-   * Check if event is upcoming (future date)
-   */
   isEventUpcoming(dateString: string): boolean {
     const eventDate = new Date(dateString);
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to compare dates only
+    today.setHours(0, 0, 0, 0);
     return eventDate > today;
   }
 
-  /**
-   * Validate event form data
-   */
   validateEventForm(formData: EventFormData): string | null {
     if (!formData.title.trim()) {
       return 'Event title is required';
@@ -295,10 +285,9 @@ class EventService {
       return 'Event must be in the future';
     }
     
-    return null; // No errors
+    return null;
   }
 }
 
-// Export as singleton instance
 export const eventService = new EventService();
 export default eventService;

@@ -11,21 +11,30 @@ import type {
   RoadmapAnalytics
 } from '../interfaces/RoadmapData';
 
-/**
- * Service layer for handling all roadmap-related operations
- * Using ONLY actual backend endpoints
- */
 class RoadmapService {
   
-  // ==================== EXISTING BACKEND ENDPOINTS ====================
+  private getAuthHeader() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
 
-  /**
-   * Create a new roadmap
-   * POST /api/roadmaps?userId={userId}
-   */
-  async createRoadmap(roadmapData: RoadmapFormData, userId: string): Promise<AdminRoadmapItem> {
+  private getCurrentUserId(): string {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.id || user.userId || '';
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    return '';
+  }
+
+  // ==================== ROADMAP OPERATIONS ====================
+
+  async createRoadmap(roadmapData: RoadmapFormData): Promise<AdminRoadmapItem> {
     try {
-      // Transform to match backend DTO structure
       const roadmapDTO = {
         title: roadmapData.title,
         businessType: roadmapData.businessType,
@@ -37,11 +46,11 @@ class RoadmapService {
         timeline: roadmapData.timeline,
         isPublic: roadmapData.isPublic,
         isTemplate: roadmapData.isTemplate,
-        status: 'DRAFT' // Backend expects uppercase
+        status: 'DRAFT'
       };
       
       const response = await axiosClient.post('/roadmaps', roadmapDTO, {
-        params: { userId }
+        headers: this.getAuthHeader()
       });
       return this.transformToAdminRoadmapItem(response.data);
     } catch (error: any) {
@@ -51,13 +60,24 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Get user's roadmaps
-   * GET /api/roadmaps/user/{userId}
-   */
-  async getUserRoadmaps(userId: string): Promise<UserRoadmapItem[]> {
+  async getRoadmapById(roadmapId: string): Promise<RoadmapApiResponse> {
     try {
-      const response = await axiosClient.get(`/roadmaps/user/${userId}`);
+      const response = await axiosClient.get(`/roadmaps/${roadmapId}`, {
+        headers: this.getAuthHeader()
+      });
+      return this.transformToRoadmapApiResponse(response.data);
+    } catch (error: any) {
+      console.error('Error fetching roadmap:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch roadmap';
+      throw new Error(errorMessage);
+    }
+  }
+
+  async getUserRoadmaps(): Promise<UserRoadmapItem[]> {
+    try {
+      const response = await axiosClient.get('/roadmaps/my-roadmaps', {
+        headers: this.getAuthHeader()
+      });
       return response.data.map((roadmap: any) => 
         this.transformToUserRoadmapItem(roadmap)
       );
@@ -68,13 +88,11 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Get public roadmaps
-   * GET /api/roadmaps/public
-   */
   async getPublicRoadmaps(): Promise<UserRoadmapItem[]> {
     try {
-      const response = await axiosClient.get('/roadmaps/public');
+      const response = await axiosClient.get('/roadmaps/public', {
+        headers: this.getAuthHeader()
+      });
       return response.data.map((roadmap: any) => 
         this.transformToUserRoadmapItem(roadmap)
       );
@@ -85,13 +103,11 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Get templates
-   * GET /api/roadmaps/templates
-   */
   async getTemplates(): Promise<RoadmapTemplate[]> {
     try {
-      const response = await axiosClient.get('/roadmaps/templates');
+      const response = await axiosClient.get('/roadmaps/templates', {
+        headers: this.getAuthHeader()
+      });
       return response.data.map((template: any) => 
         this.transformToTemplate(template)
       );
@@ -102,28 +118,7 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Get roadmap by ID
-   * GET /api/roadmaps/{roadmapId}?userId={userId}
-   */
-  async getRoadmapById(roadmapId: string, userId: string): Promise<RoadmapApiResponse> {
-    try {
-      const response = await axiosClient.get(`/roadmaps/${roadmapId}`, {
-        params: { userId }
-      });
-      return this.transformToRoadmapApiResponse(response.data);
-    } catch (error: any) {
-      console.error('Error fetching roadmap:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to fetch roadmap';
-      throw new Error(errorMessage);
-    }
-  }
-
-  /**
-   * Update roadmap
-   * PUT /api/roadmaps/{roadmapId}?userId={userId}
-   */
-  async updateRoadmap(roadmapId: string, roadmapData: RoadmapFormData, userId: string): Promise<AdminRoadmapItem> {
+  async updateRoadmap(roadmapId: string, roadmapData: RoadmapFormData): Promise<AdminRoadmapItem> {
     try {
       const roadmapDTO = {
         title: roadmapData.title,
@@ -140,7 +135,7 @@ class RoadmapService {
       };
       
       const response = await axiosClient.put(`/roadmaps/${roadmapId}`, roadmapDTO, {
-        params: { userId }
+        headers: this.getAuthHeader()
       });
       return this.transformToAdminRoadmapItem(response.data);
     } catch (error: any) {
@@ -150,14 +145,10 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Delete roadmap
-   * DELETE /api/roadmaps/{roadmapId}?userId={userId}
-   */
-  async deleteRoadmap(roadmapId: string, userId: string): Promise<void> {
+  async deleteRoadmap(roadmapId: string): Promise<void> {
     try {
       await axiosClient.delete(`/roadmaps/${roadmapId}`, {
-        params: { userId }
+        headers: this.getAuthHeader()
       });
     } catch (error: any) {
       console.error('Error deleting roadmap:', error);
@@ -166,16 +157,12 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Duplicate roadmap
-   * POST /api/roadmaps/{roadmapId}/duplicate?userId={userId}
-   */
-  async duplicateRoadmap(roadmapId: string, newTitle: string, userId: string): Promise<AdminRoadmapItem> {
+  async duplicateRoadmap(roadmapId: string, newTitle: string): Promise<AdminRoadmapItem> {
     try {
       const response = await axiosClient.post(`/roadmaps/${roadmapId}/duplicate`, {
         newTitle
       }, {
-        params: { userId }
+        headers: this.getAuthHeader()
       });
       return this.transformToAdminRoadmapItem(response.data);
     } catch (error: any) {
@@ -185,16 +172,12 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Create roadmap from template
-   * POST /api/roadmaps/templates/{templateId}/create?userId={userId}
-   */
-  async createFromTemplate(templateId: string, title: string, userId: string): Promise<AdminRoadmapItem> {
+  async createFromTemplate(templateId: string, title: string): Promise<AdminRoadmapItem> {
     try {
       const response = await axiosClient.post(`/roadmaps/templates/${templateId}/create`, {
         title
       }, {
-        params: { userId }
+        headers: this.getAuthHeader()
       });
       return this.transformToAdminRoadmapItem(response.data);
     } catch (error: any) {
@@ -204,13 +187,11 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Generate roadmap
-   * POST /api/roadmaps/generate
-   */
   async generateRoadmap(generationRequest: RoadmapGenerationRequest): Promise<RoadmapGenerationResponse> {
     try {
-      const response = await axiosClient.post('/roadmaps/generate', generationRequest);
+      const response = await axiosClient.post('/roadmaps/generate', generationRequest, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error: any) {
       console.error('Error generating roadmap:', error);
@@ -219,14 +200,11 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Search roadmaps
-   * GET /api/roadmaps/search?query={query}&userId={userId}
-   */
-  async searchRoadmaps(query: string, userId: string): Promise<UserRoadmapItem[]> {
+  async searchRoadmaps(query: string): Promise<UserRoadmapItem[]> {
     try {
       const response = await axiosClient.get('/roadmaps/search', {
-        params: { query, userId }
+        params: { query },
+        headers: this.getAuthHeader()
       });
       return response.data.map((roadmap: any) => 
         this.transformToUserRoadmapItem(roadmap)
@@ -238,13 +216,11 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Get roadmap statistics
-   * GET /api/roadmaps/statistics/{userId}
-   */
-  async getRoadmapStatistics(userId: string): Promise<RoadmapAnalytics> {
+  async getRoadmapStatistics(): Promise<RoadmapAnalytics> {
     try {
-      const response = await axiosClient.get(`/roadmaps/statistics/${userId}`);
+      const response = await axiosClient.get('/roadmaps/statistics', {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error: any) {
       console.error('Error fetching roadmap statistics:', error);
@@ -255,9 +231,6 @@ class RoadmapService {
 
   // ==================== DATA TRANSFORMATION ====================
 
-  /**
-   * Transform API response to AdminRoadmapItem
-   */
   private transformToAdminRoadmapItem(apiRoadmap: any): AdminRoadmapItem {
     const phases = apiRoadmap.phases || [];
     const taskCount = phases.reduce((total: number, phase: any) => 
@@ -287,9 +260,6 @@ class RoadmapService {
     };
   }
 
-  /**
-   * Transform API response to UserRoadmapItem
-   */
   private transformToUserRoadmapItem(apiRoadmap: any): UserRoadmapItem {
     const phases = apiRoadmap.phases || [];
     const phaseCount = phases.length;
@@ -317,9 +287,6 @@ class RoadmapService {
     };
   }
 
-  /**
-   * Transform API response to RoadmapApiResponse
-   */
   private transformToRoadmapApiResponse(apiRoadmap: any): RoadmapApiResponse {
     return {
       roadmapId: apiRoadmap.roadmapId,
@@ -342,9 +309,6 @@ class RoadmapService {
     };
   }
 
-  /**
-   * Transform API response to RoadmapTemplate
-   */
   private transformToTemplate(apiTemplate: any): RoadmapTemplate {
     return {
       templateId: apiTemplate.roadmapId,
@@ -356,17 +320,14 @@ class RoadmapService {
       goals: apiTemplate.goals || [],
       phases: apiTemplate.phases || [],
       isPublic: apiTemplate.isPublic,
-      usageCount: 0, // Not provided by backend
-      rating: undefined, // Not provided by backend
+      usageCount: 0,
+      rating: undefined,
       createdBy: apiTemplate.createdBy?.fullName || 'Unknown',
       createdAt: apiTemplate.createdAt,
       updatedAt: apiTemplate.updatedAt
     };
   }
 
-  /**
-   * Map backend status to frontend status
-   */
   private mapStatus(backendStatus: string): 'draft' | 'active' | 'completed' | 'archived' {
     const status = backendStatus?.toLowerCase();
     if (status === 'active' || status === 'completed' || status === 'archived') {
@@ -377,19 +338,13 @@ class RoadmapService {
 
   // ==================== UTILITY METHODS ====================
 
-  /**
-   * Save generated roadmap
-   */
   async saveGeneratedRoadmap(
     generationRequest: RoadmapGenerationRequest,
-    title: string,
-    userId: string
+    title: string
   ): Promise<AdminRoadmapItem> {
     try {
-      // First generate the roadmap
       const generatedRoadmap = await this.generateRoadmap(generationRequest);
       
-      // Create roadmap with the generated data
       const roadmapData: RoadmapFormData = {
         title: title,
         businessType: generationRequest.businessType,
@@ -403,16 +358,13 @@ class RoadmapService {
         isTemplate: false
       };
       
-      return await this.createRoadmap(roadmapData, userId);
+      return await this.createRoadmap(roadmapData);
     } catch (error: any) {
       console.error('Error saving generated roadmap:', error);
       throw new Error('Failed to save roadmap: ' + (error.message || 'Unknown error'));
     }
   }
 
-  /**
-   * Validate roadmap form data
-   */
   validateRoadmapForm(formData: RoadmapFormData): string | null {
     if (!formData.title.trim()) return 'Roadmap title is required';
     if (!formData.businessType.trim()) return 'Business type is required';
@@ -423,9 +375,6 @@ class RoadmapService {
     return null;
   }
 
-  /**
-   * Format date for display
-   */
   formatDate(dateString: string): string {
     if (!dateString) return 'N/A';
     try {
@@ -440,9 +389,6 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Get priority color for display
-   */
   getPriorityColor(priority: string): string {
     switch (priority.toUpperCase()) {
       case 'HIGH': return 'bg-red-100 text-red-800';
@@ -452,9 +398,6 @@ class RoadmapService {
     }
   }
 
-  /**
-   * Get status color for display
-   */
   getStatusColor(status: string): string {
     switch (status.toLowerCase()) {
       case 'active': return 'bg-blue-100 text-blue-800';
@@ -465,6 +408,5 @@ class RoadmapService {
   }
 }
 
-// Export as singleton instance
 export const roadmapService = new RoadmapService();
 export default roadmapService;

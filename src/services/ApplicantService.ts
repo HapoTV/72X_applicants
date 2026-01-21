@@ -4,32 +4,40 @@ import type {
   Application, 
   CreateApplicationRequest
 } from '../interfaces/ApplicantData';
+import { useAuth } from '../context/AuthContext';
 
 class ApplicationService {
-  /**
-   * Create a new application
-   */
+  
+  private getAuthHeader() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   async createApplication(applicationData: CreateApplicationRequest): Promise<Application> {
     try {
-      const response = await axiosClient.post<Application>('/api/applications', applicationData);
+      const userId = this.getCurrentUserId();
+      applicationData.userId = userId;
+      
+      const response = await axiosClient.post<Application>('/applications', applicationData, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error: any) {
       console.error('Create application error:', error);
       
       if (error.response?.status === 400) {
-        throw new Error(error.response.data || 'Invalid application data. Please check your inputs.');
+        throw new Error(error.response.data?.message || error.response.data || 'Invalid application data. Please check your inputs.');
       }
       
-      throw new Error(error.response?.data || 'Failed to create application. Please try again.');
+      throw new Error(error.response?.data?.message || 'Failed to create application. Please try again.');
     }
   }
 
-  /**
-   * Get application by ID
-   */
   async getApplicationById(applicationId: string): Promise<Application> {
     try {
-      const response = await axiosClient.get<Application>(`/api/applications/${applicationId}`);
+      const response = await axiosClient.get<Application>(`/applications/${applicationId}`, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error: any) {
       console.error('Get application error:', error);
@@ -38,57 +46,22 @@ class ApplicationService {
         throw new Error('Application not found.');
       }
       
-      throw new Error(error.response?.data || 'Failed to fetch application details.');
+      throw new Error(error.response?.data?.message || 'Failed to fetch application details.');
     }
   }
 
-  /**
-   * Get application by application number
-   */
-  async getApplicationByNumber(applicationNumber: string): Promise<Application> {
+  async getUserApplications(): Promise<Application[]> {
     try {
-      const response = await axiosClient.get<Application>(`/api/applications/number/${applicationNumber}`);
-      return response.data;
-    } catch (error: any) {
-      console.error('Get application by number error:', error);
-      
-      if (error.response?.status === 404) {
-        throw new Error(`Application with number ${applicationNumber} not found.`);
-      }
-      
-      throw new Error(error.response?.data || 'Failed to fetch application by number.');
-    }
-  }
-
-  /**
-   * Get all applications for a user
-   */
-  async getUserApplications(userId: string): Promise<Application[]> {
-    try {
-      const response = await axiosClient.get<Application[]>(`/api/applications/user/${userId}`);
+      const response = await axiosClient.get<Application[]>('/applications/my-applications', {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error: any) {
       console.error('Get user applications error:', error);
-      throw new Error(error.response?.data || 'Failed to fetch user applications.');
+      throw new Error(error.response?.data?.message || 'Failed to fetch user applications.');
     }
   }
 
-  /**
-   * Get applications by status
-   */
-  async getApplicationsByStatus(status: string): Promise<Application[]> {
-    try {
-      const response = await axiosClient.get<Application[]>(`/api/applications/status/${status}`);
-      return response.data;
-    } catch (error: any) {
-      console.error('Get applications by status error:', error);
-      throw new Error(error.response?.data || `Failed to fetch applications with status: ${status}`);
-    }
-  }
-
-  /**
-   * Update application status
-   */
   async updateApplicationStatus(
     applicationId: string, 
     status: string, 
@@ -102,55 +75,42 @@ class ApplicationService {
       }
 
       const response = await axiosClient.put<Application>(
-        `/api/applications/${applicationId}/status?${params.toString()}`
+        `/applications/${applicationId}/status`,
+        null,
+        {
+          params,
+          headers: this.getAuthHeader()
+        }
       );
       return response.data;
     } catch (error: any) {
       console.error('Update application status error:', error);
       
       if (error.response?.status === 400) {
-        throw new Error(error.response.data || 'Invalid status update request.');
+        throw new Error(error.response.data?.message || 'Invalid status update request.');
       }
       
-      throw new Error(error.response?.data || 'Failed to update application status.');
+      throw new Error(error.response?.data?.message || 'Failed to update application status.');
     }
   }
 
-  /**
-   * Generate application number
-   */
-  async generateApplicationNumber(): Promise<string> {
-    try {
-      const response = await axiosClient.get<string>('/api/applications/generate-number');
-      return response.data;
-    } catch (error: any) {
-      console.error('Generate application number error:', error);
-      throw new Error(error.response?.data || 'Failed to generate application number.');
-    }
-  }
-
-  /**
-   * Get all applications (Admin only)
-   */
   async getAllApplications(): Promise<Application[]> {
     try {
-      const response = await axiosClient.get<Application[]>('/api/applications/all');
+      const response = await axiosClient.get<Application[]>('/applications/all', {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error: any) {
       console.error('Get all applications error:', error);
-      throw new Error(error.response?.data || 'Failed to fetch all applications.');
+      throw new Error(error.response?.data?.message || 'Failed to fetch all applications.');
     }
   }
 
-  /**
-   * Delete application by ID
-   */
-  async deleteApplication(applicationId: string, userEmail: string): Promise<void> {
+  async deleteApplication(applicationId: string): Promise<void> {
     try {
-      const params = new URLSearchParams();
-      params.append('userEmail', userEmail);
-      
-      await axiosClient.delete(`/api/applications/${applicationId}?${params.toString()}`);
+      await axiosClient.delete(`/applications/${applicationId}`, {
+        headers: this.getAuthHeader()
+      });
     } catch (error: any) {
       console.error('Delete application error:', error);
       
@@ -162,13 +122,10 @@ class ApplicationService {
         throw new Error('You are not authorized to delete this application.');
       }
       
-      throw new Error(error.response?.data || 'Failed to delete application.');
+      throw new Error(error.response?.data?.message || 'Failed to delete application.');
     }
   }
 
-  /**
-   * Upload supporting document for application
-   */
   async uploadSupportingDocument(
     applicationId: string, 
     documentFile: File, 
@@ -176,14 +133,15 @@ class ApplicationService {
   ): Promise<Application> {
     try {
       const formData = new FormData();
-      formData.append('document', documentFile);
+      formData.append('file', documentFile);
       formData.append('documentType', documentType);
 
       const response = await axiosClient.post<Application>(
-        `/api/applications/${applicationId}/documents`,
+        `/applications/${applicationId}/documents`,
         formData,
         {
           headers: {
+            ...this.getAuthHeader(),
             'Content-Type': 'multipart/form-data',
           },
         }
@@ -196,17 +154,13 @@ class ApplicationService {
         throw new Error('Invalid document type or file format.');
       }
       
-      throw new Error(error.response?.data || 'Failed to upload supporting document.');
+      throw new Error(error.response?.data?.message || 'Failed to upload supporting document.');
     }
   }
 
-  /**
-   * Search applications with filters
-   */
   async searchApplications(
     filters: {
       applicationNumber?: string;
-      userEmail?: string;
       userFullName?: string;
       status?: string;
       startDate?: string;
@@ -217,25 +171,24 @@ class ApplicationService {
       const params = new URLSearchParams();
       
       if (filters.applicationNumber) params.append('applicationNumber', filters.applicationNumber);
-      if (filters.userEmail) params.append('userEmail', filters.userEmail);
       if (filters.userFullName) params.append('userFullName', filters.userFullName);
       if (filters.status) params.append('status', filters.status);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
 
       const response = await axiosClient.get<Application[]>(
-        `/api/applications/search?${params.toString()}`
+        `/applications/search?${params.toString()}`,
+        {
+          headers: this.getAuthHeader()
+        }
       );
       return response.data;
     } catch (error: any) {
       console.error('Search applications error:', error);
-      throw new Error(error.response?.data || 'Failed to search applications.');
+      throw new Error(error.response?.data?.message || 'Failed to search applications.');
     }
   }
 
-  /**
-   * Get application statistics
-   */
   async getApplicationStats(): Promise<{
     total: number;
     pending: number;
@@ -244,12 +197,27 @@ class ApplicationService {
     rejected: number;
   }> {
     try {
-      const response = await axiosClient.get('/api/applications/stats');
+      const response = await axiosClient.get('/applications/stats', {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error: any) {
       console.error('Get application stats error:', error);
-      throw new Error(error.response?.data || 'Failed to fetch application statistics.');
+      throw new Error(error.response?.data?.message || 'Failed to fetch application statistics.');
     }
+  }
+
+  private getCurrentUserId(): string {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.userId || user.id || '';
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    throw new Error('User not authenticated');
   }
 }
 

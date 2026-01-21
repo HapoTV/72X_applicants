@@ -14,11 +14,15 @@ import type {
 class DataInputService {
   private baseURL = '/data-input';
 
+  private getAuthHeader() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   // ==================== FINANCIAL DATA METHODS ====================
 
   async saveFinancialData(data: FinancialData): Promise<DataInputApiResponse> {
     try {
-      // Format date for backend
       const periodDate = data.date ? new Date(data.date).toISOString().replace('Z', '') : new Date().toISOString().replace('Z', '');
       
       const requestData = {
@@ -29,7 +33,9 @@ class DataInputService {
         userId: data.userId
       };
 
-      const response = await axiosClient.post(`${this.baseURL}/financial`, requestData);
+      const response = await axiosClient.post(`${this.baseURL}/financial`, requestData, {
+        headers: this.getAuthHeader()
+      });
       
       return {
         success: response.data.success,
@@ -48,9 +54,12 @@ class DataInputService {
 
   async getFinancialData(userId: string): Promise<FinancialData[]> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/financial/${userId}`);
+      const response = await axiosClient.get(`${this.baseURL}/financial`, {
+        headers: this.getAuthHeader()
+      });
       
       return (response.data.data || []).map((item: any) => ({
+        id: item.financialId,
         revenue: item.revenue || 0,
         expenses: item.expenses || 0,
         period: item.period || 'monthly',
@@ -69,7 +78,6 @@ class DataInputService {
 
   async saveCustomerData(data: CustomerData): Promise<DataInputApiResponse> {
     try {
-      // Format date for backend
       const periodDate = data.date ? new Date(data.date).toISOString().replace('Z', '') : new Date().toISOString().replace('Z', '');
       
       const requestData = {
@@ -82,7 +90,9 @@ class DataInputService {
         userId: data.userId
       };
 
-      const response = await axiosClient.post(`${this.baseURL}/customer`, requestData);
+      const response = await axiosClient.post(`${this.baseURL}/customer`, requestData, {
+        headers: this.getAuthHeader()
+      });
       
       return {
         success: response.data.success,
@@ -101,9 +111,12 @@ class DataInputService {
 
   async getCustomerData(userId: string): Promise<CustomerData[]> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/customer/${userId}`);
+      const response = await axiosClient.get(`${this.baseURL}/customer`, {
+        headers: this.getAuthHeader()
+      });
       
       return (response.data.data || []).map((item: any) => ({
+        id: item.customerDataId,
         totalCustomers: item.totalCustomers || 0,
         newCustomers: item.newCustomers || 0,
         retentionRate: item.retentionRate || 0,
@@ -120,11 +133,134 @@ class DataInputService {
     }
   }
 
+  // ==================== FINANCIAL DOCUMENTS METHODS ====================
+
+  async uploadFinancialDocument(file: File, metadata: FileUploadMetadata): Promise<UploadResponse> {
+    try {
+      const userId = this.getCurrentUserId();
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', this.getDocumentTypeFromFile(file.name));
+      formData.append('description', `Uploaded financial document: ${file.name}`);
+      
+      const response = await axiosClient.post(`${this.baseURL}/documents/upload`, formData, {
+        headers: {
+          ...this.getAuthHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        document: response.data.data ? this.mapToUploadedDocument(response.data.data, userId) : undefined
+      };
+    } catch (error: any) {
+      console.error('Error uploading financial document:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to upload document',
+        errors: [error.response?.data?.message || 'Network error occurred']
+      };
+    }
+  }
+
+  async uploadAndProcessFinancialDocument(file: File, metadata: FileUploadMetadata): Promise<UploadResponse> {
+    try {
+      const userId = this.getCurrentUserId();
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', this.getDocumentTypeFromFile(file.name));
+      formData.append('description', `Uploaded financial document: ${file.name}`);
+      
+      const response = await axiosClient.post(`${this.baseURL}/documents/upload-and-process`, formData, {
+        headers: {
+          ...this.getAuthHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        document: response.data.data ? this.mapToUploadedDocument(response.data.data, userId) : undefined
+      };
+    } catch (error: any) {
+      console.error('Error uploading and processing financial document:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to upload and process document',
+        errors: [error.response?.data?.message || 'Network error occurred']
+      };
+    }
+  }
+
+  async getUploadedDocuments(): Promise<UploadedDocument[]> {
+    try {
+      const userId = this.getCurrentUserId();
+      const response = await axiosClient.get(`${this.baseURL}/documents`, {
+        headers: this.getAuthHeader()
+      });
+      
+      return (response.data.data || []).map((doc: any) => 
+        this.mapToUploadedDocument(doc, userId)
+      );
+    } catch (error) {
+      console.error('Error fetching uploaded documents:', error);
+      return [];
+    }
+  }
+
+  async deleteDocument(documentId: string): Promise<UploadResponse> {
+    try {
+      const response = await axiosClient.delete(`${this.baseURL}/documents/${documentId}`, {
+        headers: this.getAuthHeader()
+      });
+      
+      return {
+        success: response.data.success,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to delete document',
+        errors: [error.response?.data?.message || 'Network error occurred']
+      };
+    }
+  }
+
+  async extractDataFromDocument(documentId: string): Promise<any> {
+    try {
+      const response = await axiosClient.post(`${this.baseURL}/documents/${documentId}/extract`, {}, {
+        headers: this.getAuthHeader()
+      });
+      
+      return {
+        success: response.data.success,
+        data: response.data.extractedData,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('Error extracting data from document:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to extract data',
+        errors: [error.response?.data?.message || 'Network error occurred']
+      };
+    }
+  }
+
   // ==================== ANALYTICS & METRICS METHODS ====================
 
-  async getMetrics(userId: string): Promise<any> {
+  async getMetrics(): Promise<any> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/metrics/${userId}`);
+      const response = await axiosClient.get(`${this.baseURL}/metrics`, {
+        headers: this.getAuthHeader()
+      });
       return response.data.metrics || {};
     } catch (error) {
       console.error('Error fetching metrics:', error);
@@ -132,35 +268,16 @@ class DataInputService {
     }
   }
 
-  async getChartData(userId: string, type: 'financial' | 'customer'): Promise<any> {
+  async getChartData(type: 'financial' | 'customer'): Promise<any> {
     try {
-      const response = await axiosClient.get(`${this.baseURL}/charts/${userId}`, {
-        params: { type }
+      const response = await axiosClient.get(`${this.baseURL}/charts`, {
+        params: { type },
+        headers: this.getAuthHeader()
       });
       return response.data.charts || {};
     } catch (error) {
       console.error('Error fetching chart data:', error);
       return {};
-    }
-  }
-
-  async getFinancialChartData(userId: string): Promise<any[]> {
-    try {
-      const data = await this.getChartData(userId, 'financial');
-      return data.revenueOverTime || [];
-    } catch (error) {
-      console.error('Error fetching financial chart data:', error);
-      return [];
-    }
-  }
-
-  async getCustomerChartData(userId: string): Promise<any[]> {
-    try {
-      const data = await this.getChartData(userId, 'customer');
-      return data.customerGrowth || [];
-    } catch (error) {
-      console.error('Error fetching customer chart data:', error);
-      return [];
     }
   }
 
@@ -172,6 +289,8 @@ class DataInputService {
         revenue: data.revenue?.toString(),
         expenses: data.expenses?.toString(),
         period: data.period
+      }, {
+        headers: this.getAuthHeader()
       });
       
       const validation = response.data.validation;
@@ -199,6 +318,8 @@ class DataInputService {
         newCustomers: data.newCustomers?.toString(),
         retentionRate: data.retentionRate?.toString(),
         avgCustomerValue: data.avgCustomerValue?.toString()
+      }, {
+        headers: this.getAuthHeader()
       });
       
       const validation = response.data.validation;
@@ -215,130 +336,6 @@ class DataInputService {
       return {
         isValid: false,
         errors: [{ field: 'general', message: 'Validation service unavailable' }]
-      };
-    }
-  }
-
-  // ==================== FILE UPLOAD METHODS ====================
-
-  async uploadFinancialDocument(file: File, metadata: FileUploadMetadata): Promise<UploadResponse> {
-    try {
-      const userId = this.getCurrentUserId();
-      
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('documentType', this.getDocumentTypeFromFile(file.name));
-      formData.append('description', `Uploaded financial document: ${file.name}`);
-      formData.append('userId', userId);
-      
-      // Use the correct endpoint that exists in the backend
-      const response = await axiosClient.post(`${this.baseURL}/documents/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      return {
-        success: response.data.success,
-        message: response.data.message,
-        document: response.data.data ? this.mapToUploadedDocument(response.data.data, userId) : undefined
-      };
-    } catch (error: any) {
-      console.error('Error uploading financial document:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to upload document',
-        errors: [error.response?.data?.message || 'Network error occurred']
-      };
-    }
-  }
-
-  async uploadAndProcessFinancialDocument(file: File, metadata: FileUploadMetadata): Promise<UploadResponse> {
-    try {
-      const userId = this.getCurrentUserId();
-      
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('documentType', this.getDocumentTypeFromFile(file.name));
-      formData.append('description', `Uploaded financial document: ${file.name}`);
-      formData.append('userId', userId);
-      
-      // Use the upload and process endpoint
-      const response = await axiosClient.post(`${this.baseURL}/documents/upload-and-process`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      return {
-        success: response.data.success,
-        message: response.data.message,
-        document: response.data.data ? this.mapToUploadedDocument(response.data.data, userId) : undefined
-      };
-    } catch (error: any) {
-      console.error('Error uploading and processing financial document:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to upload and process document',
-        errors: [error.response?.data?.message || 'Network error occurred']
-      };
-    }
-  }
-
-  async getUploadedDocuments(userId: string): Promise<UploadedDocument[]> {
-    try {
-      const response = await axiosClient.get(`${this.baseURL}/documents/${userId}`);
-      
-      return (response.data.data || []).map((doc: any) => 
-        this.mapToUploadedDocument(doc, userId)
-      );
-    } catch (error) {
-      console.error('Error fetching uploaded documents:', error);
-      return [];
-    }
-  }
-
-  async deleteDocument(documentId: string, userId: string): Promise<UploadResponse> {
-    try {
-      const response = await axiosClient.delete(`${this.baseURL}/documents/${documentId}`, {
-        params: { userId }
-      });
-      
-      return {
-        success: response.data.success,
-        message: response.data.message
-      };
-    } catch (error: any) {
-      console.error('Error deleting document:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to delete document',
-        errors: [error.response?.data?.message || 'Network error occurred']
-      };
-    }
-  }
-
-  async extractDataFromDocument(documentId: string): Promise<any> {
-    try {
-      // Note: This endpoint doesn't exist yet, but we'll create it
-      const userId = this.getCurrentUserId();
-      const response = await axiosClient.post(`${this.baseURL}/documents/${documentId}/extract`, {
-        userId
-      });
-      
-      return {
-        success: response.data.success,
-        data: response.data.extractedData,
-        message: response.data.message
-      };
-    } catch (error: any) {
-      console.error('Error extracting data from document:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Failed to extract data',
-        errors: [error.response?.data?.message || 'Network error occurred']
       };
     }
   }
@@ -364,7 +361,7 @@ class DataInputService {
 
   private mapToUploadedDocument(doc: any, userId: string): UploadedDocument {
     return {
-      id: doc.documentId || doc.id,
+      id: doc.financialDocumentId || doc.id,
       fileName: doc.fileName || doc.originalFileName,
       fileType: this.getFileTypeFromMime(doc.fileType || doc.mimeType),
       fileSize: doc.fileSize || 0,
@@ -436,7 +433,7 @@ class DataInputService {
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        return user.id || user.userId || 'demo-user';
+        return user.id || user.userId || '';
       } catch (e) {
         console.error('Error parsing user data:', e);
       }

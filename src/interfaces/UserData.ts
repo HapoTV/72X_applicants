@@ -27,6 +27,18 @@ export interface LoginRequest {
   loginType: 'user' | 'admin';
 }
 
+export interface LoginResponse {
+  token: string;
+  tokenType: string;
+  userId: string;
+  email: string;
+  fullName: string;
+  role: string;
+  businessReference?: string;
+  profileImageUrl?: string;
+  companyName?: string;
+}
+
 export interface UserFormData {
   fullName: string;
   email: string;

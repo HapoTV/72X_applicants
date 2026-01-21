@@ -8,20 +8,34 @@ import type {
   FundingRequest
 } from '../interfaces/FundingData';
 
-/**
- * Service layer for handling all funding-related operations
- */
 class FundingService {
   
+  private getAuthHeader() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  private getCurrentUserEmail(): string {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.email || '';
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    return '';
+  }
+
   // ==================== ADMIN OPERATIONS ====================
 
-  /**
-   * Get all funding opportunities (Admin only)
-   */
   async getAllFunding(): Promise<AdminFundingItem[]> {
     try {
-      const response = await axiosClient.get('/funding');
-      return response.data.map((funding: FundingApiResponse) => 
+      const response = await axiosClient.get('/funding', {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((funding: any) => 
         this.transformToAdminFundingItem(funding)
       );
     } catch (error) {
@@ -30,13 +44,12 @@ class FundingService {
     }
   }
 
-  /**
-   * Create a new funding opportunity (Admin only)
-   */
   async createFunding(fundingData: FundingFormData, createdBy: string): Promise<AdminFundingItem> {
     try {
       const fundingRequest: FundingRequest = this.transformToFundingRequest(fundingData, createdBy);
-      const response = await axiosClient.post('/funding', fundingRequest);
+      const response = await axiosClient.post('/funding', fundingRequest, {
+        headers: this.getAuthHeader()
+      });
       return this.transformToAdminFundingItem(response.data);
     } catch (error) {
       console.error('Error creating funding opportunity:', error);
@@ -44,13 +57,12 @@ class FundingService {
     }
   }
 
-  /**
-   * Update an existing funding opportunity (Admin only)
-   */
   async updateFunding(fundingId: string, fundingData: FundingFormData, createdBy: string): Promise<AdminFundingItem> {
     try {
       const fundingRequest: FundingRequest = this.transformToFundingRequest(fundingData, createdBy);
-      const response = await axiosClient.put(`/funding/${fundingId}`, fundingRequest);
+      const response = await axiosClient.put(`/funding/${fundingId}`, fundingRequest, {
+        headers: this.getAuthHeader()
+      });
       return this.transformToAdminFundingItem(response.data);
     } catch (error) {
       console.error('Error updating funding opportunity:', error);
@@ -58,13 +70,10 @@ class FundingService {
     }
   }
 
-  /**
-   * Delete a funding opportunity (Admin only)
-   */
-  async deleteFunding(fundingId: string, userEmail: string): Promise<void> {
+  async deleteFunding(fundingId: string): Promise<void> {
     try {
       await axiosClient.delete(`/funding/${fundingId}`, {
-        params: { userEmail }
+        headers: this.getAuthHeader()
       });
     } catch (error) {
       console.error('Error deleting funding opportunity:', error);
@@ -74,26 +83,18 @@ class FundingService {
 
   // ==================== USER OPERATIONS ====================
 
-  /**
-   * Get active funding opportunities for users
-   */
   async getActiveFunding(): Promise<UserFundingItem[]> {
     try {
-      const response = await axiosClient.get('/funding/active');
-      return response.data.map((funding: FundingApiResponse) => 
+      const response = await axiosClient.get('/funding/active', {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((funding: any) => 
         this.transformToUserFundingItem(funding)
       );
     } catch (error: any) {
       console.error('Error fetching active funding opportunities:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       
-      // If the endpoint doesn't exist, fall back to regular endpoint and filter active ones
       if (error.response?.status === 404) {
-        console.log('Active endpoint not found, fetching all and filtering...');
         const allFunding = await this.getAllFunding();
         const today = new Date();
         
@@ -105,7 +106,6 @@ class FundingService {
           return daysLeft >= 0 || daysLeft === undefined;
         });
         
-        // Transform AdminFundingItem to UserFundingItem
         return activeFunding.map(funding => ({
           id: funding.id,
           title: funding.title,
@@ -126,20 +126,17 @@ class FundingService {
     }
   }
 
-  /**
-   * Get funding opportunities by industry
-   */
   async getFundingByIndustry(industry: string): Promise<UserFundingItem[]> {
     try {
-      const response = await axiosClient.get(`/funding/industry/${industry}`);
-      return response.data.map((funding: FundingApiResponse) => 
+      const response = await axiosClient.get(`/funding/industry/${industry}`, {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((funding: any) => 
         this.transformToUserFundingItem(funding)
       );
     } catch (error: any) {
       console.error('Error fetching funding by industry:', error);
-      // If endpoint doesn't exist, filter from active funding
       if (error.response?.status === 404) {
-        console.log('Industry endpoint not found, filtering from active...');
         const activeFunding = await this.getActiveFunding();
         return activeFunding.filter(funding => 
           !industry || industry === 'all' || funding.industry === industry
@@ -149,20 +146,17 @@ class FundingService {
     }
   }
 
-  /**
-   * Get funding opportunities by type
-   */
   async getFundingByType(type: string): Promise<UserFundingItem[]> {
     try {
-      const response = await axiosClient.get(`/funding/type/${type}`);
-      return response.data.map((funding: FundingApiResponse) => 
+      const response = await axiosClient.get(`/funding/type/${type}`, {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((funding: any) => 
         this.transformToUserFundingItem(funding)
       );
     } catch (error: any) {
       console.error('Error fetching funding by type:', error);
-      // If endpoint doesn't exist, filter from active funding
       if (error.response?.status === 404) {
-        console.log('Type endpoint not found, filtering from active...');
         const activeFunding = await this.getActiveFunding();
         return activeFunding.filter(funding => 
           !type || type === 'all' || funding.type === type
@@ -172,20 +166,17 @@ class FundingService {
     }
   }
 
-  /**
-   * Get upcoming funding deadlines
-   */
   async getUpcomingDeadlines(): Promise<UserFundingItem[]> {
     try {
-      const response = await axiosClient.get('/funding/upcoming-deadlines');
-      return response.data.map((funding: FundingApiResponse) => 
+      const response = await axiosClient.get('/funding/upcoming-deadlines', {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((funding: any) => 
         this.transformToUserFundingItem(funding)
       );
     } catch (error: any) {
       console.error('Error fetching upcoming deadlines:', error);
-      // If endpoint doesn't exist, filter from active funding
       if (error.response?.status === 404) {
-        console.log('Upcoming deadlines endpoint not found, filtering from active...');
         const activeFunding = await this.getActiveFunding();
         const today = new Date();
         
@@ -194,32 +185,28 @@ class FundingService {
           
           const deadline = new Date(funding.deadline);
           const daysLeft = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 3600 * 24));
-          return daysLeft >= 0 && daysLeft <= 30; // Within next 30 days
+          return daysLeft >= 0 && daysLeft <= 30;
         }).sort((a, b) => {
           if (!a.daysLeft || !b.daysLeft) return 0;
-          return a.daysLeft - b.daysLeft; // Sort by closest deadline
+          return a.daysLeft - b.daysLeft;
         });
       }
       throw new Error('Failed to fetch upcoming deadlines');
     }
   }
 
-  /**
-   * Search funding opportunities
-   */
   async searchFunding(query: string): Promise<UserFundingItem[]> {
     try {
       const response = await axiosClient.get('/funding/search', {
-        params: { query }
+        params: { query },
+        headers: this.getAuthHeader()
       });
-      return response.data.map((funding: FundingApiResponse) => 
+      return response.data.map((funding: any) => 
         this.transformToUserFundingItem(funding)
       );
     } catch (error: any) {
       console.error('Error searching funding opportunities:', error);
-      // If endpoint doesn't exist, filter from active funding
       if (error.response?.status === 404) {
-        console.log('Search endpoint not found, filtering from active...');
         const activeFunding = await this.getActiveFunding();
         const searchLower = query.toLowerCase();
         
@@ -235,10 +222,7 @@ class FundingService {
 
   // ==================== DATA TRANSFORMATION METHODS ====================
 
-  /**
-   * Transform API response to AdminFundingItem
-   */
-  private transformToAdminFundingItem(apiFunding: FundingApiResponse): AdminFundingItem {
+  private transformToAdminFundingItem(apiFunding: any): AdminFundingItem {
     return {
       id: apiFunding.fundingId,
       title: apiFunding.title,
@@ -254,10 +238,7 @@ class FundingService {
     };
   }
 
-  /**
-   * Transform API response to UserFundingItem
-   */
-  private transformToUserFundingItem(apiFunding: FundingApiResponse): UserFundingItem {
+  private transformToUserFundingItem(apiFunding: any): UserFundingItem {
     const deadline = apiFunding.deadline ? new Date(apiFunding.deadline) : undefined;
     const today = new Date();
     const daysLeft = deadline ? Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : undefined;
@@ -278,9 +259,6 @@ class FundingService {
     };
   }
 
-  /**
-   * Transform form data to API request format
-   */
   private transformToFundingRequest(formData: FundingFormData, createdBy: string): FundingRequest {
     return {
       title: formData.title,
@@ -297,11 +275,7 @@ class FundingService {
     };
   }
 
-  /**
-   * Transform AdminFundingItem back to form data for editing
-   */
   transformToFormData(funding: AdminFundingItem): FundingFormData {
-    // Parse the formatted date back to input format
     let deadline = '';
     if (funding.deadline) {
       const date = new Date(funding.deadline);
@@ -324,9 +298,6 @@ class FundingService {
 
   // ==================== UTILITY METHODS ====================
 
-  /**
-   * Format date for display
-   */
   formatDate(dateString: string): string {
     try {
       const date = new Date(dateString);
@@ -341,14 +312,11 @@ class FundingService {
     }
   }
 
-  /**
-   * Calculate days until deadline
-   */
   calculateDaysLeft(deadline: string): number {
     try {
       const deadlineDate = new Date(deadline);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to compare dates only
+      today.setHours(0, 0, 0, 0);
       const timeDiff = deadlineDate.getTime() - today.getTime();
       return Math.ceil(timeDiff / (1000 * 3600 * 24));
     } catch (error) {
@@ -357,11 +325,26 @@ class FundingService {
     }
   }
 
-  /**
-   * Check if funding is expired
-   */
   isFundingExpired(deadline: string): boolean {
     return this.calculateDaysLeft(deadline) < 0;
+  }
+
+  validateFundingForm(formData: FundingFormData): string | null {
+    if (!formData.title.trim()) {
+      return 'Funding title is required';
+    }
+    if (!formData.provider.trim()) {
+      return 'Provider name is required';
+    }
+    
+    if (formData.deadline) {
+      const deadlineDate = new Date(formData.deadline);
+      if (deadlineDate <= new Date()) {
+        return 'Deadline must be in the future';
+      }
+    }
+    
+    return null;
   }
 
   /**
@@ -426,29 +409,7 @@ class FundingService {
         return true;
     }
   }
-
-  /**
-   * Validate funding form data
-   */
-  validateFundingForm(formData: FundingFormData): string | null {
-    if (!formData.title.trim()) {
-      return 'Funding title is required';
-    }
-    if (!formData.provider.trim()) {
-      return 'Provider name is required';
-    }
-    
-    if (formData.deadline) {
-      const deadlineDate = new Date(formData.deadline);
-      if (deadlineDate <= new Date()) {
-        return 'Deadline must be in the future';
-      }
-    }
-    
-    return null; // No errors
-  }
 }
 
-// Export as singleton instance
 export const fundingService = new FundingService();
 export default fundingService;

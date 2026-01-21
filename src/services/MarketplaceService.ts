@@ -10,7 +10,6 @@ import type {
   MarketplaceLocation,
   SellerFormData,
   SellerApiResponse,
-  SellerRequest,
   ProductReview,
   ReviewFormData,
   ReviewRequest,
@@ -23,20 +22,34 @@ import type {
   ReportFormData
 } from '../interfaces/MarketplaceData';
 
-/**
- * Service layer for handling all marketplace-related operations
- */
 class MarketplaceService {
   
+  private getAuthHeader() {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  private getCurrentUserId(): string {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.id || user.userId || '';
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    return '';
+  }
+
   // ==================== PRODUCT OPERATIONS ====================
 
-  /**
-   * Get all products (Admin only)
-   */
   async getAllProducts(): Promise<AdminProductItem[]> {
     try {
-      const response = await axiosClient.get('/marketplace/products');
-      return response.data.map((product: ProductApiResponse) => 
+      const response = await axiosClient.get('/marketplace/products', {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((product: any) => 
         this.transformToAdminProductItem(product)
       );
     } catch (error) {
@@ -45,16 +58,16 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Get active products for users
-   */
   async getActiveProducts(params?: ProductSearchParams): Promise<ProductSearchResponse> {
     try {
-      const response = await axiosClient.get('/marketplace/products', { params });
+      const response = await axiosClient.get('/marketplace/products', { 
+        params,
+        headers: this.getAuthHeader()
+      });
 
       const data = response.data as any;
 
-      const rawProducts: ProductApiResponse[] = Array.isArray(data)
+      const rawProducts: any[] = Array.isArray(data)
         ? data
         : Array.isArray(data?.products)
           ? data.products
@@ -79,7 +92,7 @@ class MarketplaceService {
             : 1;
 
       return {
-        products: rawProducts.map((product: ProductApiResponse) => this.transformToUserProductItem(product)),
+        products: rawProducts.map((product: any) => this.transformToUserProductItem(product)),
         total,
         page,
         limit,
@@ -92,13 +105,12 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Get featured products
-   */
   async getFeaturedProducts(): Promise<UserProductItem[]> {
     try {
-      const response = await axiosClient.get('/marketplace/products/featured');
-      return response.data.map((product: ProductApiResponse) => 
+      const response = await axiosClient.get('/marketplace/products/featured', {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((product: any) => 
         this.transformToUserProductItem(product)
       );
     } catch (error) {
@@ -107,12 +119,11 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Get product by ID
-   */
   async getProductById(productId: string): Promise<ProductApiResponse> {
     try {
-      const response = await axiosClient.get(`/marketplace/products/${productId}`);
+      const response = await axiosClient.get(`/marketplace/products/${productId}`, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -120,35 +131,27 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Create a new product
-   */
   async createProduct(productData: ProductFormData, createdBy: string, seller?: string): Promise<AdminProductItem> {
     try {
       const productDTO = this.transformToProductDTO(productData, createdBy, seller);
-      console.log('Sending product data to backend:', productDTO);
-      const response = await axiosClient.post('/marketplace/products', productDTO);
+      const response = await axiosClient.post('/marketplace/products', productDTO, {
+        headers: this.getAuthHeader()
+      });
       return this.transformToAdminProductItem(response.data);
-    } catch (error) {
-      const err = error as any;
-      const status = err?.response?.status;
-      const data = err?.response?.data;
-      if (status !== undefined || data !== undefined) {
-        console.error('Error creating product:', { status, data });
-      } else {
-        console.error('Error creating product:', error);
-      }
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const data = error?.response?.data;
+      console.error('Error creating product:', { status, data });
       throw new Error('Failed to create product');
     }
   }
 
-  /**
-   * Update an existing product
-   */
   async updateProduct(productId: string, productData: ProductFormData, createdBy: string): Promise<AdminProductItem> {
     try {
       const productRequest: ProductRequest = this.transformToProductRequest(productData, createdBy);
-      const response = await axiosClient.put(`/marketplace/products/${productId}`, productRequest);
+      const response = await axiosClient.put(`/marketplace/products/${productId}`, productRequest, {
+        headers: this.getAuthHeader()
+      });
       return this.transformToAdminProductItem(response.data);
     } catch (error) {
       console.error('Error updating product:', error);
@@ -156,13 +159,10 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Delete a product
-   */
-  async deleteProduct(productId: string, userEmail: string): Promise<void> {
+  async deleteProduct(productId: string): Promise<void> {
     try {
       await axiosClient.delete(`/marketplace/products/${productId}`, {
-        params: { userEmail }
+        headers: this.getAuthHeader()
       });
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -170,128 +170,12 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Toggle product featured status (Admin only)
-   */
-  async toggleProductFeatured(productId: string): Promise<void> {
+  async getSellerProducts(): Promise<UserProductItem[]> {
     try {
-      await axiosClient.patch(`/marketplace/products/${productId}/featured`);
-    } catch (error) {
-      console.error('Error toggling product featured status:', error);
-      throw new Error('Failed to update product status');
-    }
-  }
-
-  /**
-   * Update product status
-   */
-  async updateProductStatus(productId: string, status: 'active' | 'sold' | 'pending' | 'removed'): Promise<void> {
-    try {
-      await axiosClient.patch(`/marketplace/products/${productId}/status`, { status });
-    } catch (error) {
-      console.error('Error updating product status:', error);
-      throw new Error('Failed to update product status');
-    }
-  }
-
-  // ==================== CATEGORY OPERATIONS ====================
-
-  /**
-   * Get all categories
-   */
-  async getCategories(): Promise<MarketplaceCategory[]> {
-    try {
-      return [
-        { id: 'all', name: 'All Categories' },
-        { id: 'food', name: 'Food & Beverages' },
-        { id: 'crafts', name: 'Arts & Crafts' },
-        { id: 'clothing', name: 'Clothing & Fashion' },
-        { id: 'services', name: 'Services' },
-        { id: 'agriculture', name: 'Agriculture' },
-        { id: 'beauty', name: 'Beauty & Personal Care' },
-        { id: 'electronics', name: 'Electronics & Repairs' },
-        { id: 'home', name: 'Home & Garden' },
-        { id: 'other', name: 'Other' }
-      ];
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      throw new Error('Failed to fetch categories');
-    }
-  }
-
-  // ==================== LOCATION OPERATIONS ====================
-
-  /**
-   * Get all locations
-   */
-  async getLocations(): Promise<MarketplaceLocation[]> {
-    try {
-      return [
-        { id: 'all', name: 'All Locations' },
-        { id: 'soweto', name: 'Soweto' },
-        { id: 'alexandra', name: 'Alexandra' },
-        { id: 'khayelitsha', name: 'Khayelitsha' },
-        { id: 'mitchells-plain', name: 'Mitchells Plain' },
-        { id: 'mamelodi', name: 'Mamelodi' },
-        { id: 'umlazi', name: 'Umlazi' },
-        { id: 'mdantsane', name: 'Mdantsane' },
-        { id: 'other', name: 'Other' }
-      ];
-    } catch (error) {
-      console.error('Error fetching locations:', error);
-      throw new Error('Failed to fetch locations');
-    }
-  }
-
-  // ==================== SELLER OPERATIONS ====================
-
-  /**
-   * Get seller by ID
-   */
-  async getSellerById(sellerId: string): Promise<SellerApiResponse> {
-    try {
-      const response = await axiosClient.get(`/marketplace/sellers/${sellerId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching seller:', error);
-      throw new Error('Failed to fetch seller');
-    }
-  }
-
-  /**
-   * Get current seller profile
-   */
-  async getCurrentSellerProfile(userId: string): Promise<SellerApiResponse> {
-    try {
-      const response = await axiosClient.get(`/marketplace/sellers/profile/${userId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching seller profile:', error);
-      throw new Error('Failed to fetch seller profile');
-    }
-  }
-
-  /**
-   * Create or update seller profile
-   */
-  async updateSellerProfile(sellerData: SellerFormData, createdBy: string): Promise<SellerApiResponse> {
-    try {
-      const sellerRequest: SellerRequest = this.transformToSellerRequest(sellerData, createdBy);
-      const response = await axiosClient.post('/marketplace/sellers/profile', sellerRequest);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating seller profile:', error);
-      throw new Error('Failed to update seller profile');
-    }
-  }
-
-  /**
-   * Get seller's products
-   */
-  async getSellerProducts(sellerId: string): Promise<UserProductItem[]> {
-    try {
-      const response = await axiosClient.get(`/marketplace/sellers/${sellerId}/products`);
-      return response.data.map((product: ProductApiResponse) => 
+      const response = await axiosClient.get('/marketplace/products/my-products', {
+        headers: this.getAuthHeader()
+      });
+      return response.data.map((product: any) => 
         this.transformToUserProductItem(product)
       );
     } catch (error) {
@@ -302,12 +186,11 @@ class MarketplaceService {
 
   // ==================== REVIEW OPERATIONS ====================
 
-  /**
-   * Get product reviews
-   */
   async getProductReviews(productId: string): Promise<ProductReview[]> {
     try {
-      const response = await axiosClient.get(`/marketplace/products/${productId}/reviews`);
+      const response = await axiosClient.get(`/marketplace/reviews/${productId}`, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching product reviews:', error);
@@ -315,13 +198,12 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Add product review
-   */
   async addProductReview(reviewData: ReviewFormData, createdBy: string): Promise<ProductReview> {
     try {
       const reviewRequest: ReviewRequest = this.transformToReviewRequest(reviewData, createdBy);
-      const response = await axiosClient.post('/marketplace/reviews', reviewRequest);
+      const response = await axiosClient.post('/marketplace/reviews', reviewRequest, {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error) {
       console.error('Error adding review:', error);
@@ -329,155 +211,24 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Update review
-   */
-  async updateReview(reviewId: string, reviewData: ReviewFormData, createdBy: string): Promise<ProductReview> {
-    try {
-      const reviewRequest: ReviewRequest = this.transformToReviewRequest(reviewData, createdBy);
-      const response = await axiosClient.put(`/marketplace/reviews/${reviewId}`, reviewRequest);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating review:', error);
-      throw new Error('Failed to update review');
-    }
-  }
-
-  /**
-   * Delete review
-   */
-  async deleteReview(reviewId: string, userEmail: string): Promise<void> {
-    try {
-      await axiosClient.delete(`/marketplace/reviews/${reviewId}`, {
-        params: { userEmail }
-      });
-    } catch (error) {
-      console.error('Error deleting review:', error);
-      throw new Error('Failed to delete review');
-    }
-  }
-
-  /**
-   * Mark review as helpful
-   */
   async markReviewHelpful(reviewId: string): Promise<void> {
     try {
-      await axiosClient.post(`/marketplace/reviews/${reviewId}/helpful`);
+      await axiosClient.post(`/marketplace/reviews/${reviewId}/helpful`, {}, {
+        headers: this.getAuthHeader()
+      });
     } catch (error) {
       console.error('Error marking review as helpful:', error);
       throw new Error('Failed to update review');
     }
   }
 
-  // ==================== MESSAGE OPERATIONS ====================
-
-  /**
-   * Send message to seller
-   */
-  async sendMessage(messageData: MessageFormData, createdBy: string): Promise<ProductMessage> {
-    try {
-      const messageRequest: MessageRequest = this.transformToMessageRequest(messageData, createdBy);
-      const response = await axiosClient.post('/marketplace/messages', messageRequest);
-      return response.data;
-    } catch (error) {
-      console.error('Error sending message:', error);
-      throw new Error('Failed to send message');
-    }
-  }
-
-  /**
-   * Get user's messages
-   */
-  async getUserMessages(userId: string): Promise<ProductMessage[]> {
-    try {
-      const response = await axiosClient.get(`/marketplace/messages/${userId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      throw new Error('Failed to fetch messages');
-    }
-  }
-
-  /**
-   * Mark message as read
-   */
-  async markMessageAsRead(messageId: string): Promise<void> {
-    try {
-      await axiosClient.patch(`/marketplace/messages/${messageId}/read`);
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-      throw new Error('Failed to update message');
-    }
-  }
-
-  // ==================== FAVORITE OPERATIONS ====================
-
-  /**
-   * Add product to favorites
-   */
-  async addToFavorites(productId: string, userId: string): Promise<void> {
-    try {
-      await axiosClient.post('/marketplace/favorites', { productId, userId });
-    } catch (error) {
-      console.error('Error adding to favorites:', error);
-      throw new Error('Failed to add to favorites');
-    }
-  }
-
-  /**
-   * Remove product from favorites
-   */
-  async removeFromFavorites(productId: string, userId: string): Promise<void> {
-    try {
-      await axiosClient.delete('/marketplace/favorites', {
-        params: { productId, userId }
-      });
-    } catch (error) {
-      console.error('Error removing from favorites:', error);
-      throw new Error('Failed to remove from favorites');
-    }
-  }
-
-  /**
-   * Get user's favorite products
-   */
-  async getUserFavorites(userId: string): Promise<UserProductItem[]> {
-    try {
-      const response = await axiosClient.get(`/marketplace/favorites/${userId}`);
-      return response.data.map((product: ProductApiResponse) => 
-        this.transformToUserProductItem(product)
-      );
-    } catch (error) {
-      console.error('Error fetching favorites:', error);
-      throw new Error('Failed to fetch favorites');
-    }
-  }
-
-  // ==================== REPORT OPERATIONS ====================
-
-  /**
-   * Report a product
-   */
-  async reportProduct(reportData: ReportFormData, createdBy: string): Promise<void> {
-    try {
-      await axiosClient.post('/marketplace/reports', {
-        ...reportData,
-        createdBy
-      });
-    } catch (error) {
-      console.error('Error reporting product:', error);
-      throw new Error('Failed to report product');
-    }
-  }
-
   // ==================== ANALYTICS ====================
 
-  /**
-   * Get marketplace analytics (Admin only)
-   */
   async getMarketplaceAnalytics(): Promise<MarketplaceAnalytics> {
     try {
-      const response = await axiosClient.get('/marketplace/analytics');
+      const response = await axiosClient.get('/marketplace/analytics', {
+        headers: this.getAuthHeader()
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching marketplace analytics:', error);
@@ -487,10 +238,7 @@ class MarketplaceService {
 
   // ==================== DATA TRANSFORMATION METHODS ====================
 
-  /**
-   * Transform API response to AdminProductItem
-   */
-  private transformToAdminProductItem(apiProduct: ProductApiResponse): AdminProductItem {
+  private transformToAdminProductItem(apiProduct: any): AdminProductItem {
     return {
       id: apiProduct.productId,
       title: apiProduct.title,
@@ -520,10 +268,7 @@ class MarketplaceService {
     };
   }
 
-  /**
-   * Transform API response to UserProductItem
-   */
-  private transformToUserProductItem(apiProduct: ProductApiResponse): UserProductItem {
+  private transformToUserProductItem(apiProduct: any): UserProductItem {
     return {
       id: apiProduct.productId,
       title: apiProduct.title,
@@ -541,13 +286,10 @@ class MarketplaceService {
       negotiable: apiProduct.negotiable,
       status: apiProduct.status,
       timeAgo: this.formatTimeAgo(apiProduct.createdAt),
-      isLiked: false // This would be determined by checking user's favorites
+      isLiked: false
     };
   }
 
-  /**
-   * Transform form data to API request format
-   */
   private transformToProductRequest(formData: ProductFormData, createdBy: string): ProductRequest {
     return {
       title: formData.title,
@@ -566,9 +308,6 @@ class MarketplaceService {
     };
   }
 
-  /**
-   * Transform form data to match backend ProductDTO expectations
-   */
   private transformToProductDTO(formData: ProductFormData, createdBy: string, seller?: string): any {
     return {
       title: formData.title,
@@ -586,30 +325,10 @@ class MarketplaceService {
       images: Array.isArray(formData.images) && formData.images.length > 0 ? formData.images[0] : null,
       createdBy: createdBy,
       sellerName: seller || undefined,
-      sellerId: createdBy
+      sellerId: this.getCurrentUserId()
     };
   }
 
-  /**
-   * Transform form data to API request format
-   */
-  private transformToSellerRequest(formData: SellerFormData, createdBy: string): SellerRequest {
-    return {
-      name: formData.name,
-      email: formData.email || undefined,
-      phone: formData.phone || undefined,
-      location: formData.location,
-      description: formData.description || undefined,
-      responseTime: formData.responseTime || undefined,
-      languages: formData.languages.split(',').map(lang => lang.trim()).filter(lang => lang.length > 0),
-      socialLinks: this.parseSocialLinks(formData.socialLinks),
-      createdBy: createdBy
-    };
-  }
-
-  /**
-   * Transform form data to API request format
-   */
   private transformToReviewRequest(formData: ReviewFormData, createdBy: string): ReviewRequest {
     return {
       productId: formData.productId,
@@ -620,9 +339,6 @@ class MarketplaceService {
     };
   }
 
-  /**
-   * Transform form data to API request format
-   */
   private transformToMessageRequest(formData: MessageFormData, createdBy: string): MessageRequest {
     return {
       productId: formData.productId,
@@ -632,9 +348,6 @@ class MarketplaceService {
     };
   }
 
-  /**
-   * Transform AdminProductItem back to form data for editing
-   */
   transformToProductFormData(product: AdminProductItem): ProductFormData {
     return {
       title: product.title,
@@ -654,9 +367,6 @@ class MarketplaceService {
 
   // ==================== UTILITY METHODS ====================
 
-  /**
-   * Parse specifications from string
-   */
   private parseSpecifications(specString: string): Record<string, string> {
     const specs: Record<string, string> = {};
     if (!specString) return specs;
@@ -671,35 +381,12 @@ class MarketplaceService {
     return specs;
   }
 
-  /**
-   * Format specifications to string
-   */
   private formatSpecifications(specs: Record<string, string>): string {
     return Object.entries(specs)
       .map(([key, value]) => `${key}: ${value}`)
       .join('\n');
   }
 
-  /**
-   * Parse social links from string
-   */
-  private parseSocialLinks(linksString: string): Record<string, string> {
-    const links: Record<string, string> = {};
-    if (!linksString) return links;
-    
-    linksString.split('\n').forEach(line => {
-      const [platform, ...urlParts] = line.split(':');
-      if (platform && urlParts.length > 0) {
-        links[platform.trim()] = urlParts.join(':').trim();
-      }
-    });
-    
-    return links;
-  }
-
-  /**
-   * Format time ago
-   */
   private formatTimeAgo(dateString?: string): string {
     if (!dateString) return 'Just now';
     
@@ -718,16 +405,6 @@ class MarketplaceService {
     return date.toLocaleDateString();
   }
 
-  /**
-   * Format price for display
-   */
-  formatPrice(price: string): string {
-    return price.startsWith('R') ? price : `R${price}`;
-  }
-
-  /**
-   * Validate product form data
-   */
   validateProductForm(formData: ProductFormData): string | null {
     if (!formData.title.trim()) {
       return 'Product title is required';
@@ -745,12 +422,9 @@ class MarketplaceService {
       return 'Location is required';
     }
     
-    return null; // No errors
+    return null;
   }
 
-  /**
-   * Validate review form data
-   */
   validateReviewForm(formData: ReviewFormData): string | null {
     if (!formData.productId) {
       return 'Product ID is required';
@@ -762,12 +436,9 @@ class MarketplaceService {
       return 'Review comment is required';
     }
     
-    return null; // No errors
+    return null;
   }
 
-  /**
-   * Get condition color for display
-   */
   getConditionColor(condition?: 'new' | 'used' | 'refurbished'): string {
     switch (condition) {
       case 'new': return 'bg-green-100 text-green-800';
@@ -777,9 +448,6 @@ class MarketplaceService {
     }
   }
 
-  /**
-   * Get status color for display
-   */
   getStatusColor(status: 'active' | 'sold' | 'pending' | 'removed'): string {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -791,6 +459,5 @@ class MarketplaceService {
   }
 }
 
-// Export as singleton instance
 export const marketplaceService = new MarketplaceService();
 export default marketplaceService;

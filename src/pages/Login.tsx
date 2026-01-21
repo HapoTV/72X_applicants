@@ -1,9 +1,10 @@
-// src/pages/Login.tsx
+// src/pages/Login.tsx - UPDATED VERSION
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2 } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
+import type { LoginResponse } from '../interfaces/UserData';
 import Logo from '../assets/Logo.svg';
 
 const Login: React.FC = () => {
@@ -18,16 +19,21 @@ const Login: React.FC = () => {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string>('');
 
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+        setErrorMessage(''); // Clear error when user types
     };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setErrorMessage('');
 
         try {
+            console.log("🚀 Starting login process...");
+            
             const loginRequest = {
                 email: formData.email,
                 password: formData.password,
@@ -35,44 +41,70 @@ const Login: React.FC = () => {
                 loginType: loginType
             };
 
-            const userData = await authService.login(loginRequest);
+            // ✅ Get REAL token from backend
+            const loginResponse: LoginResponse = await authService.login(loginRequest);
             
-            // Store auth info
-            localStorage.setItem('authToken', `token-${Date.now()}`);
+            console.log("✅ Login successful, storing token...");
+            
+            // ✅ Store REAL JWT token from backend
+            localStorage.setItem('authToken', loginResponse.token);
             localStorage.setItem('userType', loginType);
-            localStorage.setItem('userEmail', userData.email);
-            localStorage.setItem('userId', userData.userId);
+            localStorage.setItem('userEmail', loginResponse.email);
+            localStorage.setItem('userId', loginResponse.userId);
+            localStorage.setItem('userRole', loginResponse.role);
+            localStorage.setItem('fullName', loginResponse.fullName);
             
-            if (userData.businessReference) {
-                localStorage.setItem('businessReference', userData.businessReference);
+            if (loginResponse.businessReference) {
+                localStorage.setItem('businessReference', loginResponse.businessReference);
             }
-            if (userData.userPackage) {
-                localStorage.setItem('userPackage', userData.userPackage);
-            }
+            
+            // Store user object for AuthContext
+            const userData = {
+                userId: loginResponse.userId,
+                fullName: loginResponse.fullName,
+                email: loginResponse.email,
+                role: loginResponse.role,
+                status: 'ACTIVE',
+                businessReference: loginResponse.businessReference,
+                companyName: loginResponse.companyName,
+                profileImageUrl: loginResponse.profileImageUrl
+            };
 
             // Update auth context
             login(userData);
             
-            console.log('Login successful, redirecting...');
+            console.log("🎉 Login complete! Token:", loginResponse.token.substring(0, 30) + "...");
             
-            // Redirect based on user type
-            if (loginType === 'admin') {
-                window.location.replace('/admin/dashboard/overview');
-            } else {
-                window.location.replace('/dashboard/overview');
+            // Delay redirect slightly to ensure localStorage is updated
+            setTimeout(() => {
+                if (loginType === 'admin') {
+                    window.location.href = '/admin/dashboard/overview';
+                } else {
+                    window.location.href = '/dashboard/overview';
+                }
+            }, 100);
+            
+        } catch (error: any) {
+            console.error('❌ Login error:', error);
+            
+            let message = error.message || 'An error occurred during login. Please try again.';
+            
+            if (message.includes('Network Error') || message.includes('Cannot connect')) {
+                message = 'Cannot connect to server. Please check if the backend is running.';
+            } else if (message.includes('Invalid credentials')) {
+                message = 'Invalid email or password. Please try again.';
+            } else if (message.includes('Business reference is required')) {
+                message = 'Business reference is required for user login.';
             }
             
-        } catch (error) {
-            console.error('Login error:', error);
-            const errorMessage = error instanceof Error ? error.message : 'An error occurred during login. Please try again.';
-            alert(errorMessage);
+            setErrorMessage(message);
+            
         } finally {
             setIsLoading(false);
         }
     };
 
     const fillDemoCredentials = () => {
-        // Updated development credentials
         const demoCredentials = {
             user: { 
                 email: 'asandile.nkala@example.com', 
@@ -93,6 +125,7 @@ const Login: React.FC = () => {
             businessReference: credentials.businessReference,
             password: credentials.password
         }));
+        setErrorMessage('');
     };
 
     return (
@@ -135,6 +168,16 @@ const Login: React.FC = () => {
                         </button>
                     </div>
 
+                    {/* Error Message */}
+                    {errorMessage && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-700 text-sm">{errorMessage}</p>
+                            <p className="text-red-600 text-xs mt-1">
+                                Backend URL: http://localhost:8080/api/authentication/login
+                            </p>
+                        </div>
+                    )}
+
                     {/* Login Form */}
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div>
@@ -150,6 +193,7 @@ const Login: React.FC = () => {
                                     placeholder="Enter your email"
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                     required
+                                    disabled={isLoading}
                                 />
                             </div>
                         </div>
@@ -167,7 +211,8 @@ const Login: React.FC = () => {
                                         onChange={(e) => handleInputChange('businessReference', e.target.value)}
                                         placeholder="Enter your business reference"
                                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        required
+                                        required={loginType === 'user'}
+                                        disabled={isLoading}
                                     />
                                 </div>
                             </div>
@@ -186,11 +231,13 @@ const Login: React.FC = () => {
                                     placeholder="Enter your password"
                                     className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                     required
+                                    disabled={isLoading}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                                    disabled={isLoading}
                                 >
                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -204,13 +251,15 @@ const Login: React.FC = () => {
                                     checked={formData.rememberMe}
                                     onChange={(e) => handleInputChange('rememberMe', e.target.checked)}
                                     className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                                    disabled={isLoading}
                                 />
                                 <span className="text-sm text-gray-600">Remember me</span>
                             </label>
                             <button
                                 type="button"
                                 onClick={() => navigate('/reset-password')}
-                                className="text-sm text-primary-600 hover:text-primary-700"
+                                className="text-sm text-primary-600 hover:text-primary-700 disabled:opacity-50"
+                                disabled={isLoading}
                             >
                                 Forgot password?
                             </button>
@@ -219,10 +268,13 @@ const Login: React.FC = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                            className="w-full py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center font-medium"
                         >
                             {isLoading ? (
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                    Signing in...
+                                </>
                             ) : (
                                 `Sign In as ${loginType === 'admin' ? 'Admin' : 'User'}`
                             )}
@@ -244,7 +296,8 @@ const Login: React.FC = () => {
                         <button
                             type="button"
                             onClick={fillDemoCredentials}
-                            className="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                            className="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
+                            disabled={isLoading}
                         >
                             Fill {loginType} credentials
                         </button>
@@ -257,7 +310,8 @@ const Login: React.FC = () => {
                         Don't have an account?{' '}
                         <button
                             onClick={() => navigate('/signup')}
-                            className="text-primary-600 hover:text-primary-700 font-medium"
+                            className="text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
+                            disabled={isLoading}
                         >
                             Sign up for free
                         </button>
