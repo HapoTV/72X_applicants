@@ -1,40 +1,31 @@
-// src/pages/Analytics.tsx (FIXED VERSION)
-import React, { useState, useEffect, useCallback } from 'react';
+// src/pages/Analytics.tsx
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, DollarSign, Users, Loader2 } from 'lucide-react';
+import { TrendingUp, DollarSign, Users, Loader2, AlertCircle } from 'lucide-react';
 import { analyticsService } from '../services/AnalyticsService';
-import { dataInputService } from '../services/DataInputService';
 
 type TimeRange = '3months' | '6months' | '1year';
 
 type RevenuePoint = {
-  month: string;
+  period: string;
   revenue: number;
   expenses: number;
   profit: number;
 };
 
 type CustomerPoint = {
-  month: string;
+  period: string;
   customers: number;
+  newCustomers?: number;
+  churnRate?: number;
 };
 
 type ExpenseSlice = {
   name: string;
   value: number;
+  percentage: number;
   color: string;
-};
-
-type DashboardAnalytics = {
-  revenueMetrics?: {
-    totalRevenue?: number;
-    revenueGrowth?: number;
-  };
-  customerMetrics?: {
-    totalCustomers?: number;
-    averageCustomerValue?: number;
-    customerGrowth?: number;
-  };
+  trend?: 'up' | 'down' | 'stable';
 };
 
 const Analytics: React.FC = () => {
@@ -47,164 +38,130 @@ const Analytics: React.FC = () => {
     totalCustomers: 0,
     avgCustomerValue: 0,
     revenueGrowth: 0,
-    customerGrowth: 0
+    customerGrowth: 0,
+    totalProfit: 0,
+    profitMargin: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const getTimeRangeLabel = useCallback((range: string): string => {
+  const fetchAnalyticsData = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Fetch all data in parallel
+      const [dashboardData, revenueChartData, expenseData, customerAnalytics] = await Promise.all([
+        analyticsService.getDashboardAnalytics(timeRange),
+        analyticsService.getRevenueChartData(timeRange),
+        analyticsService.getExpenseBreakdown(timeRange),
+        analyticsService.getCustomerAnalytics(timeRange)
+      ]);
+
+      // Set revenue chart data
+      setRevenueData(revenueChartData);
+
+      // Transform customer data for chart
+      const customerChartData: CustomerPoint[] = revenueChartData.map((point, index) => ({
+        period: point.period,
+        customers: Math.round(customerAnalytics.totalCustomers * (0.95 + (index * 0.01))), // Simple scaling
+        newCustomers: Math.round(customerAnalytics.newCustomers / 6), // Assuming 6 months
+        churnRate: customerAnalytics.churnRate
+      }));
+      setCustomerData(customerChartData);
+
+      // Set expense breakdown
+      setExpenseBreakdown(expenseData);
+
+      // Set key metrics from dashboard
+      setKeyMetrics({
+        totalRevenue: dashboardData.revenueMetrics.totalRevenue,
+        totalCustomers: dashboardData.customerMetrics.totalCustomers,
+        avgCustomerValue: dashboardData.customerMetrics.averageCustomerValue,
+        revenueGrowth: dashboardData.revenueMetrics.revenueGrowth,
+        customerGrowth: dashboardData.customerMetrics.customerGrowth,
+        totalProfit: dashboardData.revenueMetrics.totalProfit,
+        profitMargin: dashboardData.revenueMetrics.profitMargin
+      });
+
+    } catch (err) {
+      console.error('Error fetching analytics data:', err);
+      setError('Failed to load analytics data. Please try again.');
+      
+      // Clear all data on error
+      setRevenueData([]);
+      setCustomerData([]);
+      setExpenseBreakdown([]);
+      setKeyMetrics({
+        totalRevenue: 0,
+        totalCustomers: 0,
+        avgCustomerValue: 0,
+        revenueGrowth: 0,
+        customerGrowth: 0,
+        totalProfit: 0,
+        profitMargin: 0
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [timeRange]);
+
+  const getTimeRangeLabel = (range: string): string => {
     switch (range) {
       case '3months': return '3 months';
       case '6months': return '6 months';
       case '1year': return '1 year';
       default: return '6 months';
     }
-  }, []);
-
-  const transformCustomerData = useCallback((dashboardData?: DashboardAnalytics): CustomerPoint[] => {
-    void dashboardData;
-    // This would transform the customer metrics into chart data format
-    // For now, return mock data
-    return [
-      { month: 'Jan', customers: 1100 },
-      { month: 'Feb', customers: 1150 },
-      { month: 'Mar', customers: 1180 },
-      { month: 'Apr', customers: 1200 },
-      { month: 'May', customers: 1230 },
-      { month: 'Jun', customers: 1247 }
-    ];
-  }, []);
-
-  const getFallbackData = useCallback((timeRangeValue: string) => {
-    const baseRevenue = [
-      { month: 'Jan', revenue: 18000, expenses: 12000, profit: 6000 },
-      { month: 'Feb', revenue: 22000, expenses: 14000, profit: 8000 },
-      { month: 'Mar', revenue: 19000, expenses: 13000, profit: 6000 },
-      { month: 'Apr', revenue: 25000, expenses: 15000, profit: 10000 },
-      { month: 'May', revenue: 28000, expenses: 16000, profit: 12000 },
-      { month: 'Jun', revenue: 24500, expenses: 14500, profit: 10000 },
-    ];
-
-    const baseCustomer = [
-      { month: 'Jan', customers: 1100 },
-      { month: 'Feb', customers: 1150 },
-      { month: 'Mar', customers: 1180 },
-      { month: 'Apr', customers: 1200 },
-      { month: 'May', customers: 1230 },
-      { month: 'Jun', customers: 1247 },
-    ];
-
-    const baseExpense = [
-      { name: 'Marketing', value: 35, color: '#0ea5e9' },
-      { name: 'Operations', value: 25, color: '#10b981' },
-      { name: 'Staff', value: 20, color: '#f59e0b' },
-      { name: 'Technology', value: 12, color: '#ef4444' },
-      { name: 'Other', value: 8, color: '#8b5cf6' },
-    ];
-
-    const limit = timeRangeValue === '3months' ? 3 : timeRangeValue === '6months' ? 6 : 12;
-    
-    return {
-      revenueData: baseRevenue.slice(-limit),
-      customerData: baseCustomer.slice(-limit),
-      expenseData: baseExpense
-    };
-  }, []);
-
-  useEffect(() => {
-    const fetchAnalyticsData = async () => {
-      setIsLoading(true);
-      try {
-        const userId = dataInputService.getCurrentUserId();
-        
-        // Use fallback data immediately for better UX
-        const fallback = getFallbackData(timeRange);
-        setRevenueData(fallback.revenueData);
-        setCustomerData(fallback.customerData);
-        setExpenseBreakdown(fallback.expenseData);
-        setKeyMetrics({
-          totalRevenue: 245000,
-          totalCustomers: 1247,
-          avgCustomerValue: 196,
-          revenueGrowth: 12.5,
-          customerGrowth: 8.3
-        });
-
-        // Try to fetch real data in background with timeout
-        try {
-          const [dashboardData, revenueChartData, expenseData] = await Promise.allSettled([
-            Promise.race([
-              analyticsService.getDashboardAnalytics(userId, timeRange),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-            ]),
-            Promise.race([
-              analyticsService.getRevenueChartData(userId, timeRange),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-            ]),
-            Promise.race([
-              analyticsService.getExpenseBreakdown(userId, timeRange),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-            ])
-          ]);
-
-          // Handle dashboard data
-          if (dashboardData.status === 'fulfilled') {
-            const data = dashboardData.value as DashboardAnalytics;
-            
-            // Transform customer data from dashboard
-            const customerChartData = transformCustomerData(data);
-            setCustomerData(customerChartData);
-
-          // Set key metrics
-          setKeyMetrics({
-            totalRevenue: data.revenueMetrics?.totalRevenue || 0,
-            totalCustomers: data.customerMetrics?.totalCustomers || 0,
-            avgCustomerValue: data.customerMetrics?.averageCustomerValue || 0,
-            revenueGrowth: data.revenueMetrics?.revenueGrowth || 0,
-            customerGrowth: data.customerMetrics?.customerGrowth || 0
-          });
-        }
-
-        // Handle revenue chart data
-        if (revenueChartData.status === 'fulfilled') {
-          setRevenueData(revenueChartData.value as RevenuePoint[]);
-        } else {
-          // Use fallback data
-          const fallback = getFallbackData(timeRange);
-          setRevenueData(fallback.revenueData);
-        }
-
-        // Handle expense breakdown
-        if (expenseData.status === 'fulfilled') {
-          setExpenseBreakdown(expenseData.value as ExpenseSlice[]);
-        } else {
-          // Use fallback data
-          const fallback = getFallbackData(timeRange);
-          setExpenseBreakdown(fallback.expenseData);
-        }
-
-      } catch {
-        console.log('Background API calls timed out or failed, using fallback data');
-      }
-
-      } catch (error) {
-        console.error('Error fetching analytics data:', error);
-        // Use fallback data
-        const fallback = getFallbackData(timeRange);
-        setRevenueData(fallback.revenueData);
-        setCustomerData(fallback.customerData);
-        setExpenseBreakdown(fallback.expenseData);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAnalyticsData();
-  }, [timeRange, getFallbackData, transformCustomerData]);
+  };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary-500" />
+        <p className="text-gray-600">Loading analytics data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <h3 className="text-lg font-semibold text-gray-900">Unable to Load Data</h3>
+        <p className="text-gray-600 text-center max-w-md">{error}</p>
+        <button
+          onClick={fetchAnalyticsData}
+          className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (revenueData.length === 0 && customerData.length === 0 && expenseBreakdown.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <div className="p-4 bg-gray-50 rounded-lg">
+          <Users className="h-12 w-12 text-gray-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900">No Analytics Data Available</h3>
+        <p className="text-gray-600 text-center max-w-md">
+          Start by adding your financial data to see analytics.
+          <br />
+          Go to Data Input to add revenue, expenses, and customer information.
+        </p>
+        <button
+          onClick={() => window.location.href = '/data-input'}
+          className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          Go to Data Input
+        </button>
       </div>
     );
   }
@@ -266,120 +223,133 @@ const Analytics: React.FC = () => {
             <div className="p-2 bg-purple-50 rounded-lg">
               <TrendingUp className="w-5 h-5 text-purple-600" />
             </div>
-            <span className="text-sm text-purple-600 font-medium">Current</span>
+            <span className={`text-sm font-medium ${keyMetrics.profitMargin >= 20 ? 'text-purple-600' : 'text-yellow-600'}`}>
+              {keyMetrics.profitMargin.toFixed(1)}%
+            </span>
           </div>
           <h3 className="text-2xl font-bold text-gray-900">
-            {analyticsService.formatCurrency(keyMetrics.avgCustomerValue)}
+            {analyticsService.formatCurrency(keyMetrics.totalProfit)}
           </h3>
-          <p className="text-gray-600 text-sm">Avg. Customer Value</p>
+          <p className="text-gray-600 text-sm">Total Profit</p>
         </div>
       </div>
 
       {/* Revenue Chart */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Revenue vs Expenses</h3>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={revenueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" stroke="#6b7280" />
-              <YAxis 
-                stroke="#6b7280"
-                tickFormatter={(value) => analyticsService.formatCurrency(value).replace('R', '')}
-              />
-              <Tooltip 
-                formatter={(value) => [analyticsService.formatCurrency(Number(value)), '']}
-                labelFormatter={(label) => `Month: ${label}`}
-                contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                }}
-              />
-              <Bar dataKey="revenue" fill="#0ea5e9" name="Revenue" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expenses" fill="#ef4444" name="Expenses" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {revenueData.length > 0 && (
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Revenue vs Expenses</h3>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={revenueData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="period" stroke="#6b7280" />
+                <YAxis 
+                  stroke="#6b7280"
+                  tickFormatter={(value) => analyticsService.formatCurrency(value).replace('R', '')}
+                />
+                <Tooltip 
+                  formatter={(value) => [analyticsService.formatCurrency(Number(value)), '']}
+                  labelFormatter={(label) => `Period: ${label}`}
+                  contentStyle={{ 
+                    backgroundColor: 'white', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Bar dataKey="revenue" fill="#0ea5e9" name="Revenue" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expenses" fill="#ef4444" name="Expenses" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Customer Growth & Expense Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Growth</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={customerData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="customers" 
-                  stroke="#10b981" 
-                  strokeWidth={3}
-                  dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Expense Breakdown</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={expenseBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                  label={(entry) => `${entry.name}: ${entry.value}%`}
-                >
-                  {expenseBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value, _name, props) => [`${value}%`, props.payload.name]}
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4 space-y-2">
-            {expenseBreakdown.map((item, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: item.color }}
+        {customerData.length > 0 && (
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Customer Growth</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={customerData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="period" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
                   />
-                  <span className="text-sm text-gray-600">{item.name}</span>
-                </div>
-                <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-              </div>
-            ))}
+                  <Line 
+                    type="monotone" 
+                    dataKey="customers" 
+                    stroke="#10b981" 
+                    strokeWidth={3}
+                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
+        )}
+
+        {expenseBreakdown.length > 0 && (
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Expense Breakdown</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={expenseBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={(entry) => `${entry.name}: ${entry.percentage.toFixed(1)}%`}
+                  >
+                    {expenseBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value, _name, props) => [
+                      `${analyticsService.formatCurrency(Number(value))} (${props.payload.percentage?.toFixed(1)}%)`,
+                      props.payload.name
+                    ]}
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 space-y-2">
+              {expenseBreakdown.map((item, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-sm text-gray-600">{item.name}</span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">
+                    {analyticsService.formatCurrency(item.value)} ({item.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

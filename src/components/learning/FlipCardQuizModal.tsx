@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Brain, Check, ChevronDown, ChevronUp, ChevronsRight, Flame, Sparkles, Star, Trophy, X } from 'lucide-react';
+import { Brain, ChevronDown, ChevronUp, Flame, Sparkles, Star, Trophy, X } from 'lucide-react';
 import Confetti from 'react-confetti';
 
 interface QuizQuestion {
