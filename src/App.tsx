@@ -53,12 +53,14 @@ import AdminDashboard from './pages/adminDashboard/AdminDashboard';
 import AdminNotifications from './pages/adminDashboard/AdminNotifications';
 
 import { AuthProvider } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 
 function App() {
   return (
     <AuthProvider>
-    <Router>
+      <NotificationProvider>
+        <Router>
       <Routes>
         {/* Public landing page */}
         <Route path="/" element={<LandingPage />} />
@@ -151,7 +153,8 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
-    </Router>
+        </Router>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

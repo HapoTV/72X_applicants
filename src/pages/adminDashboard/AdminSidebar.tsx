@@ -1,28 +1,40 @@
 // src/components/admin/AdminSidebar.tsx
-import { useNavigate } from 'react-router-dom';
-import { 
-    Users, 
-    Calendar, 
-    BookOpen, 
-    Handshake, 
-    DollarSign,
+import {
+    Users,
+    BookOpen,
+    BarChart3,
+    Settings,
+    Handshake,
     User,
     Bell
 } from 'lucide-react';
 
+export type AdminTab =
+    | 'users'
+    | 'content'
+    | 'analytics'
+    | 'settings'
+    | 'support'
+    | 'profile'
+    | 'notifications'
+    | 'applicants'
+    | 'events'
+    | 'learning'
+    | 'mentorship'
+    | 'funding';
+
 interface AdminSidebarProps {
-    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'profile' | 'notifications';
-    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'profile' | 'notifications') => void;
+    activeTab: AdminTab;
+    onTabChange: (tab: AdminTab) => void;
 }
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
-    const navigate = useNavigate();
     const menuItems = [
-        { id: 'applicants' as const, label: 'Applicants', icon: Users },
-        { id: 'events' as const, label: 'Events', icon: Calendar },
-        { id: 'learning' as const, label: 'Learning Material', icon: BookOpen },
-        { id: 'mentorship' as const, label: 'Mentorship', icon: Handshake },
-        { id: 'funding' as const, label: 'Funding', icon: DollarSign },
+        { id: 'users' as const, label: 'User Management', icon: Users },
+        { id: 'content' as const, label: 'Content Management', icon: BookOpen },
+        { id: 'analytics' as const, label: 'Analytics & Reports', icon: BarChart3 },
+        { id: 'settings' as const, label: 'System Settings', icon: Settings },
+        { id: 'support' as const, label: 'Support Tickets', icon: Handshake },
         { id: 'profile' as const, label: 'Profile', icon: User },
     ];
 

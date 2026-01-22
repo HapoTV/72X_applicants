@@ -30,7 +30,11 @@ const Signup: React.FC = () => {
     setIsLoading(true);
     try {
       // Generate a business reference like 72XXXXX
-      const ref = '72' + Math.floor(10000 + Math.random() * 90000).toString();
+      const generatedRef = '72' + Math.floor(10000 + Math.random() * 90000).toString();
+      // persist generated business reference so success pages can read it
+      localStorage.setItem('lastGeneratedReference', generatedRef);
+      localStorage.setItem('businessReference', generatedRef);
+      localStorage.setItem('userProvidedBusinessReference', 'false');
       localStorage.setItem('userEmail', form.email);
       localStorage.setItem('userFirstName', form.firstName);
       localStorage.setItem('userPhone', form.phone);

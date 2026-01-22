@@ -14,47 +14,7 @@ interface Notification {
 
 const Notifications: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'Daily Motivation Quote',
-      message: 'Your daily motivation quote is ready! Check out this inspiring insight for your business journey.',
-      type: 'info',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      read: false,
-    },
-    {
-      id: '2',
-      title: 'AI Insights Available',
-      message: 'New AI-generated insights about your business data are now available in the Analytics section.',
-      type: 'success',
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      read: false,
-    },
-    {
-      id: '3',
-      title: 'Data Analysis Complete',
-      message: 'Your data input analysis has been completed. Review the results in the Data Input page.',
-      type: 'success',
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      read: true,
-    },
-    {
-      id: '4',
-      title: 'New Learning Module',
-      message: 'A new advanced business strategy module has been added to your Learning path.',
-      type: 'info',
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      read: true,
-    },
-    {
-      id: '5',
-      title: 'Community Post Engagement',
-      message: 'Your recent post in the Community section received 5 new comments!',
-      type: 'success',
-      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      read: true,
-    },
-  ]);
+]);
 
   const [filterType, setFilterType] = useState<'all' | 'unread'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');

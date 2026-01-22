@@ -1,9 +1,6 @@
 // src/pages/adminDashboard/AdminNotifications.tsx
 import React, { useState } from 'react';
 import { Bell, Plus, Trash2, Edit, Send, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import AdminNavbar from './AdminNavbar';
-import AdminSidebar from './AdminSidebar';
 
 interface NotificationRecord {
   id: string;
@@ -28,38 +25,10 @@ interface CreateNotificationForm {
 }
 
 const AdminNotifications: React.FC = () => {
-  const navigate = useNavigate();
+  
   const [notifications, setNotifications] = useState<NotificationRecord[]>([
-    {
-      id: '1',
-      title: 'New Feature Launch',
-      message: 'Check out our new AI Business Analyst feature for deeper insights into your business performance.',
-      type: 'update',
-      recipientCount: 1250,
-      status: 'sent',
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      sentAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: '2',
-      title: 'System Maintenance',
-      message: 'Scheduled maintenance on Saturday from 2 AM to 4 AM UTC. Services may be temporarily unavailable.',
-      type: 'maintenance',
-      recipientCount: 5320,
-      status: 'scheduled',
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      scheduledFor: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: '3',
-      title: 'Important Security Update',
-      message: 'We\'ve enhanced security features. Please update your password to ensure your account safety.',
-      type: 'alert',
-      recipientCount: 5320,
-      status: 'sent',
-      createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-      sentAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    },
+
+    
   ]);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -168,20 +137,12 @@ const AdminNotifications: React.FC = () => {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userType');
-    localStorage.removeItem('userEmail');
-    navigate('/');
-  };
+  
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNavbar onLogout={handleLogout} />
-      <div className="flex">
-        <AdminSidebar activeTab="notifications" onTabChange={() => {}} />
-        <main className="flex-1 p-6">
-          <div className="space-y-6 animate-fade-in">
+      <main className="max-w-6xl mx-auto w-full p-6">
+        <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -494,10 +455,9 @@ const AdminNotifications: React.FC = () => {
           </p>
         </div>
       </div>
-          </div>
-        </main>
-      </div>
-    </div>
+            </div>
+          </main>
+        </div>
   );
 };
 
