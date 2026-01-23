@@ -10,8 +10,8 @@ import {
 } from 'lucide-react';
 
 interface AdminSidebarProps {
-    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile';
-    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile') => void;
+    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' |'monitoring'| 'profile';
+    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'monitoring' | 'profile') => void;
 }
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
@@ -23,6 +23,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
         { id: 'funding' as const, label: 'Funding', icon: DollarSign },
         { id: 'profile' as const, label: 'Profile', icon: User },
         { id: 'ad' as const, label: 'Ads', icon: Megaphone },
+        { id: 'monitoring' as const, label: 'Monitoring', icon: Megaphone },
     ];
 
     return (

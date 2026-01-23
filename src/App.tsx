@@ -36,6 +36,9 @@ import ResetPasswordVerify from './pages/ResetPasswordVerify';
 import CRM from './pages/applications/CRM';
 import FinanceManager from './pages/applications/FinanceManager';
 
+// Notification pages
+import Notifications from './pages/Notifications';
+
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
 import MentorshipUpgrade from './pages/upgrades/MentorshipUpgrade';
@@ -52,6 +55,7 @@ import AdminDashboard from './pages/adminDashboard/AdminDashboard';
 import MyConnections from './pages/MyConnections';
 
 import { AuthProvider } from './context/AuthContext';
+import AdminNotifications from './pages/adminDashboard/tabs/AdminNotifications';
 
 
 function App() {
@@ -75,6 +79,7 @@ function App() {
         
         {/* Admin routes - outside of main layout to avoid sidebar and chatbot */}
         <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+        <Route path="/admin/notifications" element={<AdminNotifications />} />
         <Route path="/admin/dashboard" element={
           <ProtectedRoute requireAdmin={true}>
             <AdminDashboard />
@@ -117,6 +122,9 @@ function App() {
                 <Route path="/applications/finance-manager" element={<FinanceManager />} />
                 <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
                 <Route path="/profile" element={<Profile />} />
+
+                
+                <Route path="/notifications" element={<Notifications />} />
                 
                 {/* Essential Package Features */}
                 <Route path="/marketplace" element={<Marketplace />} />

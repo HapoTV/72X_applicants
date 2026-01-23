@@ -1,6 +1,8 @@
+// src/components/Header.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Menu, Bell, Search, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Add Link
+import NotificationService from '../services/NotificationService'; // Add this import
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
@@ -12,6 +14,22 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0); // Add state for unread count
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await NotificationService.getUserNotifications(true);
+      setUnreadCount(response.unreadCount);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
 
   const index = useMemo(
     () => [
@@ -31,6 +49,8 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
       // Analytics/Data aliases
       { title: 'Analytics', path: '/analytics', keywords: ['data', 'insights', 'reports', 'customers', 'growth'] },
       { title: 'Data Input', path: '/data-input', keywords: ['data', 'input', 'capture', 'customers', 'growth'] },
+      // Notifications alias
+      { title: 'Notifications', path: '/notifications', keywords: ['alerts', 'messages', 'updates', 'bell'] },
     ],
     []
   );
@@ -116,10 +136,18 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            {/* Notification Button - CHANGED TO Link */}
+            <Link
+              to="/notifications"
+              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
               <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-            </button>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
 
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
