@@ -27,6 +27,8 @@ import {
   Phone
 } from 'lucide-react';
 import reactSvg from "../assets/react.png";
+import { adService } from "../services/AdService";
+import AdRequestModal from "./dashboard/components/AdRequestModal";
 
 import retailImg from "../assets/retail.svg";
 import tourismImg from "../assets/tourism.svg";
@@ -49,6 +51,7 @@ const LandingPage: React.FC = () => {
   const [productDropdownOpen, setProductDropdownOpen] = React.useState(false);
   const productDropdownRef = React.useRef<HTMLDivElement | null>(null);
   const [showAllApps, setShowAllApps] = React.useState(false);
+  const [showAdRequestModal, setShowAdRequestModal] = React.useState(false);
 
   // re-run reveal observer when apps toggle changes
   React.useEffect(() => {
@@ -75,6 +78,80 @@ const LandingPage: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Ad Request submit (same behavior as dashboard)
+  const handleAdRequestSubmit = async (requestData: {
+    businessName: string;
+    email: string;
+    phone: string;
+    message: string;
+  }) => {
+    try {
+      const userId = localStorage.getItem('userId') || 'anonymous';
+      const userName = localStorage.getItem('fullName') || requestData.businessName;
+      const userEmail = localStorage.getItem('userEmail') || requestData.email;
+      const userPhone = localStorage.getItem('mobileNumber') || requestData.phone;
+      const companyName = localStorage.getItem('companyName') || requestData.businessName;
+      const industry = localStorage.getItem('industry') || 'Not specified';
+      const userPackage = localStorage.getItem('userPackage') || 'Free';
+
+      const subject = `New Advertising Space Request - ${requestData.businessName}`;
+      const body = `
+NEW ADVERTISING SPACE REQUEST
+
+========================================
+BUSINESS DETAILS:
+========================================
+Business Name: ${requestData.businessName}
+Contact Person: ${userName}
+Email: ${userEmail}
+Phone: ${requestData.phone || userPhone}
+Industry: ${industry}
+Package: ${userPackage}
+
+========================================
+USER DETAILS:
+========================================
+User ID: ${userId}
+Company: ${companyName}
+Email (from account): ${localStorage.getItem('userEmail') || 'Not available'}
+Phone (from account): ${localStorage.getItem('mobileNumber') || 'Not available'}
+
+========================================
+ADVERTISING REQUEST:
+========================================
+${requestData.message}
+
+========================================
+REQUEST DETAILS:
+========================================
+Request Date: ${new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', dateStyle: 'full', timeStyle: 'long' })}
+
+========================================
+ACTION REQUIRED:
+========================================
+1. Review this request
+2. Contact the business if needed
+3. Create ad campaign in admin panel
+4. Notify user when ad is live
+
+ADMIN PANEL: ${window.location.origin}/admin/ads
+========================================
+      `;
+
+      const adminEmail = 'asandilenkala@gmail.com';
+      const mailtoLink = `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoLink;
+
+      await adService.recordEngagement('ACTION_COMPLETED', 15, 'Requested advertising space');
+
+      setShowAdRequestModal(false);
+      alert('Email client opened. Please send the email to submit your advertising request. Our team will contact you within 24 hours.');
+    } catch (error) {
+      console.error('Error submitting ad request:', error);
+      alert('Failed to open email client. Please contact admin@seventytwox.com directly with your advertising request.');
+    }
+  };
 
   // Product categories for dropdown
   const productCategories = [
@@ -549,6 +626,14 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
+        {/* Ad Request Modal for Landing (same as dashboard) */}
+        <AdRequestModal
+          isOpen={showAdRequestModal}
+          onClose={() => setShowAdRequestModal(false)}
+          onSubmit={handleAdRequestSubmit}
+          language={'en'}
+        />
+
         {/* Trust Bar */}
         <section className="bg-gray-50 py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -639,19 +724,13 @@ const LandingPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 mt-10">
-                  <a
-                    href="#help"
-                    className="inline-flex items-center justify-center bg-[#60A5FA] hover:bg-[#3B82F6] text-white px-8 py-4 rounded-lg font-semibold text-lg shadow-lg transition-colors"
+                <div className="flex justify-center mt-10">
+                  <button
+                    onClick={() => setShowAdRequestModal(true)}
+                    className="inline-flex items-center justify-center bg-[#60A5FA] hover:bg-[#3B82F6] text-white px-6 py-3 rounded-md font-semibold text-sm shadow-md transition-colors mx-auto"
                   >
                     Request Ad Space
-                  </a>
-                  <a
-                    href="#help"
-                    className="inline-flex items-center justify-center bg-white border border-gray-300 text-gray-900 hover:bg-gray-50 px-8 py-4 rounded-lg font-semibold text-lg shadow-sm transition-colors"
-                  >
-                    Contact us for advertising opportunities
-                  </a>
+                  </button>
                 </div>
               </div>
 

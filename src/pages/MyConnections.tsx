@@ -1,30 +1,13 @@
 // src/pages/MyConnections.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search as SearchIcon } from 'lucide-react';
-
 import {
-  Container,
-  Card,
-  Typography,
-  Avatar,
-  Box,
-  Chip,
-  Button,
-  CircularProgress,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
-
-import {
-  LocationOn,
-  Business,
-  Message,
-  VideoCall,
+  Search as SearchIcon,
+  MapPin,
+  BriefcaseBusiness,
+  MessageCircle,
+  Video,
   Phone,
-} from '@mui/icons-material';
+} from 'lucide-react';
 
 import MessageServices from '../services/MessageServices';
 import ChatWindow from '../components/ChatWindow';
@@ -79,7 +62,7 @@ const MyConnections: React.FC = () => {
 
     const loadConversations = async () => {
       try {
-        const conversations: Conversation[] = await MessageServices.getUserConversations(userId);
+        const conversations: Conversation[] = await MessageServices.getUserConversations();
         const meta: Record<string, { unread: number; lastTimeMs: number }> = {};
         for (const c of conversations) {
           const lastTimeMs = c.lastMessageTime ? Date.parse(c.lastMessageTime) : 0;
@@ -218,20 +201,23 @@ const MyConnections: React.FC = () => {
 
   if (loading) {
     return (
-      <Container sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
-      </Container>
+      <div className="flex justify-center mt-6">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Container sx={{ mt: 4 }}>
-        <Typography color="error">{error}</Typography>
-        <Button onClick={fetchUsers} variant="contained" sx={{ mt: 2 }}>
+      <div className="mt-6">
+        <div className="text-red-600">{error}</div>
+        <button
+          onClick={fetchUsers}
+          className="mt-3 inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+        >
           Retry
-        </Button>
-      </Container>
+        </button>
+      </div>
     );
   }
 
@@ -294,34 +280,34 @@ const MyConnections: React.FC = () => {
       </div>
 
       {/* Results Summary */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="subtitle1">
+      <div className="mb-3 flex justify-between items-center">
+        <div className="text-sm text-gray-700">
           Showing {visibleUsers.length} of {sortedFilteredUsers.length} users
-        </Typography>
+        </div>
         {users.length > 0 && (
-          <Chip
-            label={`${users.length} total users`}
-            color="primary"
-            variant="outlined"
-          />
+          <div className="text-xs px-2.5 py-1 rounded-full border border-blue-200 text-blue-700 bg-blue-50">
+            {users.length} total users
+          </div>
         )}
-      </Box>
+      </div>
 
       {/* Users List */}
       {sortedFilteredUsers.length === 0 ? (
-        <Card sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h6" color="text.secondary">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+          <div className="text-base font-semibold text-gray-700">
             No users found matching your criteria
-          </Typography>
+          </div>
 
-
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <div className="text-sm text-gray-500 mt-2">
             Try adjusting your search or filters
-          </Typography>
-          <Button onClick={clearFilters} variant="contained" sx={{ mt: 2 }}>
+          </div>
+          <button
+            onClick={clearFilters}
+            className="mt-3 inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+          >
             Clear All Filters
-          </Button>
-        </Card>
+          </button>
+        </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="divide-y divide-gray-100">
@@ -334,9 +320,20 @@ const MyConnections: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1.5">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="relative">
-                        <Avatar src={user.profileImage} sx={{ width: 28, height: 28 }}>
-                          {user.firstName?.[0]}{user.lastName?.[0]}
-                        </Avatar>
+                        <div className="w-7 h-7 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center text-[11px] font-semibold text-gray-700">
+                          {user.profileImage ? (
+                            <img
+                              src={user.profileImage}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span>
+                              {user.firstName?.[0]}
+                              {user.lastName?.[0]}
+                            </span>
+                          )}
+                        </div>
                         {user.isOnline && (
                           <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white" />
                         )}
@@ -366,13 +363,13 @@ const MyConnections: React.FC = () => {
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                           {user.industry && (
                             <div className="text-[11px] text-gray-700 inline-flex items-center gap-1">
-                              <Business fontSize="small" sx={{ color: 'text.secondary' }} />
+                              <BriefcaseBusiness className="w-3.5 h-3.5 text-gray-500" />
                               <span className="truncate">{user.industry}</span>
                             </div>
                           )}
                           {user.location && (
                             <div className="text-[11px] text-gray-700 inline-flex items-center gap-1">
-                              <LocationOn fontSize="small" sx={{ color: 'text.secondary' }} />
+                              <MapPin className="w-3.5 h-3.5 text-gray-500" />
                               <span className="truncate">{user.location}</span>
                             </div>
                           )}
@@ -385,16 +382,24 @@ const MyConnections: React.FC = () => {
                         onClick={() => handleStartChat(user)}
                         className="inline-flex items-center justify-center gap-2 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-medium"
                       >
-                        <Message className="w-5 h-5" />
+                        <MessageCircle className="w-4 h-4" />
                         Message
                       </button>
 
-                      <IconButton color="primary" size="small">
-                        <VideoCall />
-                      </IconButton>
-                      <IconButton color="primary" size="small">
-                        <Phone />
-                      </IconButton>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 text-blue-600"
+                        aria-label="Video call"
+                      >
+                        <Video className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 text-blue-600"
+                        aria-label="Phone call"
+                      >
+                        <Phone className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 
@@ -423,27 +428,36 @@ const MyConnections: React.FC = () => {
 
       {/* Chat Dialog */}
       {selectedUser && (
-        <Dialog
-          open={chatOpen}
-          onClose={handleCloseChat}
-          maxWidth="md"
-        >
-          <DialogTitle>
-            Chat with {selectedUser.firstName} {selectedUser.lastName}
-          </DialogTitle>
-          <DialogContent>
-            <ChatWindow
-              receiverId={selectedUser.userId}
-              receiverName={`${selectedUser.firstName} ${selectedUser.lastName}`}
-              receiverEmail={selectedUser.email}
-              onClose={handleCloseChat}
-              isOpen={chatOpen}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseChat}>Close</Button>
-          </DialogActions>
-        </Dialog>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            onClick={handleCloseChat}
+            aria-label="Close dialog"
+          />
+          <div className="relative w-[95vw] max-w-3xl bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+              <div className="font-semibold text-gray-900 text-sm">
+                Chat with {selectedUser.firstName} {selectedUser.lastName}
+              </div>
+              <button
+                onClick={handleCloseChat}
+                className="px-3 py-1.5 rounded-lg text-sm text-gray-700 hover:bg-gray-100"
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-4">
+              <ChatWindow
+                receiverId={selectedUser.userId}
+                receiverName={`${selectedUser.firstName} ${selectedUser.lastName}`}
+                receiverEmail={selectedUser.email}
+                onClose={handleCloseChat}
+                isOpen={chatOpen}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

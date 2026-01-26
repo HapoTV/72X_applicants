@@ -75,14 +75,14 @@ function App() {
         
         {/* Admin routes - outside of main layout to avoid sidebar and chatbot */}
         <Route path="/admin/login" element={<Navigate to="/login" replace />} />
-        <Route path="/admin/dashboard" element={
-          <ProtectedRoute requireAdmin={true}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Navigate to="overview" replace />} />
-          <Route path="overview" element={<AdminDashboard />} />
-        </Route>
+        <Route
+          path="/admin/dashboard/*"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
         
         {/* All other routes with Layout - protected */}
         <Route path="/*" element={

@@ -72,40 +72,12 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
   const [adImpressions, setAdImpressions] = useState<Set<string>>(new Set());
   const [videoEnded, setVideoEnded] = useState<boolean>(false);
   const [clickCooldowns, setClickCooldowns] = useState<Map<string, number>>(new Map());
-  
+  const [aspectRatioByAdId, setAspectRatioByAdId] = useState<Record<string, number>>({});
+
   const carouselTimerRef = useRef<NodeJS.Timeout | null>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
-  const adDebugRef = useRef<HTMLDivElement>(null);
 
   const t = translations[selectedLanguage];
-
-  // Debug log for ads
-  useEffect(() => {
-    console.log('🎯 AdCarousel Debug - Ads:', {
-      totalAds: ads?.length || 0,
-      currentIndex: currentAdIndex,
-      currentAd: ads?.[currentAdIndex],
-      allAds: ads?.map(ad => ({
-        id: ad.adId,
-        title: ad.title,
-        mediaType: ad.mediaType,
-        status: ad.status,
-        priority: ad.priority,
-        clicks: ad.totalClicks
-      }))
-    });
-
-    if (adDebugRef.current && ads?.length > 0) {
-      adDebugRef.current.innerHTML = `
-        <div style="background: rgba(0,0,0,0.1); padding: 5px; border-radius: 4px; font-size: 11px;">
-          <strong>Ad Debug:</strong> Showing ${ads.length} ads<br/>
-          Current: ${currentAdIndex + 1}/${ads.length}<br/>
-          Type: ${ads[currentAdIndex]?.mediaType}<br/>
-          Duration: ${ads[currentAdIndex]?.mediaType === 'VIDEO' ? 'Video' : '10s'}
-        </div>
-      `;
-    }
-  }, [ads, currentAdIndex]);
 
   useEffect(() => {
     // Initialize cooldowns
@@ -130,6 +102,37 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
       }
     };
   }, [ads]);
+
+  useEffect(() => {
+    const currentAd = ads?.[currentAdIndex];
+    if (!currentAd?.adId || !currentAd?.bannerUrl) return;
+    if (aspectRatioByAdId[currentAd.adId]) return;
+
+    if (currentAd.mediaType === 'IMAGE') {
+      const img = new Image();
+      img.onload = () => {
+        const w = img.naturalWidth || 0;
+        const h = img.naturalHeight || 0;
+        if (w > 0 && h > 0) {
+          setAspectRatioByAdId((prev) => ({ ...prev, [currentAd.adId]: w / h }));
+        }
+      };
+      img.src = currentAd.bannerUrl;
+    }
+
+    if (currentAd.mediaType === 'VIDEO') {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => {
+        const w = v.videoWidth || 0;
+        const h = v.videoHeight || 0;
+        if (w > 0 && h > 0) {
+          setAspectRatioByAdId((prev) => ({ ...prev, [currentAd.adId]: w / h }));
+        }
+      };
+      v.src = currentAd.bannerUrl;
+    }
+  }, [ads, currentAdIndex, aspectRatioByAdId]);
 
   const startCarousel = () => {
     if (carouselTimerRef.current) {
@@ -298,7 +301,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
     <div className="animate-pulse">
       {renderSlot(
         t.advertiseWithUs,
-        <div className="h-60 p-4">
+        <div className="h-64 p-4">
           <div className="h-full bg-gray-100 rounded" />
         </div>
       )}
@@ -308,7 +311,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
   const renderError = () => (
     renderSlot(
       typeof error === 'string' ? error : t.advertiseWithUs,
-      <div className="flex items-center justify-center h-60 p-4">
+      <div className="flex items-center justify-center h-64 p-4">
         <div className="text-center">
           <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -322,7 +325,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
   const renderEmpty = () => (
     renderSlot(
       t.advertiseWithUs,
-      <div className="flex items-center justify-center h-60 p-4">
+      <div className="flex items-center justify-center h-64 p-4">
         <div className="text-center">
           <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -338,15 +341,11 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
     const isClicking = adClickLoading === currentAd.adId;
     const canClick = adService.canClickAd(currentAd.adId);
     const cooldownRemaining = adService.getCooldownRemaining(currentAd.adId);
-    const isVideo = currentAd.mediaType === 'VIDEO';
+    const aspectRatio = aspectRatioByAdId[currentAd.adId] || 1920 / 400;
 
     return renderSlot(
       t.advertiseWithUs,
       <div className="relative overflow-hidden">
-        <div ref={adDebugRef} className="absolute top-2 left-2 z-20 text-xs text-white bg-black bg-opacity-50 p-1 rounded">
-          Debug: {ads.length} ads
-        </div>
-
         {ads.length > 1 && (
           <>
             <button
@@ -374,127 +373,79 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
         )}
 
         <div
-          className={`bg-gradient-to-r from-blue-500 to-cyan-500 overflow-hidden transform transition-all duration-300 ${
-            isTransitioning ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'
-          }`}
-          role="button"
-          tabIndex={0}
-          onClick={() => !isClicking && canClick && handleAdClick(currentAd)}
-          onKeyPress={(e) => e.key === 'Enter' && !isClicking && canClick && handleAdClick(currentAd)}
-          aria-label={`Advertisement: ${currentAd.title}. Click to learn more.`}
+          className="relative w-full bg-white"
+          style={{ aspectRatio, minHeight: '14rem', maxHeight: '26rem' }}
         >
-          <div className="p-4 text-white">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">{t.sponsored}</span>
-              <span className="text-xs opacity-80">{t.ad}</span>
+          {currentAd.mediaType === 'IMAGE' && currentAd.bannerUrl && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white">
+              <img
+                src={currentAd.bannerUrl}
+                alt={currentAd.title}
+                className="w-full h-full object-contain"
+                loading="lazy"
+                onError={(e) => {
+                  console.error('Failed to load ad image:', currentAd.bannerUrl);
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
             </div>
+          )}
 
-            <h3 className="text-sm font-semibold mb-3 line-clamp-1">{currentAd.title}</h3>
+          {currentAd.mediaType === 'VIDEO' && currentAd.bannerUrl && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black">
+              <video
+                ref={(el) => {
+                  if (el) {
+                    videoRefs.current.set(currentAd.adId, el);
+                  }
+                }}
+                src={currentAd.bannerUrl}
+                className="w-full h-full object-contain"
+                muted
+                playsInline
+                autoPlay
+                loop={false}
+                onEnded={() => handleVideoEnd(currentAd.adId)}
+                onPlay={() => handleVideoPlay(currentAd.adId)}
+                onError={(e) => {
+                  console.error('Failed to load ad video:', currentAd.bannerUrl);
+                  (e.target as HTMLVideoElement).style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+          {isClicking && (
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <div className="text-center text-white">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mx-auto mb-2"></div>
+                <p className="text-sm">Opening...</p>
+              </div>
+            </div>
+          )}
 
-            {currentAd.mediaType === 'IMAGE' && currentAd.bannerUrl && (
-              <div className="mt-2 relative bg-black bg-opacity-20 rounded-lg overflow-hidden">
-                <img
-                  src={currentAd.bannerUrl}
-                  alt={currentAd.title}
-                  className="w-full h-64 object-contain rounded-lg"
-                  loading="lazy"
-                  onError={(e) => {
-                    console.error('Failed to load ad image:', currentAd.bannerUrl);
-                    (e.target as HTMLImageElement).style.display = 'none';
+          {cooldownRemaining > 0 && !isClicking && (
+            <div className="absolute bottom-2 left-2 bg-black bg-opacity-40 text-white text-[11px] px-2 py-1 rounded">
+              {t.cooldown} ({Math.ceil(cooldownRemaining / 60000)}m)
+            </div>
+          )}
+
+          {ads.length > 1 && (
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center space-x-1">
+              {ads.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentAdIndex(index);
                   }}
+                  className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none ${
+                    index === currentAdIndex ? 'w-6 bg-white' : 'w-2 bg-white/60 hover:bg-white/80'
+                  }`}
+                  aria-label={`Go to ad ${index + 1}`}
                 />
-                {isClicking && (
-                  <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center rounded-lg">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mx-auto mb-2"></div>
-                      <p className="text-sm">Opening...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {currentAd.mediaType === 'VIDEO' && currentAd.bannerUrl && (
-              <div className="mt-2 relative bg-black bg-opacity-20 rounded-lg overflow-hidden">
-                <video
-                  ref={(el) => {
-                    if (el) {
-                      videoRefs.current.set(currentAd.adId, el);
-                    }
-                  }}
-                  src={currentAd.bannerUrl}
-                  className="w-full h-64 object-contain rounded-lg"
-                  muted
-                  playsInline
-                  autoPlay
-                  loop={false}
-                  onEnded={() => handleVideoEnd(currentAd.adId)}
-                  onPlay={() => handleVideoPlay(currentAd.adId)}
-                  onError={(e) => {
-                    console.error('Failed to load ad video:', currentAd.bannerUrl);
-                    (e.target as HTMLVideoElement).style.display = 'none';
-                  }}
-                />
-                <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                  {t.videoPlaying}
-                </div>
-                {isClicking && (
-                  <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center rounded-lg">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mx-auto mb-2"></div>
-                      <p className="text-sm">Opening...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between mt-4 text-xs">
-              <div className="flex items-center">
-                <span className={`opacity-80 ${!canClick ? 'line-through' : ''}`}>
-                  {isClicking ? 'Opening...' : canClick ? t.learnMore : t.cooldown}
-                </span>
-                {isClicking && (
-                  <svg className="w-3 h-3 ml-1 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                )}
-                {cooldownRemaining > 0 && !isClicking && (
-                  <span className="ml-2 text-xs opacity-70">({Math.ceil(cooldownRemaining / 60000)}m)</span>
-                )}
-              </div>
-              <span className="opacity-80">
-                {currentAd.totalClicks || 0} {t.clicks}
-              </span>
+              ))}
             </div>
-
-            <div className="absolute top-12 right-4 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-              {isVideo ? 'VIDEO' : 'IMAGE'}
-            </div>
-
-            {ads.length > 1 && (
-              <div className="flex justify-center space-x-1 mt-3">
-                {ads.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCurrentAdIndex(index);
-                    }}
-                    className={`h-2 rounded-full transition-all duration-300 focus:outline-none ${
-                      index === currentAdIndex ? 'w-6 bg-white' : 'w-2 bg-white bg-opacity-50 hover:bg-opacity-70'
-                    }`}
-                    aria-label={`Go to ad ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
         {ads.length > 1 && (
@@ -521,19 +472,6 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
       </div>
     );
   };
-
-  useEffect(() => {
-    if (ads && ads.length > 0) {
-      console.group('📊 Ad Carousel Status');
-      console.log(`Total Ads: ${ads.length}`);
-      console.log(`Current Ad Index: ${currentAdIndex}`);
-      console.log(`Current Ad:`, ads[currentAdIndex]);
-      console.log(`Media Type: ${ads[currentAdIndex]?.mediaType}`);
-      console.log(`Video Ended: ${videoEnded}`);
-      console.log(`Cooldowns:`, Object.fromEntries(clickCooldowns));
-      console.groupEnd();
-    }
-  }, [ads, currentAdIndex, videoEnded, clickCooldowns]);
 
   if (loading) return renderLoading();
   if (error) return renderError();

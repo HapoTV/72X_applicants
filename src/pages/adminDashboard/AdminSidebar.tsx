@@ -8,6 +8,7 @@ import {
     User,
     Megaphone
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface AdminSidebarProps {
     activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile';
@@ -15,14 +16,16 @@ interface AdminSidebarProps {
 }
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
+    const navigate = useNavigate();
+
     const menuItems = [
         { id: 'applicants' as const, label: 'Applicants', icon: Users },
+        { id: 'ad' as const, label: 'Ads', icon: Megaphone },
         { id: 'events' as const, label: 'Events', icon: Calendar },
         { id: 'learning' as const, label: 'Learning Material', icon: BookOpen },
         { id: 'mentorship' as const, label: 'Mentorship', icon: Handshake },
         { id: 'funding' as const, label: 'Funding', icon: DollarSign },
         { id: 'profile' as const, label: 'Profile', icon: User },
-        { id: 'ad' as const, label: 'Ads', icon: Megaphone },
     ];
 
     return (
@@ -33,7 +36,10 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                     return (
                         <button 
                             key={item.id}
-                            onClick={() => onTabChange(item.id)} 
+                            onClick={() => { 
+                                onTabChange(item.id);
+                                navigate(`/admin/dashboard/${item.id}`);
+                            }} 
                             className={`w-full text-left px-3 py-3 rounded-lg flex items-center space-x-3 transition-colors ${
                                 activeTab === item.id 
                                     ? 'bg-blue-50 text-blue-700 border border-blue-200' 

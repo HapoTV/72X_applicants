@@ -23,7 +23,6 @@ const Overview: React.FC = () => {
   const [adError, setAdError] = useState<string | null>(null);
   const [showAdRequestModal, setShowAdRequestModal] = useState<boolean>(false);
   const [adImpressions, setAdImpressions] = useState<Set<string>>(new Set());
-  const [debugInfo, setDebugInfo] = useState<string>('');
   const carouselTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -95,14 +94,13 @@ const Overview: React.FC = () => {
           });
         });
         
-        // Sort by priority (highest first), then by creation date
+        // Sort by priority (highest first)
         const sortedAds = activeAds.sort((a, b) => {
           // First by priority
           const priorityDiff = (b.priority || 0) - (a.priority || 0);
           if (priorityDiff !== 0) return priorityDiff;
-          
-          // Then by creation date (newest first)
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+          return 0;
         });
         
         console.log('📊 Final sorted ads:', sortedAds.map(ad => ({
@@ -112,16 +110,6 @@ const Overview: React.FC = () => {
         })));
         
         setAds(sortedAds);
-        
-        // Update debug info
-        setDebugInfo(`
-          Total Ads: ${fetchedAds.length}
-          Active Ads: ${activeAds.length}
-          User ID: ${userId}
-          Industry: ${userIndustry}
-          Package: ${userPackage}
-          Last Updated: ${new Date().toLocaleTimeString()}
-        `);
         
         // Record impression for first ad if exists
         if (sortedAds.length > 0) {
@@ -136,12 +124,6 @@ const Overview: React.FC = () => {
       } else {
         console.log('❌ No ads available for user');
         setAds([]);
-        setDebugInfo(`
-          No ads available
-          User ID: ${userId}
-          Industry: ${userIndustry}
-          Package: ${userPackage}
-        `);
       }
       
       console.groupEnd();
@@ -150,12 +132,6 @@ const Overview: React.FC = () => {
       console.error('Error details:', error.response?.data || error.message);
       setAdError(`Unable to load advertisements: ${error.message}`);
       setAds([]);
-      
-      setDebugInfo(`
-        Error loading ads
-        ${error.message}
-        ${new Date().toLocaleTimeString()}
-      `);
     } finally {
       setLoadingAds(false);
     }
@@ -302,25 +278,6 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
     refreshEngagementData();
   };
 
-  // Debug panel component
-  const DebugPanel = () => (
-    <div className="fixed bottom-20 right-4 bg-black bg-opacity-80 text-white text-xs p-2 rounded-lg shadow-lg z-20 max-w-xs">
-      <div className="font-bold mb-1">Ad Debug Info</div>
-      <div className="space-y-1">
-        <div>Total Ads: {ads.length}</div>
-        <div>Loading: {loadingAds ? 'Yes' : 'No'}</div>
-        <div>Error: {adError || 'None'}</div>
-        <div>Last Refresh: {new Date().toLocaleTimeString()}</div>
-        <button 
-          onClick={refreshAds}
-          className="mt-2 px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
-        >
-          Force Refresh
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <>
       <div className="space-y-3 animate-fade-in px-2 sm:px-0">
@@ -353,18 +310,6 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
           onAdvertiseClick={handleAdvertiseClick}
           onRefreshAds={refreshAds}
         />
-
-        {/* Debug Button - Remove in production */}
-        <button 
-          onClick={refreshAds}
-          className="fixed bottom-4 right-4 bg-gray-800 text-white p-2 rounded-full shadow-lg z-10 hover:bg-gray-700 flex items-center justify-center w-10 h-10"
-          title="Debug: Refresh Ads"
-        >
-          🔄
-        </button>
-
-        {/* Debug Panel - Remove in production */}
-        {process.env.NODE_ENV === 'development' && <DebugPanel />}
 
         {/* Daily Tip & Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

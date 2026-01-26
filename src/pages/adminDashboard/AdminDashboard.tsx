@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AdminNavbar from './AdminNavbar';
 import AdminSidebar from './AdminSidebar';
 import ApplicantsTab from './tabs/ApplicantsTab';
@@ -12,6 +12,7 @@ import AdminProfile from './tabs/AdminProfile';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState<'applicants' | 'events' | 'learning' | 'mentorship' | 'ad' | 'profile' | 'funding'>('applicants');
 
     const handleLogout = () => {
@@ -20,6 +21,27 @@ export default function AdminDashboard() {
         localStorage.removeItem('userEmail');
         navigate('/');
     };
+
+    // Initialize active tab from URL on mount
+    useEffect(() => {
+        const base = '/admin/dashboard/';
+        if (location.pathname.startsWith(base)) {
+            const segment = location.pathname.slice(base.length).split('/')[0];
+            const validTabs = ['applicants', 'events', 'learning', 'mentorship', 'funding', 'ad', 'profile'] as const;
+            if (segment && (validTabs as readonly string[]).includes(segment)) {
+                setActiveTab(segment as typeof validTabs[number]);
+                return;
+            }
+        }
+        // Default to applicants if no valid segment
+        navigate('/admin/dashboard/applicants', { replace: true });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Reflect activeTab in URL when it changes
+    useEffect(() => {
+        navigate(`/admin/dashboard/${activeTab}`, { replace: true });
+    }, [activeTab, navigate]);
 
     const renderActiveTab = () => {
         switch (activeTab) {
