@@ -9,6 +9,8 @@ import MentorshipTab from './tabs/MentorshipTab';
 import FundingTab from './tabs/FundingTab';
 import AdTab from './tabs/AdTab';
 import AdminProfile from './tabs/AdminProfile';
+import AdminMonitor from './tabs/AdminMonitor';
+import AdminNotifications from './tabs/AdminNotifications';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -59,6 +61,10 @@ export default function AdminDashboard() {
                 return <AdTab />;
             case 'profile':
                 return <AdminProfile />;
+            case 'monitoring':
+                return <AdminMonitor />;
+            case 'notifications':
+                return <AdminNotifications />;
             default:
                 return <ApplicantsTab />;
         }

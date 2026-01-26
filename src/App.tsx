@@ -10,7 +10,6 @@ import ScheduleCalendar from './pages/schedule/Calendar';
 import Analytics from './pages/Analytics';
 import RoadmapGenerator from './pages/RoadmapGenerator';
 import Profile from './pages/Profile';
-import DataInput from './pages/DataInput';
 import LearningModules from './pages/LearningModules';
 import Community from './pages/Community';
 import CommunityDiscussions from './pages/community/Discussions';
@@ -36,6 +35,9 @@ import ResetPasswordVerify from './pages/ResetPasswordVerify';
 import CRM from './pages/applications/CRM';
 import FinanceManager from './pages/applications/FinanceManager';
 
+// Notification pages
+import Notifications from './pages/Notifications';
+
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
 import MentorshipUpgrade from './pages/upgrades/MentorshipUpgrade';
@@ -43,7 +45,7 @@ import FundingUpgrade from './pages/upgrades/FundingUpgrade';
 import DataInputUpgrade from './pages/upgrades/DataInputUpgrade';
 import RoadmapUpgrade from './pages/upgrades/RoadmapUpgrade';
 import AnalyticsUpgrade from './pages/upgrades/AnalyticsUpgrade';
-import ExpertsUpgrade from './pages/upgrades/ExpertsUpgrade';
+
 import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
 
 // Admin Dashboard
@@ -52,6 +54,7 @@ import AdminDashboard from './pages/adminDashboard/AdminDashboard';
 import MyConnections from './pages/MyConnections';
 
 import { AuthProvider } from './context/AuthContext';
+import AdminNotifications from './pages/adminDashboard/tabs/AdminNotifications';
 
 
 function App() {
@@ -75,6 +78,7 @@ function App() {
         
         {/* Admin routes - outside of main layout to avoid sidebar and chatbot */}
         <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+        <Route path="/admin/notifications" element={<AdminNotifications />} />
         <Route
           path="/admin/dashboard/*"
           element={
@@ -117,6 +121,9 @@ function App() {
                 <Route path="/applications/finance-manager" element={<FinanceManager />} />
                 <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
                 <Route path="/profile" element={<Profile />} />
+
+                
+                <Route path="/notifications" element={<Notifications />} />
                 
                 {/* Essential Package Features */}
                 <Route path="/marketplace" element={<Marketplace />} />
@@ -127,7 +134,7 @@ function App() {
                 {/* Premium Package Features */}
                 <Route path="/roadmap" element={<RoadmapGenerator />} />
                 <Route path="/analytics" element={<Analytics />} />
-                <Route path="/experts" element={<ExpertSessions />} />
+
                 <Route path="/ai-analyst" element={<AIBusinessAnalyst />} />
                 
                 {/* Upgrade Pages */}
@@ -137,7 +144,7 @@ function App() {
                 <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
                 <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
                 <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
-                <Route path="/upgrade/experts" element={<ExpertsUpgrade />} />
+
                 <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
 
                 <Route path="/connections" element={<MyConnections />} />
