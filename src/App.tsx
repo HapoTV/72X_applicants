@@ -56,6 +56,9 @@ import MyConnections from './pages/MyConnections';
 import { AuthProvider } from './context/AuthContext';
 import AdminNotifications from './pages/adminDashboard/tabs/AdminNotifications';
 
+// Payment Route
+import PaymentRoutes from './routes/paymentRoutes';
+
 
 function App() {
   return (
@@ -148,7 +151,15 @@ function App() {
                 <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
 
                 <Route path="/connections" element={<MyConnections />} />
-              </Routes>
+
+                {/* Payment Pages */}
+                <Route path="/payments/*" element={
+                    <ProtectedRoute>
+                      <PaymentRoutes />
+                    </ProtectedRoute>
+                  } />
+                </Routes>
+
             </Layout>
           </ProtectedRoute>
         } />
