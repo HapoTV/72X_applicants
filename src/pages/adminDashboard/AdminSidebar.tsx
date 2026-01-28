@@ -6,13 +6,14 @@ import {
     Handshake, 
     DollarSign,
     User,
-    Megaphone
+    Megaphone,
+    ShieldAlert
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface AdminSidebarProps {
-    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile';
-    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile') => void;
+    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile' | 'monitoring' ;
+    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'monitoring' | 'profile') => void;
 }
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
@@ -25,6 +26,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
         { id: 'learning' as const, label: 'Learning Material', icon: BookOpen },
         { id: 'mentorship' as const, label: 'Mentorship', icon: Handshake },
         { id: 'funding' as const, label: 'Funding', icon: DollarSign },
+        { id: 'monitoring' as const, label: 'Monitoring', icon: ShieldAlert },
         { id: 'profile' as const, label: 'Profile', icon: User },
     ];
 
