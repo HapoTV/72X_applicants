@@ -23,6 +23,7 @@ interface AuthContextType {
   user: User | null;
   login: (userData: User) => void;
   logout: () => void;
+  updateUserStatus: (status: string) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
   token: string | null;
@@ -64,6 +65,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     window.location.href = "/login";
   };
 
+  const updateUserStatus = (status: string) => {
+  if (user) {
+    const updatedUser = { ...user, status };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem('userStatus', status);
+    
+    // Update requiresPackageSelection flag
+    if (status === 'PENDING_PACKAGE') {
+      localStorage.setItem('requiresPackageSelection', 'true');
+    } else {
+      localStorage.removeItem('requiresPackageSelection');
+    }
+    
+    setUser(updatedUser);
+  }
+};
+
   // Update token when localStorage changes
   useEffect(() => {
     const handleStorageChange = () => {
@@ -92,7 +110,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{ 
       user, 
       login, 
-      logout, 
+      logout,
+      updateUserStatus, 
       isAuthenticated, 
       isAdmin,
       token 

@@ -1,8 +1,95 @@
 // src/services/AuthService.ts
+import axios from "axios";
 import axiosClient from '../api/axiosClient';
-import type { User, LoginRequest, ChangePasswordRequest, LoginResponse } from '../interfaces/UserData';
+import type { 
+  User, 
+  LoginRequest, 
+  ChangePasswordRequest, 
+  LoginResponse,
+  CreateUserRequest,
+  CreateUserResponse 
+} from '../interfaces/UserData';
+
+// Create a separate axios instance for public endpoints (no auth required)
+const publicAxios = axios.create({
+  baseURL: "http://localhost:8080/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 class AuthService {
+  /**
+   * Create a new user (public signup) - No authentication required
+   */
+  async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
+    try {
+      console.log("👤 Creating new user (public signup)...", userData);
+      
+      // Prepare request body matching backend DTO
+      const requestBody = {
+        fullName: userData.fullName,
+        email: userData.email,
+        mobileNumber: userData.mobileNumber,
+        companyName: userData.companyName,
+        employees: userData.employees,
+        founded: userData.founded,
+        industry: userData.industry,
+        location: userData.location,
+        businessReference: userData.businessReference || null,
+        hasReference: userData.hasReference || false,
+        role: 'USER', // Force USER role for public signups
+        status: 'PENDING_PASSWORD'
+      };
+
+      console.log("📤 Sending public signup request:", requestBody);
+      
+      // Use publicAxios (no auth token) for signup
+      const response = await publicAxios.post('/users/signup', requestBody);
+      
+      const createdUser: CreateUserResponse = response.data;
+      console.log("✅ User created successfully:", {
+        userId: createdUser.userId,
+        email: createdUser.email,
+        status: createdUser.status
+      });
+      
+      // Store temporary user data for password creation flow
+      localStorage.setItem('userEmail', createdUser.email);
+      localStorage.setItem('tempUserData', JSON.stringify(createdUser));
+      
+      return createdUser;
+    } catch (error: any) {
+      console.error('❌ Create user error details:', error);
+      
+      let errorMessage = 'Failed to create account. Please try again.';
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        if (errorMessage.toLowerCase().includes('email')) {
+          errorMessage = 'This email is already registered. Please use a different email or try logging in.';
+        } else if (errorMessage.toLowerCase().includes('business reference')) {
+          errorMessage = 'This business reference is already in use. Please check your reference number.';
+        }
+      }
+      
+      // Check if endpoint doesn't exist (404) and provide fallback
+      if (error.response?.status === 404) {
+        console.warn('⚠️ Signup endpoint not found. Please check backend routes.');
+        errorMessage = 'Signup service is currently unavailable. Please contact support.';
+      }
+      
+      throw new Error(errorMessage);
+    }
+  }
+
   /**
    * Login user or admin - NOW RETURNS LoginResponse WITH TOKEN
    */
@@ -14,7 +101,9 @@ class AuthService {
       const loginResponse: LoginResponse = response.data;
       console.log("✅ Login response received:", {
         ...loginResponse,
-        token: loginResponse.token ? "***MASKED***" : undefined
+        token: loginResponse.token ? "***MASKED***" : undefined,
+        status: loginResponse.status,
+        requiresPackageSelection: loginResponse.requiresPackageSelection
       });
       
       if (!loginResponse.token) {
@@ -30,13 +119,21 @@ class AuthService {
         fullName: loginResponse.fullName,
         email: loginResponse.email,
         role: loginResponse.role,
-        status: 'ACTIVE',
+        status: loginResponse.status || 'ACTIVE', // Use status from response
         businessReference: loginResponse.businessReference,
         companyName: loginResponse.companyName,
         profileImageUrl: loginResponse.profileImageUrl
       };
       
       localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('userStatus', loginResponse.status || 'ACTIVE');
+      
+      // Store if package selection is required
+      if (loginResponse.requiresPackageSelection) {
+        localStorage.setItem('requiresPackageSelection', 'true');
+      } else {
+        localStorage.removeItem('requiresPackageSelection');
+      }
       
       return loginResponse;
     } catch (error: any) {
@@ -73,6 +170,37 @@ class AuthService {
       }
       
       throw new Error('Failed to fetch user profile.');
+    }
+  }
+
+  /**
+   * Create password for user
+   */
+  async createPassword(email: string, password: string, businessReference?: string): Promise<any> {
+    try {
+      console.log("🔐 Creating password for user:", { email, businessReference });
+      
+      const response = await axiosClient.post('/authentication/create-password', {
+        email,
+        password,
+        businessReference
+      });
+      
+      console.log("✅ Password created successfully for:", email);
+      return response.data;
+    } catch (error: any) {
+      console.error('Create password error:', error);
+      
+      let errorMessage = 'Failed to create password.';
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 
@@ -122,23 +250,6 @@ class AuthService {
     } catch (error) {
       console.error('Update profile image error:', error);
       throw new Error('Failed to update profile image.');
-    }
-  }
-
-  /**
-   * Create password for user
-   */
-  async createPassword(email: string, password: string, businessReference?: string): Promise<any> {
-    try {
-      const response = await axiosClient.post('/authentication/create-password', {
-        email,
-        password,
-        businessReference
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Create password error:', error);
-      throw new Error('Failed to create password.');
     }
   }
 
@@ -216,6 +327,8 @@ class AuthService {
   logout(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('tempUserData');
+    localStorage.removeItem('userEmail');
     window.location.href = '/login';
   }
 

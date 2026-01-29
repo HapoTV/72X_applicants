@@ -16,7 +16,8 @@ const Profile: React.FC = () => {
     companyName: '',
     industry: '',
     location: '',
-    employees: ''
+    employees: '',
+    founded: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,7 +43,8 @@ const Profile: React.FC = () => {
         companyName: userData.companyName || '',
         industry: userData.industry || '',
         location: userData.location || '',
-        employees: userData.employees || ''
+        employees: userData.employees || '',
+        founded: userData.founded || '',
       });
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -63,7 +65,7 @@ const Profile: React.FC = () => {
         throw new Error('User ID not found');
       }
 
-      const updatedUser = await authService.updateUserProfile(user.userId, profileData);
+      const updatedUser = await authService.updateUserProfile( profileData);
       
       // Update auth context with new data
       login(updatedUser);
@@ -80,9 +82,9 @@ const Profile: React.FC = () => {
   };
 
   const calculateYearsInBusiness = (): string => {
-    if (!user?.createdAt) return '0';
+    if (!user?.founded) return '0';
     
-    const createdYear = new Date(user.createdAt).getFullYear();
+    const createdYear = new Date(user.founded).getFullYear();
     const currentYear = new Date().getFullYear();
     return (currentYear - createdYear).toString();
   };

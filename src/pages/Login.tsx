@@ -313,7 +313,7 @@ const Login: React.FC = () => {
                             className="text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
                             disabled={isLoading}
                         >
-                            Sign up for free
+                            Sign up
                         </button>
                     </p>
                 </div>

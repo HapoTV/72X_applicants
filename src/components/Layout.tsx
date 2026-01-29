@@ -7,7 +7,7 @@ import ScheduleSubNav from './ScheduleSubNav';
 import LearningSubNav from './LearningSubNav';
 import CommunitySubNav from './CommunitySubNav';
 import AppStoreSubNav from './AppStoreSubNav';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,8 +20,51 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
   const [isCommunitySubNavOpen, setIsCommunitySubNavOpen] = useState(false);
   const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
+  const [showLayout, setShowLayout] = useState(true);
+  const [userStatus, setUserStatus] = useState<string>('');
+  const [requiresPackageSelection, setRequiresPackageSelection] = useState(false);
+  
   const location = useLocation();
+  const navigate = useNavigate();
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
+
+  // Check if user needs to hide layout (for package selection)
+  useEffect(() => {
+    // Check user status and package requirement
+    const status = localStorage.getItem('userStatus');
+    const requiresPackage = localStorage.getItem('requiresPackageSelection');
+    const currentPath = location.pathname;
+    
+    console.log('🏗️ Layout status check:', {
+      userStatus: status,
+      requiresPackage,
+      currentPath,
+      isSelectPackagePage: currentPath === '/select-package'
+    });
+    
+    setUserStatus(status || '');
+    setRequiresPackageSelection(requiresPackage === 'true');
+    
+    // Hide navbar and sidebar if:
+    // 1. User is on the package selection page
+    // 2. User has PENDING_PACKAGE status
+    // 3. User requires package selection
+    if (currentPath === '/select-package' || 
+        status === 'PENDING_PACKAGE' || 
+        requiresPackage === 'true') {
+      console.log('🚫 Hiding navbar and sidebar for package selection');
+      setShowLayout(false);
+      
+      // If user is not on package page but needs package, redirect them
+      if (currentPath !== '/select-package' && 
+          (status === 'PENDING_PACKAGE' || requiresPackage === 'true')) {
+        console.log('🔄 Redirecting to package selection from layout');
+        navigate('/select-package');
+      }
+    } else {
+      setShowLayout(true);
+    }
+  }, [location.pathname, navigate]);
 
   // Check if current route is an app route (full-screen mode)
   const isAppRoute = location.pathname.startsWith('/applications/') && location.pathname !== '/applications';
@@ -33,8 +76,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return () => window.removeEventListener('nav-collapsed-changed', onToggle as EventListener);
   }, []);
 
-  // Lightweight engagement tracker
+  // Lightweight engagement tracker - Only run if layout is shown
   useEffect(() => {
+    if (!showLayout) return; // Skip tracking if layout is hidden
+    
     try {
       const today = new Date();
       const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -138,7 +183,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     } catch {
       // ignore tracking errors
     }
-  }, [location.pathname]);
+  }, [location.pathname, showLayout]); // Added showLayout dependency
 
   // Handle Dashboard toggle - close others
   const handleDashboardToggle = (isOpen: boolean) => {
@@ -193,6 +238,53 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
+  // If layout should be hidden (user needs to select package)
+  if (!showLayout) {
+    // Return only the content without navbar and sidebar
+    // Add a special class for package selection page
+    const isPackageSelectionPage = location.pathname === '/select-package';
+    
+    return (
+      <div className={`min-h-screen ${isPackageSelectionPage ? 'bg-gradient-to-br from-primary-50 to-primary-100' : 'bg-gray-50'}`}>
+        {/* Optional: Show a simple header for package selection */}
+        {isPackageSelectionPage && (
+          <div className="p-4">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex justify-center mb-6">
+                <img 
+                  src="/Logo.svg" 
+                  alt="SeventyTwoX Logo" 
+                  className="w-12 h-12"
+                  onClick={() => navigate('/')}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <main className={`${isPackageSelectionPage ? '' : 'p-6'}`}>
+          {children}
+        </main>
+        
+        {/* Show warning banner if user tries to access other pages */}
+        {!isPackageSelectionPage && userStatus === 'PENDING_PACKAGE' && (
+          <div className="fixed top-0 left-0 right-0 bg-red-500 text-white p-4 text-center z-50">
+            <p className="font-medium">
+              ⚠️ Please select a package to continue using the platform. 
+              <button 
+                onClick={() => navigate('/select-package')}
+                className="ml-2 underline font-bold"
+              >
+                Go to Package Selection
+              </button>
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Normal layout mode with navigation (for ACTIVE users)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Full-screen app mode - no navigation or sidebar */}

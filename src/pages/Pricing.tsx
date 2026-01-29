@@ -10,7 +10,7 @@ const Pricing: React.FC = () => {
   const plans = [
     {
       name: "Start-up",
-      price: "R0",
+      price: "R99",
       period: "/month",
       features: [
         "Basic business tools",

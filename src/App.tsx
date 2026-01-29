@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import ProtectedRoute from './components/ProtectedRoute'; // Import the ProtectedRoute
+import ProtectedRoute from './components/ProtectedRoute';
+import PackageSelectionRedirect from './components/PackageSelectionRedirect';
 import DashboardOverview from './pages/dashboard/Overview';
 import DashboardMetrics from './pages/dashboard/Metrics';
 import DashboardCommunityFeed from './pages/dashboard/CommunityFeed';
@@ -26,6 +27,8 @@ import Signup from './pages/Signup';
 import SignupSuccessProvided from './pages/SignupSuccessProvided';
 import SignupSuccessGenerated from './pages/SignupSuccessGenerated';
 import SignupSuccessRouter from './pages/SignupSuccessRouter';
+import CreatePassword from './pages/CreatePassword';
+import SelectPackage from './pages/SelectPackage';
 import RequestDemo from './pages/RequestDemo';
 import Pricing from './pages/Pricing';
 import DataInput from './pages/DataInput';
@@ -78,6 +81,8 @@ function App() {
         <Route path="/signup/success/generated" element={<SignupSuccessGenerated />} />
         <Route path="/reset-password" element={<ResetPasswordRequest />} />
         <Route path="/reset-password/verify" element={<ResetPasswordVerify />} />
+        <Route path="/create-password" element={<CreatePassword />} />
+        <Route path="/select-package" element={<SelectPackage />} />
         
         {/* Admin routes - outside of main layout to avoid sidebar and chatbot */}
         <Route path="/admin/login" element={<Navigate to="/login" replace />} />
@@ -94,73 +99,76 @@ function App() {
         {/* All other routes with Layout - protected */}
         <Route path="/*" element={
           <ProtectedRoute>
-            <Layout>
-              <BizBoostChatbot />
-              <Routes>
-                {/* Dashboard Routes */}
-                <Route path="/dashboard" element={<DashboardOverview />} />
-                <Route path="/dashboard/overview" element={<DashboardOverview />} />
-                <Route path="/dashboard/metrics" element={<DashboardMetrics />} />
-                <Route path="/dashboard/community-feed" element={<DashboardCommunityFeed />} />
-                
-                {/* Schedule Routes */}
-                <Route path="/schedule" element={<Schedule />} />
-                <Route path="/schedule/events" element={<ScheduleEvents />} />
-                <Route path="/schedule/calendar" element={<ScheduleCalendar />} />
-                
-                {/* Learning Routes */}
-                <Route path="/learning" element={<LearningModules />} />
-                <Route path="/learning/:category" element={<LearningModules />} />
-                
-                {/* Community Routes */}
-                <Route path="/community" element={<Community />} />
-                <Route path="/community/discussions" element={<CommunityDiscussions />} />
-                <Route path="/community/networking" element={<CommunityNetworking />} />
-                <Route path="/community/mentorship" element={<CommunityMentorship />} />
-                
-                {/* Other Protected Routes */}
-                <Route path="/applications" element={<Navigate to="/applications/crm" replace />} />
-                <Route path="/applications/crm/*" element={<CRM />} />
-                <Route path="/applications/finance-manager" element={<FinanceManager />} />
-                <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
-                <Route path="/profile" element={<Profile />} />
+            {/* Add PackageSelectionRedirect wrapper */}
+            <PackageSelectionRedirect>
+              <Layout>
+                <BizBoostChatbot />
+                <Routes>
+                  {/* Dashboard Routes */}
+                  <Route path="/dashboard" element={<DashboardOverview />} />
+                  <Route path="/dashboard/overview" element={<DashboardOverview />} />
+                  <Route path="/dashboard/metrics" element={<DashboardMetrics />} />
+                  <Route path="/dashboard/community-feed" element={<DashboardCommunityFeed />} />
+                  
+                  {/* Schedule Routes */}
+                  <Route path="/schedule" element={<Schedule />} />
+                  <Route path="/schedule/events" element={<ScheduleEvents />} />
+                  <Route path="/schedule/calendar" element={<ScheduleCalendar />} />
+                  
+                  {/* Learning Routes */}
+                  <Route path="/learning" element={<LearningModules />} />
+                  <Route path="/learning/:category" element={<LearningModules />} />
+                  
+                  {/* Community Routes */}
+                  <Route path="/community" element={<Community />} />
+                  <Route path="/community/discussions" element={<CommunityDiscussions />} />
+                  <Route path="/community/networking" element={<CommunityNetworking />} />
+                  <Route path="/community/mentorship" element={<CommunityMentorship />} />
+                  
+                  {/* Other Protected Routes */}
+                  <Route path="/applications" element={<Navigate to="/applications/crm" replace />} />
+                  <Route path="/applications/crm/*" element={<CRM />} />
+                  <Route path="/applications/finance-manager" element={<FinanceManager />} />
+                  <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
+                  <Route path="/profile" element={<Profile />} />
 
-                
-                <Route path="/notifications" element={<Notifications />} />
-                
-                {/* Essential Package Features */}
-                <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/mentorship" element={<MentorshipHub />} />
-                <Route path="/funding" element={<FundingFinder />} />
-                <Route path="/data-input" element={<DataInput />} />
-                
-                {/* Premium Package Features */}
-                <Route path="/roadmap" element={<RoadmapGenerator />} />
-                <Route path="/analytics" element={<Analytics />} />
+                  
+                  <Route path="/notifications" element={<Notifications />} />
+                  
+                  {/* Essential Package Features */}
+                  <Route path="/marketplace" element={<Marketplace />} />
+                  <Route path="/mentorship" element={<MentorshipHub />} />
+                  <Route path="/funding" element={<FundingFinder />} />
+                  <Route path="/data-input" element={<DataInput />} />
+                  
+                  {/* Premium Package Features */}
+                  <Route path="/roadmap" element={<RoadmapGenerator />} />
+                  <Route path="/analytics" element={<Analytics />} />
 
-                <Route path="/ai-analyst" element={<AIBusinessAnalyst />} />
-                
-                {/* Upgrade Pages */}
-                <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
-                <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
-                <Route path="/upgrade/funding" element={<FundingUpgrade />} />
-                <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
-                <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
-                <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
+                  <Route path="/ai-analyst" element={<AIBusinessAnalyst />} />
+                  
+                  {/* Upgrade Pages */}
+                  <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
+                  <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
+                  <Route path="/upgrade/funding" element={<FundingUpgrade />} />
+                  <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
+                  <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
+                  <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
 
-                <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
+                  <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
 
-                <Route path="/connections" element={<MyConnections />} />
+                  <Route path="/connections" element={<MyConnections />} />
 
-                {/* Payment Pages */}
-                <Route path="/payments/*" element={
-                    <ProtectedRoute>
-                      <PaymentRoutes />
-                    </ProtectedRoute>
-                  } />
-                </Routes>
+                  {/* Payment Pages */}
+                  <Route path="/payments/*" element={
+                      <ProtectedRoute>
+                        <PaymentRoutes />
+                      </ProtectedRoute>
+                    } />
+                  </Routes>
 
-            </Layout>
+              </Layout>
+            </PackageSelectionRedirect>
           </ProtectedRoute>
         } />
       </Routes>

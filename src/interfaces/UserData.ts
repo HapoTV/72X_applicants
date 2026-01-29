@@ -14,9 +14,36 @@ export interface User {
   profileImageUrl?: string;
   role: string;
   status: string;
-  userPackage?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface CreateUserRequest {
+  fullName: string;
+  email: string;
+  mobileNumber: string;
+  companyName: string;
+  employees: string;
+  founded: string;
+  industry: string;
+  location: string;
+  businessReference?: string;
+  hasReference?: boolean;
+  role?: string;
+  status?: string;
+}
+
+export interface CreateUserResponse {
+  userId: string;
+  fullName: string;
+  email: string;
+  mobileNumber: string;
+  companyName: string;
+  businessReference?: string;
+  hasReference?: boolean;
+  role: string;
+  status: string;
+  createdAt: string;
 }
 
 export interface LoginRequest {
@@ -37,6 +64,8 @@ export interface LoginResponse {
   businessReference?: string;
   profileImageUrl?: string;
   companyName?: string;
+  status?: string;
+  requiresPackageSelection?: boolean;
 }
 
 export interface UserFormData {
@@ -47,6 +76,7 @@ export interface UserFormData {
   industry: string;
   location: string;
   employees: string;
+  founded: string;
 }
 
 export interface ChangePasswordRequest {
