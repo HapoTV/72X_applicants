@@ -1,4 +1,3 @@
-// src/services/PaymentService.ts
 import axiosClient from '../api/axiosClient';
 import type {
   PaymentRequest,
@@ -6,8 +5,7 @@ import type {
   RefundRequest,
   PaymentStatistics,
   RevenueAnalytics,
-  CardDetails,
-  PaymentMethod,
+  InitializePaymentRequest,
   Invoice,
 } from '../interfaces/PaymentData';
 
@@ -19,7 +17,32 @@ class PaymentService {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  // Payment Operations
+  async initializePaystackPayment(request: InitializePaymentRequest): Promise<{ reference: string; authorization_url: string }> {
+    try {
+      const response = await axiosClient.post(`${this.baseURL}/initialize`, request, {
+        headers: this.getAuthHeader()
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error initializing Paystack payment:', error);
+      throw this.handlePaymentError(error);
+    }
+  }
+
+  async verifyPaystackPayment(reference: string): Promise<PaymentResponse> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/verify/${reference}`, {
+        headers: this.getAuthHeader()
+      });
+      
+      return this.transformPaymentResponse(response.data);
+    } catch (error: any) {
+      console.error('Error verifying Paystack payment:', error);
+      throw error;
+    }
+  }
+
   async createPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.post(`${this.baseURL}/create`, paymentRequest, {
@@ -50,6 +73,23 @@ class PaymentService {
       return this.transformPaymentResponse(response.data);
     } catch (error: any) {
       console.error('Error fetching payment:', error);
+      throw error;
+    }
+  }
+
+  async getPaymentByReference(reference: string): Promise<PaymentResponse> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/reference/${reference}`, {
+        headers: this.getAuthHeader()
+      });
+      
+      if (!response.data) {
+        throw new Error('Payment not found');
+      }
+      
+      return this.transformPaymentResponse(response.data);
+    } catch (error: any) {
+      console.error('Error fetching payment by reference:', error);
       throw error;
     }
   }
@@ -182,7 +222,6 @@ class PaymentService {
     }
   }
 
-  // Statistics
   async getMyPaymentStatistics(): Promise<PaymentStatistics> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/user/statistics`, {
@@ -200,7 +239,6 @@ class PaymentService {
     }
   }
 
-  // Subscription Operations
   async createSubscriptionPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.post(`${this.baseURL}/subscription/create`, paymentRequest, {
@@ -237,7 +275,6 @@ class PaymentService {
     }
   }
 
-  // Admin Operations
   async getRevenueAnalytics(startDate?: string, endDate?: string): Promise<RevenueAnalytics> {
     try {
       const params: any = {};
@@ -279,70 +316,6 @@ class PaymentService {
     }
   }
 
-  async getPaymentByStripeId(stripePaymentId: string): Promise<PaymentResponse> {
-    try {
-      const response = await axiosClient.get(`${this.baseURL}/stripe/${stripePaymentId}`, {
-        headers: this.getAuthHeader()
-      });
-      
-      if (!response.data) {
-        throw new Error('Payment not found');
-      }
-      
-      return this.transformPaymentResponse(response.data);
-    } catch (error: any) {
-      console.error('Error fetching payment by Stripe ID:', error);
-      throw error;
-    }
-  }
-
-  // Payment Methods
-  async getPaymentMethods(): Promise<PaymentMethod[]> {
-    try {
-      const response = await axiosClient.get(`${this.baseURL}/methods`, {
-        headers: this.getAuthHeader()
-      });
-      
-      if (!response.data) {
-        return [];
-      }
-      
-      return Array.isArray(response.data) ? response.data : [];
-    } catch (error: any) {
-      console.error('Error fetching payment methods:', error);
-      throw error;
-    }
-  }
-
-  async addPaymentMethod(cardDetails: CardDetails): Promise<PaymentMethod> {
-    try {
-      const response = await axiosClient.post(`${this.baseURL}/methods`, cardDetails, {
-        headers: this.getAuthHeader()
-      });
-      
-      if (!response.data) {
-        throw new Error('Failed to add payment method');
-      }
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('Error adding payment method:', error);
-      throw error;
-    }
-  }
-
-  async removePaymentMethod(methodId: string): Promise<void> {
-    try {
-      await axiosClient.delete(`${this.baseURL}/methods/${methodId}`, {
-        headers: this.getAuthHeader()
-      });
-    } catch (error: any) {
-      console.error('Error removing payment method:', error);
-      throw error;
-    }
-  }
-
-  // Invoices
   async getMyInvoices(): Promise<Invoice[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/invoices/me`, {
@@ -377,15 +350,42 @@ class PaymentService {
     }
   }
 
-  // Helper Methods
+  async createSubscriptionAuthorization(email: string, amount: number, plan: string): Promise<{ authorization_code: string }> {
+    try {
+      const response = await axiosClient.post(`${this.baseURL}/subscription/authorize`, {
+        email,
+        amount,
+        plan
+      }, {
+        headers: this.getAuthHeader()
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating subscription authorization:', error);
+      throw error;
+    }
+  }
+
+  async cancelSubscription(subscriptionId: string): Promise<void> {
+    try {
+      await axiosClient.post(`${this.baseURL}/subscription/cancel`, { subscriptionId }, {
+        headers: this.getAuthHeader()
+      });
+    } catch (error: any) {
+      console.error('Error canceling subscription:', error);
+      throw error;
+    }
+  }
+
   private transformPaymentResponse(data: any): PaymentResponse {
     return {
       id: data.id || '',
       userId: data.userId || '',
       userEmail: data.userEmail || '',
       userFullName: data.userFullName || '',
-      stripeCustomerId: data.stripeCustomerId || '',
-      stripePaymentId: data.stripePaymentId || '',
+      paystackCustomerId: data.paystackCustomerId || '',
+      paystackReference: data.paystackReference || '',
       amount: data.amount || 0,
       currency: data.currency || 'ZAR',
       description: data.description || '',
@@ -394,12 +394,12 @@ class PaymentService {
       receiptEmail: data.receiptEmail || '',
       billingAddress: data.billingAddress,
       shippingAddress: data.shippingAddress,
+      phoneNumber: data.phoneNumber,
       failureMessage: data.failureMessage,
       createdAt: data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt || new Date().toISOString(),
-      clientSecret: data.clientSecret,
       subscriptionId: data.subscriptionId,
-      invoiceId: data.invoiceId,
+      authorizationCode: data.authorizationCode,
       paymentMethodId: data.paymentMethodId,
       isRecurring: data.isRecurring || false,
       recurringInterval: data.recurringInterval,
@@ -460,7 +460,6 @@ class PaymentService {
     }
   }
 
-  // Formatting helpers
   formatCurrency(amount: number, currency: string = 'R'): string {
     if (currency === 'ZAR' || currency === 'R') {
       return new Intl.NumberFormat('en-ZA', {
@@ -525,44 +524,8 @@ class PaymentService {
     }
   }
 
-  // Validation
-  validateCardDetails(card: CardDetails): string[] {
-    const errors: string[] = [];
-
-    if (!card.cardNumber || card.cardNumber.replace(/\s/g, '').length < 16) {
-      errors.push('Card number must be 16 digits');
-    }
-
-    if (!card.expiryMonth || !card.expiryYear) {
-      errors.push('Expiry date is required');
-    } else {
-      const month = parseInt(card.expiryMonth);
-      const year = parseInt(card.expiryYear);
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth() + 1;
-
-      if (month < 1 || month > 12) {
-        errors.push('Invalid expiry month');
-      }
-
-      if (year < currentYear || (year === currentYear && month < currentMonth)) {
-        errors.push('Card has expired');
-      }
-    }
-
-    if (!card.cvc || card.cvc.length < 3) {
-      errors.push('CVC is required (3 digits)');
-    }
-
-    if (!card.cardholderName) {
-      errors.push('Cardholder name is required');
-    }
-
-    return errors;
-  }
-
   validatePaymentAmount(amount: number): boolean {
-    return amount > 0 && amount <= 1000000; // Limit to 1,000,000
+    return amount > 0 && amount <= 1000000;
   }
 }
 

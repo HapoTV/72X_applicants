@@ -7,11 +7,10 @@ import { useAuth } from '../context/AuthContext';
 import userSubscriptionService from '../services/UserSubscriptionService';
 import { UserSubscriptionType } from '../interfaces/UserSubscriptionData';
 import type { PackageOption } from '../interfaces/UserSubscriptionData';
-import authService from '../services/AuthService';
 
 const SelectPackage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, login, isAuthenticated } = useAuth();
+  const {isAuthenticated } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
@@ -193,35 +192,12 @@ const SelectPackage: React.FC = () => {
         
         localStorage.setItem('selectedPackage', JSON.stringify(serializablePackageData));
         
-        // Check if user is authenticated
-        if (!isAuthenticated) {
-          // Try to authenticate with stored credentials
-          const email = localStorage.getItem('userEmail');
-          const password = localStorage.getItem('tempPassword');
-          
-          if (email && password) {
-            try {
-              await authService.login({
-                email,
-                password,
-                businessReference: user?.businessReference,
-                loginType: 'user'
-              });
-            } catch (loginError) {
-              // If login fails, redirect to login page
-              alert('Please login first to select a package');
-              navigate('/login');
-              return;
-            }
-          } else {
-            // Redirect to login
-            navigate('/login');
-            return;
-          }
-        }
-        
         // Send package selection to backend
         await userSubscriptionService.selectPackage(selectedPkg.backendType);
+        
+        // Update local user status to PENDING_PAYMENT
+        localStorage.setItem('userStatus', 'PENDING_PAYMENT');
+        localStorage.setItem('requiresPackageSelection', 'false');
         
         // Navigate to payment page
         navigate('/payments/new');
@@ -385,11 +361,6 @@ const SelectPackage: React.FC = () => {
                       </span>
                       <span className="text-gray-500 ml-2">/{pkg.interval}</span>
                     </div>
-                    {pkg.interval === 'month' && (
-                      <p className="text-gray-500 text-sm mt-1">
-                        Billed monthly • 14-day free trial
-                      </p>
-                    )}
                   </div>
 
                   <ul className="space-y-3 mb-8">

@@ -22,47 +22,58 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   const [showLayout, setShowLayout] = useState(true);
   const [userStatus, setUserStatus] = useState<string>('');
-  const [requiresPackageSelection, setRequiresPackageSelection] = useState(false);
+  const [,setRequiresPackageSelection] = useState(false);
   
   const location = useLocation();
   const navigate = useNavigate();
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
 
-  // Check if user needs to hide layout (for package selection)
+  // Check if layout should be hidden
   useEffect(() => {
+    // Check if we should hide layout (for payment pages, package selection, etc.)
+    const hideLayout = localStorage.getItem('hideLayout') === 'true';
+    
     // Check user status and package requirement
     const status = localStorage.getItem('userStatus');
     const requiresPackage = localStorage.getItem('requiresPackageSelection');
     const currentPath = location.pathname;
     
     console.log('🏗️ Layout status check:', {
-      userStatus: status,
-      requiresPackage,
-      currentPath,
-      isSelectPackagePage: currentPath === '/select-package'
+        userStatus: status,
+        requiresPackage,
+        currentPath,
+        isSelectPackagePage: currentPath === '/select-package',
+        isPaymentPage: currentPath.includes('/payments'),
+        hideLayout
     });
     
     setUserStatus(status || '');
     setRequiresPackageSelection(requiresPackage === 'true');
     
+    // Special case: if user is on payment page, allow access
+    const isPaymentPage = currentPath.includes('/payments');
+    
     // Hide navbar and sidebar if:
-    // 1. User is on the package selection page
-    // 2. User has PENDING_PACKAGE status
-    // 3. User requires package selection
-    if (currentPath === '/select-package' || 
-        status === 'PENDING_PACKAGE' || 
-        requiresPackage === 'true') {
-      console.log('🚫 Hiding navbar and sidebar for package selection');
-      setShowLayout(false);
-      
-      // If user is not on package page but needs package, redirect them
-      if (currentPath !== '/select-package' && 
-          (status === 'PENDING_PACKAGE' || requiresPackage === 'true')) {
-        console.log('🔄 Redirecting to package selection from layout');
-        navigate('/select-package');
-      }
+    // 1. hideLayout flag is set (for payment pages)
+    // 2. User is on the package selection page
+    // 3. User has PENDING_PACKAGE status AND is NOT on payment page
+    // 4. User requires package selection AND is NOT on payment page
+    if (hideLayout || 
+        currentPath === '/select-package' || 
+        (status === 'PENDING_PACKAGE' && !isPaymentPage) || 
+        (requiresPackage === 'true' && !isPaymentPage)) {
+        console.log('🚫 Hiding navbar and sidebar');
+        setShowLayout(false);
+        
+        // If user is not on package page but needs package, redirect them
+        if (currentPath !== '/select-package' && 
+            !isPaymentPage &&
+            (status === 'PENDING_PACKAGE' || requiresPackage === 'true')) {
+            console.log('🔄 Redirecting to package selection from layout');
+            navigate('/select-package');
+        }
     } else {
-      setShowLayout(true);
+        setShowLayout(true);
     }
   }, [location.pathname, navigate]);
 
@@ -238,14 +249,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  // If layout should be hidden (user needs to select package)
+  // If layout should be hidden (user needs to select package or is on payment page)
   if (!showLayout) {
     // Return only the content without navbar and sidebar
     // Add a special class for package selection page
     const isPackageSelectionPage = location.pathname === '/select-package';
+    const isPaymentPage = location.pathname.includes('/payments');
     
     return (
-      <div className={`min-h-screen ${isPackageSelectionPage ? 'bg-gradient-to-br from-primary-50 to-primary-100' : 'bg-gray-50'}`}>
+      <div className={`min-h-screen ${isPackageSelectionPage ? 'bg-gradient-to-br from-primary-50 to-primary-100' : 
+        isPaymentPage ? 'bg-gradient-to-br from-primary-50 to-blue-50' : 'bg-gray-50'}`}>
         {/* Optional: Show a simple header for package selection */}
         {isPackageSelectionPage && (
           <div className="p-4">
@@ -262,12 +275,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         )}
         
-        <main className={`${isPackageSelectionPage ? '' : 'p-6'}`}>
+        <main className={`${isPackageSelectionPage || isPaymentPage ? '' : 'p-6'}`}>
           {children}
         </main>
         
         {/* Show warning banner if user tries to access other pages */}
-        {!isPackageSelectionPage && userStatus === 'PENDING_PACKAGE' && (
+        {!isPackageSelectionPage && !isPaymentPage && userStatus === 'PENDING_PACKAGE' && (
           <div className="fixed top-0 left-0 right-0 bg-red-500 text-white p-4 text-center z-50">
             <p className="font-medium">
               ⚠️ Please select a package to continue using the platform. 

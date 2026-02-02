@@ -1,10 +1,11 @@
+// src/interfaces/PaymentData.ts
 export interface Payment {
   id: string;
   userId: string;
   userEmail: string;
   userFullName: string;
-  stripeCustomerId: string;
-  stripePaymentId: string;
+  paystackCustomerId: string;
+  paystackReference: string;
   amount: number;
   currency: Currency;
   description: string;
@@ -13,14 +14,13 @@ export interface Payment {
   receiptEmail: string;
   billingAddress?: string;
   shippingAddress?: string;
+  phoneNumber?: string;
   failureMessage?: string;
   createdAt: string;
   updatedAt: string;
-  clientSecret?: string;
   
-  // Subscription fields
   subscriptionId?: string;
-  invoiceId?: string;
+  authorizationCode?: string;
   paymentMethodId?: string;
   isRecurring?: boolean;
   recurringInterval?: string;
@@ -32,9 +32,6 @@ export const Currency = {
   USD: 'USD',
   EUR: 'EUR',
   GBP: 'GBP',
-  CAD: 'CAD',
-  AUD: 'AUD',
-  JPY: 'JPY'
 } as const;
 
 export type Currency = typeof Currency[keyof typeof Currency];
@@ -50,8 +47,6 @@ export const PaymentStatus = {
 
 export type PaymentStatus = typeof PaymentStatus[keyof typeof PaymentStatus];
 
-
-
 export interface PaymentRequest {
   userId: string;
   amount: number;
@@ -61,6 +56,7 @@ export interface PaymentRequest {
   receiptEmail: string;
   billingAddress?: string;
   shippingAddress?: string;
+  phoneNumber?: string;
   isRecurring?: boolean;
   recurringInterval?: 'month' | 'year' | 'week';
   metadata?: string;
@@ -71,8 +67,8 @@ export interface PaymentResponse {
   userId: string;
   userEmail: string;
   userFullName: string;
-  stripeCustomerId: string;
-  stripePaymentId: string;
+  paystackCustomerId: string;
+  paystackReference: string;
   amount: number;
   currency: Currency;
   description: string;
@@ -81,16 +77,34 @@ export interface PaymentResponse {
   receiptEmail: string;
   billingAddress?: string;
   shippingAddress?: string;
+  phoneNumber?: string;
   failureMessage?: string;
   createdAt: string;
   updatedAt: string;
-  clientSecret?: string;
   subscriptionId?: string;
-  invoiceId?: string;
+  authorizationCode?: string;
   paymentMethodId?: string;
   isRecurring?: boolean;
   recurringInterval?: string;
   metadata?: string;
+}
+
+export interface InitializePaymentRequest {
+  email: string;
+  amount: number;
+  currency: Currency;
+  reference: string;
+  metadata?: {
+    userId: string;
+    orderId: string;
+    subscriptionPlan?: string;
+    billingAddress?: string;
+    phoneNumber?: string;
+  };
+}
+
+export interface VerifyPaymentRequest {
+  reference: string;
 }
 
 export interface RefundRequest {
@@ -172,31 +186,6 @@ export interface PaymentSummary {
   lastUpdated: string;
 }
 
-export interface CardDetails {
-  cardNumber: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cvc: string;
-  cardholderName: string;
-}
-
-export interface PaymentMethod {
-  id: string;
-  type: string;
-  card?: {
-    brand: string;
-    last4: string;
-    expMonth: number;
-    expYear: number;
-  };
-  billingDetails?: {
-    name: string;
-    email: string;
-    address?: string;
-  };
-  created: string;
-}
-
 export interface Invoice {
   invoiceId: string;
   customerId: string;
@@ -205,15 +194,12 @@ export interface Invoice {
   amountPaid: number;
   amountDue: number;
   status: string;
-  hostedInvoiceUrl?: string;
-  invoicePdf?: string;
   periodStart?: string;
   periodEnd?: string;
   created: string;
   paid: boolean;
   attempted: boolean;
   attemptCount: number;
-  nextPaymentAttempt?: string;
   metadata?: string;
 }
 
@@ -224,42 +210,8 @@ export interface Subscription {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
-  items: SubscriptionItem[];
-  latestInvoice?: string;
-  metadata?: string;
-}
-
-export interface SubscriptionItem {
-  id: string;
-  price: {
-    id: string;
-    currency: string;
-    unitAmount: number;
-    recurring: {
-      interval: string;
-    };
-    product: {
-      id: string;
-      name: string;
-    };
-  };
-  quantity: number;
-}
-
-export interface CreateSubscriptionRequest {
-  priceId: string;
-  customerId: string;
-  paymentMethodId?: string;
-  trialPeriodDays?: number;
-  metadata?: string;
-}
-
-export interface PaymentIntent {
-  id: string;
-  clientSecret: string;
+  plan: string;
   amount: number;
   currency: string;
-  status: string;
-  customer?: string;
-  description?: string;
+  metadata?: string;
 }

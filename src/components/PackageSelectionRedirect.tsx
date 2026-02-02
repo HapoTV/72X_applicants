@@ -13,11 +13,18 @@ const PackageSelectionRedirect: React.FC<PackageSelectionRedirectProps> = ({ chi
     // Check if user needs to select a package
     const userStatus = localStorage.getItem('userStatus');
     const requiresPackageSelection = localStorage.getItem('requiresPackageSelection');
+    const currentPath = window.location.pathname;
     
     console.log('📦 PackageSelectionRedirect check:', {
       userStatus,
-      requiresPackageSelection
+      requiresPackageSelection,
+      currentPath
     });
+    
+    // Don't redirect if user is already on package selection or payment page
+    if (currentPath === '/select-package' || currentPath === '/payments/new') {
+      return;
+    }
     
     // Redirect if user has PENDING_PACKAGE status
     if (userStatus === 'PENDING_PACKAGE' || requiresPackageSelection === 'true') {

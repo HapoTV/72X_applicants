@@ -1,9 +1,7 @@
-// src/pages/payment/NewPaymentPage.tsx - UPDATED VERSION
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
 import { paymentService } from '../../services/PaymentService';
+import { usePaystackPayment } from '../../hooks/usePaystackPayment';
 import { Currency } from '../../interfaces/PaymentData';
 import type { PaymentRequest } from '../../interfaces/PaymentData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
@@ -12,28 +10,23 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Label } from '../../components/ui/label';
 import { Alert, AlertDescription } from '../../components/ui/alert';
-import { Loader2, CreditCard, AlertCircle, CheckCircle, Package } from 'lucide-react';
+import { 
+  Loader2, 
+  CreditCard, 
+  AlertCircle, 
+  CheckCircle, 
+  Package, 
+  Shield,
+  Mail,
+  Phone,
+  MapPin,
+  Lock,
+  BadgeCheck,
+  ArrowLeft,
+  Home
+} from 'lucide-react';
 import userSubscriptionService from '../../services/UserSubscriptionService';
 import { UserSubscriptionType } from '../../interfaces/UserSubscriptionData';
-import { useAuth } from '../../context/AuthContext';
-
-// Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_your_public_key');
-
-const CARD_ELEMENT_OPTIONS = {
-  style: {
-    base: {
-      fontSize: '16px',
-      color: '#424770',
-      '::placeholder': {
-        color: '#aab7c4',
-      },
-    },
-    invalid: {
-      color: '#9e2146',
-    },
-  },
-};
 
 interface SelectedPackage {
   id: string;
@@ -44,31 +37,57 @@ interface SelectedPackage {
   backendType: UserSubscriptionType;
 }
 
-const PaymentForm: React.FC = () => {
-  const stripe = useStripe();
-  const elements = useElements();
+interface UserDetails {
+  email: string;
+  phoneNumber: string;
+  billingAddress: string;
+}
+
+const NewPaymentPage: React.FC = () => {
   const navigate = useNavigate();
-
-
-  const [loading, setLoading] = useState(false);
+  const { paystackLoaded, isProcessing, initializePayment } = usePaystackPayment();
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<SelectedPackage | null>(null);
-  
+  const [userDetails, setUserDetails] = useState<UserDetails>({
+    email: '',
+    phoneNumber: '',
+    billingAddress: ''
+  });
+
   const [paymentDetails, setPaymentDetails] = useState<Omit<PaymentRequest, 'userId' | 'receiptEmail'>>({
     amount: 0,
     currency: Currency.ZAR,
     description: '',
     orderId: `ORD-${Date.now()}`,
-    billingAddress: '',
-    shippingAddress: '',
     isRecurring: true,
     recurringInterval: 'month'
   });
 
-  // Load selected package on mount
+  // Force hide navbar and sidebar for payment pages
+  useEffect(() => {
+    // Set flag to hide layout
+    localStorage.setItem('hideLayout', 'true');
+    
+    // Cleanup on unmount
+    return () => {
+      localStorage.removeItem('hideLayout');
+    };
+  }, []);
+
+  // Initialize user details and package
   useEffect(() => {
     const pkgData = localStorage.getItem('selectedPackage');
+    const userEmail = localStorage.getItem('userEmail') || '';
+    const userPhone = localStorage.getItem('userPhone') || '';
+    
+    setUserDetails(prev => ({
+      ...prev,
+      email: userEmail,
+      phoneNumber: userPhone
+    }));
+
     if (pkgData) {
       try {
         const pkg = JSON.parse(pkgData) as SelectedPackage;
@@ -85,41 +104,50 @@ const PaymentForm: React.FC = () => {
         }));
       } catch (err) {
         console.error('Failed to parse package data:', err);
+        setError('Invalid package data. Please select a package again.');
       }
     }
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleUserDetailChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    setPaymentDetails(prev => ({
+    setUserDetails(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
-  const validateForm = (): string[] => {
-    const errors: string[] = [];
-
-    if (!paymentDetails.amount || paymentDetails.amount <= 0) {
-      errors.push('Invalid amount');
+  const handlePaymentSuccess = async (reference: string) => {
+    setVerifying(true);
+    setError(null);
+    
+    try {
+      console.log('🔄 Verifying payment with reference:', reference);
+      const verifiedPayment = await paymentService.verifyPaystackPayment(reference);
+      
+      console.log('✅ Payment verification response:', verifiedPayment);
+      
+      if (verifiedPayment.status === 'SUCCEEDED') {
+        await handlePaymentComplete(selectedPackage!.backendType);
+        setSuccess(true);
+      } else {
+        setError(`Payment failed: ${verifiedPayment.failureMessage || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      console.error('Payment verification error:', err);
+      setError(err.message || 'Payment verification failed. Please contact support.');
+    } finally {
+      setVerifying(false);
     }
-
-    if (!paymentDetails.description.trim()) {
-      errors.push('Description is required');
-    }
-
-    if (!paymentDetails.orderId.trim()) {
-      errors.push('Order ID is required');
-    }
-
-    return errors;
   };
 
-  // AFTER SUCCESSFUL PAYMENT - UPDATE USER STATUS
-  const handlePaymentSuccess = async (packageType: UserSubscriptionType) => {
+  const handlePaymentClose = () => {
+    console.log('Payment modal closed by user');
+    setError('Payment was cancelled. You can try again when ready.');
+  };
+
+  const handlePaymentComplete = async (packageType: UserSubscriptionType) => {
     try {
-      // Call backend to confirm payment and activate subscription
       if (selectedPackage?.backendType) {
         await userSubscriptionService.confirmPayment({
           packageType: selectedPackage.backendType,
@@ -128,292 +156,394 @@ const PaymentForm: React.FC = () => {
         });
       }
       
-      // Update user status to ACTIVE in localStorage
+      // Update user status
       localStorage.setItem('userStatus', 'ACTIVE');
       localStorage.removeItem('requiresPackageSelection');
+      localStorage.removeItem('hideLayout'); // Remove hide layout flag
       
-      // Update user in context and localStorage
+      // Update user in localStorage
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const updatedUser = { ...currentUser, status: 'ACTIVE' };
+      const updatedUser = { 
+        ...currentUser, 
+        status: 'ACTIVE',
+        phoneNumber: userDetails.phoneNumber,
+        billingAddress: userDetails.billingAddress,
+        email: userDetails.email,
+        subscriptionPlan: selectedPackage?.name,
+        subscriptionType: selectedPackage?.backendType
+      };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       
-      // Clear temporary package selection data
+      // Clear temporary data
       localStorage.removeItem('selectedPackage');
       localStorage.removeItem('tempPassword');
       
-      console.log('✅ Payment successful, user status updated to ACTIVE');
+      console.log('✅ User status updated to ACTIVE');
       
     } catch (error) {
-      console.error('❌ Error updating user status after payment:', error);
+      console.error('Error updating user status:', error);
       throw error;
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedPackage) {
-      setError('No package selected. Please go back and select a package.');
-      return;
-    }
-
-    const validationErrors = validateForm();
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join(', '));
-      return;
-    }
-
-    if (!stripe || !elements) {
-      setError('Payment system is not initialized');
-      return;
-    }
-
-    setLoading(true);
+  const handlePaystackPayment = async () => {
+    // Reset error
     setError(null);
 
+    // Validate form
+    if (!userDetails.email || !userDetails.email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    if (!selectedPackage) {
+      setError('No package selected');
+      return;
+    }
+
+    if (paymentDetails.amount <= 0) {
+      setError('Invalid payment amount');
+      return;
+    }
+
     try {
-      // Get payment method
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        throw new Error('Card element not found');
-      }
-
-      const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: cardElement,
-      });
-
-      if (stripeError) {
-        throw new Error(stripeError.message);
-      }
-
-      // Get user email from localStorage
-      const userEmail = localStorage.getItem('userEmail');
-      if (!userEmail) {
-        throw new Error('User not found. Please sign in again.');
-      }
-
-      // Create payment request
-      const paymentRequest: PaymentRequest = {
-        ...paymentDetails,
-        userId: userEmail, // Using email as userId for now
-        receiptEmail: userEmail,
+      const metadata = {
+        userId: userDetails.email,
+        orderId: paymentDetails.orderId,
+        subscriptionPlan: selectedPackage.name,
+        packageType: selectedPackage.backendType,
+        billingAddress: userDetails.billingAddress,
+        phoneNumber: userDetails.phoneNumber,
+        interval: selectedPackage.interval,
+        timestamp: new Date().toISOString()
       };
 
-      const response = await paymentService.createPayment(paymentRequest);
+      await initializePayment({
+        email: userDetails.email,
+        amount: paymentDetails.amount,
+        currency: paymentDetails.currency,
+        metadata,
+        onSuccess: handlePaymentSuccess,
+        onClose: handlePaymentClose
+      });
 
-      if (response.status === 'SUCCEEDED') {
-        // Payment successful - update user status and complete registration
-        await handlePaymentSuccess(selectedPackage.backendType);
-        setSuccess(true);
-      } else {
-        // Payment needs confirmation
-        await paymentService.confirmPayment(response.id);
-        await handlePaymentSuccess(selectedPackage.backendType);
-        setSuccess(true);
-      }
     } catch (err: any) {
-      setError(err.message || 'Payment failed. Please try again.');
-    } finally {
-      setLoading(false);
+      console.error('Payment initialization error:', err);
+      setError(err.message || 'Failed to initialize payment. Please try again.');
     }
   };
 
   if (success) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-md">
-        <Card className="text-center">
-          <CardContent className="pt-8 pb-8">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Welcome to 72X!
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Your payment has been processed and your account is now active.
-            </p>
-            {selectedPackage && (
-              <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Package className="h-5 w-5 text-primary-600" />
-                  <span className="font-semibold text-gray-900">
-                    {selectedPackage.name} Plan
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600">
-                  You're subscribed to the {selectedPackage.name} plan
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  Enjoy 14-day free trial before billing starts
-                </p>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="text-center border-green-200 shadow-xl">
+            <CardContent className="pt-8 pb-8">
+              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-            )}
-            <div className="space-y-3">
-              <Button 
-                onClick={() => {
-                  // Navigate to dashboard
-                  navigate('/dashboard/overview');
-                }}
-                className="w-full"
-              >
-                Go to Dashboard
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/payments')}
-              >
-                View Payment Details
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Welcome to 72X!
+              </h2>
+              <p className="text-gray-600 mb-4">
+                Your payment has been processed and your account is now active.
+              </p>
+              {selectedPackage && (
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Package className="h-5 w-5 text-primary-600" />
+                    <span className="font-semibold text-gray-900">
+                      {selectedPackage.name} Plan
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    You're subscribed to the {selectedPackage.name} plan
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Enjoy 14-day free trial before billing starts
+                  </p>
+                </div>
+              )}
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => {
+                    navigate('/dashboard/overview');
+                  }}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  <Home className="h-4 w-4 mr-2" />
+                  Go to Dashboard
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/payments')}
+                >
+                  View Payment Details
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   if (!selectedPackage) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-md">
-        <Card className="text-center">
-          <CardContent className="pt-8 pb-8">
-            <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              No Package Selected
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Please select a package before proceeding to payment.
-            </p>
-            <Button onClick={() => navigate('/select-package')}>
-              Select Package
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="text-center">
+            <CardContent className="pt-8 pb-8">
+              <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                No Package Selected
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Please select a package before proceeding to payment.
+              </p>
+              <Button 
+                onClick={() => navigate('/select-package')}
+                className="bg-primary hover:bg-primary-dark"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Select Package
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
+  const isPayButtonDisabled = !paystackLoaded || isProcessing || verifying || !userDetails.email;
+
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <Package className="h-8 w-8 text-primary-600" />
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Complete Your Subscription</h1>
-            <p className="text-gray-600 mt-1">Enter your payment details to activate your account</p>
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/select-package')}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Packages
+              </Button>
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-semibold text-gray-900">72X Subscription</h1>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Shield className="h-5 w-5 text-green-600" />
+              <span className="text-sm font-medium text-gray-700">Secure Payment</span>
+            </div>
           </div>
         </div>
-        
-        {/* Package Summary */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{selectedPackage.name} Plan</h3>
-                <p className="text-gray-600 text-sm mt-1">
-                  {selectedPackage.interval === 'month' ? 'Monthly subscription' : 'Yearly subscription'}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-gray-900">
-                  {selectedPackage.currency === 'ZAR' ? 'R' : selectedPackage.currency}{selectedPackage.price}
-                </div>
-                <div className="text-gray-500 text-sm">
-                  per {selectedPackage.interval}
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700">
-                <strong>Note:</strong> You will not be charged during the 14-day free trial. 
-                You can cancel anytime before the trial ends.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Details</CardTitle>
-              <CardDescription>Your subscription information</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="orderId">Order ID</Label>
-                <Input
-                  id="orderId"
-                  name="orderId"
-                  value={paymentDetails.orderId}
-                  readOnly
-                  className="bg-gray-50"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={paymentDetails.description}
-                  readOnly
-                  rows={2}
-                  className="bg-gray-50"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="amount">Amount</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-gray-500">
-                    {paymentDetails.currency === 'ZAR' ? 'R' : paymentDetails.currency}
-                  </span>
-                  <Input
-                    id="amount"
-                    name="amount"
-                    type="number"
-                    value={paymentDetails.amount}
-                    readOnly
-                    className="pl-10 bg-gray-50"
-                  />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Package className="h-8 w-8 text-primary-600" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Complete Your Subscription</h1>
+              <p className="text-gray-600 mt-1">Enter your details to activate your account</p>
+            </div>
+          </div>
+          
+          <Card className="mb-6 border-primary-100">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedPackage.name} Plan</h3>
+                  <p className="text-gray-600 text-sm mt-1">
+                    {selectedPackage.interval === 'month' ? 'Monthly subscription' : 'Yearly subscription'}
+                  </p>
                 </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {selectedPackage.currency === 'ZAR' ? 'R' : selectedPackage.currency}
+                    {selectedPackage.price.toLocaleString()}
+                  </div>
+                  <div className="text-gray-500 text-sm">
+                    per {selectedPackage.interval}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>14-Day Free Trial:</strong> You will not be charged during the trial period. 
+                  Cancel anytime before the trial ends.
+                </p>
               </div>
             </CardContent>
           </Card>
+        </div>
 
-          <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* User Details Card */}
+          <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle>Card Details</CardTitle>
-              <CardDescription>Enter your payment information</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Your Details
+              </CardTitle>
+              <CardDescription>
+                We need this information for your account
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div>
-                <Label>Card Information *</Label>
-                <div className="mt-1 p-3 border border-gray-300 rounded-lg bg-white">
-                  <CardElement options={CARD_ELEMENT_OPTIONS} />
-                </div>
+                <Label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={userDetails.email}
+                  onChange={handleUserDetailChange}
+                  required
+                  placeholder="your@email.com"
+                  disabled={isProcessing || verifying}
+                  className="w-full"
+                />
                 <p className="text-xs text-gray-500 mt-2">
-                  Test card: 4242 4242 4242 4242
+                  Payment receipt will be sent to this email
                 </p>
               </div>
 
               <div>
-                <Label htmlFor="billingAddress">Billing Address (Optional)</Label>
+                <Label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number (Optional)
+                </Label>
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  value={userDetails.phoneNumber}
+                  onChange={handleUserDetailChange}
+                  placeholder="+27 12 345 6789"
+                  disabled={isProcessing || verifying}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  For important account notifications
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="billingAddress" className="block text-sm font-medium text-gray-700 mb-2">
+                  Billing Address (Optional)
+                </Label>
                 <Textarea
                   id="billingAddress"
                   name="billingAddress"
-                  value={paymentDetails.billingAddress}
-                  onChange={handleInputChange}
-                  rows={2}
-                  placeholder="Street, City, Postal Code"
+                  value={userDetails.billingAddress}
+                  onChange={handleUserDetailChange}
+                  rows={3}
+                  placeholder="Street, City, Postal Code, Country"
+                  disabled={isProcessing || verifying}
+                  className="w-full"
                 />
+                <p className="text-xs text-gray-500 mt-2">
+                  Only needed for invoicing purposes
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment Security Card */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Secure Payment
+              </CardTitle>
+              <CardDescription>
+                Powered by Paystack - PCI DSS Level 1 Certified
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Security Badge */}
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <BadgeCheck className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-green-800 mb-1">Bank-Level Security</h4>
+                    <ul className="space-y-1 text-sm text-green-700">
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                        PCI DSS Level 1 Certified
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                        256-bit SSL Encryption
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                        Card details never stored
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Loading Status */}
+              {!paystackLoaded && (
+                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-800">Loading Payment Service</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Test Mode Indicator */}
+              {import.meta.env.VITE_PAYSTACK_PUBLIC_KEY?.includes('test') && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-blue-800">Test Mode Active</span>
+                  </div>
+                  <p className="text-xs text-blue-600">
+                    No real payments will be processed. Use test cards from Paystack docs.
+                  </p>
+                </div>
+              )}
+
+              {/* Payment Summary */}
+              <div className="border-t pt-6">
+                <h4 className="font-semibold text-gray-900 mb-4">Payment Summary</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Plan:</span>
+                    <span className="font-medium">{selectedPackage.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Billing Cycle:</span>
+                    <span className="font-medium capitalize">{selectedPackage.interval}ly</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-3">
+                    <span className="text-gray-900 font-semibold">Total Amount:</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      {selectedPackage.currency === 'ZAR' ? 'R' : selectedPackage.currency}
+                      {selectedPackage.price.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Error Display */}
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
@@ -421,55 +551,87 @@ const PaymentForm: React.FC = () => {
           </Alert>
         )}
 
-        <div className="flex justify-between items-center gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate('/select-package')}
-            disabled={loading}
-          >
-            Back to Packages
-          </Button>
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-white p-6 rounded-lg shadow border">
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/select-package')}
+              disabled={isProcessing || verifying}
+              className="sm:mb-0"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Packages
+            </Button>
+            <p className="text-xs text-gray-500 max-w-xs">
+              <Lock className="h-3 w-3 inline mr-1" />
+              Your information is encrypted and secure
+            </p>
+          </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="text-right">
-              <div className="text-sm text-gray-600">Total Amount</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {paymentDetails.currency === 'ZAR' ? 'R' : paymentDetails.currency}
-                {paymentDetails.amount}
+              <div className="text-sm text-gray-600">Total Due</div>
+              <div className="text-3xl font-bold text-gray-900">
+                {selectedPackage.currency === 'ZAR' ? 'R' : selectedPackage.currency}
+                {selectedPackage.price.toLocaleString()}
               </div>
             </div>
             
             <Button
-              type="submit"
-              disabled={loading || !stripe}
-              className="flex items-center gap-2 px-8"
+              onClick={handlePaystackPayment}
+              disabled={isPayButtonDisabled}
+              className="flex items-center gap-3 px-8 py-6 bg-green-600 hover:bg-green-700 text-lg shadow-lg hover:shadow-xl transition-all duration-200"
               size="lg"
             >
-              {loading ? (
+              {isProcessing ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing...
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Processing Payment...
+                </>
+              ) : verifying ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Verifying Payment...
+                </>
+              ) : !paystackLoaded ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading Payment Service...
                 </>
               ) : (
                 <>
-                  <CreditCard className="h-4 w-4" />
+                  <CreditCard className="h-5 w-5" />
                   Complete Subscription
                 </>
               )}
             </Button>
           </div>
         </div>
-      </form>
-    </div>
-  );
-};
 
-const NewPaymentPage: React.FC = () => {
-  return (
-    <Elements stripe={stripePromise}>
-      <PaymentForm />
-    </Elements>
+        {/* Security Footer */}
+        <div className="mt-12 pt-6 border-t">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm font-medium text-gray-900">100% Secure Payment</p>
+                <p className="text-xs text-gray-600">All transactions are encrypted and secure</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4 text-xs text-gray-500">
+              <span>PCI DSS Compliant</span>
+              <span>•</span>
+              <span>256-bit Encryption</span>
+              <span>•</span>
+              <span>Paystack Secured</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
