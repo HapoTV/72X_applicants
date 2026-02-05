@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, CreditCard, AlertTriangle, Server, Activity, 
-  TrendingUp, Database, Shield, BarChart, RefreshCw,
+  Shield, BarChart, RefreshCw,
   Loader2, AlertCircle, CheckCircle, XCircle, Cpu, HardDrive
 } from 'lucide-react';
 import { adminMonitoringService } from '../../../services/AdminMonitoringService';

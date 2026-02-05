@@ -1,6 +1,44 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Currency } from '../interfaces/PaymentData';
 
+declare global {
+  interface Window {
+    PaystackPop: {
+      setup(options: PaystackOptions): PaystackHandler;
+    };
+  }
+}
+
+interface PaystackOptions {
+  key: string;
+  email: string;
+  amount: number;
+  ref: string;
+  currency?: string;
+  metadata?: Record<string, any>;
+  callback: (response: PaystackResponse) => void;
+  onClose: () => void;
+  channels?: string[];
+  label?: string;
+  plan?: string;
+  quantity?: number;
+  [key: string]: any;
+}
+
+interface PaystackResponse {
+  reference: string;
+  trans: string;
+  status: string;
+  message: string;
+  transaction: string;
+  trxref: string;
+  [key: string]: any;
+}
+
+interface PaystackHandler {
+  openIframe(): void;
+}
+
 interface UsePaystackPaymentReturn {
   paystackLoaded: boolean;
   isProcessing: boolean;
@@ -20,7 +58,7 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
   const [paystackLoaded, setPaystackLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Use refs to store callbacks to avoid recreating them
+  // Use refs to store the async callbacks
   const successCallbackRef = useRef<((reference: string) => Promise<void>) | null>(null);
   const closeCallbackRef = useRef<(() => void) | null>(null);
 
@@ -41,8 +79,8 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
       setPaystackLoaded(true);
     };
     
-    script.onerror = (error) => {
-      console.error('❌ Failed to load Paystack script:', error);
+    script.onerror = () => {
+      console.error('❌ Failed to load Paystack script');
       setPaystackLoaded(false);
     };
     
@@ -58,13 +96,14 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
   }, []);
 
   // Create a regular function that Paystack can call
-  const handlePaystackCallback = useCallback((response: any) => {
+  const handlePaystackCallback = useCallback((response: PaystackResponse) => {
     console.log('🔄 Paystack callback received:', response);
     
+    // Paystack callback must be a regular function, not async
     if (response.status === 'success' && successCallbackRef.current) {
       setIsProcessing(true);
       
-      // Call the success callback
+      // Call the async success callback but don't await here
       successCallbackRef.current(response.reference)
         .catch(error => {
           console.error('❌ Error in payment success callback:', error);
@@ -72,8 +111,11 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
         .finally(() => {
           setIsProcessing(false);
         });
+    } else if (response.status === 'error') {
+      console.error('Payment error:', response.message);
+      setIsProcessing(false);
     } else {
-      console.error('Payment failed or cancelled:', response);
+      console.log('Payment status:', response.status);
       setIsProcessing(false);
     }
   }, []);
@@ -109,19 +151,18 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
     setIsProcessing(true);
 
     try {
-      const reference = `ref_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const reference = `72X_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
       if (!publicKey) {
         throw new Error('Payment gateway is not configured. Please contact support.');
       }
 
-      // Ensure PaystackPop is available
       if (!window.PaystackPop) {
         throw new Error('Payment service is not available. Please refresh the page.');
       }
 
-      // Store callbacks in refs
+      // Store the async callbacks in refs
       successCallbackRef.current = onSuccess;
       closeCallbackRef.current = onClose || (() => {});
 
@@ -132,16 +173,15 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
         ref: reference,
         currency: currency,
         metadata: metadata || {},
-        callback: handlePaystackCallback, // Regular function, not async
-        onClose: handlePaystackClose, // Regular function
-        channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money'],
+        channels: ['card', 'bank', 'ussd', 'mobile_money'],
         label: "72X Subscription",
-        plan: "", // Add your plan code if you have subscription plans
+        callback: handlePaystackCallback, // Regular function, NOT async
+        onClose: handlePaystackClose, // Regular function, NOT async
       });
 
       handler.openIframe();
 
-    } catch (error) {
+    } catch (error: any) {
       setIsProcessing(false);
       console.error('❌ Payment initialization error:', error);
       throw error;

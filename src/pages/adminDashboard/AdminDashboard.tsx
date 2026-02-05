@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import AdminNavbar from './AdminNavbar';
 import AdminSidebar from './AdminSidebar';
 import ApplicantsTab from './tabs/ApplicantsTab';
@@ -10,12 +10,13 @@ import FundingTab from './tabs/FundingTab';
 import AdTab from './tabs/AdTab';
 import AdminProfile from './tabs/AdminProfile';
 import AdminMonitor from './tabs/AdminMonitor';
-import AdminNotifications from './tabs/AdminNotifications';
+import AdminPaymentsPage from '../../pages/payment/AdminPaymentsPage';
+import AdminAnalytics from './tabs/AdminAnalytics';
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
     const location = useLocation();
-    const [activeTab, setActiveTab] = useState<'applicants' | 'events' | 'learning' | 'mentorship' | 'ad' | 'profile' | 'funding'>('applicants');
+    const [activeTab, setActiveTab] = useState<'applicants' | 'events' | 'learning' | 'mentorship' | 'ad' | 'profile' | 'funding' | 'payments' | 'monitoring' | 'analytics'>('applicants');
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
@@ -26,24 +27,31 @@ export default function AdminDashboard() {
 
     // Initialize active tab from URL on mount
     useEffect(() => {
+        const path = location.pathname;
+        
+        if (path === '/admin/payments') {
+            setActiveTab('payments');
+            return;
+        }
+        
+        if (path === '/admin/analytics') {
+            setActiveTab('analytics');
+            return;
+        }
+        
         const base = '/admin/dashboard/';
-        if (location.pathname.startsWith(base)) {
-            const segment = location.pathname.slice(base.length).split('/')[0];
-            const validTabs = ['applicants', 'events', 'learning', 'mentorship', 'funding', 'ad', 'profile'] as const;
+        if (path.startsWith(base)) {
+            const segment = path.slice(base.length).split('/')[0];
+            const validTabs = ['applicants', 'events', 'learning', 'mentorship', 'funding', 'ad', 'profile', 'monitoring'] as const;
             if (segment && (validTabs as readonly string[]).includes(segment)) {
                 setActiveTab(segment as typeof validTabs[number]);
                 return;
             }
         }
+        
         // Default to applicants if no valid segment
         navigate('/admin/dashboard/applicants', { replace: true });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Reflect activeTab in URL when it changes
-    useEffect(() => {
-        navigate(`/admin/dashboard/${activeTab}`, { replace: true });
-    }, [activeTab, navigate]);
+    }, [location.pathname, navigate]);
 
     const renderActiveTab = () => {
         switch (activeTab) {
@@ -63,8 +71,10 @@ export default function AdminDashboard() {
                 return <AdminProfile />;
             case 'monitoring':
                 return <AdminMonitor />;
-            case 'notifications':
-                return <AdminNotifications />;
+            case 'payments':
+                return <AdminPaymentsPage />;
+            case 'analytics':
+                return <AdminAnalytics />;
             default:
                 return <ApplicantsTab />;
         }

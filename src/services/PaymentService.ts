@@ -7,6 +7,7 @@ import type {
   RevenueAnalytics,
   InitializePaymentRequest,
   Invoice,
+  PaymentFilters
 } from '../interfaces/PaymentData';
 
 class PaymentService {
@@ -17,32 +18,7 @@ class PaymentService {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  async initializePaystackPayment(request: InitializePaymentRequest): Promise<{ reference: string; authorization_url: string }> {
-    try {
-      const response = await axiosClient.post(`${this.baseURL}/initialize`, request, {
-        headers: this.getAuthHeader()
-      });
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('Error initializing Paystack payment:', error);
-      throw this.handlePaymentError(error);
-    }
-  }
-
-  async verifyPaystackPayment(reference: string): Promise<PaymentResponse> {
-    try {
-      const response = await axiosClient.get(`${this.baseURL}/verify/${reference}`, {
-        headers: this.getAuthHeader()
-      });
-      
-      return this.transformPaymentResponse(response.data);
-    } catch (error: any) {
-      console.error('Error verifying Paystack payment:', error);
-      throw error;
-    }
-  }
-
+  // Create a new payment
   async createPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.post(`${this.baseURL}/create`, paymentRequest, {
@@ -60,6 +36,7 @@ class PaymentService {
     }
   }
 
+  // Get payment by ID
   async getPayment(id: string): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/${id}`, {
@@ -77,6 +54,7 @@ class PaymentService {
     }
   }
 
+  // Get payment by Paystack reference
   async getPaymentByReference(reference: string): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/reference/${reference}`, {
@@ -94,9 +72,25 @@ class PaymentService {
     }
   }
 
-  async getMyPayments(): Promise<PaymentResponse[]> {
+  // Verify Paystack payment
+  async verifyPaystackPayment(reference: string): Promise<PaymentResponse> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/verify/${reference}`, {
+        headers: this.getAuthHeader()
+      });
+      
+      return this.transformPaymentResponse(response.data);
+    } catch (error: any) {
+      console.error('Error verifying Paystack payment:', error);
+      throw error;
+    }
+  }
+
+  // Get current user's payments
+  async getMyPayments(filters?: PaymentFilters): Promise<PaymentResponse[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/user/me`, {
+        params: filters,
         headers: this.getAuthHeader()
       });
       
@@ -113,6 +107,7 @@ class PaymentService {
     }
   }
 
+  // Get payments for a specific user (Admin only)
   async getUserPayments(userId: string): Promise<PaymentResponse[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/user/${userId}`, {
@@ -132,6 +127,48 @@ class PaymentService {
     }
   }
 
+  // Get all payments (Admin only)
+  async getAllPayments(filters?: PaymentFilters): Promise<PaymentResponse[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/admin/all`, {
+        params: filters,
+        headers: this.getAuthHeader()
+      });
+      
+      if (!response.data) {
+        return [];
+      }
+      
+      return Array.isArray(response.data) 
+        ? response.data.map(this.transformPaymentResponse)
+        : [];
+    } catch (error: any) {
+      console.error('Error fetching all payments:', error);
+      throw error;
+    }
+  }
+
+  // Get payments by status (Admin only)
+  async getPaymentsByStatus(status: string): Promise<PaymentResponse[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/admin/payments/status/${status}`, {
+        headers: this.getAuthHeader()
+      });
+      
+      if (!response.data) {
+        return [];
+      }
+      
+      return Array.isArray(response.data) 
+        ? response.data.map(this.transformPaymentResponse)
+        : [];
+    } catch (error: any) {
+      console.error('Error fetching payments by status:', error);
+      throw error;
+    }
+  }
+
+  // Get recent payments for current user
   async getMyRecentPayments(limit: number = 10): Promise<PaymentResponse[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/user/me/recent`, {
@@ -152,6 +189,7 @@ class PaymentService {
     }
   }
 
+  // Get payments by order ID
   async getOrderPayments(orderId: string): Promise<PaymentResponse[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/order/${orderId}`, {
@@ -171,6 +209,7 @@ class PaymentService {
     }
   }
 
+  // Confirm payment manually
   async confirmPayment(id: string): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.post(`${this.baseURL}/${id}/confirm`, {}, {
@@ -188,6 +227,7 @@ class PaymentService {
     }
   }
 
+  // Cancel a payment
   async cancelPayment(id: string): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.post(`${this.baseURL}/${id}/cancel`, {}, {
@@ -205,6 +245,7 @@ class PaymentService {
     }
   }
 
+  // Process refund (Admin only)
   async processRefund(refundRequest: RefundRequest): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.post(`${this.baseURL}/refund`, refundRequest, {
@@ -222,6 +263,7 @@ class PaymentService {
     }
   }
 
+  // Get current user's payment statistics
   async getMyPaymentStatistics(): Promise<PaymentStatistics> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/user/statistics`, {
@@ -239,6 +281,7 @@ class PaymentService {
     }
   }
 
+  // Create subscription payment
   async createSubscriptionPayment(paymentRequest: PaymentRequest): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.post(`${this.baseURL}/subscription/create`, paymentRequest, {
@@ -256,6 +299,7 @@ class PaymentService {
     }
   }
 
+  // Get current user's subscription payments
   async getMySubscriptionPayments(): Promise<PaymentResponse[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/subscription/user/me`, {
@@ -275,6 +319,7 @@ class PaymentService {
     }
   }
 
+  // Get revenue analytics (Admin only)
   async getRevenueAnalytics(startDate?: string, endDate?: string): Promise<RevenueAnalytics> {
     try {
       const params: any = {};
@@ -297,25 +342,7 @@ class PaymentService {
     }
   }
 
-  async getPaymentsByStatus(status: string): Promise<PaymentResponse[]> {
-    try {
-      const response = await axiosClient.get(`${this.baseURL}/admin/payments/status/${status}`, {
-        headers: this.getAuthHeader()
-      });
-      
-      if (!response.data) {
-        return [];
-      }
-      
-      return Array.isArray(response.data) 
-        ? response.data.map(this.transformPaymentResponse)
-        : [];
-    } catch (error: any) {
-      console.error('Error fetching payments by status:', error);
-      throw error;
-    }
-  }
-
+  // Get current user's invoices
   async getMyInvoices(): Promise<Invoice[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/invoices/me`, {
@@ -333,6 +360,7 @@ class PaymentService {
     }
   }
 
+  // Get specific invoice
   async getInvoice(invoiceId: string): Promise<Invoice> {
     try {
       const response = await axiosClient.get(`${this.baseURL}/invoices/${invoiceId}`, {
@@ -350,23 +378,30 @@ class PaymentService {
     }
   }
 
-  async createSubscriptionAuthorization(email: string, amount: number, plan: string): Promise<{ authorization_code: string }> {
+  // Create subscription authorization
+  async createSubscriptionAuthorization(
+    email: string, 
+    amount: number, 
+    plan: string
+  ): Promise<PaymentResponse> {
     try {
       const response = await axiosClient.post(`${this.baseURL}/subscription/authorize`, {
         email,
         amount,
-        plan
+        plan,
+        isRecurring: true
       }, {
         headers: this.getAuthHeader()
       });
       
-      return response.data;
+      return this.transformPaymentResponse(response.data);
     } catch (error: any) {
       console.error('Error creating subscription authorization:', error);
       throw error;
     }
   }
 
+  // Cancel subscription
   async cancelSubscription(subscriptionId: string): Promise<void> {
     try {
       await axiosClient.post(`${this.baseURL}/subscription/cancel`, { subscriptionId }, {
@@ -378,6 +413,58 @@ class PaymentService {
     }
   }
 
+  // Get admin payment statistics
+  async getAdminPaymentStats(): Promise<any> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/admin/stats`, {
+        headers: this.getAuthHeader()
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching admin stats:', error);
+      throw error;
+    }
+  }
+
+  // Search payments (Admin only)
+  async searchPayments(query: string): Promise<PaymentResponse[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/admin/search`, {
+        params: { q: query },
+        headers: this.getAuthHeader()
+      });
+      
+      if (!response.data) {
+        return [];
+      }
+      
+      return Array.isArray(response.data) 
+        ? response.data.map(this.transformPaymentResponse)
+        : [];
+    } catch (error: any) {
+      console.error('Error searching payments:', error);
+      throw error;
+    }
+  }
+
+  // Export payments (Admin only)
+  async exportPayments(format: 'csv' | 'excel' = 'csv'): Promise<Blob> {
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/admin/export`, {
+        params: { format },
+        responseType: 'blob',
+        headers: this.getAuthHeader()
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error exporting payments:', error);
+      throw error;
+    }
+  }
+
+  // Transform response data to PaymentResponse
   private transformPaymentResponse(data: any): PaymentResponse {
     return {
       id: data.id || '',
@@ -403,10 +490,19 @@ class PaymentService {
       paymentMethodId: data.paymentMethodId,
       isRecurring: data.isRecurring || false,
       recurringInterval: data.recurringInterval,
-      metadata: data.metadata
+      metadata: data.metadata,
+      // Additional Paystack fields
+      channel: data.channel,
+      ipAddress: data.ipAddress,
+      fee: data.fee,
+      amountSettled: data.amountSettled,
+      verifiedAt: data.verifiedAt,
+      authorizationUrl: data.authorizationUrl,
+      accessCode: data.accessCode
     };
   }
 
+  // Transform statistics data
   private transformPaymentStatistics(data: any): PaymentStatistics {
     return {
       userId: data.userId || '',
@@ -420,6 +516,7 @@ class PaymentService {
     };
   }
 
+  // Transform revenue analytics data
   private transformRevenueAnalytics(data: any): RevenueAnalytics {
     return {
       totalRevenue: data.totalRevenue || 0,
@@ -433,6 +530,7 @@ class PaymentService {
     };
   }
 
+  // Handle payment errors
   private handlePaymentError(error: any): Error {
     if (error.response) {
       const { data, status } = error.response;
@@ -460,6 +558,7 @@ class PaymentService {
     }
   }
 
+  // Utility methods
   formatCurrency(amount: number, currency: string = 'R'): string {
     if (currency === 'ZAR' || currency === 'R') {
       return new Intl.NumberFormat('en-ZA', {

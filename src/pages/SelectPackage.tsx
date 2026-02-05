@@ -23,6 +23,7 @@ const SelectPackage: React.FC = () => {
     const email = localStorage.getItem('userEmail');
     const status = localStorage.getItem('userStatus');
     const requiresPackage = localStorage.getItem('requiresPackageSelection');
+    const savedPackage = localStorage.getItem('selectedPackage'); // Check for existing package
     
     if (!email) {
       navigate('/create-password');
@@ -37,6 +38,7 @@ const SelectPackage: React.FC = () => {
       email,
       status,
       requiresPackage,
+      savedPackage: savedPackage ? JSON.parse(savedPackage) : null,
       isAuthenticated
     });
     
@@ -366,7 +368,7 @@ const SelectPackage: React.FC = () => {
                   <ul className="space-y-3 mb-8">
                     {pkg.features.map((feature, index) => (
                       <li key={index} className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                        <Check className="w-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">{feature}</span>
                       </li>
                     ))}
