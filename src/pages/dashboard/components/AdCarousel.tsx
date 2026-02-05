@@ -293,7 +293,8 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
   const renderSlot = (subtitle: string, content: React.ReactNode) => (
     <div className="space-y-3">
       {renderHeader(subtitle)}
-      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">{content}</div>
+      {/* Removed border/background to blend with app */}
+      <div className="overflow-hidden">{content}</div>
     </div>
   );
 
@@ -373,11 +374,17 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
         )}
 
         <div
-          className="relative w-full bg-white"
-          style={{ aspectRatio, minHeight: '14rem', maxHeight: '26rem' }}
+          className="relative w-full"
+          style={{
+            aspectRatio,
+            minHeight: '14rem',
+            maxHeight: '26rem',
+            transform: isTransitioning ? 'translateX(100%)' : 'translateX(0)',
+            transition: 'transform 300ms ease'
+          }}
         >
           {currentAd.mediaType === 'IMAGE' && currentAd.bannerUrl && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white">
+            <div className="absolute inset-0 flex items-center justify-center">
               <img
                 src={currentAd.bannerUrl}
                 alt={currentAd.title}
@@ -392,7 +399,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
           )}
 
           {currentAd.mediaType === 'VIDEO' && currentAd.bannerUrl && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black">
+            <div className="absolute inset-0 flex items-center justify-center">
               <video
                 ref={(el) => {
                   if (el) {

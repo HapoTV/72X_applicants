@@ -613,12 +613,6 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
                   >
                     Get started
                   </button>
-                  <button
-                    onClick={() => navigate('/login')}
-                    className="inline-flex items-center gap-2 bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold shadow-md"
-                  >
-                    Start Free Trial
-                  </button>
                   
                 </div>
               </div>
@@ -726,7 +720,11 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
 
                 <div className="flex justify-center mt-10">
                   <button
-                    onClick={() => setShowAdRequestModal(true)}
+                    onClick={() => {
+                      const to = 'info@hapogroup.co.za';
+                      const subject = 'Request ad space';
+                      window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}`;
+                    }}
                     className="inline-flex items-center justify-center bg-[#60A5FA] hover:bg-[#3B82F6] text-white px-6 py-3 rounded-md font-semibold text-sm shadow-md transition-colors mx-auto"
                   >
                     Request Ad Space
@@ -1173,8 +1171,9 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
               <button 
                 className="bg-[#60A5FA] hover:bg-[#3B82F6] text-white font-medium py-3 px-8 rounded-lg transition-colors duration-300"
                 onClick={() => {
-                  // Add contact form logic here
-                  console.log('Contact us clicked');
+                  const to = 'info@hapogroup.co.za';
+                  const subject = 'Custom solution request';
+                  window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}`;
                 }}
               >
                 Get a Custom Solution
@@ -1325,7 +1324,7 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
                 onClick={() => navigate('/signup')}
                 className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-4 rounded-lg font-semibold text-lg shadow-lg transition-colors"
               >
-                Start Free Trial
+                Get started
               </button>
               <button
                 onClick={() => navigate('/request-demo')}
