@@ -45,7 +45,7 @@ const AIBusinessAnalyst: React.FC = () => {
     const loadAnalysisHistory = async () => {
       try {
         const userId = 'demo-user'; // Get from auth context
-        const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
+        const history = await aiBusinessAnalyticsService.getAnalysisHistory(5);
         setAnalysisHistory(history as AnalysisHistoryItem[]);
       } catch (error) {
         console.error('Error loading analysis history:', error);
@@ -83,7 +83,7 @@ const AIBusinessAnalyst: React.FC = () => {
           
           // Refresh history
           const userId = 'demo-user';
-          const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
+          const history = await aiBusinessAnalyticsService.getAnalysisHistory(5);
           setAnalysisHistory(history as AnalysisHistoryItem[]);
           
         } else if (status === 'failed') {
