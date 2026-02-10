@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 import { UserSubscriptionType } from '../interfaces/UserSubscriptionData';
-import type{ 
+import type { 
   UserSubscriptionData, 
   PackageSelectionData, 
 } from '../interfaces/UserSubscriptionData';
@@ -32,6 +32,22 @@ class UserSubscriptionService {
     }
   }
 
+  async activateFreeTrial(packageType: UserSubscriptionType): Promise<any> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/free-trial/activate`,
+        { 
+          new_package: packageType 
+        },
+        { headers: this.getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error activating free trial:', error);
+      throw error;
+    }
+  }
+
   async getCurrentUserPackage(): Promise<UserSubscriptionData | null> {
     try {
       const response = await axios.get(
@@ -39,7 +55,6 @@ class UserSubscriptionService {
         { headers: this.getAuthHeaders() }
       );
       
-      // If response is a string "No package selected yet"
       if (typeof response.data === 'string') {
         return null;
       }
@@ -48,6 +63,24 @@ class UserSubscriptionService {
     } catch (error) {
       console.error('Error getting user package:', error);
       return null;
+    }
+  }
+
+  async getFreeTrialStatus(): Promise<any> {
+    try {
+      const userId = this.getCurrentUserId();
+      const response = await axios.get(
+        `${API_BASE_URL}/free-trial/status/${userId}`,
+        { headers: this.getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error getting free trial status:', error);
+      // Return default response if API fails
+      return {
+        success: false,
+        message: "Could not fetch free trial status"
+      };
     }
   }
 
@@ -67,7 +100,6 @@ class UserSubscriptionService {
 
   async cancelSubscription(): Promise<any> {
     try {
-      // Note: You might need to create this endpoint in your backend
       const response = await axios.delete(
         `${API_BASE_URL}/user-packages/cancel`,
         { headers: this.getAuthHeaders() }
@@ -92,6 +124,40 @@ class UserSubscriptionService {
       throw error;
     }
   }
+
+  private getCurrentUserId(): string | null {
+    // Try multiple sources for user ID
+    const userId = localStorage.getItem('userId');
+    
+    if (!userId) {
+      // Try to extract from JWT token
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          return payload.userId || payload.sub || null;
+        } catch (e) {
+          console.warn('Could not extract userId from token:', e);
+        }
+      }
+    }
+    
+    return userId;
+  }
+
+async checkFreeTrialEligibility(): Promise<any> {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/free-trial/check-eligibility`,
+      { headers: this.getAuthHeaders() }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error checking free trial eligibility:', error);
+    throw error;
+  }
+}
+
 }
 
 export default new UserSubscriptionService();
