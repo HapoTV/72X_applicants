@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 import { authService } from '../services/AuthService';
+import { supabase } from '../lib/supabaseClient';
 
 const CreatePassword: React.FC = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const CreatePassword: React.FC = () => {
     password: '',
     confirmPassword: '',
   });
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
@@ -22,15 +24,12 @@ const CreatePassword: React.FC = () => {
   });
 
   useEffect(() => {
-    // Get user email from localStorage
     const email = localStorage.getItem('userEmail');
     const tempUserData = localStorage.getItem('tempUserData');
-    
     if (!email || !tempUserData) {
       navigate('/signup');
       return;
     }
-    
     setUserEmail(email);
   }, [navigate]);
 
@@ -54,19 +53,16 @@ const CreatePassword: React.FC = () => {
       setError('Passwords do not match');
       return false;
     }
-
     if (form.password.length < 8) {
       setError('Password must be at least 8 characters long');
       return false;
     }
-
     const requirements = passwordRequirements;
     if (!requirements.hasNumber || !requirements.hasUppercase || 
         !requirements.hasLowercase || !requirements.hasSpecialChar) {
       setError('Password does not meet all requirements');
       return false;
     }
-
     return true;
   };
 
@@ -80,7 +76,6 @@ const CreatePassword: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Get business reference if exists
       const tempUserDataStr = localStorage.getItem('tempUserData');
       if (!tempUserDataStr) {
         throw new Error('User data not found');
@@ -89,18 +84,50 @@ const CreatePassword: React.FC = () => {
       const tempUserData = JSON.parse(tempUserDataStr);
       const businessReference = tempUserData.businessReference;
 
-      // Call create password API
       await authService.createPassword(
         userEmail,
         form.password,
         businessReference
       );
 
-      // Clear temp data
+      if (businessReference) {
+        localStorage.setItem('businessReference', businessReference);
+        localStorage.setItem('userProvidedBusinessReference', 'true');
+      } else {
+        localStorage.setItem('userProvidedBusinessReference', 'false');
+      }
+
       localStorage.removeItem('tempUserData');
-      
-      // Navigate to package selection
-      navigate('/select-package');
+
+      try {
+        if (!supabase) {
+          console.warn('Supabase client not initialized; skipping Supabase signUp.');
+        } else {
+          const emailRedirectTo = `${window.location.origin}/signup/success/provided`;
+          const { error } = await supabase.auth.signUp({
+            email: userEmail,
+            password: form.password,
+            options: { emailRedirectTo }
+          });
+          if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('rate limit')) {
+            localStorage.setItem('supabaseEmailRateLimited', 'true');
+          }
+          if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('user already registered')) {
+            const { error: resendErr } = await supabase.auth.resend({
+              type: 'signup',
+              email: userEmail,
+              options: { emailRedirectTo }
+            });
+            if (resendErr) console.error('Supabase resend error:', resendErr);
+          } else if (error) {
+            console.error('Supabase signUp error:', error);
+          }
+        }
+      } catch (supabaseErr) {
+        console.error('Supabase signUp unexpected error:', supabaseErr);
+      }
+
+      navigate('/signup/success');
     } catch (err: any) {
       setError(err.message || 'Failed to create password. Please try again.');
     } finally {

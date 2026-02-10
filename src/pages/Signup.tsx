@@ -333,7 +333,7 @@ const Signup: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Year Founded *
+                Year Established *
               </label>
               <input
                 type="number"
@@ -439,21 +439,12 @@ const Signup: React.FC = () => {
               <span className="text-sm text-gray-600">
                 I agree to the{' '}
                 <a 
-                  href="/terms" 
+                  href="/legal/terms-and-privacy.pdf" 
                   className="text-primary-600 hover:text-primary-700 hover:underline font-medium"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Terms of Service
-                </a>{' '}
-                and{' '}
-                <a 
-                  href="/privacy" 
-                  className="text-primary-600 hover:text-primary-700 hover:underline font-medium"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Privacy Policy
+                  Terms of Service and Privacy Policy
                 </a>
               </span>
             </label>

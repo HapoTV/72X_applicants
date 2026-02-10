@@ -1,3 +1,4 @@
+// src/services/AuthService.ts
 import axios from "axios";
 import axiosClient from '../api/axiosClient';
 import type { 
@@ -16,97 +17,6 @@ const publicAxios = axios.create({
     "Content-Type": "application/json",
   },
 });
-
-// FRONTEND-ONLY PASSWORD RESET FUNCTIONALITY
-// =========================================
-
-// Storage for verification codes (frontend-only)
-const verificationStore = {
-  codes: new Map<string, { code: string; expiresAt: number; email: string }>(),
-  
-  setCode(email: string, code: string) {
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
-    this.codes.set(email, { code, expiresAt, email });
-    
-    // Also store in localStorage for persistence
-    localStorage.setItem(`frontend_reset_${email}`, JSON.stringify({
-      code,
-      expiresAt,
-      email,
-      timestamp: new Date().toISOString()
-    }));
-    
-    console.log(`✅ Frontend: Code stored for ${email}: ${code}`);
-  },
-  
-  getCode(email: string): string | null {
-    // Try memory first
-    const memoryCode = this.codes.get(email);
-    if (memoryCode) {
-      if (Date.now() > memoryCode.expiresAt) {
-        this.codes.delete(email);
-        return null;
-      }
-      return memoryCode.code;
-    }
-    
-    // Try localStorage
-    const storedData = localStorage.getItem(`frontend_reset_${email}`);
-    if (storedData) {
-      const data = JSON.parse(storedData);
-      if (Date.now() > data.expiresAt) {
-        localStorage.removeItem(`frontend_reset_${email}`);
-        return null;
-      }
-      return data.code;
-    }
-    
-    return null;
-  },
-  
-  deleteCode(email: string) {
-    this.codes.delete(email);
-    localStorage.removeItem(`frontend_reset_${email}`);
-  }
-};
-
-// Email service using Resend API
-import { createExternalAxios } from '../api/axiosClient';
-
-// Hardcoded for development; replace with env variable in production
-const RESEND_API_KEY = 're_AT599Xgk_H85L563k1Jk4C8HizSWEsFhK';
-
-const emailService = {
-  async sendVerificationCode(email: string, code: string, businessRef?: string): Promise<boolean> {
-    try {
-      console.log('📧 [Resend Email Service] Sending to:', email);
-      const resendAxios = createExternalAxios('https://api.resend.com', RESEND_API_KEY);
-      const subject = 'Your 72X Password Reset Verification Code';
-      const html = `
-        <div style="font-family: Arial, sans-serif;">
-          <h2>🔐 Password Reset Verification</h2>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Verification Code:</strong> <span style="font-size: 1.5em; color: #2563eb;">${code}</span></p>
-          ${businessRef ? `<p><strong>Business:</strong> ${businessRef}</p>` : ''}
-          <p>⏰ This code expires in 10 minutes.</p>
-          <p>Copy this code to use on the reset password page.</p>
-        </div>
-      `;
-      const data = {
-        from: 'no-reply@72x.app',
-        to: [email],
-        subject,
-        html,
-      };
-      const response = await resendAxios.post('/emails', data);
-      console.log('✅ Resend API response:', response.data);
-      return true;
-    } catch (error: any) {
-      console.error('❌ Resend email service error:', error?.response?.data || error);
-      return false;
-    }
-  },
-};
 
 class AuthService {
   /**
@@ -243,159 +153,6 @@ class AuthService {
   }
 
   /**
-   * Request password reset - FRONTEND ONLY
-   * Generates a 6-digit code and stores it in localStorage
-   */
-  async requestPasswordReset(email: string, businessRef?: string): Promise<{ message: string; code: string }> {
-    try {
-      console.log("📧 [Frontend Only] Requesting password reset for:", email);
-      
-      // Generate a 6-digit code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      console.log(`🔐 Generated code: ${verificationCode}`);
-      
-      // Store in localStorage with expiration (10 minutes)
-      verificationStore.setCode(email, verificationCode);
-      
-      // Also store in sessionStorage for current session
-      sessionStorage.setItem('resetEmail', email);
-      sessionStorage.setItem('resetCode', verificationCode);
-      
-      // Try to send email (will show alert in development)
-      try {
-        await emailService.sendVerificationCode(email, verificationCode, businessRef);
-        
-        return { 
-          message: '✅ Verification code generated and sent!',
-          code: verificationCode
-        };
-      } catch (emailError) {
-        // Even if email fails, return the code
-        console.log('⚠️ Email failed, but code is:', verificationCode);
-        return { 
-          message: `📝 Verification code: ${verificationCode}`,
-          code: verificationCode
-        };
-      }
-      
-    } catch (error: any) {
-      console.error('❌ Frontend password reset error:', error);
-      
-      // Generate a fallback code
-      const fallbackCode = '123456';
-      verificationStore.setCode(email, fallbackCode);
-      
-      return { 
-        message: `🔄 Fallback code: ${fallbackCode}`,
-        code: fallbackCode
-      };
-    }
-  }
-
-  /**
-   * Verify reset code - FRONTEND ONLY
-   */
-  async verifyResetCode(email: string, code: string): Promise<boolean> {
-    console.log(`🔍 [Frontend Only] Verifying code for ${email}`);
-    
-    // Get the stored code
-    const storedCode = verificationStore.getCode(email);
-    
-    if (!storedCode) {
-      // Check sessionStorage as fallback
-      const sessionCode = sessionStorage.getItem('resetCode');
-      const sessionEmail = sessionStorage.getItem('resetEmail');
-      
-      if (sessionEmail === email && sessionCode === code) {
-        console.log('✅ Code verified from sessionStorage');
-        return true;
-      }
-      
-      throw new Error('No verification code found. Please request a new code.');
-    }
-    
-    if (storedCode !== code.trim()) {
-      console.log(`❌ Code mismatch: Entered ${code}, Expected ${storedCode}`);
-      throw new Error('Invalid verification code. Please check and try again.');
-    }
-    
-    console.log('✅ Code verified successfully');
-    return true;
-  }
-
-  /**
-   * Reset password with verification code - FRONTEND ONLY
-   * Stores the new password in localStorage (for demo)
-   */
-  async resetPasswordWithCode(email: string, code: string, newPassword: string): Promise<boolean> {
-    try {
-      console.log("🔄 [Frontend Only] Resetting password for:", email);
-      
-      // First verify the code
-      await this.verifyResetCode(email, code);
-      
-      // Code is valid - store the new password in localStorage
-      const passwordResetRecord = {
-        email: email,
-        newPassword: newPassword, // In real app, you would hash this
-        resetAt: new Date().toISOString(),
-        codeUsed: code,
-        status: 'reset'
-      };
-      
-      // Save to localStorage (for demo purposes)
-      localStorage.setItem(`password_reset_record_${email}`, JSON.stringify(passwordResetRecord));
-      
-      // Clear the verification data
-      verificationStore.deleteCode(email);
-      sessionStorage.removeItem('resetEmail');
-      sessionStorage.removeItem('resetCode');
-      
-      console.log('✅ Password reset saved to localStorage');
-      
-      // Show success
-      alert(`✅ Password reset successful!\n\nEmail: ${email}\nNew password has been saved.\n\nIn a real app, this would update your backend database.`);
-      
-      return true;
-      
-    } catch (error: any) {
-      console.error('❌ Frontend password reset error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if a password reset was performed (frontend demo)
-   */
-  getPasswordResetStatus(email: string): any {
-    const record = localStorage.getItem(`password_reset_record_${email}`);
-    return record ? JSON.parse(record) : null;
-  }
-
-  /**
-   * Clear all reset data (for testing)
-   */
-  clearAllResetData(): void {
-    // Clear localStorage items
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('frontend_reset_') || key?.startsWith('password_reset_record_')) {
-        keysToRemove.push(key);
-      }
-    }
-    
-    keysToRemove.forEach(key => localStorage.removeItem(key));
-    
-    // Clear sessionStorage
-    sessionStorage.removeItem('resetEmail');
-    sessionStorage.removeItem('resetCode');
-    
-    console.log('🧹 Cleared all reset data');
-  }
-
-  /**
    * Get current user profile (uses JWT token)
    */
   async getCurrentUser(): Promise<User> {
@@ -406,7 +163,7 @@ class AuthService {
       console.error('Get current user error:', error);
       
       // If unauthorized, clear token and redirect
-      if ((error as any).response?.status === 401) {
+      if (error.response?.status === 401) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -497,9 +254,9 @@ class AuthService {
   }
 
   /**
-   * Request password reset (keeping original for backward compatibility)
+   * Request password reset
    */
-  async requestPasswordResetOld(email: string): Promise<any> {
+  async requestPasswordReset(email: string): Promise<any> {
     try {
       const response = await axiosClient.post('/authentication/forgot-password', { email });
       return response.data;
@@ -572,12 +329,6 @@ class AuthService {
     localStorage.removeItem('user');
     localStorage.removeItem('tempUserData');
     localStorage.removeItem('userEmail');
-    localStorage.removeItem('userStatus');
-    localStorage.removeItem('requiresPackageSelection');
-    
-    // Also clear frontend reset data
-    this.clearAllResetData();
-    
     window.location.href = '/login';
   }
 

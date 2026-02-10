@@ -139,7 +139,7 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
 ========================================
       `;
 
-      const adminEmail = 'asandilenkala@gmail.com';
+      const adminEmail = 'admin@hapogroup.co.za';
       const mailtoLink = `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       window.location.href = mailtoLink;
 
@@ -721,7 +721,7 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
                 <div className="flex justify-center mt-10">
                   <button
                     onClick={() => {
-                      const to = 'info@hapogroup.co.za';
+                      const to = 'admin@hapogroup.co.za';
                       const subject = 'Request ad space';
                       window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}`;
                     }}
@@ -1171,7 +1171,7 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
               <button 
                 className="bg-[#60A5FA] hover:bg-[#3B82F6] text-white font-medium py-3 px-8 rounded-lg transition-colors duration-300"
                 onClick={() => {
-                  const to = 'info@hapogroup.co.za';
+                  const to = 'admin@hapogroup.co.za';
                   const subject = 'Custom solution request';
                   window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}`;
                 }}

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 import { Check, Sparkles, Zap, Crown, AlertCircle, Clock, Gift, CreditCard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import userSubscriptionService from '../services/UserSubscriptionService';
 import { UserSubscriptionType } from '../interfaces/UserSubscriptionData';
 import type { PackageOption } from '../interfaces/UserSubscriptionData';
@@ -26,37 +27,75 @@ const SelectPackage: React.FC = () => {
   } | null>(null);
 
   useEffect(() => {
-    const email = localStorage.getItem('userEmail');
-    const status = localStorage.getItem('userStatus');
-    const requiresPackage = localStorage.getItem('requiresPackageSelection');
-    const savedPackage = localStorage.getItem('selectedPackage');
-    
-    if (!email) {
-      navigate('/create-password');
-      return;
-    }
-    
-    setUserEmail(email);
-    setUserStatus(status || '');
-    setRequiresPackageSelection(requiresPackage === 'true');
-    
-    console.log('📦 Package page user state:', {
-      email,
-      status,
-      requiresPackage,
-      savedPackage: savedPackage ? JSON.parse(savedPackage) : null,
-      isAuthenticated
-    });
-    
-    if (status === 'PENDING_PACKAGE') {
-      console.log('⚠️ User has PENDING_PACKAGE status - mandatory package selection');
-    }
-    
-    if (isAuthenticated) {
-      fetchCurrentSubscription();
-      fetchFreeTrialStatus();
-      checkFreeTrialEligibility();
-    }
+    let isCancelled = false;
+
+    const ensureVerified = async () => {
+      const emailVerified = localStorage.getItem('emailVerified') === 'true';
+      if (emailVerified) return true;
+
+      try {
+        if (!supabase) return false;
+        const { data, error } = await supabase.auth.getUser();
+        if (error) return false;
+
+        const confirmed = !!data.user?.email_confirmed_at;
+        if (confirmed) {
+          localStorage.setItem('emailVerified', 'true');
+          return true;
+        }
+      } catch {
+        return false;
+      }
+
+      return false;
+    };
+
+    const run = async () => {
+      const ok = await ensureVerified();
+      if (isCancelled) return;
+      if (!ok) {
+        navigate('/signup/success/provided');
+        return;
+      }
+
+      const email = localStorage.getItem('userEmail');
+      const status = localStorage.getItem('userStatus');
+      const requiresPackage = localStorage.getItem('requiresPackageSelection');
+      const savedPackage = localStorage.getItem('selectedPackage');
+
+      if (!email) {
+        navigate('/create-password');
+        return;
+      }
+
+      setUserEmail(email);
+      setUserStatus(status || '');
+      setRequiresPackageSelection(requiresPackage === 'true');
+
+      console.log('📦 Package page user state:', {
+        email,
+        status,
+        requiresPackage,
+        savedPackage: savedPackage ? JSON.parse(savedPackage) : null,
+        isAuthenticated
+      });
+
+      if (status === 'PENDING_PACKAGE') {
+        console.log('⚠️ User has PENDING_PACKAGE status - mandatory package selection');
+      }
+
+      if (isAuthenticated) {
+        fetchCurrentSubscription();
+        fetchFreeTrialStatus();
+        checkFreeTrialEligibility();
+      }
+    };
+
+    run();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [navigate, isAuthenticated]);
 
   const fetchCurrentSubscription = async () => {
