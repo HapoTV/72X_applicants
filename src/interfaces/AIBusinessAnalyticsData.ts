@@ -17,6 +17,60 @@ export type AnalysisType =
   | 'revenue_optimization'
   | 'custom';
 
+  export interface FileAnalysisRequest {
+  documentId?: string;
+  fileUrl?: string;
+  analysisType?: AnalysisType;
+  query?: string;
+  businessContext?: BusinessContext;
+  includeRecommendations?: boolean;
+  includeDataVisualization?: boolean;
+  language?: string;
+  userId: string;
+  customPrompt?: string;
+}
+
+export interface AvailableDocument {
+  documentId: string;
+  fileName: string;
+  fileUrl: string;
+  documentType: string;
+  fileSize: number;
+  uploadedAt: string;
+  uploadedDate: string; // Formatted date
+  description?: string;
+  mimeType?: string;
+  status?: 'active' | 'archived' | 'processing' | 'failed';
+  extractedData?: ExtractedDocumentData;
+  thumbnailUrl?: string; // For image previews
+  isSelected?: boolean; // For UI selection state
+}
+
+export interface ExtractedDocumentData {
+  hasContent?: boolean;
+  contentLength?: number;
+  extractedText?: string;
+  detectedEntities?: string[];
+  metadata?: {
+    pageCount?: number;
+    author?: string;
+    createdDate?: string;
+    modifiedDate?: string;
+    keywords?: string[];
+  };
+  financialData?: {
+    revenue?: number;
+    expenses?: number;
+    profit?: number;
+    period?: string;
+  };
+  customerData?: {
+    customerCount?: number;
+    retentionRate?: number;
+    avgValue?: number;
+  };
+}
+
 export const ANALYSIS_TYPE_OPTIONS: { value: AnalysisType; label: string; description: string }[] = [
   { value: 'business_performance', label: 'Business Performance', description: 'Comprehensive analysis of overall business metrics' },
   { value: 'growth_opportunities', label: 'Growth Opportunities', description: 'Identify potential areas for business expansion' },

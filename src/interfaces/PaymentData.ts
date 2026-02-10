@@ -25,6 +25,15 @@ export interface Payment {
   isRecurring?: boolean;
   recurringInterval?: string;
   metadata?: string;
+  
+  // Paystack specific fields
+  channel?: string;
+  ipAddress?: string;
+  fee?: number;
+  amountSettled?: number;
+  verifiedAt?: string;
+  authorizationUrl?: string;
+  accessCode?: string;
 }
 
 export const Currency = {
@@ -87,6 +96,15 @@ export interface PaymentResponse {
   isRecurring?: boolean;
   recurringInterval?: string;
   metadata?: string;
+  
+  // Paystack specific fields
+  channel?: string;
+  ipAddress?: string;
+  fee?: number;
+  amountSettled?: number;
+  verifiedAt?: string;
+  authorizationUrl?: string;
+  accessCode?: string;
 }
 
 export interface InitializePaymentRequest {
@@ -100,6 +118,7 @@ export interface InitializePaymentRequest {
     subscriptionPlan?: string;
     billingAddress?: string;
     phoneNumber?: string;
+    [key: string]: any;
   };
 }
 
@@ -150,7 +169,7 @@ export interface MonthlyRevenue {
 }
 
 export interface TopCustomer {
-  userId: string;
+  userId?: string;
   userEmail: string;
   userFullName: string;
   totalSpent: number;
@@ -174,6 +193,7 @@ export interface PaymentFilters {
   minAmount?: number;
   maxAmount?: number;
   isRecurring?: boolean;
+  search?: string;
 }
 
 export interface PaymentSummary {
@@ -189,11 +209,16 @@ export interface PaymentSummary {
 export interface Invoice {
   invoiceId: string;
   customerId: string;
+  customerEmail?: string;
+  customerName?: string;
   subscriptionId?: string;
   amountTotal: number;
   amountPaid: number;
   amountDue: number;
   status: string;
+  issueDate?: string;
+  dueDate?: string;
+  paidDate?: string;
   periodStart?: string;
   periodEnd?: string;
   created: string;
@@ -201,6 +226,7 @@ export interface Invoice {
   attempted: boolean;
   attemptCount: number;
   metadata?: string;
+  notes?: string;
 }
 
 export interface Subscription {
@@ -214,4 +240,20 @@ export interface Subscription {
   amount: number;
   currency: string;
   metadata?: string;
+}
+
+export interface AdminStats {
+  totalRevenue: number;
+  totalPayments: number;
+  successfulPayments: number;
+  failedPayments: number;
+  pendingPayments: number;
+  averageAmount: number;
+  topCustomers: Array<{
+    id?: string;
+    name: string;
+    email: string;
+    amount: number;
+    payments: number;
+  }>;
 }

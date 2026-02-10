@@ -1,6 +1,6 @@
-// src/pages/AIBusinessAnalyst.tsx (Updated version)
+// src/pages/AIBusinessAnalyst.tsx (Updated with polling)
 import React, { useState, useEffect } from 'react';
-import { Brain, Send, Sparkles, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react';
+import { Brain, Send, Sparkles, TrendingUp, AlertCircle, Lightbulb, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { aiBusinessAnalyticsService } from '../services/AIBusinessAnalyticsService';
 
 type AnalysisHistoryItem = {
@@ -8,22 +8,24 @@ type AnalysisHistoryItem = {
   summary: string;
   status: string;
   createdAt: string;
+  analysisId?: string;
 };
 
 const AIBusinessAnalyst: React.FC = () => {
-
   const [query, setQuery] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<'idle' | 'processing' | 'completed' | 'failed'>('idle');
   const [showTermsModal, setShowTermsModal] = useState(true);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [quickPrompts, setQuickPrompts] = useState<string[]>([]);
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisHistoryItem[]>([]);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Load quick prompts
     const loadQuickPrompts = async () => {
-
       try {
         const prompts = await aiBusinessAnalyticsService.getQuickPrompts();
         setQuickPrompts(prompts.slice(0, 4).map(p => p.text));
@@ -43,7 +45,7 @@ const AIBusinessAnalyst: React.FC = () => {
     const loadAnalysisHistory = async () => {
       try {
         const userId = 'demo-user'; // Get from auth context
-        const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
+        const history = await aiBusinessAnalyticsService.getAnalysisHistory(5);
         setAnalysisHistory(history as AnalysisHistoryItem[]);
       } catch (error) {
         console.error('Error loading analysis history:', error);
@@ -52,7 +54,63 @@ const AIBusinessAnalyst: React.FC = () => {
 
     loadQuickPrompts();
     loadAnalysisHistory();
+
+    // Cleanup polling on unmount
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
   }, []);
+
+  const startPollingForAnalysis = (id: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const statusResponse = await aiBusinessAnalyticsService.getAnalysisStatus(id);
+        const status = statusResponse.status;
+        
+        if (status === 'completed') {
+          // Fetch the completed analysis
+          const completedAnalysis = await aiBusinessAnalyticsService.getAnalysisById(id);
+          setAnalysis(completedAnalysis.detailedAnalysis || completedAnalysis.summary);
+          setAnalysisStatus('completed');
+          
+          // Clear polling interval
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+          }
+          
+          // Refresh history
+          const userId = 'demo-user';
+          const history = await aiBusinessAnalyticsService.getAnalysisHistory(5);
+          setAnalysisHistory(history as AnalysisHistoryItem[]);
+          
+        } else if (status === 'failed') {
+          setAnalysis('Sorry, the analysis failed to process. Please try again.');
+          setAnalysisStatus('failed');
+          
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+          }
+        } else if (status === 'cancelled') {
+          setAnalysis('Analysis was cancelled.');
+          setAnalysisStatus('failed');
+          
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+          }
+        }
+        // If still processing, continue polling
+      } catch (error) {
+        console.error('Error polling analysis status:', error);
+      }
+    }, 1000); // Poll every second
+
+    setPollingInterval(interval);
+  };
 
   const handleAnalyze = async () => {
     if (!hasAcceptedTerms) {
@@ -62,7 +120,15 @@ const AIBusinessAnalyst: React.FC = () => {
     if (!query.trim()) return;
 
     setIsAnalyzing(true);
+    setAnalysisStatus('processing');
     setAnalysis(null);
+    setAnalysisId(null);
+    
+    // Clear any existing polling interval
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
     
     try {
       const userId = 'demo-user'; // Get from auth context
@@ -73,17 +139,19 @@ const AIBusinessAnalyst: React.FC = () => {
         userId: userId
       });
       
-      // Display the analysis
-      setAnalysis(response.detailedAnalysis || response.summary || 'Analysis completed successfully.');
+      // Store the analysis ID and start polling
+      setAnalysisId(response.analysisId);
       
-      // Refresh history
-      const history = await aiBusinessAnalyticsService.getAnalysisHistory(userId, 5);
-      setAnalysisHistory(history as AnalysisHistoryItem[]);
+      // Display initial message
+      setAnalysis('Analysis submitted. Processing...\n\nThis may take a few moments.');
+      
+      // Start polling for completion
+      startPollingForAnalysis(response.analysisId);
       
     } catch (error) {
       console.error('Error analyzing:', error);
       setAnalysis('Sorry, I encountered an error while analyzing your query. Please try again.');
-    } finally {
+      setAnalysisStatus('failed');
       setIsAnalyzing(false);
     }
   };
@@ -98,6 +166,45 @@ const AIBusinessAnalyst: React.FC = () => {
         setShowTermsModal(true);
       }
     }, 300);
+  };
+
+  const getStatusIcon = () => {
+    switch (analysisStatus) {
+      case 'processing':
+        return <Clock className="w-5 h-5 text-blue-500 animate-pulse" />;
+      case 'completed':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'failed':
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      default:
+        return <TrendingUp className="w-5 h-5 text-green-500" />;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (analysisStatus) {
+      case 'processing':
+        return 'AI Analysis in Progress';
+      case 'completed':
+        return 'AI Analysis Results';
+      case 'failed':
+        return 'Analysis Failed';
+      default:
+        return 'AI Analysis Results';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (analysisStatus) {
+      case 'processing':
+        return 'text-blue-600';
+      case 'completed':
+        return 'text-green-600';
+      case 'failed':
+        return 'text-red-600';
+      default:
+        return 'text-green-600';
+    }
   };
 
   return (
@@ -207,7 +314,9 @@ const AIBusinessAnalyst: React.FC = () => {
               {isAnalyzing ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Analyzing...</span>
+                  <span>
+                    {analysisStatus === 'processing' ? 'Processing...' : 'Analyzing...'}
+                  </span>
                 </>
               ) : (
                 <>
@@ -225,18 +334,70 @@ const AIBusinessAnalyst: React.FC = () => {
         </div>
       </div>
 
-      {/* Analysis Results */}
-      {analysis && (
+      {/* Analysis Status Indicator */}
+      {(isAnalyzing || analysisStatus === 'processing') && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center space-x-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-green-500" />
-            <h2 className="text-lg font-semibold text-gray-900">AI Analysis Results</h2>
+            <Brain className="w-5 h-5 text-blue-500 animate-pulse" />
+            <h2 className="text-lg font-semibold text-gray-900">AI Analysis in Progress</h2>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center space-y-4">
+                <div className="relative">
+                  <div className="w-20 h-20 border-4 border-primary-100 rounded-full"></div>
+                  <div className="w-20 h-20 border-4 border-primary-500 border-t-transparent rounded-full absolute top-0 left-0 animate-spin"></div>
+                </div>
+                <div>
+                  <p className="text-gray-700 font-medium">Processing your analysis...</p>
+                  <p className="text-sm text-gray-500 mt-1">This may take a few moments</p>
+                </div>
+                <div className="flex justify-center space-x-2">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"
+                      style={{ animationDelay: `${i * 0.2}s` }}
+                    />
+                  ))}
+                </div>
+                {analysisId && (
+                  <p className="text-xs text-gray-400 mt-2">
+                    Analysis ID: {analysisId.substring(0, 8)}...
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analysis Results */}
+      {analysis && analysisStatus !== 'processing' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            {getStatusIcon()}
+            <h2 className={`text-lg font-semibold ${getStatusColor()}`}>
+              {getStatusText()}
+            </h2>
           </div>
           <div className="prose max-w-none">
-            <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-line text-gray-700">
+            <div className={`rounded-lg p-4 whitespace-pre-line ${
+              analysisStatus === 'failed' 
+                ? 'bg-red-50 text-red-700 border border-red-200' 
+                : 'bg-gray-50 text-gray-700'
+            }`}>
               {analysis}
             </div>
           </div>
+          {analysisStatus === 'completed' && analysisId && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Analysis completed successfully</span>
+                <span className="font-mono">ID: {analysisId.substring(0, 12)}...</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -260,6 +421,8 @@ const AIBusinessAnalyst: React.FC = () => {
                           ? 'bg-green-100 text-green-800'
                           : item.status === 'processing'
                           ? 'bg-blue-100 text-blue-800'
+                          : item.status === 'failed'
+                          ? 'bg-red-100 text-red-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
                         {item.status}
@@ -273,6 +436,18 @@ const AIBusinessAnalyst: React.FC = () => {
               </div>
             ))}
           </div>
+          {analysisHistory.length > 3 && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  // Implement view all functionality
+                }}
+                className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+              >
+                View all analyses →
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+// src/components/Layout.tsx (partial update - just the useEffect)
 import React, { useEffect, useState } from 'react';
 import Navigation from './Navigation';
 import Header from './Header';
@@ -22,7 +23,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   const [showLayout, setShowLayout] = useState(true);
   const [userStatus, setUserStatus] = useState<string>('');
-  const [,setRequiresPackageSelection] = useState(false);
+  const [requiresPackageSelection, setRequiresPackageSelection] = useState(false);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,50 +31,88 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Check if layout should be hidden
   useEffect(() => {
-    // Check if we should hide layout (for payment pages, package selection, etc.)
-    const hideLayout = localStorage.getItem('hideLayout') === 'true';
-    
-    // Check user status and package requirement
+    // Get user status and package requirement
     const status = localStorage.getItem('userStatus');
-    const requiresPackage = localStorage.getItem('requiresPackageSelection');
+    const requiresPackage = localStorage.getItem('requiresPackageSelection') === 'true';
+    const selectedPackage = localStorage.getItem('selectedPackage');
     const currentPath = location.pathname;
     
     console.log('🏗️ Layout status check:', {
-        userStatus: status,
-        requiresPackage,
-        currentPath,
-        isSelectPackagePage: currentPath === '/select-package',
-        isPaymentPage: currentPath.includes('/payments'),
-        hideLayout
+      userStatus: status,
+      requiresPackage,
+      selectedPackage: !!selectedPackage,
+      currentPath,
+      isSelectPackagePage: currentPath === '/select-package',
+      isPaymentPage: currentPath.includes('/payments'),
+      isPublicPage: currentPath === '/' || 
+                   currentPath === '/login' || 
+                   currentPath === '/signup' ||
+                   currentPath === '/pricing' ||
+                   currentPath === '/request-demo' ||
+                   currentPath.includes('/reset-password') ||
+                   currentPath.includes('/create-password') ||
+                   currentPath.includes('/signup/success')
     });
     
     setUserStatus(status || '');
-    setRequiresPackageSelection(requiresPackage === 'true');
+    setRequiresPackageSelection(requiresPackage);
     
-    // Special case: if user is on payment page, allow access
+    // Define allowed paths for non-ACTIVE users
+    const isPublicPage = [
+      '/', 
+      '/login', 
+      '/signup', 
+      '/pricing', 
+      '/request-demo',
+      '/reset-password',
+      '/create-password',
+      '/signup/success'
+    ].some(path => currentPath.startsWith(path));
+    
+    const isSelectPackagePage = currentPath === '/select-package';
     const isPaymentPage = currentPath.includes('/payments');
+    const hideLayoutFlag = localStorage.getItem('hideLayout') === 'true';
     
-    // Hide navbar and sidebar if:
-    // 1. hideLayout flag is set (for payment pages)
-    // 2. User is on the package selection page
-    // 3. User has PENDING_PACKAGE status AND is NOT on payment page
-    // 4. User requires package selection AND is NOT on payment page
-    if (hideLayout || 
-        currentPath === '/select-package' || 
-        (status === 'PENDING_PACKAGE' && !isPaymentPage) || 
-        (requiresPackage === 'true' && !isPaymentPage)) {
-        console.log('🚫 Hiding navbar and sidebar');
-        setShowLayout(false);
-        
-        // If user is not on package page but needs package, redirect them
-        if (currentPath !== '/select-package' && 
-            !isPaymentPage &&
-            (status === 'PENDING_PACKAGE' || requiresPackage === 'true')) {
-            console.log('🔄 Redirecting to package selection from layout');
-            navigate('/select-package');
-        }
-    } else {
-        setShowLayout(true);
+    // Check if user is fully active
+    const isUserActive = status === 'ACTIVE';
+    
+    // Show layout only if:
+    // 1. User is ACTIVE, OR
+    // 2. User is on a public page (login, signup, etc.), OR
+    // 3. User is on package selection page, OR
+    // 4. User is on payment page with hideLayout flag
+    const shouldShowLayout = isUserActive || isPublicPage || isSelectPackagePage || (isPaymentPage && !hideLayoutFlag);
+    //const shouldShowLayout = isUserActive && !isPaymentPage && !isSelectPackagePage && !isPublicPage;
+    
+    console.log('🔍 Layout decision:', {
+      isUserActive,
+      isPublicPage,
+      isSelectPackagePage,
+      isPaymentPage,
+      hideLayoutFlag,
+      shouldShowLayout
+    });
+    
+    setShowLayout(shouldShowLayout);
+    
+    // 🔴 UPDATED: Better redirect logic for non-active users
+    if (!isUserActive && !isPublicPage && !isSelectPackagePage && !isPaymentPage) {
+      console.log('🔄 Non-active user trying to access protected route');
+      
+      if (status === 'PENDING_PACKAGE' || requiresPackage) {
+        console.log('📦 Redirecting to package selection (PENDING_PACKAGE)');
+        navigate('/select-package');
+      } else if (status === 'PENDING_PAYMENT' && selectedPackage) {
+        console.log('💳 Redirecting to payment (PENDING_PAYMENT with package)');
+        navigate('/payments/new');
+      } else if (status === 'PENDING_PAYMENT' && !selectedPackage) {
+        console.log('⚠️ PENDING_PAYMENT but no package, redirecting to package selection');
+        navigate('/select-package');
+      } else if (!status) {
+        // If no status at all, redirect to login
+        console.log('🔐 No status, redirecting to login');
+        navigate('/login');
+      }
     }
   }, [location.pathname, navigate]);
 
@@ -87,9 +126,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return () => window.removeEventListener('nav-collapsed-changed', onToggle as EventListener);
   }, []);
 
-  // Lightweight engagement tracker - Only run if layout is shown
+  // Lightweight engagement tracker - Only run if layout is shown and user is ACTIVE
   useEffect(() => {
-    if (!showLayout) return; // Skip tracking if layout is hidden
+    if (!showLayout || userStatus !== 'ACTIVE') return; // Skip tracking if layout is hidden or user not active
     
     try {
       const today = new Date();
@@ -194,7 +233,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     } catch {
       // ignore tracking errors
     }
-  }, [location.pathname, showLayout]); // Added showLayout dependency
+  }, [location.pathname, showLayout, userStatus]); // Added userStatus dependency
 
   // Handle Dashboard toggle - close others
   const handleDashboardToggle = (isOpen: boolean) => {
@@ -249,55 +288,75 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  // If layout should be hidden (user needs to select package or is on payment page)
+  // If layout should be hidden (for non-ACTIVE users or special pages)
   if (!showLayout) {
-    // Return only the content without navbar and sidebar
-    // Add a special class for package selection page
     const isPackageSelectionPage = location.pathname === '/select-package';
     const isPaymentPage = location.pathname.includes('/payments');
+    const isPublicPage = location.pathname === '/' || 
+                        location.pathname === '/login' || 
+                        location.pathname === '/signup' ||
+                        location.pathname === '/pricing' ||
+                        location.pathname === '/request-demo' ||
+                        location.pathname.includes('/reset-password') ||
+                        location.pathname.includes('/create-password') ||
+                        location.pathname.includes('/signup/success');
     
-    return (
-      <div className={`min-h-screen ${isPackageSelectionPage ? 'bg-gradient-to-br from-primary-50 to-primary-100' : 
-        isPaymentPage ? 'bg-gradient-to-br from-primary-50 to-blue-50' : 'bg-gray-50'}`}>
-        {/* Optional: Show a simple header for package selection */}
-        {isPackageSelectionPage && (
+    // For payment pages, use special styling
+    if (isPaymentPage) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-primary-50 to-blue-50">
+          <main className="w-full h-full">
+            {children}
+          </main>
+        </div>
+      );
+    }
+    
+    // For package selection page
+    if (isPackageSelectionPage) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
           <div className="p-4">
             <div className="max-w-7xl mx-auto">
               <div className="flex justify-center mb-6">
                 <img 
                   src="/Logo.svg" 
                   alt="SeventyTwoX Logo" 
-                  className="w-12 h-12"
+                  className="w-12 h-12 cursor-pointer"
                   onClick={() => navigate('/')}
                 />
               </div>
             </div>
           </div>
-        )}
-        
-        <main className={`${isPackageSelectionPage || isPaymentPage ? '' : 'p-6'}`}>
+          <main className="px-4 pb-8">
+            {children}
+          </main>
+        </div>
+      );
+    }
+    
+    // For public pages
+    if (isPublicPage) {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <main>
+            {children}
+          </main>
+        </div>
+      );
+    }
+    
+    // Fallback: just show content without layout
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <main className="p-6">
           {children}
         </main>
-        
-        {/* Show warning banner if user tries to access other pages */}
-        {!isPackageSelectionPage && !isPaymentPage && userStatus === 'PENDING_PACKAGE' && (
-          <div className="fixed top-0 left-0 right-0 bg-red-500 text-white p-4 text-center z-50">
-            <p className="font-medium">
-              ⚠️ Please select a package to continue using the platform. 
-              <button 
-                onClick={() => navigate('/select-package')}
-                className="ml-2 underline font-bold"
-              >
-                Go to Package Selection
-              </button>
-            </p>
-          </div>
-        )}
       </div>
     );
   }
 
-  // Normal layout mode with navigation (for ACTIVE users)
+  // Normal layout mode with navigation (for ACTIVE users only)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Full-screen app mode - no navigation or sidebar */}

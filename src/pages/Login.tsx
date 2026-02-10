@@ -1,4 +1,4 @@
-// src/pages/Login.tsx - UPDATED VERSION
+// src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2 } from 'lucide-react';
@@ -54,6 +54,12 @@ const Login: React.FC = () => {
             localStorage.setItem('userRole', loginResponse.role);
             localStorage.setItem('fullName', loginResponse.fullName);
             
+            // 🔴 CRITICAL: Store user status from backend response
+            if (loginResponse.status) {
+                localStorage.setItem('userStatus', loginResponse.status);
+                console.log('📋 Backend user status:', loginResponse.status);
+            }
+            
             if (loginResponse.businessReference) {
                 localStorage.setItem('businessReference', loginResponse.businessReference);
             }
@@ -64,7 +70,7 @@ const Login: React.FC = () => {
                 fullName: loginResponse.fullName,
                 email: loginResponse.email,
                 role: loginResponse.role,
-                status: 'ACTIVE',
+                status: loginResponse.status || 'ACTIVE',
                 businessReference: loginResponse.businessReference,
                 companyName: loginResponse.companyName,
                 profileImageUrl: loginResponse.profileImageUrl
@@ -74,15 +80,44 @@ const Login: React.FC = () => {
             login(userData);
             
             console.log("🎉 Login complete! Token:", loginResponse.token.substring(0, 30) + "...");
+            console.log("📊 Post-login status check:", {
+                status: loginResponse.status,
+                isAuthenticated: true
+            });
             
             // Delay redirect slightly to ensure localStorage is updated
+            // In the handleLogin function, after successful login:
             setTimeout(() => {
-                if (loginType === 'admin') {
-                    window.location.href = '/admin/dashboard/overview';
+            if (loginType === 'admin') {
+                window.location.href = '/admin/dashboard/overview';
+            } else {
+                // Check user status and redirect accordingly
+                const userStatus = loginResponse.status || localStorage.getItem('userStatus');
+                const selectedPackage = localStorage.getItem('selectedPackage');
+                
+                console.log('🔍 Post-login redirection check:', {
+                userStatus,
+                selectedPackage,
+                loginType
+                });
+                
+                if (userStatus === 'PENDING_PACKAGE') {
+                console.log('📦 User needs package selection, redirecting to /select-package');
+                window.location.href = '/select-package';
+                } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
+                console.log('💳 User needs payment for selected package, redirecting to /payments/new');
+                window.location.href = '/payments/new';
+                } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
+                console.log('⚠️ User PENDING_PAYMENT but no package selected, redirecting to package selection');
+                window.location.href = '/select-package';
                 } else {
-                    window.location.href = '/dashboard/overview';
+                console.log('🏠 User is active, going to dashboard');
+                window.location.href = '/dashboard/overview';
                 }
+            }
             }, 100);
+
+
             
         } catch (error: any) {
             console.error('❌ Login error:', error);
