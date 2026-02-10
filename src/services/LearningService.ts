@@ -284,6 +284,43 @@ class LearningService {
     return this.normalizeCategory(backendCategory);
   }
 
+  /**
+   * Upload a new learning material (file or URL)
+   * Expects backend endpoint: POST /learning-materials/upload
+   */
+  async uploadLearningMaterial(file: File, metadata: { title: string; description?: string; category?: string; creatorEmail?: string }): Promise<any> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', metadata.title);
+      if (metadata.description) formData.append('description', metadata.description);
+      if (metadata.category) formData.append('category', metadata.category);
+      if (metadata.creatorEmail) formData.append('creatorEmail', metadata.creatorEmail);
+
+      const res = await axiosClient.post(`${this.baseUrl}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return res.data;
+    } catch (error) {
+      console.error('Error uploading learning material:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Delete a learning material by id
+   * Expects backend endpoint: DELETE /learning-materials/:id
+   */
+  async deleteLearningMaterial(materialId: string): Promise<boolean> {
+    try {
+      const res = await axiosClient.delete(`${this.baseUrl}/${encodeURIComponent(materialId)}`);
+      return res.status >= 200 && res.status < 300;
+    } catch (error) {
+      console.error('Error deleting learning material:', error);
+      return false;
+    }
+  }
+
 }
 
 export const learningService = new LearningService();

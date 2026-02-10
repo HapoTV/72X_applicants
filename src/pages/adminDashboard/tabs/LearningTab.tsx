@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { learningService } from '../../../services/LearningService';
-import { useAuth } from '../../../context/AuthContext';
 import axiosClient from '../../../api/axiosClient';
 
 interface LearningItem {
     id: string;
     title: string;
-    type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK';
+    type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT';
     category: string;
     resourceUrl?: string;
     fileName?: string;
+    fileSize?: string;
     updated?: string;
     createdBy: string;
+    description?: string;
 }
 
 type LearningSection = 'business-plan' | 'marketing' | 'finance' | 'operations' | 'leadership' | 'standardbank';
@@ -27,9 +28,11 @@ export default function LearningTab() {
         'standardbank': [],
     });
     const [showAddLearning, setShowAddLearning] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [newLearning, setNewLearning] = useState<{ 
         title: string; 
-        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK'; 
+        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT'; 
         category: LearningSection;
         resourceUrl: string;
         description: string;
@@ -37,14 +40,14 @@ export default function LearningTab() {
     }>({ 
         title: '', 
         type: 'ARTICLE',
-        category: learningSection,
+        category: 'business-plan',
         resourceUrl: '',
         description: '',
         file: undefined
     });
     const [loading, setLoading] = useState(true);
 
-    const sectionTitles = {
+    const sectionTitles: Record<LearningSection, string> = {
         'business-plan': 'Business Planning',
         'marketing': 'Marketing & Sales',
         'finance': 'Financial Management',
@@ -61,11 +64,9 @@ export default function LearningTab() {
         try {
             setLoading(true);
             console.log('Fetching learning materials...');
-            // Use LearningService to get all learning materials
             const allMaterials = await learningService.getAllLearningMaterials();
             console.log('Fetched materials:', allMaterials);
             
-            // Transform API response to admin format
             const transformedData: Record<LearningSection, LearningItem[]> = {
                 'business-plan': [],
                 'marketing': [],
@@ -75,37 +76,65 @@ export default function LearningTab() {
                 'standardbank': [],
             };
             
-            // Group by category - use the same format as backend returns
-            allMaterials.forEach((material) => {
-                console.log('Existing material category:', material.category, 'Title:', material.title);
-                // Use the category directly from backend since LearningService already transforms it
+            allMaterials.forEach((material: any) => {
                 const category = material.category as LearningSection;
                 
-                console.log('Processing material:', material, 'Using category:', category);
                 if (transformedData[category]) {
                     transformedData[category].push({
-                        id: material.id,
-                        title: material.title,
-                        type: (material.type as 'ARTICLE' | 'VIDEO' | 'DOCUMENT' | 'LINK') || 'ARTICLE',
-                        category: material.category,
-                        resourceUrl: material.resourceUrl,
-                        fileName: material.fileName,
-                        updated: new Date().toLocaleDateString(), // Use current date as fallback
-                        createdBy: 'admin@72x.co.za' // Default creator
+                        id: material.id || '',
+                        title: material.title || '',
+                        type: (material.type as 'ARTICLE' | 'VIDEO' | 'DOCUMENT'),
+                    
+
+                        category: material.category || '',
+                        resourceUrl: material.resourceUrl || '',
+                        fileName: material.fileName || '',
+                        fileSize: material.fileSize || '',
+                        description: material.description || '',
+                        updated: material.updated || new Date().toLocaleDateString(),
+                        createdBy: material.createdBy || 'admin@72x.co.za'
                     });
-                    console.log('Added to category:', category, 'Items now:', transformedData[category].length);
-                } else {
-                    console.warn('Category not found in transformedData:', category);
                 }
             });
             
-            console.log('Final transformed data:', transformedData);
             setLearningData(transformedData);
         } catch (error) {
             console.error('Error fetching learning materials:', error);
+            alert('Error loading learning materials. Please try again.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const getFileSize = (bytes: number): string => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    };
+
+    const validateFile = (file: File, type: 'DOCUMENT' | 'VIDEO'): boolean => {
+        const maxSizeVideo = 500 * 1024 * 1024; // 500MB
+        const maxSizeDocument = 50 * 1024 * 1024; // 50MB
+        const maxSize = type === 'VIDEO' ? maxSizeVideo : maxSizeDocument;
+
+        if (file.size > maxSize) {
+            alert(`File size exceeds ${Math.round(maxSize / (1024 * 1024))}MB limit`);
+            return false;
+        }
+
+        const videoFormats = ['video/mp4', 'video/x-msvideo', 'video/quicktime', 'video/x-ms-wmv', 'video/x-flv', 'video/webm', 'video/x-matroska'];
+        const documentFormats = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+        
+        const allowedFormats = type === 'VIDEO' ? videoFormats : documentFormats;
+
+        if (!allowedFormats.includes(file.type)) {
+            alert(`Invalid file format. Allowed formats: ${type === 'VIDEO' ? 'MP4, AVI, MOV, WMV, FLV, WebM, MKV' : 'PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX'}`);
+            return false;
+        }
+
+        return true;
     };
 
     const handleAddLearning = async () => {
@@ -114,20 +143,23 @@ export default function LearningTab() {
             return;
         }
         
-        // For DOCUMENT and VIDEO types, require file upload
         if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && !newLearning.file) {
             alert('Please select a file to upload');
             return;
         }
         
-        // For ARTICLE and LINK types, require URL
-        if ((newLearning.type === 'ARTICLE' || newLearning.type === 'LINK') && !newLearning.resourceUrl.trim()) {
-            alert('Please enter a resource URL');
-            return;
+
+        // Validate file if uploading
+        if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && newLearning.file) {
+            if (!validateFile(newLearning.file, newLearning.type)) {
+                return;
+            }
         }
         
         try {
-            // Map frontend category to backend enum format (use exact enum values)
+            setUploading(true);
+            setUploadProgress(0);
+
             const backendCategoryMap: Record<LearningSection, string> = {
                 'business-plan': 'BUSINESS_PLANNING',
                 'marketing': 'MARKETING_SALES', 
@@ -139,17 +171,10 @@ export default function LearningTab() {
             
             const backendCategory = backendCategoryMap[learningSection];
             
-            console.log('Attempting to create learning material:', {
-                title: newLearning.title,
-                type: newLearning.type,
-                category: backendCategory,
-                resourceUrl: newLearning.resourceUrl,
-                description: newLearning.description,
-                createdBy: 'admin@72x.co.za'
-            });
+            console.log('Creating learning material with category:', backendCategory);
             
             if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && newLearning.file) {
-                // Use multipart/form-data for file upload
+                // File upload with FormData
                 const formData = new FormData();
                 formData.append('title', newLearning.title);
                 formData.append('description', newLearning.description);
@@ -157,16 +182,24 @@ export default function LearningTab() {
                 formData.append('type', newLearning.type);
                 formData.append('createdBy', 'admin@72x.co.za');
                 formData.append('file', newLearning.file);
-                
-                console.log('Sending file upload request with backend category:', backendCategory);
+
+                console.log('Uploading file:', newLearning.file.name, 'Size:', getFileSize(newLearning.file.size));
+
                 const response = await axiosClient.post('/learning-materials', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
+                    },
+                    onUploadProgress: (progressEvent: any) => {
+                        const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+                        setUploadProgress(progress);
+                        console.log(`Upload progress: ${progress}%`);
                     }
                 });
+
                 console.log('File upload successful:', response.data);
+                alert(`File "${newLearning.file.name}" uploaded successfully!`);
             } else {
-                // Use JSON for URL-based materials
+                // URL-based material
                 const requestData = {
                     title: newLearning.title,
                     type: newLearning.type,
@@ -175,58 +208,97 @@ export default function LearningTab() {
                     description: newLearning.description,
                     createdBy: 'admin@72x.co.za'
                 };
-                console.log('Sending JSON request with backend category:', backendCategory, 'data:', requestData);
-                const response = await axiosClient.post('/learning-materials', requestData);
-                console.log('JSON request successful:', response.data);
+
+                console.log('Creating URL-based material:', requestData);
+                await axiosClient.post('/learning-materials', requestData);
+                console.log('Material created successfully');
+                alert('Learning material added successfully!');
             }
             
-            fetchLearningMaterials(); // Refresh data
+            // Refresh data
+            await fetchLearningMaterials();
+            
+            // Reset form
             setShowAddLearning(false);
             setNewLearning({ 
                 title: '', 
                 type: 'ARTICLE',
-                category: learningSection,
+                category: 'business-plan',
                 resourceUrl: '',
                 description: '',
                 file: undefined
             });
-        } catch (error) {
+            setUploadProgress(0);
+        } catch (error: any) {
             console.error('Error adding learning material:', error);
-            if (error.response) {
-                console.error('Backend error response:', error.response.data);
-                console.error('Status:', error.response.status);
-                console.error('Headers:', error.response.headers);
+            if (error.response?.data?.message) {
+                alert(`Error: ${error.response.data.message}`);
+            } else if (error.response?.data?.error) {
+                alert(`Error: ${error.response.data.error}`);
+            } else {
+                alert('Error adding learning material. Please try again.');
             }
-            alert('Error adding learning material. Please try again.');
+        } finally {
+            setUploading(false);
+            setUploadProgress(0);
         }
     };
 
-    const handleDeleteLearning = async (materialId: string) => {
-        if (window.confirm('Are you sure you want to delete this learning material?')) {
-            try {
-                await axiosClient.delete(`/learning-materials/${materialId}`, {
-                    params: { userEmail: 'admin@72x.co.za' }
-                });
-                fetchLearningMaterials(); // Refresh data
-            } catch (error) {
-                console.error('Error deleting learning material:', error);
-                alert('Error deleting learning material. Please try again.');
+    const handleDeleteLearning = async (materialId: string, title: string) => {
+    if (!materialId) {
+        alert('Invalid material ID. Please refresh and try again.');
+        return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
+        return;
+    }
+
+    try {
+        console.log('Deleting material:', materialId);
+
+        await axiosClient.delete(`/learning-materials/${materialId}`, {
+            data: {
+                userEmail: 'admin@72x.co.za'
             }
+        });
+
+        await fetchLearningMaterials();
+        alert('Learning material deleted successfully!');
+    } catch (error: any) {
+        console.error('Error deleting learning material:', error);
+
+        if (error.response?.status === 400) {
+            alert('Delete failed. Backend rejected the request.');
+        } else {
+            alert('Error deleting learning material.');
+        }
+    }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setNewLearning({...newLearning, file});
+            console.log('File selected:', file.name, 'Size:', getFileSize(file.size));
         }
     };
 
     return (
         <div className="max-w-7xl mx-auto">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Learning Material</h1>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Learning Materials</h1>
+                <p className="text-gray-600">Manage and organize learning resources for all categories</p>
+            </div>
             
             {/* Horizontal nav for sections */}
-            <div className="border-b border-gray-200 mb-4">
+            <div className="border-b border-gray-200 mb-6">
                 <nav className="-mb-px flex flex-wrap gap-2">
                     {(Object.keys(sectionTitles) as LearningSection[]).map(section => (
                         <button 
                             key={section}
                             onClick={() => setLearningSection(section)}
-                            className={`px-3 py-2 text-sm font-medium border-b-2 ${
+                            className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
                                 learningSection === section 
                                     ? 'border-primary-600 text-primary-700' 
                                     : 'border-transparent text-gray-600 hover:text-gray-800'
@@ -238,17 +310,17 @@ export default function LearningTab() {
                 </nav>
             </div>
 
-            {/* Table + Add Content button for selected section */}
+            {/* Table + Add Content button */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 flex items-center justify-between">
-                    <div className="text-sm text-gray-700">
-                        {sectionTitles[learningSection]} content ({learningData[learningSection].length} items)
+                <div className="p-4 flex items-center justify-between border-b border-gray-200">
+                    <div className="text-sm text-gray-700 font-medium">
+                        {sectionTitles[learningSection]} • <span className="font-bold">{learningData[learningSection].length}</span> items
                     </div>
                     <button 
                         onClick={() => setShowAddLearning(true)}
-                        className="px-3 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700"
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
                     >
-                        Add Content
+                        + Add Content
                     </button>
                 </div>
                 
@@ -258,51 +330,72 @@ export default function LearningTab() {
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TITLE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TYPE</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RESOURCE</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">LAST UPDATED</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FILE / RESOURCE</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SIZE</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UPDATED</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-6 text-center text-sm text-gray-600">
-                                        Loading learning materials...
+                                    <td colSpan={6} className="px-6 py-8 text-center">
+                                        <div className="text-center">
+                                            <div className="text-2xl mb-2">⏳</div>
+                                            <p className="text-sm text-gray-600">Loading learning materials...</p>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : learningData[learningSection].length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-6 text-center text-sm text-gray-600">
-                                        No content yet in this category
+                                    <td colSpan={6} className="px-6 py-8 text-center">
+                                        <div className="text-center">
+                                            <div className="text-2xl mb-2">📚</div>
+                                            <p className="text-sm text-gray-600">No content yet in this category</p>
+                                            <p className="text-xs text-gray-500 mt-1">Add your first learning material using the button above</p>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (
                                 learningData[learningSection].map(item => (
-                                    <tr key={item.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4">
                                             <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                                            {item.description && (
+                                                <p className="text-xs text-gray-500 mt-1">{item.description.substring(0, 50)}...</p>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                item.type === 'VIDEO' ? 'bg-red-100 text-red-800' :
+                                                item.type === 'DOCUMENT' ? 'bg-purple-100 text-purple-800' :
+                                                item.type === 'ARTICLE' ? 'bg-blue-100 text-blue-800' :
+                                                'bg-green-100 text-green-800'
+                                            }`}>
                                                 {item.type}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-6 py-4">
                                             <div className="text-sm text-gray-500">
                                                 {item.resourceUrl ? (
-                                                    <a href={item.resourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                                                        {item.fileName || 'View Resource'}
+                                                    <a href={item.resourceUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium">
+                                                        {item.fileName || item.resourceUrl.split('/').pop() || 'View Resource'}
                                                     </a>
-                                                ) : 'No resource'}
+                                                ) : (
+                                                    <span className="text-gray-400">No resource</span>
+                                                )}
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm text-gray-500">{item.fileSize || '—'}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-gray-500">{item.updated || '—'}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             <button 
-                                                className="text-red-600 hover:text-red-800"
-                                                onClick={() => handleDeleteLearning(item.id)}
+                                                className="text-red-600 hover:text-red-800 font-medium transition-colors"
+                                                onClick={() => handleDeleteLearning(item.id, item.title)}
                                             >
                                                 Delete
                                             </button>
@@ -317,80 +410,112 @@ export default function LearningTab() {
 
             {/* Add Learning Modal */}
             {showAddLearning && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
                         <h3 className="text-lg font-semibold mb-4">Add Content to {sectionTitles[learningSection]}</h3>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             <div>
-                                <label className="block text-sm text-gray-700 mb-1">Title *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
                                 <input 
                                     value={newLearning.title} 
                                     onChange={e => setNewLearning({...newLearning, title: e.target.value})} 
-                                    className="w-full px-3 py-2 border rounded-lg" 
-                                    required
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    placeholder="Enter title"
+                                    disabled={uploading}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm text-gray-700 mb-1">Type</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
                                 <select 
                                     value={newLearning.type} 
                                     onChange={e => setNewLearning({...newLearning, type: e.target.value as any, file: undefined, resourceUrl: ''})} 
-                                    className="w-full px-3 py-2 border rounded-lg"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    disabled={uploading}
                                 >
                                     <option value="ARTICLE">Article</option>
                                     <option value="VIDEO">Video</option>
                                     <option value="DOCUMENT">Document</option>
-                                    <option value="LINK">Link</option>
+                                    
                                 </select>
                             </div>
                             {(newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') ? (
                                 <div>
-                                    <label className="block text-sm text-gray-700 mb-1">Upload File *</label>
-                                    <input 
-                                        type="file" 
-                                        onChange={e => setNewLearning({...newLearning, file: e.target.files?.[0]})} 
-                                        className="w-full px-3 py-2 border rounded-lg" 
-                                        accept={newLearning.type === 'VIDEO' ? '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv' : '.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx'}
-                                        required
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Supported formats: {newLearning.type === 'VIDEO' ? 'MP4, AVI, MOV, WMV, FLV, WebM, MKV' : 'PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX'}
-                                    </p>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Upload File *</label>
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-500 transition-colors">
+                                        <input 
+                                            type="file" 
+                                            onChange={handleFileChange}
+                                            className="w-full"
+                                            accept={newLearning.type === 'VIDEO' ? '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv' : '.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx'}
+                                            disabled={uploading}
+                                        />
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            Max size: {newLearning.type === 'VIDEO' ? '500MB' : '50MB'}
+                                        </p>
+                                    </div>
+                                    {newLearning.file && (
+                                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                                            <p className="text-xs text-green-800"><strong>Selected:</strong> {newLearning.file.name} ({getFileSize(newLearning.file.size)})</p>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div>
-                                    <label className="block text-sm text-gray-700 mb-1">Resource URL *</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Resource URL *</label>
                                     <input 
                                         value={newLearning.resourceUrl} 
                                         onChange={e => setNewLearning({...newLearning, resourceUrl: e.target.value})} 
-                                        className="w-full px-3 py-2 border rounded-lg" 
-                                        placeholder="https://..."
-                                        required
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        placeholder="https://example.com"
+                                        disabled={uploading}
                                     />
                                 </div>
                             )}
                             <div>
-                                <label className="block text-sm text-gray-700 mb-1">Description</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                 <textarea 
                                     value={newLearning.description} 
                                     onChange={e => setNewLearning({...newLearning, description: e.target.value})} 
-                                    className="w-full px-3 py-2 border rounded-lg" 
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                     rows={3}
                                     placeholder="Brief description of the learning material..."
+                                    disabled={uploading}
                                 />
                             </div>
-                            <div className="flex gap-2 pt-2">
+
+                            {/* Upload Progress */}
+                            {uploading && uploadProgress > 0 && (
+                                <div className="mt-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-gray-700">Uploading...</span>
+                                        <span className="text-sm font-medium text-gray-700">{uploadProgress}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div 
+                                            className="bg-primary-600 h-2 rounded-full transition-all duration-300" 
+                                            style={{width: `${uploadProgress}%`}}
+                                        ></div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex gap-2 pt-4 border-t border-gray-200">
                                 <button 
-                                    onClick={() => setShowAddLearning(false)}
-                                    className="px-4 py-2 border rounded-lg"
+                                    onClick={() => {
+                                        setShowAddLearning(false);
+                                        setUploadProgress(0);
+                                    }}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                                    disabled={uploading}
                                 >
                                     Cancel
                                 </button>
                                 <button 
                                     onClick={handleAddLearning}
-                                    className="px-4 py-2 bg-primary-600 text-white rounded-lg"
+                                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50"
+                                    disabled={uploading}
                                 >
-                                    Add
+                                    {uploading ? `Uploading (${uploadProgress}%)...` : 'Add Material'}
                                 </button>
                             </div>
                         </div>

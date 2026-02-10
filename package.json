@@ -55,11 +55,11 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.2.0",
+    "paystack-js": "^0.18.1",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.0",
-    "@types/paystack-js": "^1.0.1",
     "vite": "^7.0.0"
   }
 }
