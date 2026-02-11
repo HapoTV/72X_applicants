@@ -1,30 +1,22 @@
-// src/interfaces/UserData.ts
 export interface User {
-  userId: string;
-  fullName: string;
-  email: string;
-  mobileNumber?: string;
-  businessReference?: string;
-  hasReference?: boolean;
-  companyName?: string;
-  industry?: string;
-  location?: string;
-  founded?: string;
-  employees?: string;
-  profileImageUrl?: string;
-  role: string;
-  status: string;
-  userPackage?: string;
-  createdAt?: string;
-  updatedAt?: string;
+    userId: string;
+    email: string;
+    role: string;
+    fullName?: string;
+    status?: string;
+    businessReference?: string;
+    companyName?: string;
+    profileImageUrl?: string;
+    token?: string;
+    requiresTwoFactor?: boolean;
+    twoFactorEnabled?: boolean;
 }
 
 export interface LoginRequest {
-  email: string;
-  password: string;
-  businessReference?: string;
-  hasReference?: boolean;
-  loginType: 'user' | 'admin';
+    email: string;
+    password: string;
+    businessReference?: string;
+    loginType: 'user' | 'admin';
 }
 
 export interface UserFormData {

@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import ProtectedRoute from './components/ProtectedRoute'; // Import the ProtectedRoute
+import ProtectedRoute from './components/ProtectedRoute';
 import DashboardOverview from './pages/dashboard/Overview';
 import DashboardMetrics from './pages/dashboard/Metrics';
 import DashboardCommunityFeed from './pages/dashboard/CommunityFeed';
@@ -23,6 +23,7 @@ import MentorshipHub from './pages/MentorshipHub';
 import AIBusinessAnalyst from './pages/AIBusinessAnalyst';
 import Notifications from './pages/Notifications';
 import Login from './pages/Login';
+import VerifyOtp from './pages/VerifyOtp'; // ✅ ADD THIS IMPORT
 import BizBoostChatbot from './components/Chatbot';
 import LandingPage from './pages/LandingPage';
 import Signup from './pages/Signup';
@@ -55,104 +56,104 @@ import AdminNotifications from './pages/adminDashboard/AdminNotifications';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 
-
 function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
         <Router>
-      <Routes>
-        {/* Public landing page */}
-        <Route path="/" element={<LandingPage />} />
-        
-        {/* Public routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/request-demo" element={<RequestDemo />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/signup/success" element={<SignupSuccessRouter />} />
-        <Route path="/signup/success/provided" element={<SignupSuccessProvided />} />
-        <Route path="/signup/success/generated" element={<SignupSuccessGenerated />} />
-        <Route path="/reset-password" element={<ResetPasswordRequest />} />
-        <Route path="/reset-password/verify" element={<ResetPasswordVerify />} />
-        
-        {/* Admin routes - outside of main layout to avoid sidebar and chatbot */}
-        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
-        <Route path="/admin/dashboard" element={
-          <ProtectedRoute requireAdmin={true}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Navigate to="overview" replace />} />
-          <Route path="overview" element={<AdminDashboard />} />
-        </Route>
-        <Route path="/admin/notifications" element={
-          <ProtectedRoute requireAdmin={true}>
-            <AdminNotifications />
-          </ProtectedRoute>
-        } />
-        
-        {/* All other routes with Layout - protected */}
-        <Route path="/*" element={
-          <ProtectedRoute>
-            <Layout>
-              <BizBoostChatbot />
-              <Routes>
-                {/* Dashboard Routes */}
-                <Route path="/dashboard" element={<DashboardOverview />} />
-                <Route path="/dashboard/overview" element={<DashboardOverview />} />
-                <Route path="/dashboard/metrics" element={<DashboardMetrics />} />
-                <Route path="/dashboard/community-feed" element={<DashboardCommunityFeed />} />
-                
-                {/* Schedule Routes */}
-                <Route path="/schedule" element={<Schedule />} />
-                <Route path="/schedule/events" element={<ScheduleEvents />} />
-                <Route path="/schedule/calendar" element={<ScheduleCalendar />} />
-                
-                {/* Learning Routes */}
-                <Route path="/learning" element={<LearningModules />} />
-                <Route path="/learning/:category" element={<LearningModules />} />
-                
-                {/* Community Routes */}
-                <Route path="/community" element={<Community />} />
-                <Route path="/community/discussions" element={<CommunityDiscussions />} />
-                <Route path="/community/networking" element={<CommunityNetworking />} />
-                <Route path="/community/mentorship" element={<CommunityMentorship />} />
-                
-                {/* Other Protected Routes */}
-                <Route path="/applications" element={<AppStore />} />
-                <Route path="/applications/crm/*" element={<CRM />} />
-                <Route path="/applications/finance-manager" element={<FinanceManager />} />
-                <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/notifications" element={<Notifications />} />
-                
-                {/* Essential Package Features */}
-                <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/mentorship" element={<MentorshipHub />} />
-                <Route path="/funding" element={<FundingFinder />} />
-                <Route path="/data-input" element={<DataInput />} />
-                
-                {/* Premium Package Features */}
-                <Route path="/roadmap" element={<RoadmapGenerator />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/experts" element={<ExpertSessions />} />
-                <Route path="/ai-analyst" element={<AIBusinessAnalyst />} />
-                
-                {/* Upgrade Pages */}
-                <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
-                <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
-                <Route path="/upgrade/funding" element={<FundingUpgrade />} />
-                <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
-                <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
-                <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
-                <Route path="/upgrade/experts" element={<ExpertsUpgrade />} />
-                <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
-              </Routes>
-            </Layout>
-          </ProtectedRoute>
-        } />
-      </Routes>
+          <Routes>
+            {/* Public landing page */}
+            <Route path="/" element={<LandingPage />} />
+            
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/verify-otp" element={<VerifyOtp />} /> {/* ✅ ADD THIS ROUTE */}
+            <Route path="/request-demo" element={<RequestDemo />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/signup/success" element={<SignupSuccessRouter />} />
+            <Route path="/signup/success/provided" element={<SignupSuccessProvided />} />
+            <Route path="/signup/success/generated" element={<SignupSuccessGenerated />} />
+            <Route path="/reset-password" element={<ResetPasswordRequest />} />
+            <Route path="/reset-password/verify" element={<ResetPasswordVerify />} />
+            
+            {/* Admin routes - outside of main layout to avoid sidebar and chatbot */}
+            <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+            <Route path="/admin/dashboard" element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Navigate to="overview" replace />} />
+              <Route path="overview" element={<AdminDashboard />} />
+            </Route>
+            <Route path="/admin/notifications" element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminNotifications />
+              </ProtectedRoute>
+            } />
+            
+            {/* All other routes with Layout - protected */}
+            <Route path="/*" element={
+              <ProtectedRoute>
+                <Layout>
+                  <BizBoostChatbot />
+                  <Routes>
+                    {/* Dashboard Routes */}
+                    <Route path="/dashboard" element={<DashboardOverview />} />
+                    <Route path="/dashboard/overview" element={<DashboardOverview />} />
+                    <Route path="/dashboard/metrics" element={<DashboardMetrics />} />
+                    <Route path="/dashboard/community-feed" element={<DashboardCommunityFeed />} />
+                    
+                    {/* Schedule Routes */}
+                    <Route path="/schedule" element={<Schedule />} />
+                    <Route path="/schedule/events" element={<ScheduleEvents />} />
+                    <Route path="/schedule/calendar" element={<ScheduleCalendar />} />
+                    
+                    {/* Learning Routes */}
+                    <Route path="/learning" element={<LearningModules />} />
+                    <Route path="/learning/:category" element={<LearningModules />} />
+                    
+                    {/* Community Routes */}
+                    <Route path="/community" element={<Community />} />
+                    <Route path="/community/discussions" element={<CommunityDiscussions />} />
+                    <Route path="/community/networking" element={<CommunityNetworking />} />
+                    <Route path="/community/mentorship" element={<CommunityMentorship />} />
+                    
+                    {/* Other Protected Routes */}
+                    <Route path="/applications" element={<AppStore />} />
+                    <Route path="/applications/crm/*" element={<CRM />} />
+                    <Route path="/applications/finance-manager" element={<FinanceManager />} />
+                    <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    
+                    {/* Essential Package Features */}
+                    <Route path="/marketplace" element={<Marketplace />} />
+                    <Route path="/mentorship" element={<MentorshipHub />} />
+                    <Route path="/funding" element={<FundingFinder />} />
+                    <Route path="/data-input" element={<DataInput />} />
+                    
+                    {/* Premium Package Features */}
+                    <Route path="/roadmap" element={<RoadmapGenerator />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/experts" element={<ExpertSessions />} />
+                    <Route path="/ai-analyst" element={<AIBusinessAnalyst />} />
+                    
+                    {/* Upgrade Pages */}
+                    <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
+                    <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
+                    <Route path="/upgrade/funding" element={<FundingUpgrade />} />
+                    <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
+                    <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
+                    <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
+                    <Route path="/upgrade/experts" element={<ExpertsUpgrade />} />
+                    <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
+                  </Routes>
+                </Layout>
+              </ProtectedRoute>
+            } />
+          </Routes>
         </Router>
       </NotificationProvider>
     </AuthProvider>

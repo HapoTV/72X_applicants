@@ -7,11 +7,22 @@ import type {
 
 class ApplicationService {
   /**
+   * Set authorization header before making requests
+   */
+  private ensureAuthHeader(): void {
+    const token = localStorage.getItem('authToken');
+    if (token && !axiosClient.defaults.headers.common['Authorization']) {
+      axiosClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  /**
    * Create a new application
    */
   async createApplication(applicationData: CreateApplicationRequest): Promise<Application> {
     try {
-      const response = await axiosClient.post<Application>('/api/applications', applicationData);
+      this.ensureAuthHeader();
+      const response = await axiosClient.post<Application>('/applications', applicationData);
       return response.data;
     } catch (error: any) {
       console.error('Create application error:', error);
@@ -29,7 +40,8 @@ class ApplicationService {
    */
   async getApplicationById(applicationId: string): Promise<Application> {
     try {
-      const response = await axiosClient.get<Application>(`/api/applications/${applicationId}`);
+      this.ensureAuthHeader();
+      const response = await axiosClient.get<Application>(`/applications/${applicationId}`);
       return response.data;
     } catch (error: any) {
       console.error('Get application error:', error);
@@ -47,7 +59,8 @@ class ApplicationService {
    */
   async getApplicationByNumber(applicationNumber: string): Promise<Application> {
     try {
-      const response = await axiosClient.get<Application>(`/api/applications/number/${applicationNumber}`);
+      this.ensureAuthHeader();
+      const response = await axiosClient.get<Application>(`/applications/number/${applicationNumber}`);
       return response.data;
     } catch (error: any) {
       console.error('Get application by number error:', error);
@@ -65,7 +78,8 @@ class ApplicationService {
    */
   async getUserApplications(userId: string): Promise<Application[]> {
     try {
-      const response = await axiosClient.get<Application[]>(`/api/applications/user/${userId}`);
+      this.ensureAuthHeader();
+      const response = await axiosClient.get<Application[]>(`/applications/user/${userId}`);
       return response.data;
     } catch (error: any) {
       console.error('Get user applications error:', error);
@@ -78,7 +92,8 @@ class ApplicationService {
    */
   async getApplicationsByStatus(status: string): Promise<Application[]> {
     try {
-      const response = await axiosClient.get<Application[]>(`/api/applications/status/${status}`);
+      this.ensureAuthHeader();
+      const response = await axiosClient.get<Application[]>(`/applications/status/${status}`);
       return response.data;
     } catch (error: any) {
       console.error('Get applications by status error:', error);
@@ -95,6 +110,7 @@ class ApplicationService {
     reviewNotes?: string
   ): Promise<Application> {
     try {
+      this.ensureAuthHeader();
       const params = new URLSearchParams();
       params.append('status', status);
       if (reviewNotes) {
@@ -102,7 +118,7 @@ class ApplicationService {
       }
 
       const response = await axiosClient.put<Application>(
-        `/api/applications/${applicationId}/status?${params.toString()}`
+        `/applications/${applicationId}/status?${params.toString()}`
       );
       return response.data;
     } catch (error: any) {
@@ -121,7 +137,8 @@ class ApplicationService {
    */
   async generateApplicationNumber(): Promise<string> {
     try {
-      const response = await axiosClient.get<string>('/api/applications/generate-number');
+      this.ensureAuthHeader();
+      const response = await axiosClient.get<string>('/applications/generate-number');
       return response.data;
     } catch (error: any) {
       console.error('Generate application number error:', error);
@@ -134,7 +151,8 @@ class ApplicationService {
    */
   async getAllApplications(): Promise<Application[]> {
     try {
-      const response = await axiosClient.get<Application[]>('/api/applications/all');
+      this.ensureAuthHeader();
+      const response = await axiosClient.get<Application[]>('/applications/all');
       return response.data;
     } catch (error: any) {
       console.error('Get all applications error:', error);
@@ -147,10 +165,11 @@ class ApplicationService {
    */
   async deleteApplication(applicationId: string, userEmail: string): Promise<void> {
     try {
+      this.ensureAuthHeader();
       const params = new URLSearchParams();
       params.append('userEmail', userEmail);
       
-      await axiosClient.delete(`/api/applications/${applicationId}?${params.toString()}`);
+      await axiosClient.delete(`/applications/${applicationId}?${params.toString()}`);
     } catch (error: any) {
       console.error('Delete application error:', error);
       
@@ -175,12 +194,13 @@ class ApplicationService {
     documentType: string
   ): Promise<Application> {
     try {
+      this.ensureAuthHeader();
       const formData = new FormData();
       formData.append('document', documentFile);
       formData.append('documentType', documentType);
 
       const response = await axiosClient.post<Application>(
-        `/api/applications/${applicationId}/documents`,
+        `/applications/${applicationId}/documents`,
         formData,
         {
           headers: {
@@ -214,6 +234,7 @@ class ApplicationService {
     }
   ): Promise<Application[]> {
     try {
+      this.ensureAuthHeader();
       const params = new URLSearchParams();
       
       if (filters.applicationNumber) params.append('applicationNumber', filters.applicationNumber);
@@ -224,7 +245,7 @@ class ApplicationService {
       if (filters.endDate) params.append('endDate', filters.endDate);
 
       const response = await axiosClient.get<Application[]>(
-        `/api/applications/search?${params.toString()}`
+        `/applications/search?${params.toString()}`
       );
       return response.data;
     } catch (error: any) {
@@ -244,7 +265,8 @@ class ApplicationService {
     rejected: number;
   }> {
     try {
-      const response = await axiosClient.get('/api/applications/stats');
+      this.ensureAuthHeader();
+      const response = await axiosClient.get('/applications/stats');
       return response.data;
     } catch (error: any) {
       console.error('Get application stats error:', error);
