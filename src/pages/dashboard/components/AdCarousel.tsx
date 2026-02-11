@@ -1,7 +1,7 @@
 // src/components/dashboard/components/AdCarousel.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import { adService } from '../../../services/AdService';
+import React from 'react';
 import type { AdDTO } from '../../../interfaces/AdData';
+import { useAdCarousel } from '../hooks/useAdCarousel';
 
 type Language = 'en' | 'af' | 'zu';
 
@@ -66,214 +66,23 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
   onAdvertiseClick,
   onRefreshAds,
 }) => {
-  const [currentAdIndex, setCurrentAdIndex] = useState<number>(0);
-  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
-  const [adClickLoading, setAdClickLoading] = useState<string | null>(null);
-  const [adImpressions, setAdImpressions] = useState<Set<string>>(new Set());
-  const [videoEnded, setVideoEnded] = useState<boolean>(false);
-  const [clickCooldowns, setClickCooldowns] = useState<Map<string, number>>(new Map());
-  const [aspectRatioByAdId, setAspectRatioByAdId] = useState<Record<string, number>>({});
-
-  const carouselTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
-
   const t = translations[selectedLanguage];
 
-  useEffect(() => {
-    // Initialize cooldowns
-    if (ads && ads.length > 0) {
-      const cooldowns = new Map();
-      ads.forEach(ad => {
-        const remaining = adService.getCooldownRemaining(ad.adId);
-        if (remaining > 0) {
-          cooldowns.set(ad.adId, remaining);
-        }
-      });
-      setClickCooldowns(cooldowns);
-    }
-
-    if (ads && ads.length > 1) {
-      startCarousel();
-    }
-    
-    return () => {
-      if (carouselTimerRef.current) {
-        clearInterval(carouselTimerRef.current);
-      }
-    };
-  }, [ads]);
-
-  useEffect(() => {
-    const currentAd = ads?.[currentAdIndex];
-    if (!currentAd?.adId || !currentAd?.bannerUrl) return;
-    if (aspectRatioByAdId[currentAd.adId]) return;
-
-    if (currentAd.mediaType === 'IMAGE') {
-      const img = new Image();
-      img.onload = () => {
-        const w = img.naturalWidth || 0;
-        const h = img.naturalHeight || 0;
-        if (w > 0 && h > 0) {
-          setAspectRatioByAdId((prev) => ({ ...prev, [currentAd.adId]: w / h }));
-        }
-      };
-      img.src = currentAd.bannerUrl;
-    }
-
-    if (currentAd.mediaType === 'VIDEO') {
-      const v = document.createElement('video');
-      v.preload = 'metadata';
-      v.onloadedmetadata = () => {
-        const w = v.videoWidth || 0;
-        const h = v.videoHeight || 0;
-        if (w > 0 && h > 0) {
-          setAspectRatioByAdId((prev) => ({ ...prev, [currentAd.adId]: w / h }));
-        }
-      };
-      v.src = currentAd.bannerUrl;
-    }
-  }, [ads, currentAdIndex, aspectRatioByAdId]);
-
-  const startCarousel = () => {
-    if (carouselTimerRef.current) {
-      clearInterval(carouselTimerRef.current);
-    }
-
-    carouselTimerRef.current = setInterval(() => {
-      const currentAd = ads[currentAdIndex];
-      
-      // Check if current ad is a video
-      if (currentAd?.mediaType === 'VIDEO') {
-        const videoElement = videoRefs.current.get(currentAd.adId);
-        if (videoElement && !videoElement.ended && !videoEnded) {
-          console.log('⏸️ Video still playing, skipping auto-advance');
-          return; // Don't advance if video is still playing
-        }
-      }
-      
-      nextAd();
-    }, 10000); // Rotate every 10 seconds for images
-  };
-
-  const nextAd = async () => {
-    if (!ads || ads.length <= 1) return;
-    
-    setIsTransitioning(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    setCurrentAdIndex(prev => {
-      const nextIndex = (prev + 1) % ads.length;
-      
-      // Record impression for the new ad if not already recorded
-      if (ads[nextIndex] && !adImpressions.has(ads[nextIndex].adId)) {
-        console.log('📸 Recording impression for ad:', ads[nextIndex].title);
-        adService.recordAdImpression(ads[nextIndex].adId);
-        setAdImpressions(prev => new Set(prev).add(ads[nextIndex].adId));
-      }
-      
-      // Reset video ended state
-      setVideoEnded(false);
-      
-      return nextIndex;
-    });
-    
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300);
-  };
-
-  const prevAd = async () => {
-    if (!ads || ads.length <= 1) return;
-    
-    setIsTransitioning(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    setCurrentAdIndex(prev => {
-      const prevIndex = prev === 0 ? ads.length - 1 : prev - 1;
-      
-      if (ads[prevIndex] && !adImpressions.has(ads[prevIndex].adId)) {
-        console.log('📸 Recording impression for ad:', ads[prevIndex].title);
-        adService.recordAdImpression(ads[prevIndex].adId);
-        setAdImpressions(prev => new Set(prev).add(ads[prevIndex].adId));
-      }
-      
-      // Reset video ended state
-      setVideoEnded(false);
-      
-      return prevIndex;
-    });
-    
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300);
-  };
-
-  const handleVideoEnd = (adId: string) => {
-    console.log('🎬 Video ended for ad:', adId);
-    setVideoEnded(true);
-    
-    // Auto-advance after video ends (2 second delay)
-    setTimeout(() => {
-      if (ads && ads.length > 1) {
-        nextAd();
-      }
-    }, 2000);
-  };
-
-  const handleVideoPlay = (adId: string) => {
-    console.log('▶️ Video started playing for ad:', adId);
-    setVideoEnded(false);
-    
-    // Stop auto-advance while video is playing
-    if (carouselTimerRef.current) {
-      clearInterval(carouselTimerRef.current);
-    }
-  };
-
-  const handleAdClick = async (ad: AdDTO) => {
-    if (adClickLoading === ad.adId) return;
-    
-    // Check cooldown
-    if (!adService.canClickAd(ad.adId)) {
-      const remaining = adService.getCooldownRemaining(ad.adId);
-      const minutes = Math.ceil(remaining / 60000);
-      alert(`Please wait ${minutes} minute${minutes > 1 ? 's' : ''} before clicking this ad again.`);
-      return;
-    }
-    
-    try {
-      setAdClickLoading(ad.adId);
-      
-      // Record click
-      const clickCounted = await adService.recordAdClick(ad.adId);
-      
-      if (clickCounted) {
-        // Record engagement
-        await adService.recordEngagement('AD_CLICK', 5, `Clicked ad: ${ad.title}`, ad.adId);
-        
-        // Update cooldown state
-        setClickCooldowns(prev => {
-          const newMap = new Map(prev);
-          newMap.set(ad.adId, adService.CLICK_COOLDOWN);
-          return newMap;
-        });
-        
-        console.log('✅ Click counted for ad:', ad.title);
-      } else {
-        console.log('⏳ Click not counted (cooldown)');
-      }
-      
-      // Open ad URL
-      window.open(ad.clickUrl, '_blank', 'noopener,noreferrer');
-      onAdClick();
-      
-    } catch (error) {
-      console.error('Error handling ad click:', error);
-      window.open(ad.clickUrl, '_blank', 'noopener,noreferrer');
-    } finally {
-      setAdClickLoading(null);
-    }
-  };
+  const {
+    currentAd,
+    currentAdIndex,
+    setCurrentAdIndex,
+    isTransitioning,
+    adClickLoading,
+    cooldownRemaining,
+    aspectRatio,
+    nextAd,
+    prevAd,
+    handleVideoEnd,
+    handleVideoPlay,
+    handleAdClick,
+    registerVideoRef,
+  } = useAdCarousel({ ads, onAdClick });
 
   const renderHeader = (subtitle: string) => (
     <div className="flex items-start justify-between gap-3">
@@ -338,15 +147,13 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
   );
 
   const renderCarousel = () => {
-    const currentAd = ads[currentAdIndex];
+    if (!currentAd) return null;
     const isClicking = adClickLoading === currentAd.adId;
-    const canClick = adService.canClickAd(currentAd.adId);
-    const cooldownRemaining = adService.getCooldownRemaining(currentAd.adId);
-    const aspectRatio = aspectRatioByAdId[currentAd.adId] || 1920 / 400;
 
     return renderSlot(
       t.advertiseWithUs,
       <div className="relative overflow-hidden">
+
         {ads.length > 1 && (
           <>
             <button
@@ -382,6 +189,15 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
             transform: isTransitioning ? 'translateX(100%)' : 'translateX(0)',
             transition: 'transform 300ms ease'
           }}
+          onClick={() => handleAdClick(currentAd)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleAdClick(currentAd);
+            }
+          }}
         >
           {currentAd.mediaType === 'IMAGE' && currentAd.bannerUrl && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -402,9 +218,7 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
             <div className="absolute inset-0 flex items-center justify-center">
               <video
                 ref={(el) => {
-                  if (el) {
-                    videoRefs.current.set(currentAd.adId, el);
-                  }
+                  registerVideoRef(currentAd.adId, el);
                 }}
                 src={currentAd.bannerUrl}
                 className="w-full h-full object-contain"
@@ -412,8 +226,8 @@ const AdCarousel: React.FC<AdCarouselProps> = ({
                 playsInline
                 autoPlay
                 loop={false}
-                onEnded={() => handleVideoEnd(currentAd.adId)}
-                onPlay={() => handleVideoPlay(currentAd.adId)}
+                onEnded={() => handleVideoEnd()}
+                onPlay={() => handleVideoPlay()}
                 onError={(e) => {
                   console.error('Failed to load ad video:', currentAd.bannerUrl);
                   (e.target as HTMLVideoElement).style.display = 'none';
