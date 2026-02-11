@@ -11,10 +11,8 @@ import {
 } from 'lucide-react';
 import NotificationService from '../services/NotificationService';
 import type { Notification } from '../services/NotificationService';
-import { useAuth } from '../context/AuthContext';
 
 const Notifications: React.FC = () => {
-  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'unread'>('all');

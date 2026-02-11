@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { MessageSquare, Users, TrendingUp, Heart, MessageCircle, Share, Plus } from 'lucide-react';
+import { MessageSquare, Users, TrendingUp } from 'lucide-react';
+import CommunityDiscussions from './community/components/CommunityDiscussions';
+import CommunityMentors from './community/components/CommunityMentors';
 
 const Community: React.FC = () => {
   const [activeTab, setActiveTab] = useState('discussions');
@@ -120,7 +122,7 @@ const Community: React.FC = () => {
   ];
 
   type CategoryType = 'startup' | 'marketing' | 'finance' | 'operations' | 'tech' | 'legal' | string;
-  
+
   const getCategoryColor = (category: CategoryType) => {
     const colors: Record<CategoryType, string> = {
       startup: 'bg-blue-100 text-blue-800',
@@ -209,142 +211,17 @@ const Community: React.FC = () => {
 
         <div className="p-6">
           {activeTab === 'discussions' && (
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-                <div className="flex flex-wrap gap-2">
-                  {categories.map(category => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                        selectedCategory === category.id
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-                
-                <button className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2">
-                  <Plus className="w-4 h-4" />
-                  <span>New Discussion</span>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {filteredDiscussions.map(discussion => (
-                  <div key={discussion.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-sm font-medium">{discussion.avatar}</span>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-semibold text-gray-900 hover:text-primary-600 cursor-pointer">
-                              {discussion.title}
-                              {discussion.isHot && (
-                                <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
-                                  Hot
-                                </span>
-                              )}
-                            </h3>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <span className="text-sm text-gray-600">by {discussion.author}</span>
-                              <span className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(discussion.category)}`}>
-                                {categories.find(c => c.id === discussion.category)?.name}
-                              </span>
-                            </div>
-                          </div>
-                          <span className="text-sm text-gray-500">{discussion.timeAgo}</span>
-                        </div>
-                        
-                        <p className="text-gray-600 text-sm mb-3">{discussion.preview}</p>
-                        
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <div className="flex items-center space-x-1">
-                            <MessageCircle className="w-4 h-4" />
-                            <span>{discussion.replies} replies</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Heart className="w-4 h-4" />
-                            <span>{discussion.likes} likes</span>
-                          </div>
-                          <button className="flex items-center space-x-1 hover:text-primary-600">
-                            <Share className="w-4 h-4" />
-                            <span>Share</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <CommunityDiscussions
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              filteredDiscussions={filteredDiscussions}
+              getCategoryColor={getCategoryColor}
+            />
           )}
 
           {activeTab === 'mentorship' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Available Mentors</h3>
-                <button className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
-                  Become a Mentor
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mentors.map(mentor => (
-                  <div key={mentor.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-center space-x-4 mb-4">
-                      <div className="w-12 h-12 bg-primary-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium">{mentor.avatar}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{mentor.name}</h3>
-                        <p className="text-gray-600 text-sm">{mentor.title}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3 mb-4">
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Expertise:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {mentor.expertise.map((skill, index) => (
-                            <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div className="text-sm text-gray-600">
-                        <p>{mentor.experience} experience</p>
-                        <p>{mentor.companies}</p>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-1">
-                          <div className="flex text-yellow-500">
-                            {[...Array(5)].map((_, i) => (
-                              <span key={i} className="text-xs">★</span>
-                            ))}
-                          </div>
-                          <span className="text-gray-600">{mentor.rating}</span>
-                        </div>
-                        <span className="text-gray-600">{mentor.sessions} sessions</span>
-                      </div>
-                    </div>
-                    
-                    <button className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
-                      Book Session
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <CommunityMentors mentors={mentors} />
           )}
         </div>
       </div>

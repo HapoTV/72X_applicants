@@ -1,4 +1,4 @@
-import { UserDiscussionItem } from '../../interfaces/CommunityData';
+import type { UserDiscussionItem } from '../../interfaces/CommunityData';
 
 export const useLocalDiscussions = () => {
   const readLocalDiscussions = (): UserDiscussionItem[] => {

@@ -1,624 +1,86 @@
-import React from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { 
-  ChevronDown, 
-  BarChart3, 
-  MessageCircle, 
-  BookOpen, 
-  ShoppingBag, 
-  AppWindow, 
-  DollarSign, 
-  Video, 
-  Brain, 
-  GraduationCap, 
-  Headphones, 
-  MessagesSquare, 
-  Bell, 
-  Calendar, 
-  CheckSquare, 
-  Clock,
-  ArrowRight,
-  ArrowDown,
-  Briefcase,
-  Sprout,
-  Truck,
-  Factory,
-  Home,
-  Phone
-} from 'lucide-react';
-import reactSvg from "../assets/react.png";
-import { adService } from "../services/AdService";
-import AdRequestModal from "./dashboard/components/AdRequestModal";
-
-import retailImg from "../assets/retail.svg";
-import tourismImg from "../assets/tourism.svg";
-import professionalImg from "../assets/professional.svg";
-import transportImg from "../assets/Transport.svg";
-import manufacturingImg from "../assets/manufacturing.svg";
-import agricultureImg from "../assets/Agriculture.svg";
-import educationImg from "../assets/education.svg";
-import estateImg from "../assets/estate.svg";
-import eventsImg from "../assets/events.svg";
-import financeImg from "../assets/finance.svg";
-import ngoImg from "../assets/NGO.svg";
-import healthcareImg from "../assets/healthcare.svg";
+import React from 'react';
 import 'boxicons';
-const logoUrl = "/Logo2.png";
-const footerLogo = "/Logo3.png";
+import reactSvg from '../assets/react.png';
+import retailImg from '../assets/retail.svg';
+import tourismImg from '../assets/tourism.svg';
+import professionalImg from '../assets/professional.svg';
+import transportImg from '../assets/Transport.svg';
+import manufacturingImg from '../assets/manufacturing.svg';
+import agricultureImg from '../assets/Agriculture.svg';
+import educationImg from '../assets/education.svg';
+import estateImg from '../assets/estate.svg';
+import eventsImg from '../assets/events.svg';
+import financeImg from '../assets/finance.svg';
+import ngoImg from '../assets/NGO.svg';
+import healthcareImg from '../assets/healthcare.svg';
+import AdRequestModal from './dashboard/components/AdRequestModal';
+import { useLandingPage } from './landing/hooks/useLandingPage';
+import LandingHeader from './landing/components/LandingHeader';
+import HeroSection from './landing/components/HeroSection';
+import TrustBar from './landing/components/TrustBar';
+import FeaturesSection from './landing/components/FeaturesSection';
+import AdvertisingSection from './landing/components/AdvertisingSection';
+import AudiencePartnersSection from './landing/components/AudiencePartnersSection';
+import IndustriesSection from './landing/components/IndustriesSection';
+import AppsSection from './landing/components/AppsSection';
+import CommunitySection from './landing/components/CommunitySection';
+import HelpSection from './landing/components/HelpSection';
+import CtaSection from './landing/components/CtaSection';
+import LandingFooter from './landing/components/LandingFooter';
 
 const LandingPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [productDropdownOpen, setProductDropdownOpen] = React.useState(false);
-  const productDropdownRef = React.useRef<HTMLDivElement | null>(null);
-  const [showAllApps, setShowAllApps] = React.useState(false);
-  const [showAdRequestModal, setShowAdRequestModal] = React.useState(false);
-
-  // re-run reveal observer when apps toggle changes
-  React.useEffect(() => {
-    const elements = Array.from(document.querySelectorAll('.reveal-up'));
-    elements.forEach((el) => {
-      const already = el.classList.contains('reveal-visible');
-      if (!already) {
-        const rect = (el as HTMLElement).getBoundingClientRect();
-        if (rect.top < window.innerHeight * 0.95) {
-          el.classList.add('reveal-visible');
-        }
-      }
-    });
-  }, [showAllApps]);
-
-  // Close dropdown when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (productDropdownRef.current && !productDropdownRef.current.contains(event.target as Node)) {
-        setProductDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Ad Request submit (same behavior as dashboard)
-  const handleAdRequestSubmit = async (requestData: {
-    businessName: string;
-    email: string;
-    phone: string;
-    message: string;
-  }) => {
-    try {
-      const userId = localStorage.getItem('userId') || 'anonymous';
-      const userName = localStorage.getItem('fullName') || requestData.businessName;
-      const userEmail = localStorage.getItem('userEmail') || requestData.email;
-      const userPhone = localStorage.getItem('mobileNumber') || requestData.phone;
-      const companyName = localStorage.getItem('companyName') || requestData.businessName;
-      const industry = localStorage.getItem('industry') || 'Not specified';
-      const userPackage = localStorage.getItem('userPackage') || 'Free';
-
-      const subject = `New Advertising Space Request - ${requestData.businessName}`;
-      const body = `
-NEW ADVERTISING SPACE REQUEST
-
-========================================
-BUSINESS DETAILS:
-========================================
-Business Name: ${requestData.businessName}
-Contact Person: ${userName}
-Email: ${userEmail}
-Phone: ${requestData.phone || userPhone}
-Industry: ${industry}
-Package: ${userPackage}
-
-========================================
-USER DETAILS:
-========================================
-User ID: ${userId}
-Company: ${companyName}
-Email (from account): ${localStorage.getItem('userEmail') || 'Not available'}
-Phone (from account): ${localStorage.getItem('mobileNumber') || 'Not available'}
-
-========================================
-ADVERTISING REQUEST:
-========================================
-${requestData.message}
-
-========================================
-REQUEST DETAILS:
-========================================
-Request Date: ${new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', dateStyle: 'full', timeStyle: 'long' })}
-
-========================================
-ACTION REQUIRED:
-========================================
-1. Review this request
-2. Contact the business if needed
-3. Create ad campaign in admin panel
-4. Notify user when ad is live
-
-ADMIN PANEL: ${window.location.origin}/admin/ads
-========================================
-      `;
-
-      const adminEmail = 'admin@hapogroup.co.za';
-      const mailtoLink = `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.location.href = mailtoLink;
-
-      await adService.recordEngagement('ACTION_COMPLETED', 15, 'Requested advertising space');
-
-      setShowAdRequestModal(false);
-      alert('Email client opened. Please send the email to submit your advertising request. Our team will contact you within 24 hours.');
-    } catch (error) {
-      console.error('Error submitting ad request:', error);
-      alert('Failed to open email client. Please contact admin@seventytwox.com directly with your advertising request.');
-    }
-  };
-
-  // Product categories for dropdown
-  const productCategories = [
-    {
-      title: 'APPS',
-      items: [
-        { name: 'Service Desk', icon: MessageCircle, path: '/applications' },
-        { name: 'Inventory Portal', icon: ShoppingBag, path: '/applications' },
-        { name: 'POS System', icon: AppWindow, path: '/applications' },
-        { name: 'See apps', icon: ArrowRight, path: '#apps', isAnchor: true },
-      ]
-    },
-    {
-      title: 'COMMUNICATION',
-      items: [
-        { name: '24/7 Support', icon: Headphones, path: '/support' },
-        { name: 'AI Chatbot', icon: Brain, path: '/chatbot' },
-        { name: 'Community Chat', icon: MessagesSquare, path: '/community' },
-        { name: 'Email/SMS Alerts', icon: Bell, path: '/notifications' },
-      ]
-    },
-    {
-      title: 'GROWTH',
-      items: [
-        { name: 'Business Training', icon: GraduationCap, path: '/learning' },
-        { name: 'Funding Finder', icon: DollarSign, path: '/funding' },
-        { name: 'Mentorship Program', icon: Video, path: '/mentorship' },
-        { name: 'Market Insights', icon: Brain, path: '/analytics' },
-      ]
-    },
-    {
-      title: 'TIME',
-      items: [
-        { name: 'Event Scheduler', icon: Calendar, path: '/schedule' },
-        { name: 'Booking System', icon: Clock, path: '/bookings' },
-        { name: 'Task Deadlines', icon: CheckSquare, path: '/tasks' },
-        { name: 'Meeting Planner', icon: Video, path: '/meetings' },
-      ]
-    },
-    {
-      title: 'MORE',
-      items: [
-        { name: 'Business Templates', icon: BookOpen, path: '/resources' },
-        { name: 'Integration Hub', icon: AppWindow, path: '/integrations' },
-        { name: 'Data Reports', icon: BarChart3, path: '/reports' },
-        { name: 'Supplier Network', icon: ShoppingBag, path: '/marketplace' },
-      ]
-    }
-  ];
-
-  // Close dropdown on click outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (productDropdownRef.current && !productDropdownRef.current.contains(event.target as Node)) {
-        setProductDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Close dropdown on escape key
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setProductDropdownOpen(false);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  const {
+    navigate,
+    productDropdownOpen,
+    setProductDropdownOpen,
+    productDropdownRef,
+    showAllApps,
+    setShowAllApps,
+    showAdRequestModal,
+    setShowAdRequestModal,
+    handleAdRequestSubmit,
+    productCategories,
+    handleProductItemClick,
+    features,
+    activeFeatureIdx,
+    setActiveFeatureIdx,
+    featurePanels,
+    rotatingUsers,
+    userWordIdx,
+    typedHeadline,
+    industryDetails,
+    additionalIndustries,
+    isRetailFlipped,
+    setIsRetailFlipped,
+    isHospitalityFlipped,
+    setIsHospitalityFlipped,
+    isProfessionalFlipped,
+    setIsProfessionalFlipped,
+    isManufacturingFlipped,
+    setIsManufacturingFlipped,
+    isAgricultureFlipped,
+    setIsAgricultureFlipped,
+    isTransportFlipped,
+    setIsTransportFlipped,
+    additionalFlipped,
+    setAdditionalFlipped,
+  } = useLandingPage();
 
   console.log('LandingPage rendered - Product dropdown available');
 
-  const features = [
-    {
-      title: "AI Business Advisor",
-      description: "Get personalized growth recommendations powered by artificial intelligence",
-      icon: <i className="bx bx-chip" style={{color: 'white'}}></i>,
-    },
-    {
-      title: "Multi-language Support",
-      description: "Available in all 11 official South African languages",
-      icon: <i className="bx bx-world" style={{color: 'white'}}></i>,
-    },
-    {
-      title: "Business Management Tools",
-      description: "Inventory, POS, and service desk solutions in one platform",
-      icon: <i className="bx bx-grid-alt" style={{color: 'white', fontSize: '20px'}}></i>,
-    },
-    {
-      title: "Community & Mentorship",
-      description: "Connect with successful entrepreneurs and business experts",
-      icon: <i className="bx bx-support" style={{color: 'white', fontSize: '20px'}}></i>,
-    },
-  ];
-
-  // Industries content rendered in stacked sections below
-  // Removed unused gradientBlue and handleLoginClick
-
-  // Interactive feature cards (tab-style)
-  const [activeFeatureIdx, setActiveFeatureIdx] = React.useState<number>(0);
-  const featurePanels: Array<{ title: string; bullets: string[] } > = [
-    {
-      title: "AI Business Advisor",
-      bullets: [
-        "Personalized growth recommendations",
-        "Surface next best actions based on your data",
-        "Track progress against your goals",
-      ],
-    },
-    {
-      title: "Multi-language Support",
-      bullets: [
-        "Available in 11 South African languages",
-        "Reach customers in their preferred language",
-        "Switch languages seamlessly across the app",
-      ],
-    },
-    {
-      title: "Business Management Tools",
-      bullets: [
-        "Inventory, POS and service desk in one place",
-        "Automations to reduce manual work",
-        "Built for SMEs and township businesses",
-      ],
-    },
-    {
-      title: "Community & Mentorship",
-      bullets: [
-        "Learn from successful entrepreneurs",
-        "Access workshops and mentorship",
-        "Find partners, suppliers and customers",
-      ],
-    },
-  ];
-
-  // Rotating audience words (Entrepreneurs, Organizations, Companies)
-  const rotatingUsers = ["Entrepreneurs", "Organizations", "Companies"];
-  const [userWordIdx, setUserWordIdx] = React.useState<number>(0);
-  React.useEffect(() => {
-    const id = setInterval(() => {
-      setUserWordIdx((i) => (i + 1) % rotatingUsers.length);
-    }, 1800);
-    return () => clearInterval(id);
-  }, []);
-
-  // Industry details with app-style cards
-  const industryDetails = [
-    {
-      title: "Retail & E-commerce",
-      desc: "Transform your retail business with AI-driven inventory management and seamless unified shopping experiences.",
-      points: [
-        "Real-time inventory tracking across all sales channels",
-        "AI-powered demand forecasting to prevent stockouts",
-        "Personalized customer recommendations engine",
-        "Mobile POS with offline capabilities"
-      ],
-      icon: ShoppingBag,
-      color: "#3B82F6"
-    },
-    {
-      title: "Hospitality & Tourism",
-      desc: "Deliver exceptional guest experiences with smart booking and service automation.",
-      points: [
-        "Automated booking confirmations and reminders",
-        "AI-powered dynamic pricing optimization",
-        "Contactless check-in/out solutions",
-        "Automated review management"
-      ],
-      icon: Home,
-      color: "#10B981"
-    },
-    {
-      title: "Professional Services",
-      desc: "Streamline operations and enhance client engagement with intelligent automation.",
-      points: [
-        "Automated appointment scheduling and reminders",
-        "Client portal with secure document sharing",
-        "Time tracking and billing automation",
-        "AI-powered insights for service optimization"
-      ],
-      icon: Briefcase,
-      color: "#8B5CF6"
-    },
-    {
-      title: "Manufacturing",
-      desc: "Optimize production and supply chain with real-time monitoring and predictive maintenance.",
-      points: [
-        "IoT-enabled equipment monitoring",
-        "Predictive maintenance scheduling",
-        "Supply chain visibility and optimization",
-        "Quality control automation"
-      ],
-      icon: Factory,
-      color: "#F59E0B"
-    },
-    {
-      title: "Agriculture",
-      desc: "Modernize farming operations with precision agriculture and market intelligence.",
-      points: [
-        "Soil and crop monitoring with IoT sensors",
-        "Automated irrigation control",
-        "Commodity price tracking and forecasting",
-        "Supply chain optimization for fresh produce"
-      ],
-      icon: Sprout,
-      color: "#22C55E"
-    },
-    {
-      title: "Transport & Logistics",
-      desc: "Optimize fleet operations and enhance delivery efficiency with smart logistics.",
-      points: [
-        "Real-time vehicle tracking and routing",
-        "Automated proof of delivery",
-        "Fuel consumption monitoring",
-        "Predictive maintenance scheduling"
-      ],
-      icon: Truck,
-      color: "#EC4899"
-    }
-    ];
-
-  // Additional industries for secondary strip
-  const additionalIndustries = [
-    {
-      title: "Education & Training",
-      desc: "Manage student data, online classes, assessments, and fee collections in one place."
-    },
-    {
-      title: "Healthcare & Clinics",
-      desc: "Streamline appointments, patient records, billing, and stock of medical supplies."
-    },
-    {
-      title: "Real Estate & Property Management",
-      desc: "Track properties, tenants, maintenance requests, and rental payments efficiently."
-    },
-    {
-      title: "Financial Services & Microfinance",
-      desc: "Handle client onboarding, loan portfolios, repayments, and regulatory reporting."
-    },
-    {
-      title: "Nonprofits & NGOs",
-      desc: "Coordinate projects, donors, funding, and impact reporting in a single system."
-    },
-    {
-      title: "Entertainment & Events",
-      desc: "Organize bookings, ticketing, vendors, and event analytics across venues."
-    }
-  ];
-
-  // Observe elements with 'reveal-up' to add 'reveal-visible' on enter
-  React.useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('reveal-visible');
-          }
-        });
-      },
-      { threshold: 0.01, rootMargin: '0px 0px -10% 0px' }
-    );
-
-    const elements = Array.from(document.querySelectorAll('.reveal-up'));
-    elements.forEach((el) => {
-      observer.observe(el);
-      const rect = (el as HTMLElement).getBoundingClientRect();
-      if (rect.top < window.innerHeight * 0.95) {
-        el.classList.add('reveal-visible');
-      }
-    });
-    return () => observer.disconnect();
-  }, [/* re-evaluate when layout changes */]);
-
-  // Typing effect for the main headline
-  const fullHeadline = "Your business, accelerated!";
-  const [typedHeadline, setTypedHeadline] = React.useState<string>("");
-  React.useEffect(() => {
-    let isCancelled = false;
-
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-    const runTypingLoop = async () => {
-      while (!isCancelled) {
-        for (let i = 1; i <= fullHeadline.length && !isCancelled; i++) {
-          setTypedHeadline(fullHeadline.slice(0, i));
-          await sleep(70);
-        }
-        if (isCancelled) break;
-        await sleep(1200);
-        setTypedHeadline("");
-        await sleep(200);
-      }
-    };
-
-    runTypingLoop();
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
-
-  const [isRetailFlipped, setIsRetailFlipped] = React.useState(false);
-  const [isHospitalityFlipped, setIsHospitalityFlipped] = React.useState(false);
-  const [isProfessionalFlipped, setIsProfessionalFlipped] = React.useState(false);
-  const [isManufacturingFlipped, setIsManufacturingFlipped] = React.useState(false);
-  const [isAgricultureFlipped, setIsAgricultureFlipped] = React.useState(false);
-  const [isTransportFlipped, setIsTransportFlipped] = React.useState(false);
-  const [additionalFlipped, setAdditionalFlipped] = React.useState<boolean[]>(Array(6).fill(false));
-
   return (
     <div className="min-h-screen bg-[#F5F7FA] flex flex-col">
-      {/* Header */}
-      <header className="bg-[#F5F7FA] sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-0">
-          <div className="flex justify-between items-center h-20">
-            {/* Logo and Navigation */}
-            <div className="flex items-center space-x-0">
-              <img 
-                src={logoUrl} 
-                alt="72X Logo" 
-                className="h-16 md:h-20 w-auto"
-                onError={(e) => {
-                  // Fallback in case the image fails to load
-                  (e.target as HTMLImageElement).onerror = null;
-                  (e.target as HTMLImageElement).src = '/logo.png';
-                }}
-              />
-              
-              {/* Navigation */}
-              <nav className="hidden md:flex space-x-8 items-center">
-                <a href="#features" className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors">
-                  Features
-                </a>
-                <a href="#industries" className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors">
-                  Industries
-                </a>
-                
-                {/* Product Dropdown */}
-                <div 
-                  className="relative" 
-                  ref={productDropdownRef}
-                  onMouseEnter={() => setProductDropdownOpen(true)}
-                  onMouseLeave={() => setProductDropdownOpen(false)}
-                >
-                  <button
-                    onClick={() => setProductDropdownOpen(!productDropdownOpen)}
-                    className="flex items-center space-x-1 text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
-                  >
-                    <span>Product</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${productDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  {productDropdownOpen && (
-                    <div 
-                      className="fixed left-0 right-0 mt-2 bg-white shadow-xl z-50 py-8"
-                      onMouseEnter={() => setProductDropdownOpen(true)}
-                      onMouseLeave={() => setProductDropdownOpen(false)}
-                    >
-                      <div className="max-w-7xl mx-auto px-8">
-                        <div className="grid grid-cols-5 gap-8">
-                        {productCategories.map((category, idx) => (
-                          <div key={idx}>
-                            <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
-                              {category.title}
-                            </h3>
-                            <ul className="space-y-2">
-                              {category.items.map((item) => {
-                                // Color scheme based on category
-                                const getIconColor = () => {
-                                  switch(category.title) {
-                                    case 'APPS': return 'text-blue-600 group-hover:text-blue-700';
-                                    case 'COMMUNICATION': return 'text-purple-600 group-hover:text-purple-700';
-                                    case 'GROWTH': return 'text-green-600 group-hover:text-green-700';
-                                    case 'TIME': return 'text-orange-600 group-hover:text-orange-700';
-                                    case 'MORE': return 'text-pink-600 group-hover:text-pink-700';
-                                    default: return 'text-gray-600 group-hover:text-gray-700';
-                                  }
-                                };
-                                
-                                return (
-                                <li key={item.path}>
-                                  <button
-                                    onClick={() => {
-                                      if (item.isAnchor) {
-                                        document.getElementById(item.path.replace('#', ''))?.scrollIntoView({ behavior: 'smooth' });
-                                      } else {
-                                        navigate(item.path);
-                                      }
-                                      setProductDropdownOpen(false);
-                                    }}
-                                    className="flex items-center space-x-2 w-full text-left px-2 py-2 rounded hover:bg-gray-50 transition-colors group"
-                                  >
-                                    <item.icon className={`w-4 h-4 ${getIconColor()}`} />
-                                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{item.name}</span>
-                                  </button>
-                                </li>
-                                );
-                              })}
-                            </ul>
-                          </div>
-                        ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <button onClick={() => navigate('/pricing')} className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors">
-                  Pricing
-                </button>
-              </nav>
-            </div>
+      <LandingHeader
+        navigate={navigate}
+        productDropdownOpen={productDropdownOpen}
+        setProductDropdownOpen={setProductDropdownOpen}
+        productDropdownRef={productDropdownRef}
+        productCategories={productCategories}
+        onProductItemClick={handleProductItemClick}
+      />
 
-            {/* Auth Buttons */}
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={() => navigate('/request-demo')}
-                className="text-gray-700  hover:bg-[#3B82F6] px-0.5 py-0.1 rounded-lg font-semibold text-lg transition-all duration-100  hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
-              >
-                Request demo
-              </button>
-              <button
-                onClick={() => navigate('/login')}
-                className="text-black bg-[#60A5FA] hover:bg-[#3B82F6] px-2 py-1.5 rounded-lg font-semibold text-lg transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                Log in
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
       <main className="flex-1">
-        <section
-          id="features"
-          className="relative bg-center bg-cover "
-          style={{ backgroundAttachment: 'fixed'}}
-        >
-          <div className="absolute inset-0 bg-white" />
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 md:py-40 min-h-[680px] lg:min-h-[580px]">
-            <div className="flex justify-center items-center">
-              <div className="text-blue text-center max-w-3xl">
-                <h1 className="text-5xl sm:text-6xl md:text-6xl font-extrabold leading-tight mb-4 text-black">
-                  {typedHeadline}
-                  <span className="typing-caret align-middle" />
-                </h1>
-                <p className="text-4xl font-semibold mb-4 text-black">72X, the smart partner for your business growth.</p>
-                <p className="mx-auto text-3xl text-black/90 mb-8">
-                  Empowering South African entrepreneurs with AI-driven growth tools, local language support,
-                  interactive learning, and affordable business software tailored for <strong style={{color: '#0b76faff'}}>townships and rural areas</strong>.
-                </p>
-
-                <div className="flex flex-wrap justify-center gap-4">
-                  <button
-                    onClick={() => navigate('/signup')}
-                    className="inline-flex items-center gap-2 bg-[#60A5FA] hover:bg-[#3B82F6] text-white px-6 py-3 rounded-lg font-semibold shadow-md"
-                  >
-                    Get started
-                  </button>
-                  
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        <HeroSection typedHeadline={typedHeadline} onGetStarted={() => navigate('/signup')} />
 
         {/* Ad Request Modal for Landing (same as dashboard) */}
         <AdRequestModal
@@ -628,776 +90,66 @@ ADMIN PANEL: ${window.location.origin}/admin/ads
           language={'en'}
         />
 
-        {/* Trust Bar */}
-        <section className="bg-gray-50 py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-                Trusted by South African Entrepreneurs
-              </p>
-              <div className="flex flex-wrap justify-center items-center gap-8 ">
+        <TrustBar reactSvg={reactSvg} />
 
-                <img src={reactSvg} alt="Trust Badge" className=" object-contain height-1200"style={{height: "400px", width: "700px",}} />
-              </div>
-            </div>
-          </div>
-        </section>
+        <FeaturesSection
+          features={features}
+          activeFeatureIdx={activeFeatureIdx}
+          setActiveFeatureIdx={setActiveFeatureIdx}
+          featurePanels={featurePanels}
+        />
 
-        {/* Features */}
-        <section id="features" className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Everything You Need to Grow</h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Comprehensive tools designed for the unique challenges of South African businesses
-              </p>
-            </div>
+        <AdvertisingSection
+          onRequestAdSpace={() => {
+            const to = 'admin@hapogroup.co.za';
+            const subject = 'Request ad space';
+            window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}`;
+          }}
+        />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {features.map((feature, index) => (
-                <button
-                  key={index}
-                  onClick={() => setActiveFeatureIdx(index)}
-                  className={`text-center group rounded-xl p-4 transition-all ${
-                    activeFeatureIdx === index ? '' : 'bg-transparent'
-                  }`}
-                >
-                  <div
-                    className={`w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-200 ${
-                      activeFeatureIdx === index ? 'bg-[#60A5FA]' : 'bg-[#60A5FA]'
-                    }`}
-                  >
-                    <span className={`text-2xl ${activeFeatureIdx === index ? 'text-[#111827]' : 'text-white'}`}>{feature.icon}</span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800 font-bold mb-2">{feature.title}</h3>
-                  <p className="text-gray-600 font-semibold text-sm leading-relaxed">{feature.description}</p>
-                </button>
-              ))}
-            </div>
+        <AudiencePartnersSection rotatingUsers={rotatingUsers} userWordIdx={userWordIdx} />
 
-            {/* Active feature panel */}
-            <div className="mt-10 bg-[#60A5FA] border border-black/5 rounded-2xl p-6 md:p-8">
-              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{featurePanels[activeFeatureIdx].title}</h3>
-              <ul className="list-disc pl-6 space-y-2 text-gray-800">
-                {featurePanels[activeFeatureIdx].bullets.map((b, i) => (
-                  <li key={i}>{b}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
+        <IndustriesSection
+          industryDetails={industryDetails}
+          additionalIndustries={additionalIndustries}
+          setIsRetailFlipped={setIsRetailFlipped}
+          setIsHospitalityFlipped={setIsHospitalityFlipped}
+          setIsProfessionalFlipped={setIsProfessionalFlipped}
+          setIsManufacturingFlipped={setIsManufacturingFlipped}
+          setIsAgricultureFlipped={setIsAgricultureFlipped}
+          setIsTransportFlipped={setIsTransportFlipped}
+          isRetailFlipped={isRetailFlipped}
+          isHospitalityFlipped={isHospitalityFlipped}
+          isProfessionalFlipped={isProfessionalFlipped}
+          isManufacturingFlipped={isManufacturingFlipped}
+          isAgricultureFlipped={isAgricultureFlipped}
+          isTransportFlipped={isTransportFlipped}
+          additionalFlipped={additionalFlipped}
+          setAdditionalFlipped={setAdditionalFlipped}
+          retailImg={retailImg}
+          tourismImg={tourismImg}
+          professionalImg={professionalImg}
+          manufacturingImg={manufacturingImg}
+          agricultureImg={agricultureImg}
+          transportImg={transportImg}
+          educationImg={educationImg}
+          healthcareImg={healthcareImg}
+          estateImg={estateImg}
+          eventsImg={eventsImg}
+          financeImg={financeImg}
+          ngoImg={ngoImg}
+        />
 
-        <section className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-              <div className="lg:col-span-7">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 font-semibold text-sm border border-blue-100">
-                  <span className="w-2 h-2 rounded-full bg-[#60A5FA]" />
-                  Advertising Space Available
-                </div>
-                <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mt-4 leading-tight">
-                  Advertise your business on 72X
-                </h2>
-                <p className="text-xl text-gray-700 mt-4 max-w-2xl">
-                  Promote your business, products, or services directly to entrepreneurs and business owners.
-                  Tell us about your advertising needs and we’ll help you reach the right audience.
-                </p>
+        <AppsSection showAllApps={showAllApps} setShowAllApps={setShowAllApps} />
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5">
-                    <div className="text-sm font-bold text-gray-900 mb-1">Targeted audience</div>
-                    <div className="text-sm text-gray-700">Reach business owners actively looking for tools and services.</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5">
-                    <div className="text-sm font-bold text-gray-900 mb-1">High visibility</div>
-                    <div className="text-sm text-gray-700">Your ad appears inside the platform dashboard and key areas.</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5">
-                    <div className="text-sm font-bold text-gray-900 mb-1">Flexible campaigns</div>
-                    <div className="text-sm text-gray-700">Run image or video ads with budgets that suit your goals.</div>
-                  </div>
-                </div>
+        <CommunitySection />
 
-                <div className="flex justify-center mt-10">
-                  <button
-                    onClick={() => {
-                      const to = 'admin@hapogroup.co.za';
-                      const subject = 'Request ad space';
-                      window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}`;
-                    }}
-                    className="inline-flex items-center justify-center bg-[#60A5FA] hover:bg-[#3B82F6] text-white px-6 py-3 rounded-md font-semibold text-sm shadow-md transition-colors mx-auto"
-                  >
-                    Request Ad Space
-                  </button>
-                </div>
-              </div>
+        <HelpSection />
 
-              <div className="lg:col-span-5">
-                <div className="rounded-2xl border border-gray-200 shadow-sm overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50">
-                  <div className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-bold text-gray-900">Advertising Space</div>
-                      <div className="text-xs font-semibold text-gray-700 bg-white/70 border border-gray-200 px-3 py-1 rounded-full">Sponsored</div>
-                    </div>
-                    <div className="mt-4 rounded-xl bg-white border border-gray-200 p-4">
-                      <div className="h-40 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                        <div className="text-center px-6">
-                          <div className="text-white text-lg font-extrabold">Your business here</div>
-                          <div className="text-white/90 text-sm mt-1">Promote products, services, and offers</div>
-                          <div className="text-white/90 text-xs mt-3">
-                            Image or video <span className="text-purple-300">•</span> Clickable <span className="text-pink-300">•</span> Trackable
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between">
-                        <div className="text-sm font-semibold text-gray-900">Build trust. Get customers.</div>
-                        <div className="text-xs text-gray-600">72X Ads</div>
-                      </div>
-                      <div className="mt-2 text-sm text-gray-700">
-                        We’ll guide you on creative, targeting, and budget so your ad performs.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Audience + Partners */}
-        <section className="py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-center text-gray-900 leading-tight mb-4">
-              Thousands of <span key={userWordIdx} className="text-[#3B82F6] rotating-word">{rotatingUsers[userWordIdx]}</span>
-              <br className="hidden md:block" />
-              use 72X to grow their business
-            </h2>
-            <p className="text-center text-gray-600 max-w-3xl mx-auto mb-12">
-              From solo founders to established teams, 72X provides the tools, learning, and community to scale faster—without burnout.
-            </p>
-
-            {/* Partner logos/names row */}
-            <div className="flex justify-center items-center gap-12 md:gap-16">
-              <img 
-                src="/StardandBank.png" 
-                alt="Standard Bank" 
-                className="h-16 w-auto object-contain" 
-                style={{ maxWidth: '180px' }} 
-              />
-              <img 
-                src="/COC pic.png" 
-                alt="Chamber of Commerce" 
-                className="h-16 w-auto object-contain" 
-                style={{ maxWidth: '180px' }} 
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Industries Section - Enhanced */}
-        <section id="industries" className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-16">
-              <div className="text-center md:text-left mb-8 md:mb-0">
-                <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                  Transform Your Industry with 72X
-                </h2>
-                <p className="text-xl text-gray-700 max-w-3xl">
-                  Tailored solutions designed to address the unique challenges of South African businesses across all sectors
-                </p>
-              </div>
-              <a 
-                href="#apps" 
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full text-white bg-[#60A5FA] hover:bg-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 whitespace-nowrap"
-              >
-                Jump to Apps
-                <ArrowDown className="ml-2 h-5 w-5" />
-              </a>
-            </div>
-          </div>
-
-          <div className={`overflow-hidden relative h-72 ${
-              isRetailFlipped ||
-              isHospitalityFlipped ||
-              isProfessionalFlipped ||
-              isManufacturingFlipped ||
-              isAgricultureFlipped ||
-              isTransportFlipped
-                ? 'industries-paused'
-                : ''
-            }`}>
-              <div className="flex space-x-6 industry-row-track-1">
-                {industryDetails.map((industry, index) => (
-                  <div 
-                    key={`${industry.title}-track1-${index}`}
-                    className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col min-w-[260px] max-w-xs ${[0,1,2,3,4,5].includes(index) ? 'industry-card' : ''} ${
-                      (index === 0 && isRetailFlipped) ||
-                      (index === 1 && isHospitalityFlipped) ||
-                      (index === 2 && isProfessionalFlipped) ||
-                      (index === 3 && isManufacturingFlipped) ||
-                      (index === 4 && isAgricultureFlipped) ||
-                      (index === 5 && isTransportFlipped)
-                        ? 'industry-card--flipped'
-                        : ''
-                    }`}
-                    onMouseEnter={
-                      index === 0
-                        ? () => setIsRetailFlipped(true)
-                        : index === 1
-                        ? () => setIsHospitalityFlipped(true)
-                        : index === 2
-                        ? () => setIsProfessionalFlipped(true)
-                        : index === 3
-                        ? () => setIsManufacturingFlipped(true)
-                        : index === 4
-                        ? () => setIsAgricultureFlipped(true)
-                        : index === 5
-                        ? () => setIsTransportFlipped(true)
-                        : undefined
-                    }
-                    onMouseLeave={
-                      index === 0
-                        ? () => setIsRetailFlipped(false)
-                        : index === 1
-                        ? () => setIsHospitalityFlipped(false)
-                        : index === 2
-                        ? () => setIsProfessionalFlipped(false)
-                        : index === 3
-                        ? () => setIsManufacturingFlipped(false)
-                        : index === 4
-                        ? () => setIsAgricultureFlipped(false)
-                        : index === 5
-                        ? () => setIsTransportFlipped(false)
-                        : undefined
-                    }
-                  >
-                    {[0,1,2,3,4,5].includes(index) ? (
-                      <div className="p-4 flex-1 flex flex-col industry-card-inner">
-                        <div className="industry-card-face industry-card-face--front">
-                          <div className="w-full h-full flex items-center justify-center">
-                            <img
-                              src={
-                                index === 0
-                                  ? retailImg
-                                  : index === 1
-                                  ? tourismImg
-                                  : index === 2
-                                  ? professionalImg
-                                  : index === 3
-                                  ? manufacturingImg
-                                  : index === 4
-                                  ? agricultureImg
-                                  : transportImg
-                              }
-                              alt={industry.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        </div>
-                        <div className="industry-card-face industry-card-face--back">
-                          <div className="flex flex-col h-full items-center justify-center bg-gray-900 rounded-xl p-4 text-center">
-                            <h3 className="text-lg font-bold text-white mb-3">{industry.title}</h3>
-                            <p className="text-sm text-gray-200 leading-relaxed">{industry.desc}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-4 flex-1 flex flex-col">
-                        <div className="flex items-start space-x-3">
-                          <div 
-                            className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5" 
-                            style={{ backgroundColor: industry.color }}
-                          >
-                            <industry.icon className="w-5 h-5 text-white" />
-                          </div>
-                          <h3 className="text-lg font-bold text-white">{industry.title}</h3>
-                        </div>
-                        
-                        <p className="text-sm text-gray-300 mt-3 mb-4 line-clamp-3">{industry.desc}</p>
-                        
-                        <div className="mt-auto pt-2">
-                          <h4 className="text-xs font-semibold text-[#60A5FA] mb-2 uppercase tracking-wider">Key Features</h4>
-                          <div className="flex flex-wrap gap-1.5">
-                            {industry.points.slice(0, 2).map((point, i) => (
-                              <span 
-                                key={i} 
-                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/50 text-gray-200 border border-gray-600/50 leading-tight"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#60A5FA] mr-1.5 flex-shrink-0"></span>
-                                <span className="line-clamp-1">{point.split(':')[0]}</span>
-                              </span>
-                            ))}
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/30 text-gray-400 border border-gray-600/30">
-                              + More
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex space-x-6 ml-6 industry-row-track-2" aria-hidden="true">
-                {industryDetails.map((industry, index) => (
-                  <div 
-                    key={`${industry.title}-track2-${index}`}
-                    className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col min-w-[260px] max-w-xs ${[0,1,2,3,4,5].includes(index) ? 'industry-card' : ''} ${
-                      (index === 0 && isRetailFlipped) ||
-                      (index === 1 && isHospitalityFlipped) ||
-                      (index === 2 && isProfessionalFlipped) ||
-                      (index === 3 && isManufacturingFlipped) ||
-                      (index === 4 && isAgricultureFlipped) ||
-                      (index === 5 && isTransportFlipped)
-                        ? 'industry-card--flipped'
-                        : ''
-                    }`}
-                    onMouseEnter={
-                      index === 0
-                        ? () => setIsRetailFlipped(true)
-                        : index === 1
-                        ? () => setIsHospitalityFlipped(true)
-                        : index === 2
-                        ? () => setIsProfessionalFlipped(true)
-                        : index === 3
-                        ? () => setIsManufacturingFlipped(true)
-                        : index === 4
-                        ? () => setIsAgricultureFlipped(true)
-                        : index === 5
-                        ? () => setIsTransportFlipped(true)
-                        : undefined
-                    }
-                    onMouseLeave={
-                      index === 0
-                        ? () => setIsRetailFlipped(false)
-                        : index === 1
-                        ? () => setIsHospitalityFlipped(false)
-                        : index === 2
-                        ? () => setIsProfessionalFlipped(false)
-                        : index === 3
-                        ? () => setIsManufacturingFlipped(false)
-                        : index === 4
-                        ? () => setIsAgricultureFlipped(false)
-                        : index === 5
-                        ? () => setIsTransportFlipped(false)
-                        : undefined
-                    }
-                  >
-                    {[0,1,2,3,4,5].includes(index) ? (
-                      <div className="p-4 flex-1 flex flex-col industry-card-inner">
-                        <div className="industry-card-face industry-card-face--front">
-                          <div className="w-full h-full flex items-center justify-center">
-                            <img
-                              src={
-                                index === 0
-                                  ? retailImg
-                                  : index === 1
-                                  ? tourismImg
-                                  : index === 2
-                                  ? professionalImg
-                                  : index === 3
-                                  ? manufacturingImg
-                                  : index === 4
-                                  ? agricultureImg
-                                  : transportImg
-                              }
-                              alt={industry.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        </div>
-                        <div className="industry-card-face industry-card-face--back">
-                          <div className="flex flex-col h-full items-center justify-center bg-gray-900 rounded-xl p-4 text-center">
-                            <h3 className="text-lg font-bold text-white mb-3">{industry.title}</h3>
-                            <p className="text-sm text-gray-200 leading-relaxed">{industry.desc}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-4 flex-1 flex flex-col">
-                        <div className="flex items-start space-x-3">
-                          <div 
-                            className="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5" 
-                            style={{ backgroundColor: industry.color }}
-                          >
-                            <industry.icon className="w-5 h-5 text-white" />
-                          </div>
-                          <h3 className="text-lg font-bold text-white">{industry.title}</h3>
-                        </div>
-                        
-                        <p className="text-sm text-gray-300 mt-3 mb-4 line-clamp-3">{industry.desc}</p>
-                        
-                        <div className="mt-auto pt-2">
-                          <h4 className="text-xs font-semibold text-[#60A5FA] mb-2 uppercase tracking-wider">Key Features</h4>
-                          <div className="flex flex-wrap gap-1.5">
-                            {industry.points.slice(0, 2).map((point, i) => (
-                              <span 
-                                key={i} 
-                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/50 text-gray-200 border border-gray-600/50 leading-tight"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#60A5FA] mr-1.5 flex-shrink-0"></span>
-                                <span className="line-clamp-1">{point.split(':')[0]}</span>
-                              </span>
-                            ))}
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700/30 text-gray-400 border border-gray-600/30">
-                              + More
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Additional industries strip */}
-            <div className="mt-10">
-              <div className={`overflow-hidden relative h-64 ${
-                additionalFlipped.some((v) => v) ? 'industries-paused' : ''
-              }`}>
-                <div className="flex space-x-6 industry-row-track-1">
-                  {additionalIndustries.map((industry, index) => (
-                    <div
-                      key={`${industry.title}-extra-track1-${index}`}
-                      className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col min-w-[260px] max-w-xs industry-card ${additionalFlipped[index] ? 'industry-card--flipped' : ''}`}
-                      onMouseEnter={() =>
-                        setAdditionalFlipped((prev) => {
-                          const next = [...prev];
-                          next[index] = true;
-                          return next;
-                        })
-                      }
-                      onMouseLeave={() =>
-                        setAdditionalFlipped((prev) => {
-                          const next = [...prev];
-                          next[index] = false;
-                          return next;
-                        })
-                      }
-                    >
-                      <div className="p-4 flex-1 flex flex-col industry-card-inner">
-                        <div className="industry-card-face industry-card-face--front">
-                          <div className="w-full h-full flex items-center justify-center">
-                            <img
-                              src={
-                                index === 0
-                                  ? educationImg
-                                  : index === 1
-                                  ? healthcareImg
-                                  : index === 2
-                                  ? estateImg
-                                  : index === 3
-                                  ? financeImg
-                                  : index === 4
-                                  ? ngoImg
-                                  : eventsImg
-                              }
-                              alt={industry.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        </div>
-                        <div className="industry-card-face industry-card-face--back">
-                          <div className="flex flex-col h-full items-center justify-center bg-gray-900 rounded-xl p-4 text-center">
-                            <h3 className="text-lg font-bold text-white mb-3">{industry.title}</h3>
-                            <p className="text-sm text-gray-200 leading-relaxed">{industry.desc}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex space-x-6 ml-6 industry-row-track-2" aria-hidden="true">
-                  {additionalIndustries.map((industry, index) => (
-                    <div
-                      key={`${industry.title}-extra-track2-${index}`}
-                      className={`bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group h-full flex flex-col min-w-[260px] max-w-xs industry-card ${additionalFlipped[index] ? 'industry-card--flipped' : ''}`}
-                      onMouseEnter={() =>
-                        setAdditionalFlipped((prev) => {
-                          const next = [...prev];
-                          next[index] = true;
-                          return next;
-                        })
-                      }
-                      onMouseLeave={() =>
-                        setAdditionalFlipped((prev) => {
-                          const next = [...prev];
-                          next[index] = false;
-                          return next;
-                        })
-                      }
-                    >
-                      <div className="p-4 flex-1 flex flex-col industry-card-inner">
-                        <div className="industry-card-face industry-card-face--front">
-                          <div className="w-full h-full flex items-center justify-center">
-                            <img
-                              src={
-                                index === 0
-                                  ? educationImg
-                                  : index === 1
-                                  ? healthcareImg
-                                  : index === 2
-                                  ? estateImg
-                                  : index === 3
-                                  ? financeImg
-                                  : index === 4
-                                  ? ngoImg
-                                  : eventsImg
-                              }
-                              alt={industry.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        </div>
-                        <div className="industry-card-face industry-card-face--back">
-                          <div className="flex flex-col h-full items-center justify-center bg-gray-900 rounded-xl p-4 text-center">
-                            <h3 className="text-lg font-bold text-white mb-3">{industry.title}</h3>
-                            <p className="text-sm text-gray-200 leading-relaxed">{industry.desc}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 text-center">
-              <h3 className="text-2xl font-bold text-white mb-4">Don't see your industry?</h3>
-              <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
-                Our platform is highly customizable to meet the unique needs of any business. Contact us to discuss a tailored solution for your industry.
-              </p>
-              <button 
-                className="bg-[#60A5FA] hover:bg-[#3B82F6] text-white font-medium py-3 px-8 rounded-lg transition-colors duration-300"
-                onClick={() => {
-                  const to = 'admin@hapogroup.co.za';
-                  const subject = 'Custom solution request';
-                  window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}`;
-                }}
-              >
-                Get a Custom Solution
-              </button>
-            </div>
-        </section>
-
-
-        {/* Apps */}
-        <section id="apps" className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Powerful Business Apps</h2>
-              <p className="text-xl text-gray-050">All the tools you need in one integrated platform</p>
-            </div>
-
-            {(() => {
-              const apps = [
-                { icon: <i className="bx bxs-package" style={{color: 'white'}}></i>, title: "Inventory Management", desc: "Track stock levels, manage suppliers, and automate reordering" },
-                { icon: <i className="bx bx-credit-card" style={{color: 'white'}}></i>, title: "POS System", desc: "Modern point-of-sale with multiple payment options" },
-                { icon: <i className="bx bx-target-lock" style={{color: 'white'}}></i>, title: "AI Business Advisor", desc: "Get personalized growth recommendations and insights" },
-                { icon: <i className="bx bxs-bar-chart-square" style={{color: 'white'}}></i>, title: "Analytics Dashboard", desc: "Real-time business performance tracking and reporting" },
-                { icon: <i className="bx bxs-bell" style={{color: 'white'}}></i>, title: "Service Desk", desc: "Manage customer service and support tickets efficiently" },
-                { icon: <i className="bx bxs-user" style={{color: 'white'}}></i>, title: "CRM", desc: "Build better customer relationships and increase sales" },
-              ];
-
-              return (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative">
-                    {apps.map((app, idx) => (
-                      <div
-                        key={app.title}
-                        className={`bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-all reveal-up ${
-                          !showAllApps && idx >= 3 ? 'opacity-20 pointer-events-none' : ''
-                        }` }
-                        style={{ transitionDelay: `${idx * 120}ms` }}
-                      >
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ background: '#60A5FA' }}>
-                          <span className="text-xl text-white">{app.icon}</span>
-                        </div>
-                        <h3 className="text-xl font-semibold text-blue-500 mb-3">{app.title}</h3>
-                        <p className="text-gray-900">{app.desc}</p>
-                      </div>
-                    ))}
-                    {!showAllApps && (
-                      <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-white to-transparent pointer-events-none hidden md:block" />
-                    )}
-                  </div>
-                  <div className="mt-8 flex justify-center">
-                    <button
-                      onClick={() => setShowAllApps(!showAllApps)}
-                      className="px-6 py-3 rounded-xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-800 font-semibold shadow-sm"
-                    >
-                      {showAllApps ? 'Show fewer apps' : 'Show more apps'}
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </section>
-
-        {/* Community */}
-        <section className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Join Our Growing Community</h2>
-              <p className="text-xl text-gray-600">Connect, learn, and grow with fellow entrepreneurs</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              {[
-                { icon: <i className="bx bxs-user-plus" style={{color: 'white'}}></i> , title: "Network & Connect", desc: "Join thousands of South African entrepreneurs sharing insights and opportunities" },
-                { icon: <i className="bx bxs-graduation" style={{color: 'white'}}></i>, title: "Learn & Grow", desc: "Access exclusive workshops, webinars, and mentorship programs" },
-                { icon: <i className="bx bxs-group" style={{color: 'white'}}></i>, title: "Collaborate", desc: "Find business partners, suppliers, and customers within our community" },
-              ].map((item, i) => (
-                <div key={i} className="text-center">
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#60A5FA' }}>
-                    <span className="text-2xl text-white">{item.icon}</span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">{item.title}</h3>
-                  <p className="text-gray-600">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing moved to dedicated page */}
-
-        {/* Help Section - Modern Design */}
-        <section id="help" className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">We're Here to Help</h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Get the support you need to succeed with our comprehensive help resources and dedicated team
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { 
-                  icon: <BookOpen className="w-6 h-6" />, 
-                  title: "Knowledge Base", 
-                  desc: "Comprehensive guides and documentation to help you get the most out of our platform" 
-                },
-                { 
-                  icon: <Video className="w-6 h-6" />, 
-                  title: "Video Tutorials", 
-                  desc: "Step-by-step video guides for all features and workflows" 
-                },
-                { 
-                  icon: <MessageCircle className="w-6 h-6" />, 
-                  title: "Live Chat", 
-                  desc: "Instant help from our friendly support team, available 24/7" 
-                },
-                { 
-                  icon: <Phone className="w-6 h-6" />, 
-                  title: "Direct Support", 
-                  desc: "Talk directly with our experts for personalized assistance" 
-                },
-              ].map((help, index) => (
-                <div 
-                  key={index} 
-                  className="group bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 hover:border-blue-100"
-                >
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                    {help.icon}
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{help.title}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{help.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="py-20 bg-white">
-          <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">Ready to Grow Your Business?</h2>
-            <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
-              Join thousands of South African entrepreneurs using 72X to scale their businesses
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => navigate('/signup')}
-                className="bg-white text-gray-900 hover:bg-gray-100 px-8 py-4 rounded-lg font-semibold text-lg shadow-lg transition-colors"
-              >
-                Get started
-              </button>
-              <button
-                onClick={() => navigate('/request-demo')}
-                className="bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
-              >
-                Schedule demo
-              </button>
-            </div>
-          </div>
-        </section>
+        <CtaSection onGetStarted={() => navigate('/signup')} onScheduleDemo={() => navigate('/request-demo')} />
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center mb-4">
-                <img 
-                  src={footerLogo} 
-                  alt="72X Logo" 
-                  className="h-24 w-auto"
-                  onError={(e) => {
-                    // Fallback in case the image fails to load
-                    (e.target as HTMLImageElement).onerror = null;
-                    (e.target as HTMLImageElement).src = '/Logo2.png';
-                  }}
-                />
-              </div>
-              <p className="text-gray-300 text-sm">
-                Empowering South African entrepreneurs with AI-driven business tools and localized support.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Product</h4>
-              <ul className="space-y-2 text-sm text-white/90">
-                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#apps" className="hover:text-white transition-colors">Apps</a></li>
-                <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link to="/request-demo" className="hover:text-white transition-colors">Demo</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-sm text-white/90">
-                <li><a href="#industries" className="hover:text-white transition-colors">Industries</a></li>
-                <li><a href="#community" className="hover:text-white transition-colors">Community</a></li>
-                <li><a href="#help" className="hover:text-white transition-colors">Help</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-sm text-white/90">
-                <li><a href="#help" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Learning</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Webinars</a></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <div className="text-white/90 text-sm">© {new Date().getFullYear()} 72X. All rights reserved.</div>
-            <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-white/90 hover:text-white transition-colors text-sm">Privacy</a>
-              <a href="#" className="text-white/90 hover:text-white transition-colors text-sm">Terms</a>
-              <a href="#" className="text-white/90 hover:text-white transition-colors text-sm">Cookies</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 };

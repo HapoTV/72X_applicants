@@ -1,5 +1,6 @@
 // src/pages/AIBusinessAnalyst.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+
 import {
   Brain,
   Send,
@@ -13,112 +14,24 @@ import {
   BarChart,
   Globe,
 } from 'lucide-react';
+import { useAIBusinessAnalyst } from './hooks/useAIBusinessAnalyst';
+import type { AnalysisTypeId } from './hooks/useAIBusinessAnalyst';
 
 const AIBusinessAnalyst: React.FC = () => {
-  const [query, setQuery] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<string | null>(null);
-  const [analysisType, setAnalysisType] = useState('REQUIREMENT_ANALYSIS');
-  const [tokensUsed, setTokensUsed] = useState(0);
-  const [usageStats, setUsageStats] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    query,
+    setQuery,
+    isAnalyzing,
+    analysis,
+    analysisType,
+    setAnalysisType,
+    tokensUsed,
+    usageStats,
+    error,
+    runAnalysis,
+  } = useAIBusinessAnalyst();
 
-  // API base URL - adjust to match your Spring Boot backend
-  const API_BASE = 'http://localhost:8080/api/ai-analyst';
-
-  // Fetch token usage on component mount
-  useEffect(() => {
-    fetchUsageStats();
-  }, []);
-
-  const fetchUsageStats = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/usage`);
-      if (response.ok) {
-        const data = await response.json();
-        setUsageStats(data);
-        setTokensUsed(data.tokensUsed || 0);
-      }
-    } catch (err) {
-      console.error('Failed to fetch usage stats:', err);
-    }
-  };
-
-  const handleAnalyze = async () => {
-    if (!query.trim()) return;
-
-    setIsAnalyzing(true);
-    setError(null);
-
-    console.log('🔍 Sending request to:', `${API_BASE}/analyze`);
-
-    try {
-      const response = await fetch(`${API_BASE}/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: query,
-          analysisType: analysisType,
-        }),
-      });
-
-      console.log('📊 Response status:', response.status);
-      console.log('📊 Response ok?', response.ok);
-
-      // Check if response has content
-      const contentType = response.headers.get('content-type');
-      console.log('📊 Content-Type:', contentType);
-
-      if (!response.ok) {
-        let errorText = await response.text();
-        console.error('❌ Response text:', errorText);
-        throw new Error(`Server error: ${response.status} ${response.statusText}`);
-      }
-
-      if (!contentType || !contentType.includes('application/json')) {
-        let text = await response.text();
-        console.warn('⚠️ Response is not JSON:', text);
-        throw new Error(`Server returned non-JSON: ${text.substring(0, 100)}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Response data:', data);
-
-      if (!data) {
-        throw new Error('Server returned empty response');
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      if (!data.analysis) {
-        throw new Error('Analysis field missing in response');
-      }
-
-      setAnalysis(data.analysis);
-      setTokensUsed(data.totalTokensUsed || data.tokensUsed || 0);
-
-      // Refresh usage stats
-      fetchUsageStats();
-    } catch (err: any) {
-      console.error('💥 Analysis error:', err);
-      setError(err.message);
-
-      // Provide helpful error message
-      if (err.message && err.message.includes('Failed to fetch')) {
-        setError('Cannot connect to backend. Make sure Spring Boot is running on port 8080.');
-      } else if (err.message && err.message.includes('Unexpected end of JSON')) {
-        setError('Backend returned empty response. Check server logs for errors.');
-      }
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const quickPrompts = [
+  const quickPrompts: Array<{ text: string; type: AnalysisTypeId; icon: React.ComponentType<any> }> = [
     {
       text: "Analyze requirements for a mobile banking app",
       type: "REQUIREMENT_ANALYSIS",
@@ -151,7 +64,12 @@ const AIBusinessAnalyst: React.FC = () => {
     },
   ];
 
-  const analysisTypes = [
+  const analysisTypes: Array<{
+    id: AnalysisTypeId;
+    label: string;
+    icon: React.ComponentType<any>;
+    color: string;
+  }> = [
     {
       id: 'REQUIREMENT_ANALYSIS',
       label: 'Requirements',
@@ -190,9 +108,13 @@ const AIBusinessAnalyst: React.FC = () => {
     },
   ];
 
-  const handleQuickPrompt = (text: string, type: string) => {
+  const handleQuickPrompt = (text: string, type: AnalysisTypeId) => {
     setQuery(text);
     setAnalysisType(type);
+  };
+
+  const handleAnalyze = () => {
+    runAnalysis();
   };
 
   const getTypeLabel = (typeId: string) => {

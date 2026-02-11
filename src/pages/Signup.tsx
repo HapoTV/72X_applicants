@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
-import { authService } from '../services/AuthService';
-import type { CreateUserRequest } from '../interfaces/UserData';
+import { useSignup } from './hooks/useSignup';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -21,123 +20,13 @@ const Signup: React.FC = () => {
     businessReference: '',
     acceptTerms: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { isLoading, error, setError, submit } = useSignup();
   const update = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
-
-  const validateForm = (): boolean => {
-    // Clear previous errors
-    setError(null);
-
-    if (!form.firstName.trim()) {
-      setError('First name is required');
-      return false;
-    }
-    if (!form.lastName.trim()) {
-      setError('Last name is required');
-      return false;
-    }
-    if (!form.email.trim()) {
-      setError('Email is required');
-      return false;
-    }
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-    if (!form.phone.trim()) {
-      setError('Contact number is required');
-      return false;
-    }
-    // Phone number validation (allow digits, spaces, dashes, parentheses)
-    const phoneRegex = /^[\d\s\-\(\)\+]{10,15}$/;
-    if (!phoneRegex.test(form.phone.replace(/[^0-9]/g, ''))) {
-      setError('Please enter a valid contact number');
-      return false;
-    }
-    if (!form.companyName.trim()) {
-      setError('Company name is required');
-      return false;
-    }
-    if (!form.industry.trim()) {
-      setError('Industry is required');
-      return false;
-    }
-    if (!form.location.trim()) {
-      setError('Location is required');
-      return false;
-    }
-    if (!form.founded.trim()) {
-      setError('Year founded is required');
-      return false;
-    }
-    // Year validation
-    const currentYear = new Date().getFullYear();
-    const foundedYear = parseInt(form.founded);
-    if (isNaN(foundedYear) || foundedYear < 1800 || foundedYear > currentYear) {
-      setError(`Please enter a valid year between 1800 and ${currentYear}`);
-      return false;
-    }
-    if (!form.employees.trim()) {
-      setError('Number of employees is required');
-      return false;
-    }
-    // Employees validation
-    const employeesNum = parseInt(form.employees.replace(/,/g, ''));
-    if (isNaN(employeesNum) || employeesNum < 1 || employeesNum > 1000000) {
-      setError('Please enter a valid number of employees (1 - 1,000,000)');
-      return false;
-    }
-    if (!form.acceptTerms) {
-      setError('Please accept the terms and conditions');
-      return false;
-    }
-    return true;
-  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Prepare user data for API call
-      const userData: CreateUserRequest = {
-        fullName: `${form.firstName} ${form.lastName}`,
-        email: form.email,
-        mobileNumber: form.phone,
-        companyName: form.companyName,
-        industry: form.industry,
-        location: form.location,
-        founded: form.founded,
-        employees: form.employees,
-        hasReference: form.hasBankReference,
-        businessReference: form.businessReference || undefined,
-        role: 'USER',
-        status: 'PENDING_PASSWORD'
-      };
-
-      console.log("📝 Creating user with data:", userData);
-      
-      // Call the API to create user
-      await authService.createUser(userData);
-      
-      console.log("✅ User created, navigating to password page");
-      
-      // Navigate to create password page
-      navigate('/create-password');
-    } catch (err: any) {
-      console.error("❌ Signup error:", err);
-      setError(err.message || 'Failed to create account. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    await submit(form as any);
   };
 
   // Industry options
