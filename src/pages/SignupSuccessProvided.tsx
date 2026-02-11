@@ -78,10 +78,6 @@ const SignupSuccessProvided: React.FC = () => {
   }, []);
 
   const resendVerification = async () => {
-    if (!email) {
-      setMessage('Email address not found. Please return to signup.');
-      return;
-    }
     if (!supabase) {
       setMessage('Verification service unavailable. Please try again later.');
       return;
@@ -89,10 +85,23 @@ const SignupSuccessProvided: React.FC = () => {
     setSending(true);
     setMessage(null);
     try {
+      let effectiveEmail = email;
+      if (!effectiveEmail) {
+        const { data, error } = await supabase.auth.getUser();
+        if (!error) {
+          effectiveEmail = data.user?.email || '';
+        }
+      }
+
+      if (!effectiveEmail) {
+        setMessage('Email address not found. Please return to signup.');
+        return;
+      }
+
       const emailRedirectTo = `${window.location.origin}/signup/success/provided`;
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email,
+        email: effectiveEmail,
         options: { emailRedirectTo }
       });
       if (error) throw error;
@@ -122,7 +131,7 @@ const SignupSuccessProvided: React.FC = () => {
           <p className="text-gray-800 font-medium mb-2">Once your email is verified, you’ll be able to:</p>
           <ul className="list-disc pl-5 space-y-1 text-gray-700">
             <li>Choose the package you want</li>
-            <li>Continue to payment</li>
+            <li>Continue to login</li>
             <li>Access your account</li>
           </ul>
           <p className="text-gray-700 mt-4">
@@ -148,7 +157,7 @@ const SignupSuccessProvided: React.FC = () => {
           <button
             type="button"
             onClick={resendVerification}
-            disabled={sending || !email}
+            disabled={sending}
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
           >
             {sending ? 'Sending...' : 'Resend verification email'}
@@ -160,7 +169,7 @@ const SignupSuccessProvided: React.FC = () => {
             <button
               onClick={() => {
                 if (!isVerified) return;
-                navigate('/select-package');
+                navigate('/login');
               }}
               disabled={!isVerified}
               className={`px-5 py-2.5 rounded-lg transition-colors ${
@@ -169,7 +178,7 @@ const SignupSuccessProvided: React.FC = () => {
                   : 'bg-gray-200 text-gray-500 cursor-not-allowed'
               }`}
             >
-              Continue to payment
+              Continue to login
             </button>
 
             {!isVerified && (
