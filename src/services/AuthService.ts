@@ -10,9 +10,12 @@ import type {
   CreateUserResponse 
 } from '../interfaces/UserData';
 
-// Create a separate axios instance for public endpoints (no auth required)
+// Base URL for public axios (no auth required)
+const API_URL = 'http://localhost:8080/api';
+
+// Separate axios instance for public endpoints
 const publicAxios = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -91,63 +94,44 @@ class AuthService {
   }
 
   /**
-   * Login user or admin - NOW RETURNS LoginResponse WITH TOKEN
+   * Login user or admin.
+   *
+   * Note: Do NOT assume a token is always returned immediately.
+   * For OTP / two-factor flows, the backend may first respond with
+   * requiresOtpVerification/ requiresTwoFactor flags and only
+   * return a token after OTP verification. Token storage and
+   * redirects are handled by the Login page (completeLogin).
    */
   async login(loginData: LoginRequest): Promise<LoginResponse> {
     try {
       console.log("🔐 Attempting login...", loginData);
       const response = await axiosClient.post('/authentication/login', loginData);
-      
+
       const loginResponse: LoginResponse = response.data;
       console.log("✅ Login response received:", {
         ...loginResponse,
         token: loginResponse.token ? "***MASKED***" : undefined,
         status: loginResponse.status,
-        requiresPackageSelection: loginResponse.requiresPackageSelection
+        requiresPackageSelection: loginResponse.requiresPackageSelection,
+        requiresOtpVerification: loginResponse.requiresOtpVerification,
+        requiresTwoFactor: loginResponse.requiresTwoFactor
       });
-      
-      if (!loginResponse.token) {
-        throw new Error("No authentication token received from server");
-      }
-      
-      // Store token and user data
-      localStorage.setItem('authToken', loginResponse.token);
-      
-      // Construct user object from response
-      const user: User = {
-        userId: loginResponse.userId,
-        fullName: loginResponse.fullName,
-        email: loginResponse.email,
-        role: loginResponse.role,
-        status: loginResponse.status || 'ACTIVE', // Use status from response
-        businessReference: loginResponse.businessReference,
-        companyName: loginResponse.companyName,
-        profileImageUrl: loginResponse.profileImageUrl
-      };
-      
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('userStatus', loginResponse.status || 'ACTIVE');
-      
-      // Store if package selection is required
-      if (loginResponse.requiresPackageSelection) {
-        localStorage.setItem('requiresPackageSelection', 'true');
-      } else {
-        localStorage.removeItem('requiresPackageSelection');
-      }
-      
+
+      // Do NOT store token or user here; let the caller decide
+      // based on whether OTP verification is required.
       return loginResponse;
     } catch (error: any) {
       console.error('❌ Login error details:', error);
-      
+
       let errorMessage = 'Login failed. Please check your credentials.';
       if (error.response?.data) {
-        errorMessage = typeof error.response.data === 'string' 
-          ? error.response.data 
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
           : error.response.data.message || errorMessage;
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       throw new Error(errorMessage);
     }
   }
@@ -159,16 +143,16 @@ class AuthService {
     try {
       const response = await axiosClient.get('/users/me');
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Get current user error:', error);
-      
+
       // If unauthorized, clear token and redirect
       if (error.response?.status === 401) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         window.location.href = '/login';
       }
-      
+
       throw new Error('Failed to fetch user profile.');
     }
   }
@@ -322,6 +306,38 @@ class AuthService {
   }
 
   /**
+   * OTP verification (from demo branch)
+   */
+  async verifyOtp(verifyOtpRequest: any): Promise<LoginResponse> {
+    try {
+      const response = await axios.post(`${API_URL}/authentication/verify-otp`, verifyOtpRequest);
+      return response.data;
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resend OTP (from demo branch)
+   */
+  async resendOtp(resendOtpRequest: any): Promise<void> {
+    try {
+      await axios.post(`${API_URL}/authentication/resend-otp`, resendOtpRequest);
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Set default Authorization header for axios (from demo branch)
+   */
+  setAxiosAuthHeader(token: string): void {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  }
+
+  /**
    * Logout user
    */
   logout(): void {
@@ -365,6 +381,4 @@ class AuthService {
   }
 }
 
-// Export as singleton instance
 export const authService = new AuthService();
-export default authService;

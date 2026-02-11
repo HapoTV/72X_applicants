@@ -1,10 +1,11 @@
-// src/pages/Login.tsx
+// src/pages/Login.tsx - UPDATED FOR OTP VERIFICATION
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2 } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
-import type { LoginResponse } from '../interfaces/UserData';
+import type { LoginRequest, LoginResponse, User } from '../interfaces/UserData';
+
 import Logo from '../assets/Logo.svg';
 
 const Login: React.FC = () => {
@@ -33,39 +34,89 @@ const Login: React.FC = () => {
 
         try {
             console.log("🚀 Starting login process...");
-            
-            const loginRequest = {
+
+            const loginRequest: LoginRequest = {
                 email: formData.email,
                 password: formData.password,
                 businessReference: loginType === 'user' ? formData.businessReference : undefined,
-                loginType: loginType
+                loginType
             };
 
-            // ✅ Get REAL token from backend
-            const loginResponse: LoginResponse = await authService.login(loginRequest);
-            
-            console.log("✅ Login successful, storing token...");
-            
-            // ✅ Store REAL JWT token from backend
-            localStorage.setItem('authToken', loginResponse.token);
+            console.log("🔑 Calling login endpoint...");
+            const loginResponse = await authService.login(loginRequest);
+
+            console.log("✅ Login response received:", loginResponse);
+
+            const requiresOtp =
+                loginResponse.requiresOtpVerification === true ||
+                loginResponse.requiresTwoFactor === true;
+
+            console.log("🔍 requiresOtp check result:", requiresOtp);
+
+            if (requiresOtp) {
+                console.log("📱 OTP verification required, redirecting...");
+                navigate('/verify-otp', {
+                    state: {
+                        email: formData.email,
+                        loginType,
+                        businessReference: loginType === 'user' ? formData.businessReference : undefined,
+                        userId: loginResponse.userId,
+                        requiresOtpVerification: true,
+                        otpCode: loginResponse.otpCode
+                    }
+                });
+                return;
+            }
+
+            // No OTP required, complete login immediately
+            console.log("✅ No OTP required, completing login...");
+            await completeLogin(loginResponse);
+        } catch (error: any) {
+            console.error('❌ Login error:', error);
+            console.error('❌ Error response:', (error as any).response?.data);
+            console.error('❌ Error status:', (error as any).response?.status);
+
+            let message = error.message || 'An error occurred during login. Please try again.';
+
+            if (message.includes('Network Error') || message.includes('Cannot connect')) {
+                message = 'Cannot connect to server. Please check if the backend is running.';
+            } else if (message.includes('Invalid credentials')) {
+                message = 'Invalid email or password. Please try again.';
+            } else if (message.includes('Business reference is required')) {
+                message = 'Business reference is required for user login.';
+            }
+
+            setErrorMessage(message);
+            setIsLoading(false);
+        }
+    };
+
+    const completeLogin = async (loginResponse: LoginResponse) => {
+        try {
+            // Store auth info permanently
+            if (loginResponse.token) {
+                localStorage.setItem('authToken', loginResponse.token);
+                authService.setAxiosAuthHeader(loginResponse.token);
+            }
+
             localStorage.setItem('userType', loginType);
             localStorage.setItem('userEmail', loginResponse.email);
             localStorage.setItem('userId', loginResponse.userId);
-            localStorage.setItem('userRole', loginResponse.role);
-            localStorage.setItem('fullName', loginResponse.fullName);
-            
-            // 🔴 CRITICAL: Store user status from backend response
+            localStorage.setItem('userRole', loginResponse.role || '');
+            localStorage.setItem('fullName', loginResponse.fullName || '');
+
+            // Store user status from backend response
             if (loginResponse.status) {
                 localStorage.setItem('userStatus', loginResponse.status);
                 console.log('📋 Backend user status:', loginResponse.status);
             }
-            
+
             if (loginResponse.businessReference) {
                 localStorage.setItem('businessReference', loginResponse.businessReference);
             }
-            
+
             // Store user object for AuthContext
-            const userData = {
+            const userData: User = {
                 userId: loginResponse.userId,
                 fullName: loginResponse.fullName,
                 email: loginResponse.email,
@@ -78,52 +129,52 @@ const Login: React.FC = () => {
 
             // Update auth context
             login(userData);
-            
-            console.log("🎉 Login complete! Token:", loginResponse.token.substring(0, 30) + "...");
+
+            console.log(
+                "🎉 Login complete! Token:",
+                loginResponse.token ? loginResponse.token.substring(0, 30) + "..." : 'none'
+            );
             console.log("📊 Post-login status check:", {
                 status: loginResponse.status,
                 isAuthenticated: true
             });
-            
+
             // Delay redirect slightly to ensure localStorage is updated
-            // In the handleLogin function, after successful login:
             setTimeout(() => {
-            if (loginType === 'admin') {
-                window.location.href = '/admin/dashboard/overview';
-            } else {
-                // Check user status and redirect accordingly
-                const userStatus = loginResponse.status || localStorage.getItem('userStatus');
-                const selectedPackage = localStorage.getItem('selectedPackage');
-                
-                console.log('🔍 Post-login redirection check:', {
-                userStatus,
-                selectedPackage,
-                loginType
-                });
-                
-                if (userStatus === 'PENDING_PACKAGE') {
-                console.log('📦 User needs package selection, redirecting to /select-package');
-                window.location.href = '/select-package';
-                } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
-                console.log('💳 User needs payment for selected package, redirecting to /payments/new');
-                window.location.href = '/payments/new';
-                } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
-                console.log('⚠️ User PENDING_PAYMENT but no package selected, redirecting to package selection');
-                window.location.href = '/select-package';
+                if (loginType === 'admin') {
+                    window.location.href = '/admin/dashboard/overview';
                 } else {
-                console.log('🏠 User is active, going to dashboard');
-                window.location.href = '/dashboard/overview';
+                    // Check user status and redirect accordingly
+                    const userStatus = loginResponse.status || localStorage.getItem('userStatus');
+                    const selectedPackage = localStorage.getItem('selectedPackage');
+
+                    console.log('🔍 Post-login redirection check:', {
+                        userStatus,
+                        selectedPackage,
+                        loginType
+                    });
+
+                    if (userStatus === 'PENDING_PACKAGE') {
+                        console.log('📦 User needs package selection, redirecting to /select-package');
+                        window.location.href = '/select-package';
+                    } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
+                        console.log('💳 User needs payment for selected package, redirecting to /payments/new');
+                        window.location.href = '/payments/new';
+                    } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
+                        console.log('⚠️ User PENDING_PAYMENT but no package selected, redirecting to package selection');
+                        window.location.href = '/select-package';
+                    } else {
+                        console.log('🏠 User is active, going to dashboard');
+                        window.location.href = '/dashboard/overview';
+                    }
                 }
-            }
             }, 100);
 
-
-            
         } catch (error: any) {
-            console.error('❌ Login error:', error);
-            
+            console.error('❌ Login error in completeLogin:', error);
+
             let message = error.message || 'An error occurred during login. Please try again.';
-            
+
             if (message.includes('Network Error') || message.includes('Cannot connect')) {
                 message = 'Cannot connect to server. Please check if the backend is running.';
             } else if (message.includes('Invalid credentials')) {
@@ -131,9 +182,9 @@ const Login: React.FC = () => {
             } else if (message.includes('Business reference is required')) {
                 message = 'Business reference is required for user login.';
             }
-            
+
             setErrorMessage(message);
-            
+
         } finally {
             setIsLoading(false);
         }

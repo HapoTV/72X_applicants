@@ -1,8 +1,11 @@
-// src/interfaces/UserData.ts
 export interface User {
+  // Core identity
   userId: string;
-  fullName: string;
   email: string;
+  role: string;
+
+  // Profile / business details
+  fullName?: string;
   mobileNumber?: string;
   businessReference?: string;
   hasReference?: boolean;
@@ -12,10 +15,14 @@ export interface User {
   founded?: string;
   employees?: string;
   profileImageUrl?: string;
-  role: string;
-  status: string;
+
+  // Account status & security
+  status?: string;
   createdAt?: string;
   updatedAt?: string;
+  token?: string;
+  requiresTwoFactor?: boolean;
+  twoFactorEnabled?: boolean;
 }
 
 export interface CreateUserRequest {
@@ -47,11 +54,10 @@ export interface CreateUserResponse {
 }
 
 export interface LoginRequest {
-  email: string;
-  password: string;
-  businessReference?: string;
-  hasReference?: boolean;
-  loginType: 'user' | 'admin';
+    email: string;
+    password: string;
+    businessReference?: string;
+    loginType: 'user' | 'admin';
 }
 
 export interface LoginResponse {
@@ -66,6 +72,11 @@ export interface LoginResponse {
   companyName?: string;
   status?: string;
   requiresPackageSelection?: boolean;
+
+  // OTP / 2FA flags from demo branch
+  requiresOtpVerification?: boolean;
+  requiresTwoFactor?: boolean;
+  otpCode?: string; // for dev/testing only
 }
 
 export interface UserFormData {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Search, Moon, Sun, Settings, LogOut, User, Bell } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -16,6 +17,7 @@ interface HeaderProps {
 }
 
 export function Header({ user, onSearch, onSignOut, notificationCount = 0 }: HeaderProps) {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const { theme, toggleTheme } = useTheme()
 
@@ -63,7 +65,13 @@ export function Header({ user, onSearch, onSignOut, notificationCount = 0 }: Hea
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative dark:text-dark-text">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative dark:text-dark-text"
+            onClick={() => navigate('/notifications')}
+            title="View notifications"
+          >
             <Bell className="h-5 w-5" />
             {notificationCount > 0 && (
               <Badge 

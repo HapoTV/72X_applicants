@@ -3,12 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   Bell, 
   Trash2, 
-  Archive, 
   CheckCircle, 
   AlertCircle, 
   Info,
   Clock,
-  Users,
   Globe
 } from 'lucide-react';
 import NotificationService from '../services/NotificationService';
@@ -228,7 +226,9 @@ const Notifications: React.FC = () => {
                           {notification.title}
                         </h3>
                         {!notification.userId && (
-                          <Globe className="w-4 h-4 text-gray-400" title="Broadcast Notification" />
+                          <span title="Broadcast Notification">
+                            <Globe className="w-4 h-4 text-gray-400" />
+                          </span>
                         )}
                       </div>
                       <p className="text-gray-600 text-sm">

@@ -1,23 +1,7 @@
 // src/context/AuthContext.tsx
 import { createContext, useState, useContext, useEffect } from "react";
-import type {ReactNode} from "react";
-
-interface User {
-  userId: string;
-  fullName: string;
-  email: string;
-  role: string;
-  status: string;
-  businessReference?: string;
-  companyName?: string;
-  industry?: string;
-  location?: string;
-  founded?: string;
-  employees?: string;
-  profileImageUrl?: string;
-  userPackage?: string;
-  mobileNumber?: string;
-}
+import type { ReactNode } from "react";
+import type { User } from "../interfaces/UserData";
 
 interface AuthContextType {
   user: User | null;
@@ -27,20 +11,27 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   token: string | null;
+  tempSessionToken: string | null;
+  setTempSessionToken: (token: string | null) => void;
+  twoFactorEnabled: boolean;
+  setTwoFactorEnabled: (enabled: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => {
-    // Load user from localStorage on initial render
     const storedUser = localStorage.getItem("user");
     return storedUser ? JSON.parse(storedUser) : null;
   });
-  
+
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem("authToken");
   });
+
+  // Used for OTP / temporary sessions
+  const [tempSessionToken, setTempSessionToken] = useState<string | null>(null);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   const login = (userData: User) => {
     localStorage.setItem("user", JSON.stringify(userData));
@@ -60,6 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     setUser(null);
     setToken(null);
+    setTempSessionToken(null);
+    setTwoFactorEnabled(false);
     
     // Redirect to login
     window.location.href = "/login";
@@ -107,15 +100,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      logout,
-      updateUserStatus, 
-      isAuthenticated, 
-      isAdmin,
-      token 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        updateUserStatus,
+        isAuthenticated,
+        isAdmin,
+        token,
+        tempSessionToken,
+        setTempSessionToken,
+        twoFactorEnabled,
+        setTwoFactorEnabled,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

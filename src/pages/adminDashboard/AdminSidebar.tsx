@@ -1,22 +1,37 @@
 // src/components/admin/AdminSidebar.tsx
-import { 
-    Users, 
-    Calendar, 
-    BookOpen, 
-    Handshake, 
-    DollarSign,
-    User,
-    Megaphone,
-    ShieldAlert,
-    CreditCard,
-    BarChart3,
-    Settings
+import {
+	Users,
+	Calendar,
+	BookOpen,
+	Handshake,
+	DollarSign,
+	User,
+	Megaphone,
+	ShieldAlert,
+	CreditCard,
+	BarChart3,
+	Settings,
+	Bell,
 } from 'lucide-react';
+
 import { useNavigate, useLocation } from 'react-router-dom';
 
+export type AdminTab =
+	| 'applicants'
+	| 'events'
+	| 'learning'
+	| 'mentorship'
+	| 'funding'
+	| 'ad'
+	| 'payments'
+	| 'analytics'
+	| 'monitoring'
+	| 'profile'
+	| 'notifications';
+
 interface AdminSidebarProps {
-    activeTab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile' | 'monitoring' | 'payments' | 'analytics';
-    onTabChange: (tab: 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'monitoring' | 'profile' | 'payments' | 'analytics') => void;
+	activeTab: AdminTab;
+	onTabChange: (tab: AdminTab) => void;
 }
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
@@ -24,28 +39,28 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     const location = useLocation();
 
     const menuItems = [
-        { id: 'applicants' as const, label: 'Applicants', icon: Users },
-        { id: 'ad' as const, label: 'Ads', icon: Megaphone },
-        { id: 'events' as const, label: 'Events', icon: Calendar },
-        { id: 'learning' as const, label: 'Learning Material', icon: BookOpen },
-        { id: 'mentorship' as const, label: 'Mentorship', icon: Handshake },
-        { id: 'funding' as const, label: 'Funding', icon: DollarSign },
-        { id: 'payments' as const, label: 'Payments', icon: CreditCard },
-        { id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
-        { id: 'monitoring' as const, label: 'Monitoring', icon: ShieldAlert },
-        { id: 'profile' as const, label: 'Profile', icon: User },
-    ];
+		{ id: 'applicants' as const, label: 'Applicants', icon: Users },
+		{ id: 'ad' as const, label: 'Ads', icon: Megaphone },
+		{ id: 'events' as const, label: 'Events', icon: Calendar },
+		{ id: 'learning' as const, label: 'Learning Material', icon: BookOpen },
+		{ id: 'mentorship' as const, label: 'Mentorship', icon: Handshake },
+		{ id: 'funding' as const, label: 'Funding', icon: DollarSign },
+		{ id: 'payments' as const, label: 'Payments', icon: CreditCard },
+		{ id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
+		{ id: 'monitoring' as const, label: 'Monitoring', icon: ShieldAlert },
+		{ id: 'profile' as const, label: 'Profile', icon: User },
+	];
 
     const handleTabClick = (tabId: string) => {
-        if (tabId === 'payments') {
-            navigate('/admin/payments');
-        } else if (tabId === 'analytics') {
-            navigate('/admin/analytics');
-        } else {
-            onTabChange(tabId as any);
-            navigate(`/admin/dashboard/${tabId}`);
-        }
-    };
+		if (tabId === 'payments') {
+			navigate('/admin/payments');
+		} else if (tabId === 'analytics') {
+			navigate('/admin/analytics');
+		} else {
+			onTabChange(tabId as AdminTab);
+			navigate(`/admin/dashboard/${tabId}`);
+		}
+	};
 
     const isActive = (tabId: string) => {
         if (tabId === 'payments') {
@@ -87,6 +102,19 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                         </button>
                     );
                 })}
+                
+                {/* Notifications Management */}
+                <button 
+                    onClick={() => onTabChange('notifications')} 
+                    className={`w-full text-left px-3 py-3 rounded-lg flex items-center space-x-3 transition-colors border-t border-gray-200 mt-4 pt-4 ${
+                        activeTab === 'notifications' 
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                            : 'hover:bg-gray-50 text-gray-700'
+                    }`}
+                >
+                    <Bell className={`w-5 h-5 ${activeTab === 'notifications' ? 'text-blue-600' : 'text-gray-500'}`} />
+                    <span className="font-medium">Notifications</span>
+                </button>
             </nav>
 
             {/* Bottom Section */}

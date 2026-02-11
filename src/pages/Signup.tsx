@@ -126,7 +126,7 @@ const Signup: React.FC = () => {
       console.log("📝 Creating user with data:", userData);
       
       // Call the API to create user
-      const createdUser = await authService.createUser(userData);
+      await authService.createUser(userData);
       
       console.log("✅ User created, navigating to password page");
       

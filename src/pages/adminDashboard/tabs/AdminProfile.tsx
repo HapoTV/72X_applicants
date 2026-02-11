@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building } from 'lucide-react';
 import { authService } from '../../../services/AuthService';
 import { useAuth } from '../../../context/AuthContext';
-import type { User as UserType, UserFormData } from '../../../interfaces/UserData';
+import type { UserFormData } from '../../../interfaces/UserData';
 
 const AdminProfile: React.FC = () => {
     const { user, login } = useAuth();

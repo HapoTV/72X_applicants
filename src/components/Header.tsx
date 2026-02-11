@@ -137,6 +137,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const index = useMemo(
     () => [
       { title: 'Dashboard', path: '/', keywords: ['home', 'overview', 'metrics'] },
+      { title: 'Notifications', path: '/notifications', keywords: ['alerts', 'messages', 'updates', 'bell'] },
       { title: 'Schedule', path: '/schedule', keywords: ['calendar', 'events'] },
       { title: 'Learning', path: '/learning', keywords: ['modules', 'courses'] },
       { title: 'Community', path: '/community', keywords: ['discussions', 'networking', 'mentorship'] },
