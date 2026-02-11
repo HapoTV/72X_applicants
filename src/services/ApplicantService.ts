@@ -2,6 +2,7 @@
 import axiosClient from '../api/axiosClient';
 import type {
   Application,
+  ApplicationStatus,
   CreateApplicationRequest,
 } from '../interfaces/ApplicantData';
 
@@ -130,19 +131,20 @@ class ApplicationService {
   async updateApplicationStatus(
     applicationId: string,
 
-    status: string,
+    status: ApplicationStatus,
     reviewNotes?: string
   ): Promise<Application> {
     try {
       this.ensureAuthHeader();
-      const params = new URLSearchParams();
-      params.append('status', status);
-      if (reviewNotes) {
-        params.append('reviewNotes', reviewNotes);
-      }
-
       const response = await axiosClient.put<Application>(
-        `/applications/${applicationId}/status?${params.toString()}`,
+        `/applications/${applicationId}/status`,
+        null,
+        {
+          params: {
+            status,
+            ...(reviewNotes ? { reviewNotes } : {}),
+          },
+        },
       );
       return response.data;
     } catch (error: any) {

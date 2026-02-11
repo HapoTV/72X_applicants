@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import { applicationService } from '../../../services/ApplicantService';
+
+import type { Application as ApiApplication, ApplicationStatus } from '../../../interfaces/ApplicantData';
 
 interface Application {
     id: string;
@@ -53,14 +55,14 @@ export default function ApplicantsTab() {
     const fetchApplications = async () => {
         try {
             setLoading(true);
-            const response = await axiosClient.get('/applications/all');
+            const apiApplications = await applicationService.getAllApplications();
             // Transform API response to match frontend interface
-            const transformedApplications: Application[] = response.data.map((app: any) => ({
+            const transformedApplications: Application[] = apiApplications.map((app: ApiApplication) => ({
                 id: app.applicationId,
                 referenceNumber: app.applicationNumber,
-                businessName: app.companyName || app.userFullName || 'N/A',
+                businessName: app.userFullName || 'N/A',
                 businessOwner: app.userFullName || 'N/A',
-                package: app.userPackage || 'startup',
+                package: 'startup',
                 submitted: new Date(app.submittedAt).toLocaleDateString(),
                 actions: 'view',
                 status: mapStatus(app.status),
@@ -87,14 +89,13 @@ export default function ApplicantsTab() {
         }
     };
 
-    const updateApplicationStatus = async (applicationId: string, status: string, reviewNotes?: string) => {
+    const updateApplicationStatus = async (applicationId: string, status: ApplicationStatus, reviewNotes?: string) => {
         try {
-            await axiosClient.put(`/applications/${applicationId}/status`, null, {
-                params: { 
-                    status, 
-                    reviewNotes: reviewNotes || `Status updated to ${status}` 
-                }
-            });
+            await applicationService.updateApplicationStatus(
+                applicationId,
+                status,
+                reviewNotes || `Status updated to ${status}`
+            );
             fetchApplications(); // Refresh the list
         } catch (error) {
             console.error('Error updating application status:', error);

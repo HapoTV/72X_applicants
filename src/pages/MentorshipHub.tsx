@@ -2,29 +2,20 @@
 import React, { useState } from 'react';
 import FindMentor from './mentorship/FindMentor';
 import PeerSupportGroups from './mentorship/PeerSupportGroups';
-import MyConnections from './MyConnections';
-import ChatPage from './mentorship/ChatPage';
 import MentorChatPage from './mentorship/MentorChatPage';
 import GroupChatPage from './mentorship/GroupChatPage';
 
 const MentorshipHub: React.FC = () => {
   const [activeTab, setActiveTab] = useState('find-mentor');
-  const [showChat, setShowChat] = useState(false);
   const [showMentorChat, setShowMentorChat] = useState(false);
   const [showGroupChat, setShowGroupChat] = useState(false);
-  
-  const [currentChatDetails, setCurrentChatDetails] = useState<{
-    otherUserId: string;
-    otherUserName: string;
-    otherUserEmail: string;
-  } | null>(null);
-  
+
   const [currentMentorChatDetails, setCurrentMentorChatDetails] = useState<{
     mentorId: string;
     mentorName: string;
     mentorEmail?: string;
   } | null>(null);
-  
+
   const [currentGroupChatDetails, setCurrentGroupChatDetails] = useState<{
     groupId: string;
     groupName: string;
@@ -33,7 +24,6 @@ const MentorshipHub: React.FC = () => {
   const tabs = [
     { id: 'find-mentor', name: 'Find Mentor' },
     { id: 'peer-support', name: 'Peer Support' },
-    { id: 'my-connections', name: 'My Connections' }
   ];
 
   // Get current user ID from localStorage
@@ -47,17 +37,16 @@ const MentorshipHub: React.FC = () => {
         console.error('Error parsing user data:', e);
       }
     }
-    
+
     // Fallback to email
     const email = localStorage.getItem('userEmail') || '';
     return email || 'current-user';
   };
 
-  // Get current user object
   const getCurrentUser = () => {
     const user = localStorage.getItem('user');
     if (!user) return null;
-    
+
     try {
       return JSON.parse(user);
     } catch (e) {
@@ -66,74 +55,8 @@ const MentorshipHub: React.FC = () => {
     }
   };
 
-  // Handle starting chat with another user
-  const handleStartUserChat = async (userId: string, userName: string, userEmail: string) => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      alert('Please login to start a chat');
-      return;
-    }
-
-    console.log('Starting user chat with:', { userId, userName, userEmail });
-
-    // Get current user ID
-    const currentUserId = currentUser.userId || currentUser.id || currentUser._id;
-    if (!currentUserId) {
-      alert('Your user information is incomplete. Please log in again.');
-      return;
-    }
-
-    let finalUserId = userId;
-    
-    // If we don't have a userId, try to get it from email
-    if (!finalUserId || finalUserId === 'undefined') {
-      console.log('No userId provided, trying to get from email:', userEmail);
-      try {
-        if (userEmail) {
-          // We need to get userId from email - this requires an API endpoint
-          // For now, we'll show an error
-          alert(`Cannot start chat: User account for ${userEmail} was not found. Please try connecting with them first.`);
-          return;
-        } else {
-          alert('Cannot start chat: No email address provided.');
-          return;
-        }
-      } catch (error: any) {
-        alert(`Cannot start chat: ${error.message || 'User not found.'}`);
-        return;
-      }
-    }
-
-    // Validate the userId
-    if (!finalUserId || finalUserId === 'undefined') {
-      alert('Cannot start chat: Invalid user information.');
-      return;
-    }
-
-    console.log('Opening user chat with:', {
-      currentUserId,
-      otherUserId: finalUserId,
-      otherUserName: userName,
-      otherUserEmail: userEmail
-    });
-
-    // We have valid user IDs
-    setCurrentChatDetails({
-      otherUserId: finalUserId,
-      otherUserName: userName,
-      otherUserEmail: userEmail
-    });
-    setShowChat(true);
-  };
-
   // Handle starting chat with a mentor
   const handleStartMentorChat = (mentorId: string, mentorName: string, mentorEmail?: string) => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      alert('Please login to start a chat');
-      return;
-    }
-
     console.log('Starting mentor chat with:', { mentorId, mentorName, mentorEmail });
 
     if (!mentorId || mentorId === 'undefined') {
@@ -141,7 +64,6 @@ const MentorshipHub: React.FC = () => {
       return;
     }
 
-    // For mentors, we use mentorId directly (not a user ID)
     setCurrentMentorChatDetails({
       mentorId,
       mentorName,
@@ -154,19 +76,6 @@ const MentorshipHub: React.FC = () => {
   const handleConnectMentor = (mentorId: string) => {
     console.log('Connecting with mentor:', mentorId);
     alert(`Connection request sent to mentor ${mentorId}`);
-  };
-
-  // Handle starting video call with connection
-  const handleStartVideoCall = (connectionId: string) => {
-    console.log('Starting video call with connection:', connectionId);
-    // Implement video call functionality
-    alert(`Video call with connection ${connectionId} will open in a future update`);
-  };
-
-  // Handle close user chat
-  const handleCloseChat = () => {
-    setShowChat(false);
-    setCurrentChatDetails(null);
   };
 
   // Handle close mentor chat
@@ -184,7 +93,7 @@ const MentorshipHub: React.FC = () => {
     }
 
     console.log('Opening group chat:', { groupId, groupName });
-    
+
     setCurrentGroupChatDetails({
       groupId,
       groupName
@@ -224,22 +133,6 @@ const MentorshipHub: React.FC = () => {
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Mentorship Hub</h1>
         <p className="text-gray-600 text-sm">Connect with experienced mentors and supportive peers in your community</p>
       </div>
-
-      {/* User-to-User Chat Modal */}
-      {showChat && currentChatDetails && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-2xl bg-white rounded-xl overflow-hidden shadow-2xl">
-            <ChatPage
-              conversationId=""
-              currentUserId={getCurrentUserId()}
-              otherUserId={currentChatDetails.otherUserId}
-              otherUserName={currentChatDetails.otherUserName}
-              otherUserEmail={currentChatDetails.otherUserEmail}
-              onClose={handleCloseChat}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Mentor Chat Modal */}
       {showMentorChat && currentMentorChatDetails && (
@@ -303,13 +196,6 @@ const MentorshipHub: React.FC = () => {
               onJoinGroup={handleJoinGroup}
               onLeaveGroup={handleLeaveGroup}
               onOpenGroupChat={handleOpenGroupChat}
-            />
-          )}
-
-          {activeTab === 'my-connections' && (
-            <MyConnections
-              onStartChat={handleStartUserChat}
-              onStartVideoCall={handleStartVideoCall}
             />
           )}
         </div>

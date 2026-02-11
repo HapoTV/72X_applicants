@@ -1,43 +1,47 @@
 // src/services/AiBusinessAnalystService.ts
 // Thin service wrapper around the AI Business Analyst backend
 
+import type { AnalysisRequest, AnalysisResponse, UsageStats } from './aiBusinessAnalystTypes';
+
 const API_BASE = 'http://localhost:8080/api/ai-analyst';
 
-export interface AnalysisResponse {
-  analysis: string;
-  error?: string;
-  totalTokensUsed?: number;
-  tokensUsed?: number;
-}
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    console.error('❌ Response error:', response.status, response.statusText, errorText);
+    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+  }
 
-export interface UsageStats {
-  tokensUsed?: number;
-  tokensRemaining?: number;
-  percentageUsed?: number;
-  requestsToday?: number;
-  [key: string]: any;
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text().catch(() => '');
+    console.warn('⚠️ Response is not JSON:', text);
+    throw new Error(`Server returned non-JSON: ${text.substring(0, 100)}`);
+  }
+
+  const data = (await response.json()) as T | null;
+  if (!data) {
+    throw new Error('Server returned empty response');
+  }
+
+  return data;
 }
 
 export const aiBusinessAnalystService = {
   async fetchUsage(): Promise<UsageStats | null> {
     try {
-      const response = await fetch(`${API_BASE}/usage`);
-      if (!response.ok) {
-        console.error('Failed to fetch usage stats:', response.status, response.statusText);
-        return null;
-      }
-      const data = await response.json();
-      return data as UsageStats;
+      return await requestJson<UsageStats>(`${API_BASE}/usage`);
     } catch (err) {
       console.error('Failed to fetch usage stats:', err);
       return null;
     }
   },
 
-  async analyze(query: string, analysisType: string): Promise<AnalysisResponse> {
+  async analyze(query: string, analysisType: AnalysisRequest['analysisType']): Promise<AnalysisResponse> {
     console.log('🔍 Sending request to:', `${API_BASE}/analyze`);
 
-    const response = await fetch(`${API_BASE}/analyze`, {
+    const data = await requestJson<AnalysisResponse>(`${API_BASE}/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -45,30 +49,7 @@ export const aiBusinessAnalystService = {
       body: JSON.stringify({ query, analysisType }),
     });
 
-    console.log('📊 Response status:', response.status);
-    console.log('📊 Response ok?', response.ok);
-
-    const contentType = response.headers.get('content-type');
-    console.log('📊 Content-Type:', contentType);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Response text:', errorText);
-      throw new Error(`Server error: ${response.status} ${response.statusText}`);
-    }
-
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.warn('⚠️ Response is not JSON:', text);
-      throw new Error(`Server returned non-JSON: ${text.substring(0, 100)}`);
-    }
-
-    const data = (await response.json()) as AnalysisResponse | null;
     console.log('✅ Response data:', data);
-
-    if (!data) {
-      throw new Error('Server returned empty response');
-    }
 
     if (data.error) {
       throw new Error(data.error);

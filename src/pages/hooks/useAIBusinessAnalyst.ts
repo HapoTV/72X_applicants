@@ -2,13 +2,7 @@
 import { useEffect, useState } from 'react';
 import { aiBusinessAnalystService } from '../../services/AiBusinessAnalystService';
 
-export type AnalysisTypeId =
-  | 'REQUIREMENT_ANALYSIS'
-  | 'USER_STORY'
-  | 'SWOT_ANALYSIS'
-  | 'MARKET_RESEARCH'
-  | 'FINANCIAL_PROJECTION'
-  | 'RISK_ASSESSMENT';
+import type { AnalysisTypeId, UsageStats } from '../../services/aiBusinessAnalystTypes';
 
 export function useAIBusinessAnalyst() {
   const [query, setQuery] = useState('');
@@ -16,7 +10,7 @@ export function useAIBusinessAnalyst() {
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [analysisType, setAnalysisType] = useState<AnalysisTypeId>('REQUIREMENT_ANALYSIS');
   const [tokensUsed, setTokensUsed] = useState(0);
-  const [usageStats, setUsageStats] = useState<any>(null);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {

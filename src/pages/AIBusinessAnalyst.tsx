@@ -15,7 +15,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { useAIBusinessAnalyst } from './hooks/useAIBusinessAnalyst';
-import type { AnalysisTypeId } from './hooks/useAIBusinessAnalyst';
+import type { AnalysisTypeId } from '../services/aiBusinessAnalystTypes';
 
 const AIBusinessAnalyst: React.FC = () => {
   const {

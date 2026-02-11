@@ -49,12 +49,22 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
   marketplace: {
     keywords: ["marketplace", "sell", "buy", "products", "services"],
     response:
-      "Verified business profiles with high engagement scores and active listings are automatically prioritized in the Marketplace feed.",
+      "The Marketplace helps you discover and promote local products and services. You can browse listings and connect with businesses in the community.",
   },
   mentorship: {
     keywords: ["mentorship", "mentorship hub", "mentor", "advice"],
     response:
       "The Mentorship Hub connects you with experienced mentors, peers, and expert groups for guidance and support.",
+  },
+  funding: {
+    keywords: ["funding", "funding finder", "fund", "grants", "loans", "investors"],
+    response:
+      "Use the Funding section to discover funding opportunities (grants, loans, and programs) and follow the instructions on each listing to apply. If you need help, contact admin@hapogroup.co.za.",
+  },
+  chats: {
+    keywords: ["chats", "chat", "messages", "messaging", "group chat", "mentor chat"],
+    response:
+      "You can use chats to message mentors and peer support groups inside the Mentorship Hub. Open a mentor or group and start chatting from there.",
   },
   forum: {
     keywords: ["forum", "community forum", "discussions", "network"],
@@ -69,10 +79,10 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
   revenue_model: {
     keywords: ["revenue", "pricing model", "business model", "how you make money"],
     response:
-      "Revenue streams include a free tier, premium subscriptions, and paid modules like SeventyTwoX Service Desk, Inventory Portal, and POS system with add-ons for affiliate partnerships.",
+      "Revenue streams include subscription plans (Start-up, Essential, Premium) and optional paid modules/add-ons. For pricing, ask 'pricing' to see the current plans.",
   },
   data_input: {
-    keywords: ["data input", "upload data", "spreadsheets", "manual entry"],
+    keywords: ["data input", "data upload", "upload data", "upload", "spreadsheets", "manual entry"],
     response:
       "The Data Input System allows you to upload spreadsheets or enter data manually, which SeventyTwoX uses to generate insights and recommendations.",
   },
@@ -117,19 +127,19 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
       "Yes. Go to “Community → My Story” to submit your journey. Selected stories are featured across SeventyTwoX social channels.",
   },
    protect: {
-    keywords: ["protected", "my data", "privacy", "security", "popia", "data protection"],
+    keywords: ["protected", "my data", "privacy", "security", "popia", "data protection", "privacy policy"],
     response:
       "Absolutely. All data is encrypted and stored securely under South African data protection laws (POPIA compliant).",
   },
   offline: {
     keywords: ["offline", "connection", "internet", "no internet", "without data", "offline mode"],
     response:
-      "Yes. You can access learning modules, notes, and your growth roadmap offline. Data will sync automatically once you reconnect.",
+      "Some parts of the platform require an internet connection. If you’re having connectivity issues, try again on a stronger network or contact support for help.",
   },
   slow: {
     keywords: ["slow", "speed", "load", "lag", "loading", "performance", "app slow"],
     response:
-      "Try clearing your app cache or checking your network connection. If the issue persists, contact support via the in-app Help Desk.",
+      "Try checking your network connection and refreshing the page. If it keeps happening, contact support at admin@hapogroup.co.za.",
   },
    certification: {
     keywords: ["certificate", "certification", "modules", "complete", "course", "completed"],
@@ -157,22 +167,42 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
       "pricing"
     ],
     response:
-      "No transaction fees apply to your internal activities. However, marketplace sales or payment gateway usage may include small processing fees.",
+      "Pricing plans are: Start-up (R99/month), Essential (R299/month), and Premium (R999/month). There is no free package — you get a once-off 14-day free trial for 1 account (then you choose a plan).",
   },
   subscription: {
     keywords: ["subscription", "cancel subscription", "stop paying", "manage plan", "downgrade", "upgrade plan", "billing"],
     response:
-      "Yes. You can manage or cancel your subscription under “Account Settings” without losing your stored business data",
+      "You can manage, upgrade, or cancel your subscription in the app under “Account Settings”.",
+  },
+  trial: {
+    keywords: ["free trial", "trial", "14 days", "14-day", "trial period"],
+    response:
+      "You get a once-off 14-day free trial for 1 account. After the trial, you choose a plan to continue.",
+  },
+  refund: {
+    keywords: ["refund", "refunds", "money back", "chargeback", "charged twice", "billing issue"],
+    response:
+      "For billing issues or refund requests, please contact admin@hapogroup.co.za with your account email and a short description of the issue.",
+  },
+  demo: {
+    keywords: ["demo", "request demo", "book a demo", "schedule demo"],
+    response:
+      "You can request a demo from the website (Request demo). If you need help, email admin@hapogroup.co.za.",
+  },
+  sales: {
+    keywords: ["contact sales", "sales", "talk to sales", "pricing help", "enterprise"],
+    response:
+      "To speak to sales, email admin@hapogroup.co.za and tell us which plan you’re considering.",
   },
   payment: {
     keywords: ["payment methods", "how to pay", "card", "eft", "wallet", "hapopay", "ways to pay"],
     response:
-      "You can pay using bank cards, EFT, mobile wallets (HapoPay), or through SeventyTwoX Pay credits (coming soon).",
+      "To pay, click the “Continue to payment” button in the app. You’ll be redirected to our secure payment page where you can enter your card details and complete the payment.",
   },
   language: {
     keywords: ["communicate", "language", "languages", "multilingual", "afrikaans", "zulu", "xhosa", "sesotho", "isizulu", "isixhosa"],
     response:
-      "Yes. The AI assistant supports multiple South African languages including English, isiXhosa, isiZulu, Sesotho, and Afrikaans.",
+      "Multi-language support is still in development. We’re working to fully support multiple South African languages (including English, isiXhosa, isiZulu, Sesotho, and Afrikaans) and deliver the best possible results as the feature rolls out.",
   },
   tracker: {
     keywords: ["smart", "tracker", "goal tracker", "progress", "goals"],
@@ -192,7 +222,7 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
   password: {
     keywords: ["forgot", "reset", "password", "blocked", "password reset"],
     response:
-      "Tap \"Forgot Password\" on the login screen. You’ll receive a verification link or code to create a new password",
+      "Tap \"Forgot Password\" on the login screen. You’ll receive a verification link to create a new password",
   },
   registration: {
     keywords: ["register", "registration", "registering", "signing up issues", "registration issues"],
@@ -212,7 +242,20 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
       "start account"
     ],
     response:
-      "Simply go to the app login page, select \"Create Account\", and fill in your business and owner details. You'll be onboarded into your dashboard immediately after verifying your email.",
+      "To create an account, click “Get started” on the landing page (or go to Login). If you don’t have an account, click “Sign up”, enter your details, create a password, and verify your account. Once verified, your account will be created successfully.",
+  },
+  greeting: {
+    keywords: [
+      "hi",
+      "hello",
+      "hey",
+      "yo",
+      "good morning",
+      "good afternoon",
+      "good evening"
+    ],
+    response:
+      "Hi! How can I help you today? You can ask about onboarding, pricing, features, or type 'contact support' to reach our support team.",
   },
   contact: {
     keywords: [
@@ -228,12 +271,12 @@ const KNOWLEDGE_BASE: Record<string, KBEntry> = {
       "talk to support",
       "email support"
     ],
-    response: "For support and enquiries: support@seventytwox.co.za or use the in-app forum and documentation library.",
+    response: "For support and enquiries: admin@hapogroup.co.za or use the in-app forum and documentation library.",
   },
   default: {
     keywords: [],
     response: [
-      "That's an interesting question! For complex queries try to contact our support team.",
+      "That's an interesting question! For complex queries try to contact our support team at admin@hapogroup.co.za.",
     ],
   },
 };
@@ -282,8 +325,74 @@ export default function BizBoostChatbot() {
       .trim();
   }
 
+  const STOP_WORDS = new Set([
+    'a',
+    'an',
+    'and',
+    'are',
+    'as',
+    'at',
+    'be',
+    'by',
+    'can',
+    'do',
+    'for',
+    'from',
+    'how',
+    'i',
+    'in',
+    'is',
+    'it',
+    'me',
+    'my',
+    'of',
+    'on',
+    'or',
+    'our',
+    'please',
+    'the',
+    'their',
+    'they',
+    'this',
+    'to',
+    'us',
+    'was',
+    'we',
+    'what',
+    'where',
+    'who',
+    'why',
+    'with',
+    'you',
+    'your',
+  ]);
+
+  function includesWordSequence(haystackWords: string[], needleWords: string[]): boolean {
+    if (needleWords.length === 0) return false;
+    if (needleWords.length > haystackWords.length) return false;
+
+    for (let i = 0; i <= haystackWords.length - needleWords.length; i++) {
+      let ok = true;
+      for (let j = 0; j < needleWords.length; j++) {
+        if (haystackWords[i + j] !== needleWords[j]) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) return true;
+    }
+    return false;
+  }
+
   function findResponse(query: string): string {
     const q = normalize(query);
+    const qWords = q.split(' ').map((w) => w.trim()).filter(Boolean);
+    const qWordSet = new Set(
+      q
+        .split(' ')
+        .map((w) => w.trim())
+        .filter((w) => w && !STOP_WORDS.has(w))
+    );
 
     let best: { key: string; score: number } | null = null;
 
@@ -294,20 +403,25 @@ export default function BizBoostChatbot() {
       let entryBest = 0;
       for (const kw of entry.keywords) {
         const kwNorm = normalize(kw);
+        const kwWords = kwNorm.split(' ').map((w) => w.trim()).filter(Boolean);
         let score = 0;
 
         if (q === kwNorm) {
           score = 100; // exact phrase
-        } else if (q.includes(kwNorm)) {
-          score = 80 + Math.min(20, kwNorm.length / 5); // phrase contained; longer phrases score higher
+        } else if (includesWordSequence(qWords, kwWords)) {
+          score = 80 + Math.min(20, kwNorm.length / 5); // phrase contained (whole-word match)
         } else if (kwNorm.includes(q) && q.length > 2) {
           score = 60; // query is subset of keyword
         } else {
-          const words = kwNorm.split(" ").filter(Boolean);
+          const words = kwNorm
+            .split(' ')
+            .map((w) => w.trim())
+            .filter((w) => w && !STOP_WORDS.has(w));
+
           if (words.length) {
-            const overlap = words.filter(w => q.includes(w)).length;
+            const overlap = words.filter((w) => qWordSet.has(w)).length;
             if (overlap) {
-              score = 40 + Math.floor((overlap / words.length) * 30); // token overlap
+              score = 40 + Math.floor((overlap / words.length) * 30); // token overlap (meaningful words only)
             }
           }
         }
