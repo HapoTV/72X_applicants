@@ -49,7 +49,6 @@ class LearningService {
       return this.transformBackendToUserModules(response.data);
     } catch (error) {
       console.error('Error fetching learning materials:', error);
-      // Return empty array instead of mock data
       return [];
     }
   }
@@ -94,18 +93,17 @@ class LearningService {
   }
 
   /**
-   * Get learning modules for a user (like EventService.getUserEvents)
+   * Get learning modules for a user
    */
   async getUserModules(userEmail: string, filter?: LearningModuleFilter): Promise<UserLearningModule[]> {
     try {
       console.log('getUserModules called with:', { userEmail, filter });
-      // Use the same endpoint as admin dashboard to get all materials
       const response = await axiosClient.get(`${this.baseUrl}`);
       console.log('Backend response:', response.data);
       let allModules = this.transformBackendToUserModules(response.data);
       console.log('Transformed modules:', allModules);
 
-      // Try to fetch per-user progress and merge it (safe if endpoint not implemented)
+      // Try to fetch per-user progress
       const progress = await this.safeGet<LearningMaterialUserProgress[]>(`${this.baseUrl}/progress/${encodeURIComponent(userEmail)}`);
       if (progress && Array.isArray(progress) && progress.length > 0) {
         const progressById = new Map(progress.map((p) => [p.materialId, p] as const));
@@ -113,8 +111,6 @@ class LearningService {
           const p = progressById.get(m.id);
           if (!p) return m;
           const mergedProgress = typeof p.progress === 'number' ? p.progress : m.progress;
-          const quizStartedAt = (p.quizStartedAt || undefined) as any;
-          const quizPassedAt = (p.quizPassedAt || undefined) as any;
 
           return {
             ...m,
@@ -122,34 +118,32 @@ class LearningService {
             lastAccessed: p.lastAccessed || m.lastAccessed,
             openedAt: p.openedAt,
             finishedAt: p.finishedAt,
-            quizStartedAt,
-            quizPassedAt,
+            quizStartedAt: p.quizStartedAt,
+            quizPassedAt: p.quizPassedAt,
             quizAttempts: p.attempts,
             lastQuizScore: p.lastQuizScore,
             lastQuizTotalQuestions: p.lastQuizTotalQuestions,
             lastQuizPercentage: p.lastQuizPercentage,
-            isCompleted: Boolean(quizPassedAt || p.finishedAt || mergedProgress === 100),
+            isCompleted: Boolean(p.quizPassedAt || p.finishedAt || mergedProgress === 100),
           };
         });
       }
       
-      // Apply category filter if specified
+      // Apply category filter
       if (filter?.category && filter.category !== 'all') {
         const target = this.normalizeCategory(filter.category);
         allModules = allModules.filter(module => this.normalizeCategory(module.category) === target);
-        console.log('Filtered modules for category', filter.category, ':', allModules);
       }
       
       return allModules;
     } catch (error) {
       console.error('Error fetching user learning modules:', error);
-      // Return empty array instead of mock data
       return [];
     }
   }
 
   /**
-   * Get learning statistics for a user (like EventService pattern)
+   * Get learning statistics for a user
    */
   async getUserStats(userEmail: string): Promise<LearningStats> {
     try {
@@ -157,7 +151,6 @@ class LearningService {
       return response.data;
     } catch (error) {
       console.error('Error fetching user learning stats:', error);
-      // Return default stats instead of mock data
       return {
         totalModules: 0,
         completedModules: 0,
@@ -172,10 +165,7 @@ class LearningService {
   }
 
   /**
-   * Record a progress event for a user's learning material.
-   *
-   * Proposed endpoint: POST /learning-materials/progress/event
-   * This is safe: if the endpoint is not available yet, it won't throw.
+   * Record a progress event for a user's learning material
    */
   async recordProgressEvent(payload: LearningProgressEventRequest): Promise<void> {
     await this.safePost(`${this.baseUrl}/progress/event`, payload);
@@ -235,6 +225,67 @@ class LearningService {
     }
   }
 
+  // ============== QUIZ METHODS ==============
+
+  /**
+   * Generate quiz for a learning material using AI
+   */
+  async generateQuiz(materialId: string, numberOfQuestions: number = 20): Promise<any> {
+    try {
+      const response = await axiosClient.post(
+        `${this.baseUrl}/${materialId}/quiz?numberOfQuestions=${numberOfQuestions}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error generating quiz:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get quiz for a learning material
+   */
+  async getQuiz(materialId: string): Promise<any> {
+    try {
+      const response = await axiosClient.get(`${this.baseUrl}/${materialId}/quiz`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting quiz:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Submit quiz answers
+   */
+  async submitQuiz(quizId: string, answers: Record<string, any>, timeSpentSeconds: number): Promise<any> {
+    try {
+      const response = await axiosClient.post(
+        `${this.baseUrl}/quiz/${quizId}/submit?timeSpentSeconds=${timeSpentSeconds}`, 
+        answers
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting quiz:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get user's quiz attempts for a material
+   */
+  async getQuizAttempts(materialId: string): Promise<any[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseUrl}/${materialId}/quiz/attempts`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching quiz attempts:', error);
+      return [];
+    }
+  }
+
+  // ============== TRANSFORM METHODS ==============
+
   /**
    * Transform backend DTO response to UserLearningModule format
    */
@@ -244,21 +295,39 @@ class LearningService {
       title: item.title,
       description: item.description || '',
       category: this.transformCategory(item.category),
-      duration: item.estimatedDuration || '60 min',
-      lessons: 1, // Backend doesn't have lessons, default to 1
-      difficulty: 'Beginner', // Backend doesn't have difficulty, default to Beginner
-      rating: 0, // Backend doesn't have rating, default to 0
-      students: 0, // Backend doesn't have students count, default to 0
-      isPremium: false, // Backend doesn't have premium flag, default to false
-      progress: 0, // Backend doesn't track progress, default to 0
+      duration: item.estimatedDuration || '15 min',
+      lessons: 1,
+      difficulty: this.mapDifficulty(item.difficulty || 'Beginner'),
+      rating: item.rating || 0,
+      students: item.students || 0,
+      isPremium: item.isPremium || false,
+      progress: item.progress || 0,
       thumbnail: item.thumbnailUrl || this.getDefaultThumbnail(item.category),
       isCompleted: false,
       isLocked: false,
-      // Include resource information for file/URL access
       resourceUrl: item.resourceUrl,
       fileName: item.fileName,
-      type: item.type
+      type: item.type,
+      // Quiz status fields
+      quizStartedAt: item.quizStartedAt,
+      quizPassedAt: item.quizPassedAt,
+      quizAttempts: item.quizAttempts || 0,
+      lastQuizScore: item.lastQuizScore,
+      lastQuizTotalQuestions: item.lastQuizTotalQuestions,
+      lastQuizPercentage: item.lastQuizPercentage
     }));
+  }
+
+  /**
+   * Map difficulty string
+   */
+  private mapDifficulty(difficulty: string): string {
+    const map: Record<string, string> = {
+      'BEGINNER': 'Beginner',
+      'INTERMEDIATE': 'Intermediate',
+      'ADVANCED': 'Advanced'
+    };
+    return map[difficulty.toUpperCase()] || 'Beginner';
   }
 
   /**
@@ -271,7 +340,10 @@ class LearningService {
       'finance': 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=400',
       'operations': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400',
       'leadership': 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400',
-      'standardbank': 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400'
+      'standardbank': 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400',
+      'technology': 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400',
+      'sales': 'https://images.unsplash.com/photo-1552581234-26160f608093?w=400',
+      'strategy': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400'
     };
     
     return thumbnailMap[category] || 'https://images.unsplash.com/photo-1560473676-56e936e0f8b3?w=400';
@@ -285,8 +357,7 @@ class LearningService {
   }
 
   /**
-   * Upload a new learning material (file or URL)
-   * Expects backend endpoint: POST /learning-materials/upload
+   * Upload a new learning material
    */
   async uploadLearningMaterial(file: File, metadata: { title: string; description?: string; category?: string; creatorEmail?: string }): Promise<any> {
     try {
@@ -308,8 +379,7 @@ class LearningService {
   }
 
   /**
-   * Delete a learning material by id
-   * Expects backend endpoint: DELETE /learning-materials/:id
+   * Delete a learning material
    */
   async deleteLearningMaterial(materialId: string): Promise<boolean> {
     try {
@@ -320,7 +390,6 @@ class LearningService {
       return false;
     }
   }
-
 }
 
 export const learningService = new LearningService();

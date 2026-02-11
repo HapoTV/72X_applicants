@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react';
+// src/pages/LearningModules.tsx
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Play, Clock, Star, BookOpen, Lock, X } from 'lucide-react';
+import { Clock, Star, BookOpen, Lock, X, Brain, Award, CheckCircle } from 'lucide-react';
 import { learningService } from '../services/LearningService';
-import { quizAttemptService } from '../services/QuizAttemptService';
 import { useAuth } from '../context/AuthContext';
 import type { UserLearningModule } from '../interfaces/LearningData';
 import FlipCardQuizModal from '../components/learning/FlipCardQuizModal';
@@ -11,150 +11,119 @@ import QuizService from '../services/QuizService';
 const LearningModules: React.FC = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const [selectedCategory, setSelectedCategory] = useState<'all' | string>(searchParams.get('category') || 'business-plan');
   
-  useEffect(() => {
-    console.log('Current URL search params:', searchParams.toString());
-    console.log('Selected category from URL:', selectedCategory);
-    console.log('Current categories:', categories);
-  }, [searchParams, selectedCategory]);
-
-  useEffect(() => {
-    const categoryFromParams = searchParams.get('category') || 'business-plan';
-    console.log('Updating selectedCategory from URL:', categoryFromParams);
-    setSelectedCategory(categoryFromParams);
-  }, [searchParams]);
-
+  // ALL HOOKS MUST BE AT THE TOP LEVEL - NO CONDITIONALS BEFORE HOOKS
+  const [selectedCategory, setSelectedCategory] = useState<'all' | string>('business-plan');
   const [modules, setModules] = useState<UserLearningModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [openMaterial, setOpenMaterial] = useState<UserLearningModule | null>(null);
-  const [startedMaterialIds, setStartedMaterialIds] = useState<string[]>([]);
-  const [finishedMaterialIds, setFinishedMaterialIds] = useState<string[]>([]);
-  const [quizStartedMaterialIds, setQuizStartedMaterialIds] = useState<string[]>([]);
-  const [quizPassedMaterialIds, setQuizPassedMaterialIds] = useState<string[]>([]);
+  const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
+  const [quizLoading, setQuizLoading] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizMaterial, setQuizMaterial] = useState<UserLearningModule | null>(null);
-  const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
-
+  const [quiz, setQuiz] = useState<any>(null);
+  const [startedMaterialIds, setStartedMaterialIds] = useState<string[]>([]);
+  const [quizPassedMaterialIds, setQuizPassedMaterialIds] = useState<string[]>([]);
   const [materialReadyForQuiz, setMaterialReadyForQuiz] = useState(false);
   const [readTimerDone, setReadTimerDone] = useState(false);
+  
+  // Use refs to prevent multiple fetches
+  const initialFetchDone = useRef(false);
+  const categoryFromParams = useRef(searchParams.get('category') || 'business-plan');
 
-  const orderedModules = useMemo(() => modules, [modules]);
+  const categories = [
+    { id: 'business-plan', name: 'Business Planning' },
+    { id: 'marketing', name: 'Marketing & Sales' },
+    { id: 'finance', name: 'Financial Management' },
+    { id: 'operations', name: 'Operations' },
+    { id: 'leadership', name: 'Leadership' },
+    { id: 'standardbank', name: 'Standard Bank' },
+    { id: 'technology', name: 'Technology' },
+    { id: 'sales', name: 'Sales' },
+    { id: 'strategy', name: 'Strategy' }
+  ];
 
-  const getIsLockedByGate = (moduleId: string): { isLocked: boolean; gateText: string } => {
-    const idx = orderedModules.findIndex((m) => m.id === moduleId);
-    if (idx <= 0) return { isLocked: false, gateText: '' };
-    const prevId = orderedModules[idx - 1]?.id;
-    const isLocked = prevId ? !quizPassedMaterialIds.includes(prevId) : false;
-    return {
-      isLocked,
-      gateText: prevId ? 'To continue to the next learning material, you must first answer this quiz.' : '',
-    };
-  };
-
-  const beginQuizForMaterial = (material: UserLearningModule) => {
-    console.log('Begin quiz for material:', {
-      id: material.id,
-      title: material.title,
-      category: material.category,
-    });
-    const questions = QuizService.generateQuizQuestions(
-      material.title,
-      [material.description || '', material.fileName || '', material.type || ''].filter(Boolean).join('\n'),
-      material.category
-    );
-    console.log(
-      'Generated quiz questions:',
-      questions.length,
-      questions.map((q) => ({ id: q.id, type: (q as any).type }))
-    );
-    setQuizQuestions(questions);
-    setQuizMaterial(material);
-    setShowQuiz(true);
-    setQuizStartedMaterialIds((prev) => (prev.includes(material.id) ? prev : [...prev, material.id]));
-
-    if (user?.email) {
-      void learningService.recordQuizStarted(user.email, material.id);
-      void quizAttemptService.recordAttempt({
-        userEmail: user.email,
-        materialId: material.id,
-        status: 'STARTED',
-        occurredAt: new Date().toISOString(),
-      });
+  // Update selected category from URL params - only when searchParams actually changes
+  useEffect(() => {
+    const category = searchParams.get('category') || 'business-plan';
+    if (category !== selectedCategory) {
+      setSelectedCategory(category);
     }
-  };
+  }, [searchParams, selectedCategory]);
 
-  const handleQuizPass = (score: number, totalQuestions: number, percentage: number) => {
-    setShowQuiz(false);
-
-    if (quizMaterial) {
-      setQuizPassedMaterialIds((prev) => (prev.includes(quizMaterial.id) ? prev : [...prev, quizMaterial.id]));
-      const message = QuizService.getPerformanceMessage(score, totalQuestions);
-      alert(`${message} Score: ${score}/${totalQuestions} (${percentage}%)`);
-
-      if (user?.email) {
-        void learningService.recordQuizPassed(user.email, quizMaterial.id, score, totalQuestions, percentage);
-        void quizAttemptService.recordAttempt({
-          userEmail: user.email,
-          materialId: quizMaterial.id,
-          status: 'PASSED',
-          score,
-          totalQuestions,
-          percentage,
-          occurredAt: new Date().toISOString(),
-        });
-      }
-    }
-
-    setQuizMaterial(null);
-  };
-
-  const handleCloseQuiz = () => {
-    setShowQuiz(false);
-    setQuizMaterial(null);
-  };
-
-  const openMaterialAndTrack = (material: UserLearningModule) => {
-    setOpenMaterial(material);
-    setStartedMaterialIds((prev) => (prev.includes(material.id) ? prev : [...prev, material.id]));
-
-    if (user?.email) {
-      void learningService.recordOpened(user.email, material.id);
-    }
-  };
-
-  const completedMaterialIdSet = useMemo(() => {
-    const ids = new Set<string>([...quizPassedMaterialIds, ...quizStartedMaterialIds]);
-    if (showQuiz && quizMaterial?.id) ids.add(quizMaterial.id);
-    return ids;
-  }, [quizPassedMaterialIds, quizStartedMaterialIds, showQuiz, quizMaterial?.id]);
+  // Memoized values
+  const completedCount = useMemo(() => {
+    return modules.filter(m => quizPassedMaterialIds.includes(m.id) || m.progress === 100).length;
+  }, [modules, quizPassedMaterialIds]);
 
   const inProgressCount = useMemo(() => {
-    const startedSet = new Set<string>(startedMaterialIds);
-    if (openMaterial?.id) startedSet.add(openMaterial.id);
+  const startedSet = new Set<string>(startedMaterialIds);
+  if (openMaterial?.id) startedSet.add(openMaterial.id);
+  
+  // Convert array to Set for O(1) lookup
+  const passedSet = new Set<string>(quizPassedMaterialIds);
+  
+  let count = 0;
+  for (const m of modules) {
+    if (!startedSet.has(m.id)) continue;
+    if (passedSet.has(m.id)) continue;
+    count += 1;
+  }
+  return count;
+}, [modules, startedMaterialIds, openMaterial?.id, quizPassedMaterialIds]);
 
-    const fromBackend = modules.filter((m) => m.progress > 0 && m.progress < 100).map((m) => m.id);
-    for (const id of fromBackend) startedSet.add(id);
-
-    let count = 0;
-    for (const m of modules) {
-      if (!startedSet.has(m.id)) continue;
-      if (completedMaterialIdSet.has(m.id)) continue;
-      count += 1;
+  // Fetch learning data
+  const fetchLearningData = useCallback(async () => {
+    if (!user?.email) {
+      setError('User email not found');
+      setLoading(false);
+      return;
     }
-    return count;
-  }, [modules, startedMaterialIds, openMaterial?.id, completedMaterialIdSet]);
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const filter = { category: selectedCategory as any };
+      const modulesData = await learningService.getUserModules(user.email, filter);
+      setModules(modulesData);
 
-  const completedCount = useMemo(() => {
-    let count = 0;
-    for (const m of modules) {
-      if (completedMaterialIdSet.has(m.id) || m.progress === 100) count += 1;
+      const started = new Set<string>();
+      const quizPassed = new Set<string>();
+
+      modulesData.forEach(m => {
+        if (m.openedAt || (m.progress && m.progress > 0)) started.add(m.id);
+        if (m.quizPassedAt) quizPassed.add(m.id);
+      });
+
+      setStartedMaterialIds(Array.from(started));
+      setQuizPassedMaterialIds(Array.from(quizPassed));
+
+    } catch (err) {
+      setError('Failed to load learning materials');
+      console.error('Error fetching learning data:', err);
+    } finally {
+      setLoading(false);
     }
-    return count;
-  }, [modules, completedMaterialIdSet]);
+  }, [user?.email, selectedCategory]);
 
+  // Single fetch effect - this is the key fix
+  useEffect(() => {
+    if (user?.email && !initialFetchDone.current) {
+      initialFetchDone.current = true;
+      fetchLearningData();
+    }
+    
+    // Reset when user changes
+    return () => {
+      if (!user?.email) {
+        initialFetchDone.current = false;
+      }
+    };
+  }, [user?.email, fetchLearningData]);
+
+  // Timer effect for reading materials
   useEffect(() => {
     if (!openMaterial) {
       setMaterialReadyForQuiz(false);
@@ -169,13 +138,176 @@ const LearningModules: React.FC = () => {
     const url = openMaterial.resourceUrl || '';
     const isVideo = type.includes('video') || /\.(mp4|webm|ogg)$/i.test(url);
 
-    if (isVideo) return;
-
-    const timer = window.setTimeout(() => setReadTimerDone(true), 12000);
-    return () => window.clearTimeout(timer);
+    if (!isVideo) {
+      const timer = window.setTimeout(() => setReadTimerDone(true), 15000);
+      return () => window.clearTimeout(timer);
+    }
   }, [openMaterial]);
 
-  const detectViewerKind = (material: UserLearningModule): 'video' | 'pdf' | 'doc' | 'url' | 'unknown' => {
+  // Callback definitions
+  const getIsLockedByGate = useCallback((moduleId: string): { isLocked: boolean; gateText: string } => {
+    const idx = modules.findIndex((m) => m.id === moduleId);
+    if (idx <= 0) return { isLocked: false, gateText: '' };
+    const prevId = modules[idx - 1]?.id;
+    const isLocked = prevId ? !quizPassedMaterialIds.includes(prevId) : false;
+    return {
+      isLocked,
+      gateText: prevId ? 'To continue to the next learning material, you must first pass the knowledge check.' : '',
+    };
+  }, [modules, quizPassedMaterialIds]);
+
+  const openMaterialAndTrack = useCallback((material: UserLearningModule) => {
+    setOpenMaterial(material);
+    setStartedMaterialIds(prev => 
+      prev.includes(material.id) ? prev : [...prev, material.id]
+    );
+    setMaterialReadyForQuiz(false);
+    setReadTimerDone(false);
+
+    if (user?.email) {
+      learningService.recordOpened(user.email, material.id);
+    }
+  }, [user?.email]);
+
+  const mapQuestionType = useCallback((type: string): string => {
+    const typeMap: Record<string, string> = {
+      'MULTIPLE_CHOICE': 'multiple_choice',
+      'TRUE_FALSE': 'multiple_choice',
+      'FILL_BLANK': 'fill_blank',
+      'MATCHING': 'match_pairs',
+      'ORDERING': 'order_steps',
+      'CATEGORIZE': 'categorize'
+    };
+    return typeMap[type] || 'multiple_choice';
+  }, []);
+
+  const transformBackendQuestionsToFlipCardFormat = useCallback((backendQuestions: any[]): any[] => {
+    if (!Array.isArray(backendQuestions) || backendQuestions.length === 0) {
+      return [];
+    }
+    
+    return backendQuestions.map((q, index) => {
+      const questionType = q.questionType || 'MULTIPLE_CHOICE';
+      
+      const baseQuestion: any = {
+        id: q.id || `q${index + 1}`,
+        type: mapQuestionType(questionType),
+        question: q.questionText || 'Sample question',
+        explanation: q.explanation || 'Review the material to understand this concept better.',
+        correctAnswer: q.correctAnswerIndex || 0,
+      };
+
+      switch (questionType) {
+        case 'MULTIPLE_CHOICE':
+        case 'TRUE_FALSE':
+          baseQuestion.options = q.options || ['Option A', 'Option B', 'Option C', 'Option D'];
+          break;
+        case 'FILL_BLANK':
+          baseQuestion.template = q.questionText || '______ is a key concept.';
+          baseQuestion.wordBank = [q.correctAnswerText || 'answer', 'concept', 'process', 'method', 'strategy'];
+          baseQuestion.correctWord = q.correctAnswerText || 'answer';
+          break;
+        default:
+          baseQuestion.options = q.options || ['Option A', 'Option B', 'Option C', 'Option D'];
+      }
+
+      return baseQuestion;
+    });
+  }, [mapQuestionType]);
+
+  const beginQuizForMaterial = useCallback(async (material: UserLearningModule) => {
+    setQuizLoading(true);
+    try {
+      const existingQuiz = await learningService.getQuiz(material.id);
+      
+      if (existingQuiz?.questions) {
+        const transformedQuestions = transformBackendQuestionsToFlipCardFormat(existingQuiz.questions);
+        setQuizQuestions(transformedQuestions);
+        setQuizMaterial(material);
+        setShowQuiz(true);
+      } else {
+        // Generate new quiz with AI
+        const newQuiz = await learningService.generateQuiz(material.id, 20);
+        
+        if (newQuiz?.questions) {
+          const transformedQuestions = transformBackendQuestionsToFlipCardFormat(newQuiz.questions);
+          setQuizQuestions(transformedQuestions);
+          setQuiz(newQuiz);
+          setQuizMaterial(material);
+          setShowQuiz(true);
+          
+          if (user?.email) {
+            await learningService.recordQuizStarted(user.email, material.id);
+          }
+        } else {
+          // Fallback to local quiz generation
+          const localQuestions = QuizService.generateQuizQuestions(
+            material.title,
+            material.description || '',
+            material.category
+          );
+          setQuizQuestions(localQuestions);
+          setQuizMaterial(material);
+          setShowQuiz(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error starting quiz:', error);
+      const localQuestions = QuizService.generateQuizQuestions(
+        material.title,
+        material.description || '',
+        material.category
+      );
+      setQuizQuestions(localQuestions);
+      setQuizMaterial(material);
+      setShowQuiz(true);
+    } finally {
+      setQuizLoading(false);
+    }
+  }, [user?.email, transformBackendQuestionsToFlipCardFormat]);
+
+  const handleQuizPass = useCallback(async (score: number, totalQuestions: number, percentage: number) => {
+    if (!quizMaterial) return;
+    
+    try {
+      if (user?.email) {
+        await learningService.recordQuizPassed(
+          user.email,
+          quizMaterial.id,
+          score,
+          totalQuestions,
+          percentage
+        );
+      }
+
+      setQuizPassedMaterialIds(prev => 
+        prev.includes(quizMaterial.id) ? prev : [...prev, quizMaterial.id]
+      );
+      
+      setModules(prevModules => 
+        prevModules.map(m => 
+          m.id === quizMaterial.id 
+            ? { ...m, progress: 100, isCompleted: true, quizPassedAt: new Date().toISOString() }
+            : m
+        )
+      );
+
+    } catch (error) {
+      console.error('Error recording quiz pass:', error);
+    } finally {
+      setShowQuiz(false);
+      setQuizMaterial(null);
+      setQuizQuestions([]);
+    }
+  }, [user?.email, quizMaterial]);
+
+  const handleCloseQuiz = useCallback(() => {
+    setShowQuiz(false);
+    setQuizMaterial(null);
+    setQuizQuestions([]);
+  }, []);
+
+  const detectViewerKind = useCallback((material: UserLearningModule): 'video' | 'pdf' | 'doc' | 'url' | 'unknown' => {
     const type = (material.type || '').toLowerCase();
     const url = material.resourceUrl || '';
     if (type.includes('video') || /\.(mp4|webm|ogg)$/i.test(url)) return 'video';
@@ -183,71 +315,9 @@ const LearningModules: React.FC = () => {
     if (type.includes('doc') || /\.(doc|docx)$/i.test(url)) return 'doc';
     if (type.includes('url') || /^https?:\/\//i.test(url)) return 'url';
     return 'unknown';
-  };
+  }, []);
 
-  const categories = [
-    { id: 'business-plan', name: 'Business Planning' },
-    { id: 'marketing', name: 'Marketing & Sales' },
-    { id: 'finance', name: 'Financial Management' },
-    { id: 'operations', name: 'Operations' },
-    { id: 'leadership', name: 'Leadership' },
-    { id: 'standardbank', name: 'Standard Bank' }
-  ];
-
-  useEffect(() => {
-    if (user?.email) {
-      fetchLearningData();
-    } else {
-      setLoading(false);
-    }
-  }, [user?.email, selectedCategory]);
-
-  const fetchLearningData = async () => {
-    if (!user?.email) {
-      setError('User email not found');
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError(null);
-      console.log('Fetching learning data for category:', selectedCategory);
-      const filter = { category: selectedCategory as any };
-      const modulesData = await learningService.getUserModules(user.email, filter);
-      console.log('Fetched modules:', modulesData);
-      setModules(modulesData);
-
-      // Initialize local UI tracking from backend progress fields (if available)
-      try {
-        const started = new Set<string>();
-        const finished = new Set<string>();
-        const quizStarted = new Set<string>();
-        const quizPassed = new Set<string>();
-
-        for (const m of modulesData) {
-          if (m.openedAt || (typeof m.progress === 'number' && m.progress > 0)) started.add(m.id);
-          if (m.finishedAt || m.progress === 100) finished.add(m.id);
-          if (m.quizStartedAt) quizStarted.add(m.id);
-          if (m.quizPassedAt) quizPassed.add(m.id);
-        }
-
-        setStartedMaterialIds((prev) => Array.from(new Set([...prev, ...Array.from(started)])));
-        setFinishedMaterialIds((prev) => Array.from(new Set([...prev, ...Array.from(finished)])));
-        setQuizStartedMaterialIds((prev) => Array.from(new Set([...prev, ...Array.from(quizStarted)])));
-        setQuizPassedMaterialIds((prev) => Array.from(new Set([...prev, ...Array.from(quizPassed)])));
-      } catch {
-        // ignore
-      }
-
-    } catch (err) {
-      setError('Failed to load learning materials');
-      console.error('Error fetching learning data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Early returns - AFTER all hooks
   if (!user?.email) {
     return (
       <div className="space-y-6 animate-fade-in px-2 sm:px-0">
@@ -260,7 +330,7 @@ const LearningModules: React.FC = () => {
     );
   }
 
-  if (loading) {
+  if (loading && modules.length === 0) {
     return (
       <div className="space-y-6 animate-fade-in px-2 sm:px-0">
         <div className="text-center py-12">
@@ -303,22 +373,18 @@ const LearningModules: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-green-600 font-medium">Completed</p>
-                <p className="text-2xl font-bold text-green-800">
-                  {completedCount}
-                </p>
+                <p className="text-2xl font-bold text-green-800">{completedCount}</p>
               </div>
-              <Play className="w-8 h-8 text-green-400" />
+              <CheckCircle className="w-8 h-8 text-green-400" />
             </div>
           </div>
           <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-purple-600 font-medium">In Progress</p>
-                <p className="text-2xl font-bold text-purple-800">
-                  {inProgressCount}
-                </p>
+                <p className="text-2xl font-bold text-purple-800">{inProgressCount}</p>
               </div>
-              <Clock className="w-8 h-8 text-purple-400" />
+              <Brain className="w-8 h-8 text-purple-400" />
             </div>
           </div>
         </div>
@@ -330,121 +396,112 @@ const LearningModules: React.FC = () => {
           <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-600 mb-2">No modules found</h3>
           <p className="text-gray-500">No learning materials available for this category yet.</p>
-
-          <div className="mt-8 max-w-xl mx-auto text-left bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <div className="text-sm font-semibold text-blue-900">
-              To continue to the next learning material, you must first answer this quiz.
-            </div>
-            <div className="text-xs text-blue-800 mt-1">
-              Quiz Development: simulate completing a material and unlock the next by passing a flip-card checkpoint (50%).
-            </div>
-            <div className="mt-4 flex justify-center">
-              <button
-                onClick={() => {
-                  const demoMaterial: UserLearningModule = {
-                    id: 'demo-material-001',
-                    title: 'Business Planning: Executive Summary',
-                    description: 'A short demo material used to preview the quiz gate flow.',
-                    category: selectedCategory,
-                    duration: '5 min',
-                    lessons: 1,
-                    difficulty: 'Beginner',
-                    rating: 0,
-                    students: 0,
-                    isPremium: false,
-                    progress: 0,
-                    thumbnail: 'https://images.unsplash.com/photo-1560473676-56e936e0f8b3?w=400',
-                    isCompleted: false,
-                    isLocked: false,
-                    type: 'URL',
-                    resourceUrl: 'https://example.com',
-                  };
-                  openMaterialAndTrack(demoMaterial);
-                }}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all transform hover:scale-105 text-sm font-semibold"
-              >
-                Preview Quiz Gate
-              </button>
-            </div>
-          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {modules.map((module) => (
-            <div key={module.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="relative">
-                <img src={module.thumbnail} alt={module.title} className="w-full h-32 object-cover" />
-                {module.isPremium && (
-                  <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-semibold">
-                    Premium
-                  </div>
-                )}
-                {finishedMaterialIds.includes(module.id) && (
-                  <div className="absolute bottom-2 left-2 bg-green-100 border border-green-200 text-green-800 px-2 py-1 rounded-full text-xs font-semibold">
-                    Finished
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="text-sm font-semibold mb-1 line-clamp-1">{module.title}</h3>
-                <p className="text-gray-600 text-xs mb-3 line-clamp-2">{module.description}</p>
-                
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{module.duration}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 text-yellow-400" />
-                    <span>{module.rating}</span>
+          {modules.map((module) => {
+            const { isLocked, gateText } = getIsLockedByGate(module.id);
+            const hasPassedQuiz = quizPassedMaterialIds.includes(module.id);
+            
+            return (
+              <div key={module.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                <div className="relative">
+                  <img 
+                    src={module.thumbnail} 
+                    alt={module.title} 
+                    className="w-full h-32 object-cover"
+                  />
+                  {hasPassedQuiz && (
+                    <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Passed
+                    </div>
+                  )}
+                  {module.isPremium && (
+                    <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-semibold">
+                      Premium
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 right-2">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
+                      <div className="flex items-center justify-between text-white text-xs">
+                        <span>Progress</span>
+                        <span className="font-semibold">{hasPassedQuiz ? 100 : module.progress}%</span>
+                      </div>
+                      <div className="w-full bg-white/30 rounded-full h-1 mt-1">
+                        <div 
+                          className="bg-green-500 h-1 rounded-full transition-all duration-500"
+                          style={{ width: `${hasPassedQuiz ? 100 : module.progress}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
+                
+                <div className="p-4">
+                  <h3 className="text-sm font-semibold mb-1 line-clamp-1">{module.title}</h3>
+                  <p className="text-gray-600 text-xs mb-3 line-clamp-2">{module.description}</p>
+                  
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{module.duration}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-yellow-400" />
+                      <span>{module.rating}</span>
+                    </div>
+                  </div>
 
-                {(() => {
-                  const { isLocked, gateText } = getIsLockedByGate(module.id);
+                  {isLocked && (
+                    <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-2">
+                      <div className="text-xs font-semibold text-blue-900 flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        {gateText}
+                      </div>
+                    </div>
+                  )}
 
-                  return (
-                    <>
-                      {isLocked && (
-                        <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-2">
-                          <div className="text-xs font-semibold text-blue-900">{gateText}</div>
-                        </div>
-                      )}
-
-                      <button
-                        className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                          module.isLocked || isLocked
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        }`}
-                        disabled={module.isLocked || isLocked}
-                        onClick={() => openMaterialAndTrack(module)}
-                      >
-                        {module.isLocked || isLocked ? (
-                          <span className="inline-flex items-center justify-center gap-2">
-                            <Lock className="w-4 h-4" />
-                            Locked
-                          </span>
-                        ) : (
-                          'Open Material'
-                        )}
-                      </button>
-                    </>
-                  );
-                })()}
+                  <button
+                    className={`w-full py-2 px-4 rounded-lg font-medium transition-all transform hover:scale-[1.02] ${
+                      module.isLocked || isLocked
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : hasPassedQuiz
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
+                          : 'bg-primary-600 text-white hover:bg-primary-700'
+                    }`}
+                    disabled={module.isLocked || isLocked}
+                    onClick={() => openMaterialAndTrack(module)}
+                  >
+                    {module.isLocked || isLocked ? (
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <Lock className="w-4 h-4" />
+                        Locked
+                      </span>
+                    ) : hasPassedQuiz ? (
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Review Material
+                      </span>
+                    ) : (
+                      'Start Learning'
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
+      {/* Material Viewer Modal */}
       {openMaterial && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-5xl w-full mx-4 max-h-[95vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{openMaterial.title}</h2>
-                <p className="text-sm text-gray-600 mt-1">{openMaterial.type || 'Material'}</p>
+                <p className="text-sm text-gray-600 mt-1">{openMaterial.type || 'Learning Material'}</p>
               </div>
               <button
                 onClick={() => setOpenMaterial(null)}
@@ -467,33 +524,32 @@ const LearningModules: React.FC = () => {
                   );
                 }
 
-                if (kind === 'doc') {
-                  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+                if (kind === 'pdf' || kind === 'doc') {
                   return (
                     <div>
                       <iframe
                         title="Document Viewer"
-                        src={officeUrl}
+                        src={kind === 'doc' 
+                          ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`
+                          : url
+                        }
                         className="w-full h-[72vh] rounded-lg bg-white"
                       />
                       <div className="mt-3 flex items-center justify-between gap-3">
                         <div className="text-xs text-gray-600">
-                          Read for a moment, then confirm when finished to unlock the quiz.
+                          Read for a moment, then confirm when finished to unlock the knowledge check.
                         </div>
                         <button
                           onClick={() => setMaterialReadyForQuiz(true)}
                           disabled={!readTimerDone}
                           className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                            readTimerDone ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            readTimerDone 
+                              ? 'bg-primary-600 text-white hover:bg-primary-700' 
+                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                           }`}
                         >
                           I finished reading
                         </button>
-                      </div>
-                      <div className="mt-2 text-xs">
-                        <a className="text-blue-600 hover:underline break-all" href={url} target="_blank" rel="noreferrer">
-                          Open in new tab
-                        </a>
                       </div>
                     </div>
                   );
@@ -511,70 +567,7 @@ const LearningModules: React.FC = () => {
                         <source src={url} />
                       </video>
                       <div className="mt-2 text-xs text-gray-600">
-                        Watch until the end to unlock the quiz.
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (kind === 'pdf') {
-                  return (
-                    <div>
-                      <iframe
-                        title="PDF Viewer"
-                        src={url}
-                        className="w-full h-[72vh] rounded-lg bg-white"
-                      />
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <div className="text-xs text-gray-600">
-                          Read for a moment, then confirm when finished to unlock the quiz.
-                        </div>
-                        <button
-                          onClick={() => setMaterialReadyForQuiz(true)}
-                          disabled={!readTimerDone}
-                          className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                            readTimerDone ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          I finished reading
-                        </button>
-                      </div>
-                      <div className="mt-2 text-xs">
-                        <a className="text-blue-600 hover:underline break-all" href={url} target="_blank" rel="noreferrer">
-                          Open in new tab
-                        </a>
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (kind === 'url') {
-                  return (
-                    <div>
-                      <iframe
-                        title="Article Viewer"
-                        src={url}
-                        className="w-full h-[72vh] rounded-lg bg-white"
-                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-                      />
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <div className="text-xs text-gray-600">
-                          Read for a moment, then confirm when finished to unlock the quiz.
-                        </div>
-                        <button
-                          onClick={() => setMaterialReadyForQuiz(true)}
-                          disabled={!readTimerDone}
-                          className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                            readTimerDone ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          I finished reading
-                        </button>
-                      </div>
-                      <div className="mt-2 text-xs">
-                        <a className="text-blue-600 hover:underline break-all" href={url} target="_blank" rel="noreferrer">
-                          Open in new tab
-                        </a>
+                        Watch until the end to unlock the knowledge check.
                       </div>
                     </div>
                   );
@@ -582,21 +575,26 @@ const LearningModules: React.FC = () => {
 
                 return (
                   <div className="text-sm text-gray-700">
-                    Unsupported material type. You can still open the resource:
-                    <div className="mt-2 text-sm">
-                      <a className="text-blue-600 hover:underline break-all" href={url} target="_blank" rel="noreferrer">
-                        {url}
-                      </a>
-                    </div>
-                    <div className="mt-3">
+                    <p>Click the link below to open the material:</p>
+                    <a 
+                      className="text-primary-600 hover:underline break-all mt-2 inline-block" 
+                      href={url} 
+                      target="_blank" 
+                      rel="noreferrer"
+                    >
+                      {url}
+                    </a>
+                    <div className="mt-4">
                       <button
                         onClick={() => setMaterialReadyForQuiz(true)}
                         disabled={!readTimerDone}
-                        className={`px-3 py-2 rounded-lg text-xs font-semibold ${
-                          readTimerDone ? 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-800' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                          readTimerDone 
+                            ? 'bg-primary-600 text-white hover:bg-primary-700' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         }`}
                       >
-                        I finished
+                        I finished reviewing
                       </button>
                     </div>
                   </div>
@@ -607,43 +605,56 @@ const LearningModules: React.FC = () => {
             <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end">
               <button
                 onClick={() => setOpenMaterial(null)}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Close
               </button>
               <button
                 onClick={() => {
-                  setFinishedMaterialIds((prev) => (prev.includes(openMaterial.id) ? prev : [...prev, openMaterial.id]));
                   setOpenMaterial(null);
-
-                  if (user?.email) {
-                    void learningService.recordFinished(user.email, openMaterial.id);
-                  }
-
                   beginQuizForMaterial(openMaterial);
                 }}
-                disabled={!materialReadyForQuiz && !finishedMaterialIds.includes(openMaterial.id)}
-                className={`px-6 py-3 rounded-lg ${
-                  materialReadyForQuiz || finishedMaterialIds.includes(openMaterial.id)
-                    ? 'bg-primary-600 text-white hover:bg-primary-700'
+                disabled={!materialReadyForQuiz && !quizPassedMaterialIds.includes(openMaterial.id)}
+                className={`px-6 py-3 rounded-lg transition-all ${
+                  materialReadyForQuiz || quizPassedMaterialIds.includes(openMaterial.id)
+                    ? 'bg-primary-600 text-white hover:bg-primary-700 transform hover:scale-105'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                Take Quiz
+                {quizPassedMaterialIds.includes(openMaterial.id) 
+                  ? 'Retake Knowledge Check' 
+                  : 'Take Knowledge Check'}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Flip Card Quiz Modal */}
       <FlipCardQuizModal
         isOpen={showQuiz}
         moduleTitle={quizMaterial?.title || ''}
         questions={quizQuestions}
-        passPercentage={50}
+        passPercentage={70}
         onClose={handleCloseQuiz}
         onPass={handleQuizPass}
       />
+
+      {/* Loading Overlay for Quiz Generation */}
+      {quizLoading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-2xl p-12 text-center max-w-md">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary-200 border-t-primary-600 mx-auto mb-6"></div>
+              <Brain className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-primary-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">Generating AI Knowledge Check</h3>
+            <p className="text-gray-600 mb-2">
+              Analyzing your learning material to create personalized questions...
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
