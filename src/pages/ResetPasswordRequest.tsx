@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/AuthService';
+import { supabase } from '../lib/supabaseClient';
 
 const ResetPasswordRequest: React.FC = () => {
   const navigate = useNavigate();
@@ -13,15 +13,20 @@ const ResetPasswordRequest: React.FC = () => {
     if (!email.trim()) return alert('Please enter your email');
     setIsLoading(true);
     try {
-      const res = await authService.requestPasswordReset(email.trim(), businessRef.trim() || undefined);
-      alert('Verification code sent (check email).');
-      // For dev convenience, if backend fallback returns code, save it in session so user can see it on verify page
-      if ((res as any).code) sessionStorage.setItem(`resetCode:${email.trim()}`, (res as any).code);
-      // Save the email for the next step
-      sessionStorage.setItem('resetEmail', email.trim());
-      navigate('/reset-password/verify');
+      if (!supabase) {
+        alert('Password reset service is unavailable. Please try again later.');
+        return;
+      }
+
+      const emailRedirectTo = `${window.location.origin}/reset-password/verify`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: emailRedirectTo,
+      });
+      if (error) throw error;
+
+      alert('Reset password email sent. Please check your inbox (and spam/junk).');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to request verification code');
+      alert(err instanceof Error ? err.message : 'Failed to send reset password email');
     } finally {
       setIsLoading(false);
     }
@@ -31,7 +36,7 @@ const ResetPasswordRequest: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-semibold mb-2">Forgot password</h1>
-        <p className="text-sm text-gray-600 mb-4">Enter your account email to receive a verification code.</p>
+        <p className="text-sm text-gray-600 mb-4">Enter your account email to receive a reset password email.</p>
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
@@ -45,7 +50,7 @@ const ResetPasswordRequest: React.FC = () => {
           </div>
 
           <button type="submit" disabled={isLoading} className="w-full px-4 py-2 bg-primary-500 text-white rounded-lg">
-            {isLoading ? 'Sending...' : 'Send verification code'}
+            {isLoading ? 'Sending...' : 'Send reset password email'}
           </button>
         </form>
 
