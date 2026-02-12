@@ -6,7 +6,6 @@ import { learningService } from '../services/LearningService';
 import { useAuth } from '../context/AuthContext';
 import type { UserLearningModule } from '../interfaces/LearningData';
 import FlipCardQuizModal from '../components/learning/FlipCardQuizModal';
-import QuizService from '../services/QuizService';
 
 const LearningModules: React.FC = () => {
   const { user } = useAuth();
@@ -217,50 +216,45 @@ const LearningModules: React.FC = () => {
 
   const beginQuizForMaterial = useCallback(async (material: UserLearningModule) => {
     setQuizLoading(true);
+    setError(null); // Clear any previous errors
+    
     try {
-      const existingQuiz = await learningService.getQuiz(material.id);
+      // First try to get existing quiz
+      let quiz = await learningService.getQuiz(material.id);
       
-      if (existingQuiz?.questions) {
-        const transformedQuestions = transformBackendQuestionsToFlipCardFormat(existingQuiz.questions);
-        setQuizQuestions(transformedQuestions);
-        setQuizMaterial(material);
-        setShowQuiz(true);
-      } else {
-        // Generate new quiz with AI
-        const newQuiz = await learningService.generateQuiz(material.id, 20);
-        
-        if (newQuiz?.questions) {
-          const transformedQuestions = transformBackendQuestionsToFlipCardFormat(newQuiz.questions);
-          setQuizQuestions(transformedQuestions);
-          setQuiz(newQuiz);
-          setQuizMaterial(material);
-          setShowQuiz(true);
-          
-          if (user?.email) {
-            await learningService.recordQuizStarted(user.email, material.id);
-          }
-        } else {
-          // Fallback to local quiz generation
-          const localQuestions = QuizService.generateQuizQuestions(
-            material.title,
-            material.description || '',
-            material.category
-          );
-          setQuizQuestions(localQuestions);
-          setQuizMaterial(material);
-          setShowQuiz(true);
-        }
+      // If no quiz exists, generate one
+      if (!quiz) {
+        quiz = await learningService.generateQuiz(material.id, 20);
       }
-    } catch (error) {
-      console.error('Error starting quiz:', error);
-      const localQuestions = QuizService.generateQuizQuestions(
-        material.title,
-        material.description || '',
-        material.category
-      );
-      setQuizQuestions(localQuestions);
+      
+      // Validate we have a valid quiz with questions
+      if (!quiz?.questions || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
+        throw new Error('Server returned invalid quiz data');
+      }
+      
+      // Transform backend questions to flip card format
+      const transformedQuestions = transformBackendQuestionsToFlipCardFormat(quiz.questions);
+      
+      if (transformedQuestions.length === 0) {
+        throw new Error('Failed to transform quiz questions');
+      }
+      
+      setQuizQuestions(transformedQuestions);
+      setQuiz(quiz);
       setQuizMaterial(material);
       setShowQuiz(true);
+      
+      // Record that user started the quiz
+      if (user?.email) {
+        await learningService.recordQuizStarted(user.email, material.id);
+      }
+      
+      console.log(`✅ Quiz ready with ${transformedQuestions.length} questions`);
+      
+    } catch (error) {
+      console.error('❌ Failed to start quiz:', error);
+      // Show error to user instead of falling back to mock data
+      setError(error.message || 'Failed to generate quiz. Please try again.');
     } finally {
       setQuizLoading(false);
     }
