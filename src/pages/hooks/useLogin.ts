@@ -14,6 +14,17 @@ interface FormData {
   rememberMe: boolean;
 }
 
+const isTruthyFlag = (value: unknown): boolean => {
+  if (value === true) return true;
+  if (value === false || value == null) return false;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    return v === 'true' || v === '1' || v === 'yes';
+  }
+  return Boolean(value);
+};
+
 export function useLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -41,8 +52,8 @@ export function useLogin() {
       console.log('✅ Login response received:', loginResponse);
 
       const requiresOtp =
-        loginResponse.requiresOtpVerification === true ||
-        loginResponse.requiresTwoFactor === true;
+        isTruthyFlag((loginResponse as any).requiresOtpVerification) ||
+        isTruthyFlag((loginResponse as any).requiresTwoFactor);
 
       console.log('🔍 requiresOtp check result:', requiresOtp);
 

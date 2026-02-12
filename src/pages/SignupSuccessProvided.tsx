@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 import { supabase } from '../lib/supabaseClient';
 
+const getPublicSiteUrl = (): string => {
+  const fromEnv = (import.meta as any)?.env?.VITE_PUBLIC_SITE_URL as string | undefined;
+  const trimmed = (fromEnv || '').trim();
+  return trimmed ? trimmed.replace(/\/$/, '') : window.location.origin;
+};
+
 const SignupSuccessProvided: React.FC = () => {
   const navigate = useNavigate();
   const reference = localStorage.getItem('businessReference') || '';
@@ -19,10 +25,14 @@ const SignupSuccessProvided: React.FC = () => {
 
         const url = new URL(window.location.href);
         const hasCodeParam = url.searchParams.has('code');
+        const tokenHash = url.searchParams.get('token_hash');
+        const typeParam = url.searchParams.get('type');
         const hasAccessTokenInHash = window.location.hash.includes('access_token=');
 
         if (hasCodeParam && typeof (supabase.auth as any).exchangeCodeForSession === 'function') {
           await (supabase.auth as any).exchangeCodeForSession(window.location.href);
+        } else if (tokenHash && typeParam && typeof (supabase.auth as any).verifyOtp === 'function') {
+          await (supabase.auth as any).verifyOtp({ type: typeParam, token_hash: tokenHash });
         } else if (hasAccessTokenInHash && typeof (supabase.auth as any).getSessionFromUrl === 'function') {
           await (supabase.auth as any).getSessionFromUrl({ storeSession: true });
         }
@@ -44,6 +54,7 @@ const SignupSuccessProvided: React.FC = () => {
         const { data, error } = await supabase.auth.getUser();
         if (error) return;
         const confirmed = !!data.user?.email_confirmed_at;
+
         if (confirmed) {
           setIsVerified(true);
           localStorage.setItem('emailVerified', 'true');
@@ -98,7 +109,7 @@ const SignupSuccessProvided: React.FC = () => {
         return;
       }
 
-      const emailRedirectTo = `${window.location.origin}/signup/success/provided`;
+      const emailRedirectTo = `${getPublicSiteUrl()}/signup/success/provided`;
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: effectiveEmail,

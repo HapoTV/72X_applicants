@@ -1,32 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+
+const getPublicSiteUrl = (): string => {
+  const fromEnv = (import.meta as any)?.env?.VITE_PUBLIC_SITE_URL as string | undefined;
+  const trimmed = (fromEnv || '').trim();
+  return trimmed ? trimmed.replace(/\/$/, '') : window.location.origin;
+};
 
 const ResetPasswordRequest: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [businessRef, setBusinessRef] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [canResend, setCanResend] = useState(true);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cooldown timer to prevent rapid retries
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setCanResend(true);
+    }
+  }, [cooldown]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return alert('Please enter your email');
+    if (!email.trim()) {
+      alert('Please enter your email');
+      return;
+    }
+    if (!canResend) {
+      alert(`Please wait ${cooldown} seconds before requesting again.`);
+      return;
+    }
+
     setIsLoading(true);
+    setCanResend(false);
+    setCooldown(30); // 30-second cooldown
+
     try {
       if (!supabase) {
         alert('Password reset service is unavailable. Please try again later.');
         return;
       }
 
-      const emailRedirectTo = `${window.location.origin}/reset-password/verify`;
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      const emailRedirectTo = `${getPublicSiteUrl()}/reset-password/verify`;
+      const trimmedEmail = email.trim();
+
+      console.log('🔍 Debug: Requesting password reset for email:', trimmedEmail);
+      console.log('🔍 Debug: redirectTo:', emailRedirectTo);
+
+      const { error, data } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
         redirectTo: emailRedirectTo,
       });
-      if (error) throw error;
 
-      alert('Reset password email sent. Please check your inbox (and spam/junk).');
+      console.log('🔍 Debug: Supabase response:', { error, data });
+
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        // More specific error handling
+        if (error.message?.includes('Email not registered')) {
+          alert('This email is not registered. Please check your email or sign up for an account.');
+        } else if (error.message?.includes('rate limit')) {
+          alert('Too many reset requests. Please wait a few minutes before trying again.');
+        } else if (error.message?.includes('Invalid email')) {
+          alert('Invalid email address. Please enter a valid email.');
+        } else {
+          alert(`Failed to send reset email: ${error.message || 'Unknown error'}`);
+        }
+        return;
+      }
+
+      // Success
+      alert(
+        `Reset password email sent to ${trimmedEmail}. Please check your inbox (and spam/junk folder). If you don’t receive it within 5 minutes, try again or contact support.`
+      );
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to send reset password email');
+      console.error('❌ Unexpected error:', err);
+      alert(
+        err instanceof Error ? err.message : 'Failed to send reset password email. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -36,26 +92,57 @@ const ResetPasswordRequest: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-semibold mb-2">Forgot password</h1>
-        <p className="text-sm text-gray-600 mb-4">Enter your account email to receive a reset password email.</p>
+        <p className="text-sm text-gray-600 mb-4">
+          Enter your account email to receive a reset password email.
+        </p>
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="you@example.com"
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Business Reference (optional)</label>
-            <input type="text" value={businessRef} onChange={e => setBusinessRef(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Business Reference (optional)
+            </label>
+            <input
+              type="text"
+              value={businessRef}
+              onChange={(e) => setBusinessRef(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="Optional"
+            />
           </div>
 
-          <button type="submit" disabled={isLoading} className="w-full px-4 py-2 bg-primary-500 text-white rounded-lg">
-            {isLoading ? 'Sending...' : 'Send reset password email'}
+          <button
+            type="submit"
+            disabled={isLoading || !canResend}
+            className="w-full px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isLoading
+              ? 'Sending...'
+              : !canResend
+              ? `Please wait ${cooldown}s`
+              : 'Send reset password email'}
           </button>
         </form>
 
         <div className="text-sm text-gray-600 mt-4">
-          Remembered your password? <button onClick={() => navigate('/login')} className="text-primary-600">Sign in</button>
+          Remembered your password?{' '}
+          <button
+            onClick={() => navigate('/login')}
+            className="text-primary-600 hover:text-primary-700 font-medium"
+          >
+            Sign in
+          </button>
         </div>
       </div>
     </div>

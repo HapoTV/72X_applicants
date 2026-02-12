@@ -5,6 +5,12 @@ import Logo from '../assets/Logo.svg';
 import { authService } from '../services/AuthService';
 import { supabase } from '../lib/supabaseClient';
 
+const getPublicSiteUrl = (): string => {
+  const fromEnv = (import.meta as any)?.env?.VITE_PUBLIC_SITE_URL as string | undefined;
+  const trimmed = (fromEnv || '').trim();
+  return trimmed ? trimmed.replace(/\/$/, '') : window.location.origin;
+};
+
 const CreatePassword: React.FC = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -103,7 +109,7 @@ const CreatePassword: React.FC = () => {
         if (!supabase) {
           console.warn('Supabase client not initialized; skipping Supabase signUp.');
         } else {
-          const emailRedirectTo = `${window.location.origin}/signup/success/provided`;
+          const emailRedirectTo = `${getPublicSiteUrl()}/signup/success/provided`;
           const { error } = await supabase.auth.signUp({
             email: userEmail,
             password: form.password,
