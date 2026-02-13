@@ -321,9 +321,10 @@ class AuthService {
   /**
    * Resend OTP (from demo branch)
    */
-  async resendOtp(resendOtpRequest: any): Promise<void> {
+  async resendOtp(resendOtpRequest: any): Promise<LoginResponse> {
     try {
-      await axios.post(`${API_URL}/authentication/resend-otp`, resendOtpRequest);
+      const response = await axios.post(`${API_URL}/authentication/resend-otp`, resendOtpRequest);
+      return response.data;
     } catch (error) {
       console.error('Resend OTP error:', error);
       throw error;

@@ -63,16 +63,13 @@ const NewPaymentPage: React.FC = () => {
     recurringInterval: 'month'
   });
 
-  // Force hide navbar and sidebar for payment pages
   useEffect(() => {
-    // Set flag to hide layout
-    localStorage.setItem('hideLayout', 'true');
-    
-    // Cleanup on unmount
-    return () => {
-      localStorage.removeItem('hideLayout');
-    };
-  }, []);
+    if (!success) return;
+    const t = setTimeout(() => {
+      window.location.href = '/dashboard/overview';
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [success]);
 
   // Initialize user details and package
   useEffect(() => {

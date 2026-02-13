@@ -11,7 +11,6 @@ import AdsList from './components/AdsList';
 import StatsSummary from './components/StatsSummary';
 import HelpSection from './components/HelpSection';
 import Messages from './components/Messages';
-import DebugInfo from './components/DebugInfo';
 
 const AdTab: React.FC = () => {
   // State management
@@ -36,12 +35,7 @@ const AdTab: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      console.log('Fetching ads...');
-      const userId = localStorage.getItem('userId');
-      console.log('User ID:', userId);
-      
       const response = await adService.getUserAds(currentPage - 1, itemsPerPage);
-      console.log('API Response:', response);
       
       // Ensure all ads have required fields with default values
       const safeAds = (response.content || []).map((ad: any) => ({
@@ -155,9 +149,6 @@ const AdTab: React.FC = () => {
 
       {/* Messages */}
       <Messages success={success} error={error} />
-
-      {/* Debug Info */}
-      <DebugInfo />
 
       {/* Ad Form */}
       {showForm && (

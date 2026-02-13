@@ -31,32 +31,9 @@ const PageHeader: React.FC<PageHeaderProps> = ({
         <img src={Logo} alt="SeventyTwoX Logo" className="w-16 h-16" />
       </div>
 
-      <div className="mb-4 max-w-2xl mx-auto text-left bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <p className="text-sm font-medium text-gray-700 mb-2">Debug Info:</p>
-        <div className="text-xs text-gray-600 space-y-1">
-          <p>
-            User Status: <span className="font-medium">{userStatus || 'none'}</span>
-          </p>
-          <p>
-            Has Subscription: <span className="font-medium">{currentSubscription ? 'Yes' : 'No'}</span>
-          </p>
-          <p>
-            Eligibility Check:{' '}
-            <span className="font-medium">
-              {eligibilityCheck ? JSON.stringify(eligibilityCheck) : 'pending'}
-            </span>
-          </p>
-          <p>
-            Should Show Free Trial:{' '}
-            <span
-              className={`font-medium ${shouldShowFreeTrial ? 'text-green-600' : 'text-red-600'}`}
-            >
-              {shouldShowFreeTrial ? 'Yes' : 'No'}
-            </span>
-          </p>
-        </div>
-      </div>
-
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        {isMandatorySelection ? 'Choose Your Package' : 'Select a Package'}
+      </h1>
       {shouldShowFreeTrial && (
         <div className="mb-6 max-w-2xl mx-auto">
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-4 rounded-xl shadow-sm">

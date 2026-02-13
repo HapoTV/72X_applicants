@@ -16,7 +16,8 @@ const AdminProfile: React.FC = () => {
         companyName: '',
         industry: '',
         location: '',
-        employees: ''
+        employees: '',
+        founded: ''
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -42,7 +43,8 @@ const AdminProfile: React.FC = () => {
                 companyName: userData.companyName || '',
                 industry: userData.industry || '',
                 location: userData.location || '',
-                employees: userData.employees || ''
+                employees: userData.employees || '',
+                founded: userData.founded || ''
             });
         } catch (error) {
             console.error('Error fetching admin profile:', error);
@@ -63,11 +65,8 @@ const AdminProfile: React.FC = () => {
                 throw new Error('User ID not found');
             }
 
-            const updatedUser = await authService.updateUserProfile(user.userId, profileData);
-            
-            // Update auth context with new data
+            const updatedUser = await authService.updateUserProfile(profileData);
             login(updatedUser);
-            
             setIsEditing(false);
             console.log('Profile saved:', updatedUser);
             alert('Profile updated successfully!');

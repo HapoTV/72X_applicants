@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Edit, Save, Bell, Shield, Trash2 } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
-import type { User as UserType, UserFormData } from '../interfaces/UserData';
+import type { UserFormData } from '../interfaces/UserData';
 
 const Profile: React.FC = () => {
   const { user, login } = useAuth();
@@ -65,11 +65,8 @@ const Profile: React.FC = () => {
         throw new Error('User ID not found');
       }
 
-      const updatedUser = await authService.updateUserProfile( profileData);
-      
-      // Update auth context with new data
+      const updatedUser = await authService.updateUserProfile(profileData);
       login(updatedUser);
-      
       setIsEditing(false);
       console.log('Profile saved:', updatedUser);
       alert('Profile updated successfully!');
