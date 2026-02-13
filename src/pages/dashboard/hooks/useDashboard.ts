@@ -224,6 +224,8 @@ export function useDashboard() {
           } else if (profile) {
             const name = profile.first_name || profile.email?.split('@')[0] || 'User';
             localStorage.setItem('userName', name);
+            localStorage.setItem('firstName', profile.first_name || '');
+            localStorage.setItem('userFirstName', profile.first_name || '');
             localStorage.setItem('userEmail', profile.email || '');
           }
         }

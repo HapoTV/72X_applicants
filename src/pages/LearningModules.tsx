@@ -1,7 +1,7 @@
 // src/pages/LearningModules.tsx
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Clock, Star, BookOpen, Lock, X, Brain, Award, CheckCircle } from 'lucide-react';
+import { Clock, Star, BookOpen, Lock, X, Brain, CheckCircle } from 'lucide-react';
 import { learningService } from '../services/LearningService';
 import { useAuth } from '../context/AuthContext';
 import type { UserLearningModule } from '../interfaces/LearningData';
@@ -21,15 +21,10 @@ const LearningModules: React.FC = () => {
   const [quizLoading, setQuizLoading] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [quizMaterial, setQuizMaterial] = useState<UserLearningModule | null>(null);
-  const [quiz, setQuiz] = useState<any>(null);
   const [startedMaterialIds, setStartedMaterialIds] = useState<string[]>([]);
   const [quizPassedMaterialIds, setQuizPassedMaterialIds] = useState<string[]>([]);
   const [materialReadyForQuiz, setMaterialReadyForQuiz] = useState(false);
   const [readTimerDone, setReadTimerDone] = useState(false);
-  
-  // Use refs to prevent multiple fetches
-  const initialFetchDone = useRef(false);
-  const categoryFromParams = useRef(searchParams.get('category') || 'business-plan');
 
   const categories = [
     { id: 'business-plan', name: 'Business Planning' },
@@ -57,20 +52,20 @@ const LearningModules: React.FC = () => {
   }, [modules, quizPassedMaterialIds]);
 
   const inProgressCount = useMemo(() => {
-  const startedSet = new Set<string>(startedMaterialIds);
-  if (openMaterial?.id) startedSet.add(openMaterial.id);
+    const startedSet = new Set<string>(startedMaterialIds);
+    if (openMaterial?.id) startedSet.add(openMaterial.id);
   
-  // Convert array to Set for O(1) lookup
-  const passedSet = new Set<string>(quizPassedMaterialIds);
+    // Convert array to Set for O(1) lookup
+    const passedSet = new Set<string>(quizPassedMaterialIds);
   
-  let count = 0;
-  for (const m of modules) {
-    if (!startedSet.has(m.id)) continue;
-    if (passedSet.has(m.id)) continue;
-    count += 1;
-  }
-  return count;
-}, [modules, startedMaterialIds, openMaterial?.id, quizPassedMaterialIds]);
+    let count = 0;
+    for (const m of modules) {
+      if (!startedSet.has(m.id)) continue;
+      if (passedSet.has(m.id)) continue;
+      count += 1;
+    }
+    return count;
+  }, [modules, startedMaterialIds, openMaterial?.id, quizPassedMaterialIds]);
 
   // Fetch learning data
   const fetchLearningData = useCallback(async () => {
@@ -109,17 +104,9 @@ const LearningModules: React.FC = () => {
 
   // Single fetch effect - this is the key fix
   useEffect(() => {
-    if (user?.email && !initialFetchDone.current) {
-      initialFetchDone.current = true;
+    if (user?.email) {
       fetchLearningData();
     }
-    
-    // Reset when user changes
-    return () => {
-      if (!user?.email) {
-        initialFetchDone.current = false;
-      }
-    };
   }, [user?.email, fetchLearningData]);
 
   // Timer effect for reading materials
@@ -240,7 +227,6 @@ const LearningModules: React.FC = () => {
       }
       
       setQuizQuestions(transformedQuestions);
-      setQuiz(quiz);
       setQuizMaterial(material);
       setShowQuiz(true);
       
@@ -253,8 +239,8 @@ const LearningModules: React.FC = () => {
       
     } catch (error) {
       console.error('❌ Failed to start quiz:', error);
-      // Show error to user instead of falling back to mock data
-      setError(error.message || 'Failed to generate quiz. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to generate quiz. Please try again.';
+      setError(message);
     } finally {
       setQuizLoading(false);
     }
@@ -399,12 +385,7 @@ const LearningModules: React.FC = () => {
             
             return (
               <div key={module.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="relative">
-                  <img 
-                    src={module.thumbnail} 
-                    alt={module.title} 
-                    className="w-full h-32 object-cover"
-                  />
+                <div className="relative bg-gray-50 h-16">
                   {hasPassedQuiz && (
                     <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" />

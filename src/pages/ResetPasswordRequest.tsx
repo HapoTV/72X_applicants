@@ -50,7 +50,7 @@ const ResetPasswordRequest: React.FC = () => {
       const emailRedirectTo = `${getPublicSiteUrl()}/reset-password/verify`;
       const trimmedEmail = email.trim();
 
-      const { error, data } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
         redirectTo: emailRedirectTo,
       });
 

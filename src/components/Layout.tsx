@@ -23,8 +23,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   const [showLayout, setShowLayout] = useState(true);
   const [userStatus, setUserStatus] = useState<string>('');
-  const [requiresPackageSelection, setRequiresPackageSelection] = useState(false);
-  
+
   const location = useLocation();
   const navigate = useNavigate();
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
@@ -39,8 +38,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     
     console.log('🏗️ Layout status check:', {
       userStatus: status,
-      requiresPackage,
-      selectedPackage: !!selectedPackage,
       currentPath,
       isSelectPackagePage: currentPath === '/select-package',
       isPaymentPage: currentPath.includes('/payments'),
@@ -55,7 +52,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     });
     
     setUserStatus(status || '');
-    setRequiresPackageSelection(requiresPackage);
     
     // Define allowed paths for non-ACTIVE users
     const publicPrefixes = [

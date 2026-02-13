@@ -47,10 +47,14 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
   
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
-  const userName = userEmail.split('@')[0].replace('.', ' ').split(' ').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-  const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+  const userInitials = userEmail
+    .split('@')[0]
+    .split(/[._\s-]+/)
+    .filter(Boolean)
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   const userStatus = localStorage.getItem('userStatus');
   const isFreeTrial = userStatus === 'FREE_TRIAL';
@@ -180,15 +184,12 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
         </div>
 
         {/* User Profile Section */}
-        <div className="flex flex-col items-center pt-2 pb-3 border-b border-gray-200">
-          <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-2 shadow-md ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
+        <div className="flex flex-col items-center pt-2 pb-1 border-b border-gray-200">
+          <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-0 shadow-md ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
             <span className="text-white text-xl font-bold">
               {userInitials}
             </span>
           </div>
-          {!collapsed && (
-            <h3 className="text-sm font-semibold text-gray-900 text-center">{userName}</h3>
-          )}
         </div>
       </div>
 
