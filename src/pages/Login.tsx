@@ -1,6 +1,6 @@
-// src/pages/Login.tsx - UPDATED FOR OTP VERIFICATION
+// src/pages/Login.tsx
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLogin } from './hooks/useLogin';
 import Logo from '../assets/Logo.svg';
@@ -34,6 +34,15 @@ const Login: React.FC = () => {
         await handleLogin(formData);
     };
 
+    const getLoginTypeLabel = () => {
+        switch(loginType) {
+            case 'user': return 'User';
+            case 'admin': return 'Admin';
+            case 'superadmin': return 'Super Admin';
+            default: return 'User';
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
             <div className="w-full max-w-lg">
@@ -59,7 +68,7 @@ const Login: React.FC = () => {
                             }`}
                         >
                             <Users className="w-4 h-4" />
-                            <span className="font-medium">User Login</span>
+                            <span className="font-medium">User</span>
                         </button>
                         <button
                             onClick={() => setLoginType('admin')}
@@ -70,7 +79,18 @@ const Login: React.FC = () => {
                             }`}
                         >
                             <Shield className="w-4 h-4" />
-                            <span className="font-medium">Admin Login</span>
+                            <span className="font-medium">Admin</span>
+                        </button>
+                        <button
+                            onClick={() => setLoginType('superadmin')}
+                            className={`flex-1 flex items-center justify-center space-x-2 py-2 px-4 rounded-md transition-colors ${
+                                loginType === 'superadmin'
+                                    ? 'bg-white text-purple-600 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                        >
+                            <Crown className="w-4 h-4" />
+                            <span className="font-medium">Super</span>
                         </button>
                     </div>
 
@@ -182,7 +202,7 @@ const Login: React.FC = () => {
                                     Signing in...
                                 </>
                             ) : (
-                                `Sign In as ${loginType === 'admin' ? 'Admin' : 'User'}`
+                                `Sign In as ${getLoginTypeLabel()}`
                             )}
                         </button>
                     </form>
@@ -198,6 +218,9 @@ const Login: React.FC = () => {
                             <p className="mt-2"><strong>Admin:</strong></p>
                             <p className="ml-4">Email: asavela.mbengashe@example.com</p>
                             <p className="ml-4">Password: @TesterAsavela123</p>
+                            <p className="mt-2"><strong>Super Admin:</strong></p>
+                            <p className="ml-4">Email: misa@gmail.com</p>
+                            <p className="ml-4">Password: Misa@123</p>
                         </div>
                         <button
                             type="button"
@@ -205,7 +228,7 @@ const Login: React.FC = () => {
                             className="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
                             disabled={isLoading}
                         >
-                            Fill {loginType} credentials
+                            Fill {getLoginTypeLabel()} credentials
                         </button>
                     </div>
                 </div>

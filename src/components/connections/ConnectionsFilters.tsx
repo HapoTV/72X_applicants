@@ -9,8 +9,11 @@ interface Props {
   onIndustryChange: (value: string) => void;
   selectedLocation: string;
   onLocationChange: (value: string) => void;
+  selectedOrganisation: string;
+  onOrganisationChange: (value: string) => void;
   industries: string[];
   locations: string[];
+  organisations: string[];
   onClearFilters: () => void;
 }
 
@@ -21,8 +24,11 @@ const ConnectionsFilters: React.FC<Props> = ({
   onIndustryChange,
   selectedLocation,
   onLocationChange,
+  selectedOrganisation,
+  onOrganisationChange,
   industries,
   locations,
+  organisations,
   onClearFilters,
 }) => {
   return (
@@ -31,14 +37,14 @@ const ConnectionsFilters: React.FC<Props> = ({
         <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Search users by name, email, industry, or location..."
+          placeholder="Search users by name, email, industry, location, or organisation..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
         />
       </div>
 
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <select
           value={selectedIndustry}
           onChange={(e) => onIndustryChange(e.target.value)}
@@ -61,6 +67,19 @@ const ConnectionsFilters: React.FC<Props> = ({
           {locations.map((location) => (
             <option key={location} value={location}>
               {location}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={selectedOrganisation}
+          onChange={(e) => onOrganisationChange(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+        >
+          <option value="all">All Organisations</option>
+          {organisations.map((organisation) => (
+            <option key={organisation} value={organisation}>
+              {organisation}
             </option>
           ))}
         </select>

@@ -60,20 +60,27 @@ const VerifyOtp: React.FC = () => {
                 loginType
             });
             
+            console.log('✅ OTP verification response:', response);
+            console.log('👤 User role from response:', response.role);
+            
             if (response.token) {
                 localStorage.setItem('authToken', response.token);
                 authService.setAxiosAuthHeader(response.token);
                 
-                localStorage.setItem('userType', loginType);
+                // Store user role from response - this is the source of truth
+                const userRole = response.role || '';
+                console.log('📝 Storing user role:', userRole);
+                
+                localStorage.setItem('userRole', userRole);
                 localStorage.setItem('userEmail', email);
                 localStorage.setItem('userId', response.userId || userId || '');
-                localStorage.setItem('userRole', response.role || (loginType === 'admin' ? 'ADMIN' : 'USER'));
-                localStorage.setItem('fullName', response.fullName || (loginType === 'admin' ? 'Admin User' : 'User'));
+                localStorage.setItem('fullName', response.fullName || '');
 
                 localStorage.setItem('emailVerified', 'true');
 
                 if (response.status) {
                     localStorage.setItem('userStatus', response.status);
+                    console.log('📋 Backend user status:', response.status);
                 }
 
                 if (response.businessReference) {
@@ -86,16 +93,12 @@ const VerifyOtp: React.FC = () => {
                     localStorage.removeItem('requiresPackageSelection');
                 }
                 
-                if (loginType === 'admin') {
-                    localStorage.setItem('isAdmin', 'true');
-                }
-                
                 sessionStorage.removeItem('pendingLogin');
                 
                 const userData = {
                     userId: response.userId || userId || '',
                     email: response.email || email,
-                    role: response.role || (loginType === 'admin' ? 'ADMIN' : 'USER'),
+                    role: userRole, // Use role from response
                     fullName: response.fullName,
                     businessReference: response.businessReference,
                     status: response.status,
@@ -105,17 +108,49 @@ const VerifyOtp: React.FC = () => {
                 
                 login(userData);
                 
-                if (response.requiresPackageSelection === true) {
-                    window.location.href = '/select-package';
-                } else {
-                    setTimeout(() => {
-                        if (loginType === 'admin') {
-                            window.location.href = '/admin/dashboard/overview';
+                // Use setTimeout to ensure state updates are complete
+                setTimeout(() => {
+                    // Determine redirect based on role from response
+                    const role = userRole.toUpperCase();
+                    console.log('🔍 Determining redirect based on role:', role);
+                    
+                    if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+                        console.log('👑 Redirecting to admin dashboard for role:', role);
+                        window.location.href = '/admin/dashboard/overview';
+                        return; // Important: return to prevent further execution
+                    }
+                    
+                    // If we get here, it's a regular user
+                    console.log('👤 Processing regular user redirect with role:', role);
+                    
+                    if (response.requiresPackageSelection === true) {
+                        console.log('📦 User needs package selection, redirecting to /select-package');
+                        window.location.href = '/select-package';
+                    } else {
+                        const userStatus = response.status || localStorage.getItem('userStatus');
+                        const selectedPackage = localStorage.getItem('selectedPackage');
+                        
+                        console.log('🔍 User dashboard redirection check:', {
+                            userStatus,
+                            selectedPackage,
+                            role,
+                        });
+
+                        if (userStatus === 'PENDING_PACKAGE') {
+                            console.log('📦 User needs package selection, redirecting to /select-package');
+                            window.location.href = '/select-package';
+                        } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
+                            console.log('💳 User needs payment for selected package, redirecting to /payments/new');
+                            window.location.href = '/payments/new';
+                        } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
+                            console.log('⚠️ User PENDING_PAYMENT but no package selected, redirecting to package selection');
+                            window.location.href = '/select-package';
                         } else {
+                            console.log('🏠 User is active, going to dashboard');
                             window.location.href = '/dashboard/overview';
                         }
-                    }, 300);
-                }
+                    }
+                }, 300);
             } else {
                 console.error('❌ NO TOKEN IN RESPONSE! Full response:', response);
                 setError('Authentication failed: No token received from server');
@@ -152,6 +187,7 @@ const VerifyOtp: React.FC = () => {
             });
 
             if (response?.otpCode) {
+                // OTP resent successfully
             }
         } catch (error: any) {
             console.error('❌ Resend OTP error:', error);
@@ -187,8 +223,8 @@ const VerifyOtp: React.FC = () => {
                 </p>
                 
                 <div className="flex justify-center mb-6">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${loginType === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                        {loginType === 'admin' ? '👑 Admin Login' : '👤 User Login'}
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${loginType === 'admin' || loginType === 'superadmin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                        {loginType === 'admin' ? '👑 Admin Login' : loginType === 'superadmin' ? '👑 Super Admin Login' : '👤 User Login'}
                     </span>
                 </div>
                 
@@ -218,7 +254,7 @@ const VerifyOtp: React.FC = () => {
                             inputMode="numeric"
                         />
                         <p className="text-xs text-gray-500 mt-2 text-center">
-                            Enter the 6-digit code from your email/console
+                            Enter the 6-digit code from your email.
                         </p>
                     </div>
                     

@@ -1,12 +1,12 @@
 // src/pages/Profile.tsx
 import React, { useState, useEffect } from 'react';
-import { User, Edit, Save, Bell, Shield, Trash2 } from 'lucide-react';
+import { User, Edit, Save, Bell, Shield, Trash2, Building2 } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
 import type { UserFormData } from '../interfaces/UserData';
 
 const Profile: React.FC = () => {
-  const { user, login } = useAuth();
+  const { user, login, userOrganisation } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   const [profileData, setProfileData] = useState<UserFormData>({
@@ -14,6 +14,7 @@ const Profile: React.FC = () => {
     email: '',
     mobileNumber: '',
     companyName: '',
+    organisation: '', // NEW
     industry: '',
     location: '',
     employees: '',
@@ -41,6 +42,7 @@ const Profile: React.FC = () => {
         email: userData.email || '',
         mobileNumber: userData.mobileNumber || '',
         companyName: userData.companyName || '',
+        organisation: userData.organisation || '', // NEW
         industry: userData.industry || '',
         location: userData.location || '',
         employees: userData.employees || '',
@@ -111,8 +113,18 @@ const Profile: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Profile Settings</h1>
-        <p className="text-gray-600">Manage your account and business information</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Profile Settings</h1>
+            <p className="text-gray-600">Manage your account and business information</p>
+          </div>
+          {userOrganisation && (
+            <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+              <Building2 className="w-4 h-4" />
+              {userOrganisation}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Horizontal Tab Navigation */}
@@ -170,6 +182,12 @@ const Profile: React.FC = () => {
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">{profileData.fullName}</h3>
                 <p className="text-gray-600">{profileData.companyName}</p>
+                {profileData.organisation && (
+                  <p className="text-sm text-gray-500 mt-1 flex items-center">
+                    <Building2 className="w-4 h-4 mr-1" />
+                    Organisation: {profileData.organisation}
+                  </p>
+                )}
                 {isEditing && (
                   <button className="text-primary-600 text-sm hover:text-primary-700 mt-1">
                     Change Photo
@@ -234,6 +252,20 @@ const Profile: React.FC = () => {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Referenced By
+                    </label>
+                    <input
+                      type="text"
+                      value={profileData.organisation}
+                      onChange={(e) => handleInputChange('organisation', e.target.value)}
+                      disabled={!isEditing}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                      placeholder="Your organisation"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -243,7 +275,7 @@ const Profile: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Company Name
+                      My Company Name
                     </label>
                     <input
                       type="text"

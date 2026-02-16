@@ -1,9 +1,11 @@
+// src/pages/payment/NewPaymentPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { paymentService } from '../../services/PaymentService';
 import { usePaystackPayment } from '../../hooks/usePaystackPayment';
 import { Currency } from '../../interfaces/PaymentData';
 import type { PaymentRequest } from '../../interfaces/PaymentData';
+import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -21,7 +23,8 @@ import {
   Lock,
   BadgeCheck,
   ArrowLeft,
-  Home
+  Home,
+  Building2
 } from 'lucide-react';
 import userSubscriptionService from '../../services/UserSubscriptionService';
 import { UserSubscriptionType } from '../../interfaces/UserSubscriptionData';
@@ -39,11 +42,13 @@ interface UserDetails {
   email: string;
   phoneNumber: string;
   billingAddress: string;
+  organisation?: string; // NEW
 }
 
 const NewPaymentPage: React.FC = () => {
   const navigate = useNavigate();
   const { paystackLoaded, isProcessing, initializePayment } = usePaystackPayment();
+  const { user, updateUserOrganisation } = useAuth(); // Added updateUserOrganisation
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -51,7 +56,8 @@ const NewPaymentPage: React.FC = () => {
   const [userDetails, setUserDetails] = useState<UserDetails>({
     email: '',
     phoneNumber: '',
-    billingAddress: ''
+    billingAddress: '',
+    organisation: ''
   });
 
   const [paymentDetails, setPaymentDetails] = useState<Omit<PaymentRequest, 'userId' | 'receiptEmail'>>({
@@ -74,13 +80,15 @@ const NewPaymentPage: React.FC = () => {
   // Initialize user details and package
   useEffect(() => {
     const pkgData = localStorage.getItem('selectedPackage');
-    const userEmail = localStorage.getItem('userEmail') || '';
+    const userEmail = localStorage.getItem('userEmail') || user?.email || '';
     const userPhone = localStorage.getItem('userPhone') || '';
+    const userOrg = localStorage.getItem('userOrganisation') || '';
     
     setUserDetails(prev => ({
       ...prev,
       email: userEmail,
-      phoneNumber: userPhone
+      phoneNumber: userPhone,
+      organisation: userOrg
     }));
 
     if (pkgData) {
@@ -102,7 +110,7 @@ const NewPaymentPage: React.FC = () => {
         setError('Invalid package data. Please select a package again.');
       }
     }
-  }, []);
+  }, [user]);
 
   const handleUserDetailChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -123,7 +131,12 @@ const NewPaymentPage: React.FC = () => {
       console.log('✅ Payment verification response:', verifiedPayment);
       
       if (verifiedPayment.status === 'SUCCEEDED') {
-        // Call handlePaymentComplete to update user status and WAIT for it to complete
+        // Save organisation if provided
+        if (userDetails.organisation) {
+          updateUserOrganisation(userDetails.organisation);
+        }
+        
+        // Call handlePaymentComplete to update user status
         await handlePaymentComplete();
         
         // Force a small delay to ensure backend processes the update
@@ -159,7 +172,8 @@ const NewPaymentPage: React.FC = () => {
         userSubscriptionService.confirmPayment({
           packageType: selectedPackage.backendType,
           amount: selectedPackage.price,
-          currency: selectedPackage.currency
+          currency: selectedPackage.currency,
+          organisation: userDetails.organisation // Include organisation
         }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Backend timeout')), 10000)
@@ -183,8 +197,12 @@ const NewPaymentPage: React.FC = () => {
         // CRITICAL: Check if status is actually ACTIVE
         if (updatedUser.status !== 'ACTIVE') {
           console.warn('⚠️ Backend returned non-ACTIVE status:', updatedUser.status);
-          // Manually override to ACTIVE since payment succeeded
           updatedUser.status = 'ACTIVE';
+        }
+
+        // Save organisation
+        if (updatedUser.organisation) {
+          localStorage.setItem('userOrganisation', updatedUser.organisation);
         }
 
         localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -195,15 +213,19 @@ const NewPaymentPage: React.FC = () => {
         const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
         const updatedUser = { 
           ...currentUser, 
-          status: 'ACTIVE', // <-- FORCE ACTIVE
+          status: 'ACTIVE',
           phoneNumber: userDetails.phoneNumber,
           billingAddress: userDetails.billingAddress,
           email: userDetails.email,
+          organisation: userDetails.organisation,
           subscriptionPlan: selectedPackage?.name,
           subscriptionType: selectedPackage?.backendType
         };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         localStorage.setItem('userStatus', 'ACTIVE');
+        if (userDetails.organisation) {
+          localStorage.setItem('userOrganisation', userDetails.organisation);
+        }
       }
 
       // Clear temporary data
@@ -217,19 +239,23 @@ const NewPaymentPage: React.FC = () => {
     } catch (error: any) {
       console.error('❌ Error in handlePaymentComplete:', error);
       
-      // Even if backend fails, FORCE ACTIVE status because payment succeeded
+      // Even if backend fails, FORCE ACTIVE status
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const updatedUser = { 
         ...currentUser, 
-        status: 'ACTIVE', // <-- FORCE ACTIVE HERE TOO
+        status: 'ACTIVE',
         phoneNumber: userDetails.phoneNumber,
         billingAddress: userDetails.billingAddress,
         email: userDetails.email,
+        organisation: userDetails.organisation,
         subscriptionPlan: selectedPackage?.name,
         subscriptionType: selectedPackage?.backendType
       };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       localStorage.setItem('userStatus', 'ACTIVE');
+      if (userDetails.organisation) {
+        localStorage.setItem('userOrganisation', userDetails.organisation);
+      }
       
       console.log('⚠️ Backend update failed, but FORCING local status to ACTIVE');
     }
@@ -263,6 +289,7 @@ const NewPaymentPage: React.FC = () => {
         packageType: selectedPackage.backendType,
         billingAddress: userDetails.billingAddress,
         phoneNumber: userDetails.phoneNumber,
+        organisation: userDetails.organisation, // Include organisation
         interval: selectedPackage.interval,
         timestamp: new Date().toISOString()
       };
@@ -308,6 +335,12 @@ const NewPaymentPage: React.FC = () => {
                   <p className="text-sm text-gray-600">
                     You're subscribed to the {selectedPackage.name} plan
                   </p>
+                  {userDetails.organisation && (
+                    <p className="text-sm text-gray-600 mt-2 flex items-center justify-center">
+                      <Building2 className="w-4 h-4 mr-1" />
+                      Organisation: {userDetails.organisation}
+                    </p>
+                  )}
                   <p className="text-sm text-green-600 font-medium mt-2">
                     ✅ Account Status: ACTIVE
                   </p>
@@ -316,7 +349,6 @@ const NewPaymentPage: React.FC = () => {
               <div className="space-y-3">
                 <Button 
                   onClick={() => {
-                    // Force refresh user data by redirecting to dashboard
                     window.location.href = '/dashboard/overview';
                   }}
                   className="w-full bg-green-600 hover:bg-green-700"
@@ -462,6 +494,28 @@ const NewPaymentPage: React.FC = () => {
               </div>
 
               <div>
+                <Label htmlFor="organisation" className="block text-sm font-medium text-gray-700 mb-2">
+                  Organisation (Optional)
+                </Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    id="organisation"
+                    name="organisation"
+                    type="text"
+                    value={userDetails.organisation}
+                    onChange={handleUserDetailChange}
+                    placeholder="e.g., TechCorp, InnovateLabs"
+                    disabled={isProcessing || verifying}
+                    className="w-full pl-10"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Your company or organisation name
+                </p>
+              </div>
+
+              <div>
                 <Label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
                   Phone Number (Optional)
                 </Label>
@@ -574,6 +628,12 @@ const NewPaymentPage: React.FC = () => {
                     <span className="text-gray-600">Billing Cycle:</span>
                     <span className="font-medium capitalize">{selectedPackage.interval}ly</span>
                   </div>
+                  {userDetails.organisation && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Organisation:</span>
+                      <span className="font-medium">{userDetails.organisation}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t pt-3">
                     <span className="text-gray-900 font-semibold">Total Amount:</span>
                     <span className="text-xl font-bold text-gray-900">

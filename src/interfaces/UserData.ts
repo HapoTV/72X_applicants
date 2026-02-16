@@ -1,3 +1,4 @@
+// src/interfaces/UserData.ts
 export interface User {
   // Core identity
   userId: string;
@@ -10,6 +11,7 @@ export interface User {
   businessReference?: string;
   hasReference?: boolean;
   companyName?: string;
+  organisation?: string; // NEW: Organisation that referred the user
   industry?: string;
   location?: string;
   founded?: string;
@@ -23,6 +25,10 @@ export interface User {
   token?: string;
   requiresTwoFactor?: boolean;
   twoFactorEnabled?: boolean;
+  
+  // Availability
+  availabilityStatus?: string;
+  lastSeenAt?: string;
 }
 
 export interface CreateUserRequest {
@@ -30,6 +36,7 @@ export interface CreateUserRequest {
   email: string;
   mobileNumber: string;
   companyName: string;
+  organisation?: string; // NEW: Optional organisation
   employees: string;
   founded: string;
   industry: string;
@@ -46,6 +53,7 @@ export interface CreateUserResponse {
   email: string;
   mobileNumber: string;
   companyName: string;
+  organisation?: string; // NEW
   businessReference?: string;
   hasReference?: boolean;
   role: string;
@@ -57,7 +65,7 @@ export interface LoginRequest {
     email: string;
     password: string;
     businessReference?: string;
-    loginType: 'user' | 'admin';
+    loginType: 'user' | 'admin' | 'superadmin'; // Added superadmin type
 }
 
 export interface LoginResponse {
@@ -70,6 +78,7 @@ export interface LoginResponse {
   businessReference?: string;
   profileImageUrl?: string;
   companyName?: string;
+  organisation?: string; // NEW
   status?: string;
   requiresPackageSelection?: boolean;
 
@@ -77,6 +86,10 @@ export interface LoginResponse {
   requiresOtpVerification?: boolean;
   requiresTwoFactor?: boolean;
   otpCode?: string; // for dev/testing only
+  
+  // Availability
+  availabilityStatus?: string;
+  lastSeenAt?: string;
 }
 
 export interface UserFormData {
@@ -84,6 +97,7 @@ export interface UserFormData {
   email: string;
   mobileNumber: string;
   companyName: string;
+  organisation?: string; // NEW
   industry: string;
   location: string;
   employees: string;
@@ -93,4 +107,22 @@ export interface UserFormData {
 export interface ChangePasswordRequest {
   oldPassword: string;
   newPassword: string;
+}
+
+// NEW: Interface for organisation-based user operations
+export interface OrganisationUserRequest {
+  organisation: string;
+  userId?: string;
+  role?: string;
+  status?: string;
+}
+
+// NEW: Interface for user availability
+export interface UserAvailability {
+  userId: string;
+  status: 'ONLINE' | 'OFFLINE' | 'AWAY' | 'BUSY';
+  lastSeenAt: string;
+  sessionId?: string;
+  ipAddress?: string;
+  deviceInfo?: string;
 }

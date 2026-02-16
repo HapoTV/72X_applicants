@@ -11,6 +11,8 @@ import {
   Paper,
   IconButton,
   CircularProgress,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import { Send, AttachFile, EmojiEmotions } from '@mui/icons-material';
 import MessageServices from '../services/MessageServices';
@@ -29,17 +31,53 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   receiverName,
   receiverEmail,
   isOpen,
+  onClose,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const currentUserId = localStorage.getItem('userId') || '';
+  const pollingIntervalRef = useRef<NodeJS.Timeout>();
+  
+  // Get current user ID from localStorage
+  const getCurrentUserId = (): string => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.id || user.userId || '';
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    return localStorage.getItem('userId') || '';
+  };
+  
+  const currentUserId = getCurrentUserId();
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen && currentUserId && receiverId) {
       fetchMessages();
+      
+      // Set up polling for new messages every 3 seconds
+      pollingIntervalRef.current = setInterval(fetchMessages, 3000);
+      
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+      };
     }
   }, [isOpen, currentUserId, receiverId]);
 
@@ -48,40 +86,50 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   }, [messages]);
 
   const fetchMessages = async () => {
+    if (!receiverId || !currentUserId) {
+      console.log('Cannot fetch messages: missing receiverId or currentUserId', { receiverId, currentUserId });
+      return;
+    }
+
     try {
       setLoading(true);
+      setError(null);
       
       // Check if user is authenticated
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.error('No authentication token found');
+        setError('Please login to continue');
         throw new Error('Please login to continue');
       }
       
-      const fetchedMessages = await MessageServices.getMessagesBetweenUsers(
-        currentUserId,
-        receiverId
-      );
+      console.log('Fetching messages between:', currentUserId, 'and', receiverId);
+      
+      // Pass only the receiverId - the backend will get sender ID from the token
+      const fetchedMessages = await MessageServices.getMessagesBetweenUsers(receiverId);
+      console.log('Fetched messages:', fetchedMessages);
+      
       setMessages(fetchedMessages);
       
-      // Mark messages as read
-      const unreadMessages = fetchedMessages
-        .filter(msg => msg.receiverId === currentUserId && !msg.isRead)
-        .map(msg => msg.messageId);
+      // Mark messages as read if there are any unread messages from the receiver
+      const hasUnreadFromReceiver = fetchedMessages.some(
+        msg => msg.senderId === receiverId && !msg.isRead
+      );
       
-      if (unreadMessages.length > 0) {
-        await MessageServices.markMessagesAsRead(unreadMessages);
+      if (hasUnreadFromReceiver) {
+        console.log('Marking messages as read from:', receiverId);
+        await MessageServices.markMessagesAsRead(receiverId);
       }
     } catch (error: any) {
       console.error('Error fetching messages:', error);
       
       // Handle specific error cases
       if (error.response?.status === 403) {
-        console.error('Access denied. You may not have permission to view this conversation.');
-        // You could show a user-friendly message here
+        setError('Access denied. You may not have permission to view this conversation.');
       } else if (error.response?.status === 401) {
-        console.error('Unauthorized. Please login again.');
-        // The interceptor should handle redirecting to login
+        setError('Unauthorized. Please login again.');
+      } else {
+        setError(error.message || 'Failed to load messages');
       }
     } finally {
       setLoading(false);
@@ -93,22 +141,33 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !currentUserId) return;
+    if (!newMessage.trim() || !currentUserId || !receiverId) return;
 
     try {
       setSending(true);
+      setError(null);
+      
       const messageData = {
-        content: newMessage,
+        content: newMessage.trim(),
         senderId: currentUserId,
-        receiverId,
+        receiverId: receiverId,
         messageType: 'TEXT' as const,
       };
 
-      await MessageServices.sendMessage(messageData);
+      console.log('Sending message:', messageData);
+      
+      const sentMessage = await MessageServices.sendMessage(messageData);
+      console.log('Message sent successfully:', sentMessage);
+      
+      // Add the sent message to the list immediately for better UX
+      setMessages(prev => [...prev, sentMessage]);
       setNewMessage('');
-      fetchMessages(); // Refresh messages
-    } catch (error) {
+      
+      // Also refresh to ensure we have the latest
+      setTimeout(() => fetchMessages(), 500);
+    } catch (error: any) {
       console.error('Error sending message:', error);
+      setError(error.message || 'Failed to send message');
     } finally {
       setSending(false);
     }
@@ -126,15 +185,34 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleCloseError = () => {
+    setError(null);
+  };
+
+  // Don't render if not open
+  if (!isOpen) return null;
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '500px' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '500px', bgcolor: 'background.paper' }}>
+      {/* Error Snackbar */}
+      <Snackbar 
+        open={!!error} 
+        autoHideDuration={6000} 
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+          {error}
+        </Alert>
+      </Snackbar>
+
       {/* Chat Header */}
-      <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
-        <Avatar sx={{ mr: 2 }}>
-          {receiverName.split(' ').map(n => n[0]).join('')}
+      <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider', borderRadius: 0 }}>
+        <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+          {receiverName.split(' ').map(n => n[0]).join('').toUpperCase()}
         </Avatar>
         <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="subtitle1">{receiverName}</Typography>
+          <Typography variant="subtitle1" fontWeight={600}>{receiverName}</Typography>
           <Typography variant="caption" color="text.secondary">
             {receiverEmail}
           </Typography>
@@ -148,20 +226,22 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           overflow: 'auto',
           p: 2,
           bgcolor: 'grey.50',
+          borderRadius: 0,
         }}
       >
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        {loading && messages.length === 0 ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <CircularProgress />
           </Box>
         ) : messages.length === 0 ? (
-          <Box sx={{ textAlign: 'center', p: 4 }}>
-            <Typography color="text.secondary">
-              No messages yet. Start the conversation!
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <Typography color="text.secondary" align="center">
+              No messages yet.<br />
+              Start the conversation!
             </Typography>
           </Box>
         ) : (
-          <List>
+          <List sx={{ p: 0 }}>
             {messages.map((message) => {
               const isOwnMessage = message.senderId === currentUserId;
               
@@ -170,7 +250,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   key={message.messageId}
                   sx={{
                     justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
-                    px: 1,
+                    px: 0,
+                    py: 0.5,
                   }}
                 >
                   <Box
@@ -181,31 +262,36 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                       alignItems: isOwnMessage ? 'flex-end' : 'flex-start',
                     }}
                   >
+                    {!isOwnMessage && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, ml: 1 }}>
+                        {message.senderName || receiverName}
+                      </Typography>
+                    )}
                     <Paper
+                      elevation={1}
                       sx={{
                         p: 1.5,
-                        bgcolor: isOwnMessage ? 'primary.main' : 'grey.100',
+                        bgcolor: isOwnMessage ? 'primary.main' : 'background.paper',
                         color: isOwnMessage ? 'white' : 'text.primary',
                         borderRadius: 2,
+                        borderTopRightRadius: isOwnMessage ? 4 : 2,
+                        borderTopLeftRadius: !isOwnMessage ? 4 : 2,
                       }}
                     >
-                      {!isOwnMessage && (
-                        <Typography variant="caption" color="text.secondary">
-                          {message.senderName}
-                        </Typography>
-                      )}
-                      <Typography>{message.content}</Typography>
+                      <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                        {message.content}
+                      </Typography>
                       <Typography
                         variant="caption"
                         sx={{
                           display: 'block',
                           textAlign: 'right',
-                          color: isOwnMessage ? 'white' : 'text.secondary',
-                          opacity: 0.8,
+                          color: isOwnMessage ? 'rgba(255,255,255,0.7)' : 'text.secondary',
+                          mt: 0.5,
                         }}
                       >
                         {formatTime(message.createdAt)}
-                        {message.isRead && isOwnMessage && ' ✓'}
+                        {isOwnMessage && message.isRead && ' ✓✓'}
                       </Typography>
                     </Paper>
                   </Box>
@@ -218,12 +304,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       </Paper>
 
       {/* Message Input */}
-      <Paper sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+      <Paper sx={{ p: 2, borderTop: 1, borderColor: 'divider', borderRadius: 0 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <IconButton size="small">
+          <IconButton size="small" disabled={sending}>
             <AttachFile />
           </IconButton>
-          <IconButton size="small">
+          <IconButton size="small" disabled={sending}>
             <EmojiEmotions />
           </IconButton>
           <TextField
@@ -236,13 +322,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            disabled={sending}
+            disabled={sending || !currentUserId}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              }
+            }}
           />
           <Button
             variant="contained"
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
-            startIcon={sending ? <CircularProgress size={20} /> : <Send />}
+            disabled={!newMessage.trim() || sending || !currentUserId}
+            startIcon={sending ? <CircularProgress size={20} color="inherit" /> : <Send />}
+            sx={{ minWidth: 100 }}
           >
             Send
           </Button>

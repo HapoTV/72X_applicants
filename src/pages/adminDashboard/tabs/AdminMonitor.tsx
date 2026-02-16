@@ -1,11 +1,13 @@
-// src/pages/adminDashboard/tabs/AdminDashboard.tsx
+// src/pages/adminDashboard/tabs/AdminMonitor.tsx
 import React, { useState, useEffect } from 'react';
 import { 
   Users, CreditCard, AlertTriangle, Server, Activity, 
   Shield, BarChart, RefreshCw,
-  Loader2, AlertCircle, CheckCircle, XCircle, Cpu, HardDrive
+  Loader2, AlertCircle, CheckCircle, XCircle, Cpu, HardDrive,
+  Crown
 } from 'lucide-react';
 import { adminMonitoringService } from '../../../services/AdminMonitoringService';
+import { useAuth } from '../../../context/AuthContext';
 import type {
   AdminDashboard,
   SystemMetrics,
@@ -16,6 +18,7 @@ import type {
 } from '../../../interfaces/MonitoringData';
 
 const AdminMonitor: React.FC = () => {
+  const { isSuperAdmin } = useAuth();
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -25,6 +28,26 @@ const AdminMonitor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Check if user is super admin
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen space-y-4">
+        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
+          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600 mb-4">
+            Only Super Admins can access the system monitoring dashboard.
+          </p>
+          <div className="bg-red-100 p-4 rounded-lg">
+            <p className="text-sm text-red-700">
+              If you need monitoring access, please contact your system administrator.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const fetchAllData = async () => {
     try {
@@ -74,7 +97,7 @@ const AdminMonitor: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center h-screen space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary-500" />
-        <p className="text-gray-600">Loading admin dashboard...</p>
+        <p className="text-gray-600">Loading system monitoring dashboard...</p>
       </div>
     );
   }
@@ -97,11 +120,17 @@ const AdminMonitor: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
+      {/* Header with Super Admin Badge */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Monitor system health, users, and performance</p>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900">System Monitoring</h1>
+            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium flex items-center gap-1">
+              <Crown className="w-4 h-4" />
+              Super Admin Only
+            </span>
+          </div>
+          <p className="text-gray-600">Monitor system health, users, and performance metrics</p>
         </div>
         <button
           onClick={refreshData}
