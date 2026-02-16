@@ -28,7 +28,8 @@ const Overview: React.FC = () => {
     businessName: string; 
     email: string; 
     phone: string; 
-    message: string 
+    description: string;
+    infoLink: string;
   }) => {
     try {
       const mailtoLink = buildAdRequestMailto(requestData);
