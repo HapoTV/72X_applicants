@@ -266,14 +266,56 @@ class AuthService {
   }
 
   /**
-   * Change password
+   * Change password - Matches backend API: PUT /authentication/change-password/{userId}
    */
   async changePassword(passwords: ChangePasswordRequest): Promise<void> {
     try {
-      await axiosClient.put('/authentication/change-password', passwords);
-    } catch (error) {
-      console.error('Change password error:', error);
-      throw new Error('Failed to change password.');
+      console.log("🔐 Changing password...");
+      
+      // Get current user to extract userId
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.userId;
+      
+      if (!userId) {
+        throw new Error('User ID not found. Please log in again.');
+      }
+      
+      // Backend expects "oldPassword" and "newPassword" keys
+      const requestBody = {
+        oldPassword: passwords.currentPassword,
+        newPassword: passwords.newPassword
+      };
+      
+      await axiosClient.put(`/authentication/change-password/${userId}`, requestBody);
+      console.log("✅ Password changed successfully");
+    } catch (error: any) {
+      console.error('❌ Change password error:', error);
+      console.error('Error response:', error.response);
+      
+      let errorMessage = 'Failed to change password.';
+      
+      // Extract error message from response
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Handle specific HTTP status codes
+      if (error.response?.status === 401) {
+        errorMessage = 'Current password is incorrect. Please try again.';
+      } else if (error.response?.status === 400) {
+        // Keep the backend's validation message if available
+        if (!error.response.data?.message) {
+          errorMessage = 'Invalid password format. Please check the requirements.';
+        }
+      } else if (error.response?.status === 404) {
+        errorMessage = 'User not found. Please log in again.';
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 

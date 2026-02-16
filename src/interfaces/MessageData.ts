@@ -1,4 +1,3 @@
-// src/interfaces/MessageInterface.ts
 export interface Message {
   messageId: string;
   senderId: string;
@@ -37,4 +36,21 @@ export interface ChatWindowProps {
   receiverEmail: string;
   onClose: () => void;
   isOpen: boolean;
+}
+
+export interface UserMentorshipItem {
+  id: string;
+  mentorName: string;
+  mentorTitle: string;
+  expertise: string[];
+  experience?: string;
+  background?: string;
+  rating?: number;
+  sessionsCompleted?: number;
+  isAvailable: boolean;
+  profileImageUrl?: string;
+  bio?: string;
+  yearsOfExperience?: number;
+  specialization?: string;
+  menteeCount?: number;
 }

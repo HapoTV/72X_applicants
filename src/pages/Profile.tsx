@@ -1,9 +1,9 @@
 // src/pages/Profile.tsx
 import React, { useState, useEffect } from 'react';
-import { User, Edit, Save, Bell, Shield, Trash2 } from 'lucide-react';
+import { User, Edit, Save, Bell, Shield, Trash2, X, Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
-import type { User as UserType, UserFormData } from '../interfaces/UserData';
+import type { UserFormData } from '../interfaces/UserData';
 
 const Profile: React.FC = () => {
   const { user, login } = useAuth();
@@ -21,6 +21,30 @@ const Profile: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Password change modal states
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
+  
+  // Real-time password requirements (like CreatePassword)
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    minLength: false,
+    hasNumber: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasSpecialChar: false,
+  });
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: User },
@@ -65,7 +89,7 @@ const Profile: React.FC = () => {
         throw new Error('User ID not found');
       }
 
-      const updatedUser = await authService.updateUserProfile( profileData);
+      const updatedUser = await authService.updateUserProfile(profileData);
       
       // Update auth context with new data
       login(updatedUser);
@@ -81,6 +105,109 @@ const Profile: React.FC = () => {
     }
   };
 
+  // Real-time password requirements check (like CreatePassword)
+  const checkPasswordRequirements = (password: string) => {
+    setPasswordRequirements({
+      minLength: password.length >= 8,
+      hasNumber: /\d/.test(password),
+      hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    });
+  };
+
+  const handleNewPasswordChange = (value: string) => {
+    setPasswordData(prev => ({ ...prev, newPassword: value }));
+    checkPasswordRequirements(value);
+  };
+
+  const validatePassword = (): boolean => {
+    if (!passwordData.currentPassword) {
+      setPasswordError('Current password is required');
+      return false;
+    }
+
+    if (!passwordData.newPassword) {
+      setPasswordError('New password is required');
+      return false;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return false;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long');
+      return false;
+    }
+
+    const requirements = passwordRequirements;
+    if (!requirements.hasNumber || !requirements.hasUppercase || 
+        !requirements.hasLowercase || !requirements.hasSpecialChar) {
+      setPasswordError('Password does not meet all requirements');
+      return false;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setPasswordError('New password must be different from current password');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handlePasswordChange = async () => {
+    setPasswordError(null);
+
+    if (!validatePassword()) {
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      
+      await authService.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+
+      alert('Password changed successfully!');
+      closePasswordModal();
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      setPasswordError(error.message || 'Failed to change password. Please check your current password.');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const closePasswordModal = () => {
+    setShowPasswordModal(false);
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    });
+    setPasswordError(null);
+    setShowPasswords({
+      current: false,
+      new: false,
+      confirm: false,
+    });
+    setPasswordRequirements({
+      minLength: false,
+      hasNumber: false,
+      hasUppercase: false,
+      hasLowercase: false,
+      hasSpecialChar: false,
+    });
+  };
+
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
   const calculateYearsInBusiness = (): string => {
     if (!user?.founded) return '0';
     
@@ -88,6 +215,20 @@ const Profile: React.FC = () => {
     const currentYear = new Date().getFullYear();
     return (currentYear - createdYear).toString();
   };
+
+  // Requirement Item Component (like CreatePassword)
+  const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
+    <div className="flex items-center gap-2">
+      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${met ? 'bg-green-100' : 'bg-gray-100'}`}>
+        <span className={`text-xs ${met ? 'text-green-600' : 'text-gray-400'}`}>
+          {met ? '✓' : '○'}
+        </span>
+      </div>
+      <span className={`text-sm ${met ? 'text-green-700' : 'text-gray-500'}`}>
+        {text}
+      </span>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -372,7 +513,11 @@ const Profile: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h4 className="text-md font-medium text-gray-900 mb-4">Password</h4>
-                <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <button 
+                  type="button"
+                  onClick={() => setShowPasswordModal(true)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors"
+                >
                   Change Password
                 </button>
               </div>
@@ -418,6 +563,140 @@ const Profile: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Change Password Modal (Redesigned like CreatePassword) */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">Change Password</h3>
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* Error Message */}
+              {passwordError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-600 text-sm">{passwordError}</p>
+                </div>
+              )}
+
+              {/* Current Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords.current ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Enter current password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('current')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords.new ? 'text' : 'password'}
+                    value={passwordData.newPassword}
+                    onChange={(e) => handleNewPasswordChange(e.target.value)}
+                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Enter new password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('new')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm New Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswords.confirm ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Confirm new password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility('confirm')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Password Requirements (Like CreatePassword) */}
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Password Requirements</h3>
+                <RequirementItem met={passwordRequirements.minLength} text="At least 8 characters long" />
+                <RequirementItem met={passwordRequirements.hasUppercase} text="One uppercase letter" />
+                <RequirementItem met={passwordRequirements.hasLowercase} text="One lowercase letter" />
+                <RequirementItem met={passwordRequirements.hasNumber} text="One number" />
+                <RequirementItem met={passwordRequirements.hasSpecialChar} text="One special character" />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                disabled={changingPassword}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePasswordChange}
+                disabled={changingPassword}
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors flex items-center space-x-2"
+              >
+                {changingPassword && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
+                <span>{changingPassword ? 'Changing Password...' : 'Change Password'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -91,6 +91,8 @@ export interface UserFormData {
 }
 
 export interface ChangePasswordRequest {
-  oldPassword: string;
+  currentPassword: string;
   newPassword: string;
+
+  
 }
