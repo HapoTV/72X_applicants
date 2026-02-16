@@ -79,7 +79,7 @@ export default function FundingTab() {
         if (window.confirm('Are you sure you want to delete this funding opportunity?')) {
             try {
                 setError(null);
-                await fundingService.deleteFunding(fundingId, adminEmail);
+                await fundingService.deleteFunding(fundingId);
                 await fetchFundingOpportunities(); // Refresh the list
             } catch (err) {
                 setError('Failed to delete funding opportunity');
@@ -112,12 +112,12 @@ export default function FundingTab() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
             <div className="flex items-center justify-between mb-4">
                 <h1 className="text-2xl font-bold text-gray-900">Funding Opportunities</h1>
                 <button 
                     onClick={() => setShowAddFunding(true)}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
+                    className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg flex items-center"
                 >
                     Add Funding
                 </button>

@@ -9,12 +9,10 @@ import {
 	Megaphone,
 	ShieldAlert,
 	CreditCard,
-	BarChart3,
-	Settings,
 	Bell,
 } from 'lucide-react';
 
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export type AdminTab =
 	| 'applicants'
@@ -24,10 +22,10 @@ export type AdminTab =
 	| 'funding'
 	| 'ad'
 	| 'payments'
-	| 'analytics'
 	| 'monitoring'
 	| 'profile'
-	| 'notifications';
+	| 'notifications'
+	| 'analytics';
 
 interface AdminSidebarProps {
 	activeTab: AdminTab;
@@ -36,7 +34,6 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
     const navigate = useNavigate();
-    const location = useLocation();
 
     const menuItems = [
 		{ id: 'applicants' as const, label: 'Applicants', icon: Users },
@@ -46,29 +43,15 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
 		{ id: 'mentorship' as const, label: 'Mentorship', icon: Handshake },
 		{ id: 'funding' as const, label: 'Funding', icon: DollarSign },
 		{ id: 'payments' as const, label: 'Payments', icon: CreditCard },
-		{ id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
 		{ id: 'monitoring' as const, label: 'Monitoring', icon: ShieldAlert },
-		{ id: 'profile' as const, label: 'Profile', icon: User },
 	];
 
     const handleTabClick = (tabId: string) => {
-		if (tabId === 'payments') {
-			navigate('/admin/payments');
-		} else if (tabId === 'analytics') {
-			navigate('/admin/analytics');
-		} else {
-			onTabChange(tabId as AdminTab);
-			navigate(`/admin/dashboard/${tabId}`);
-		}
+		onTabChange(tabId as AdminTab);
+		navigate(`/admin/dashboard/${tabId}`);
 	};
 
     const isActive = (tabId: string) => {
-        if (tabId === 'payments') {
-            return location.pathname === '/admin/payments';
-        }
-        if (tabId === 'analytics') {
-            return location.pathname === '/admin/analytics';
-        }
         return activeTab === tabId;
     };
 
@@ -103,10 +86,9 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                     );
                 })}
                 
-                {/* Notifications Management */}
                 <button 
                     onClick={() => onTabChange('notifications')} 
-                    className={`w-full text-left px-3 py-3 rounded-lg flex items-center space-x-3 transition-colors border-t border-gray-200 mt-4 pt-4 ${
+                    className={`w-full text-left px-3 py-3 rounded-lg flex items-center space-x-3 transition-colors ${
                         activeTab === 'notifications' 
                             ? 'bg-blue-50 text-blue-700 border border-blue-200' 
                             : 'hover:bg-gray-50 text-gray-700'
@@ -115,18 +97,22 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                     <Bell className={`w-5 h-5 ${activeTab === 'notifications' ? 'text-blue-600' : 'text-gray-500'}`} />
                     <span className="font-medium">Notifications</span>
                 </button>
-            </nav>
 
-            {/* Bottom Section */}
-            <div className="mt-8 pt-6 border-t border-gray-200">
                 <button 
-                    onClick={() => navigate('/admin/settings')}
-                    className="w-full text-left px-3 py-2 rounded-lg flex items-center space-x-3 hover:bg-gray-50 text-gray-700"
+                    onClick={() => handleTabClick('profile')} 
+                    className={`w-full text-left px-3 py-3 rounded-lg flex items-center space-x-3 transition-colors ${
+                        isActive('profile')
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'hover:bg-gray-50 text-gray-700'
+                    }`}
                 >
-                    <Settings className="w-5 h-5 text-gray-500" />
-                    <span className="font-medium">Settings</span>
+                    <User className={`w-5 h-5 ${isActive('profile') ? 'text-blue-600' : 'text-gray-500'}`} />
+                    <span className="font-medium">Profile</span>
+                    {isActive('profile') && (
+                        <span className="ml-auto w-2 h-2 bg-blue-600 rounded-full"></span>
+                    )}
                 </button>
-            </div>
+            </nav>
         </aside>
     );
 }

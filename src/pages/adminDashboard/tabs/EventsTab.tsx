@@ -77,7 +77,7 @@ export default function EventsTab() {
     if (window.confirm('Are you sure you want to delete this event?')) {
       try {
         setError(null);
-        await eventService.deleteEvent(eventId, adminEmail);
+        await eventService.deleteEvent(eventId);
         await fetchEvents(); // Refresh the list
       } catch (err) {
         setError('Failed to delete event');
@@ -111,12 +111,12 @@ export default function EventsTab() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Events Management</h1>
         <button 
           onClick={() => setShowAddEventAdmin(true)} 
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
+          className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg flex items-center"
         >
           Add Event
         </button>

@@ -5,12 +5,15 @@ import axiosClient from '../../../api/axiosClient';
 interface LearningItem {
     id: string;
     title: string;
+
     type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT';
     category: string;
     resourceUrl?: string;
     fileName?: string;
     fileSize?: string;
     updated?: string;
+    updatedAt?: string;
+    createdAt?: string;
     createdBy: string;
     description?: string;
 }
@@ -30,15 +33,15 @@ export default function LearningTab() {
     const [showAddLearning, setShowAddLearning] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [newLearning, setNewLearning] = useState<{ 
-        title: string; 
-        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT'; 
+    const [newLearning, setNewLearning] = useState<{
+        title: string;
+        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT';
         category: LearningSection;
         resourceUrl: string;
         description: string;
         file?: File;
-    }>({ 
-        title: '', 
+    }>({
+        title: '',
         type: 'ARTICLE',
         category: 'business-plan',
         resourceUrl: '',
@@ -56,6 +59,20 @@ export default function LearningTab() {
         'standardbank': 'StandardBank'
     };
 
+    const normalizeSectionKey = (category: string): LearningSection | null => {
+        const normalized = (category || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[_\s]+/g, '-');
+        if (normalized === 'business-planning' || normalized === 'businessplanning') return 'business-plan';
+        if (normalized === 'marketing-sales' || normalized === 'marketingsales') return 'marketing';
+        if (normalized === 'financial-management' || normalized === 'financialmanagement') return 'finance';
+        if (normalized === 'standard-bank' || normalized === 'standardbank') return 'standardbank';
+        if (normalized === 'operations') return 'operations';
+        if (normalized === 'leadership') return 'leadership';
+        return null;
+    };
+
     useEffect(() => {
         fetchLearningMaterials();
     }, []);
@@ -64,9 +81,10 @@ export default function LearningTab() {
         try {
             setLoading(true);
             console.log('Fetching learning materials...');
-            const allMaterials = await learningService.getAllLearningMaterials();
+            const response = await axiosClient.get('/learning-materials');
+            const allMaterials = response.data;
             console.log('Fetched materials:', allMaterials);
-            
+
             const transformedData: Record<LearningSection, LearningItem[]> = {
                 'business-plan': [],
                 'marketing': [],
@@ -75,26 +93,38 @@ export default function LearningTab() {
                 'leadership': [],
                 'standardbank': [],
             };
-            
+
             allMaterials.forEach((material: any) => {
-                const category = material.category as LearningSection;
-                
-                if (transformedData[category]) {
+                const category = normalizeSectionKey(material.category);
+
+                if (category && transformedData[category]) {
                     transformedData[category].push({
-                        id: material.id || '',
+                        id: material.materialId || material.id || '',
                         title: material.title || '',
                         type: (material.type as 'ARTICLE' | 'VIDEO' | 'DOCUMENT'),
-                    
 
                         category: material.category || '',
                         resourceUrl: material.resourceUrl || '',
                         fileName: material.fileName || '',
                         fileSize: material.fileSize || '',
                         description: material.description || '',
-                        updated: material.updated || new Date().toLocaleDateString(),
+                        updated: material.updatedAt || material.createdAt || material.updated || new Date().toLocaleDateString(),
+                        updatedAt: material.updatedAt,
+                        createdAt: material.createdAt,
                         createdBy: material.createdBy || 'admin@72x.co.za'
                     });
                 }
+            });
+
+            (Object.keys(transformedData) as LearningSection[]).forEach((section) => {
+                transformedData[section].sort((a, b) => {
+                    const aDateRaw = a.updatedAt || a.createdAt || a.updated;
+                    const bDateRaw = b.updatedAt || b.createdAt || b.updated;
+
+                    const aTime = aDateRaw ? new Date(aDateRaw).getTime() : 0;
+                    const bTime = bDateRaw ? new Date(bDateRaw).getTime() : 0;
+                    return bTime - aTime;
+                });
             });
             
             setLearningData(transformedData);
@@ -185,10 +215,7 @@ export default function LearningTab() {
 
                 console.log('Uploading file:', newLearning.file.name, 'Size:', getFileSize(newLearning.file.size));
 
-                const response = await axiosClient.post('/learning-materials', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    },
+                const response = await learningService.uploadLearningMaterialFormData(formData, {
                     onUploadProgress: (progressEvent: any) => {
                         const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
                         setUploadProgress(progress);
@@ -210,7 +237,7 @@ export default function LearningTab() {
                 };
 
                 console.log('Creating URL-based material:', requestData);
-                await axiosClient.post('/learning-materials', requestData);
+                await learningService.createLearningMaterial(requestData);
                 console.log('Material created successfully');
                 alert('Learning material added successfully!');
             }
@@ -257,11 +284,7 @@ export default function LearningTab() {
     try {
         console.log('Deleting material:', materialId);
 
-        await axiosClient.delete(`/learning-materials/${materialId}`, {
-            data: {
-                userEmail: 'admin@72x.co.za'
-            }
-        });
+        await learningService.deleteLearningMaterial(materialId);
 
         await fetchLearningMaterials();
         alert('Learning material deleted successfully!');
@@ -270,6 +293,10 @@ export default function LearningTab() {
 
         if (error.response?.status === 400) {
             alert('Delete failed. Backend rejected the request.');
+        } else if (error.response?.data?.message) {
+            alert(`Error deleting learning material: ${error.response.data.message}`);
+        } else if (error.response?.data?.error) {
+            alert(`Error deleting learning material: ${error.response.data.error}`);
         } else {
             alert('Error deleting learning material.');
         }
@@ -285,7 +312,7 @@ export default function LearningTab() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
             <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Learning Materials</h1>
                 <p className="text-gray-600">Manage and organize learning resources for all categories</p>
@@ -331,7 +358,6 @@ export default function LearningTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TITLE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TYPE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FILE / RESOURCE</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SIZE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UPDATED</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
                             </tr>
@@ -339,7 +365,7 @@ export default function LearningTab() {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center">
+                                    <td colSpan={5} className="px-6 py-8 text-center">
                                         <div className="text-center">
                                             <div className="text-2xl mb-2">⏳</div>
                                             <p className="text-sm text-gray-600">Loading learning materials...</p>
@@ -348,7 +374,7 @@ export default function LearningTab() {
                                 </tr>
                             ) : learningData[learningSection].length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center">
+                                    <td colSpan={5} className="px-6 py-8 text-center">
                                         <div className="text-center">
                                             <div className="text-2xl mb-2">📚</div>
                                             <p className="text-sm text-gray-600">No content yet in this category</p>
@@ -387,10 +413,7 @@ export default function LearningTab() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{item.fileSize || '—'}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{item.updated || '—'}</div>
+                                            <div className="text-sm text-gray-500">{item.updatedAt || item.createdAt || item.updated || '—'}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             <button 

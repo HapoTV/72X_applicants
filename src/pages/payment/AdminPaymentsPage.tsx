@@ -11,26 +11,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { 
   Loader2, 
   Search, 
-  Filter, 
-  Download, 
   Eye, 
   User, 
   CreditCard, 
   DollarSign,
   TrendingUp,
   Users,
-  Calendar,
   BarChart3,
-  PieChart,
   CheckCircle,
   XCircle,
   Clock,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
-  FileText,
-  Printer,
-  Shield
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '../../components/ui/alert';
@@ -163,7 +155,7 @@ const AdminPaymentsPage: React.FC = () => {
     };
 
     return (
-      <Badge className={`${colors} font-medium flex items-center gap-1`}>
+      <Badge className={`${colors} font-normal flex items-center gap-1`}>
         {getIcon()}
         {status}
       </Badge>
@@ -215,12 +207,6 @@ const AdminPaymentsPage: React.FC = () => {
     }
   };
 
-  const handleRefresh = () => {
-    fetchPayments();
-    fetchStats();
-    fetchRevenueAnalytics();
-  };
-
   const handleStatusFilter = (status: string) => {
     if (status === 'all') {
       setFilters({ ...filters, status: undefined });
@@ -231,60 +217,28 @@ const AdminPaymentsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/admin/dashboard')}
-                  className="-ml-3"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-green-600" />
-                  <span className="text-sm font-medium text-gray-600">Admin Payment Portal</span>
-                </div>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900 mt-2">Payment Administration</h1>
-              <p className="text-gray-600 mt-1">Manage and monitor all payments in the system</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleRefresh}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </div>
+    <div className="w-full">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Payment Administration</h1>
+        <p className="text-gray-600 mt-1">Manage and monitor all payments in the system</p>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-normal text-gray-600">Total Revenue</p>
+                  <p className="text-2xl font-normal text-gray-900">
                     {paymentService.formatCurrency(stats.totalRevenue)}
                   </p>
                 </div>
@@ -297,8 +251,8 @@ const AdminPaymentsPage: React.FC = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Payments</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalPayments}</p>
+                  <p className="text-sm font-normal text-gray-600">Total Payments</p>
+                  <p className="text-2xl font-normal text-gray-900">{stats.totalPayments}</p>
                 </div>
                 <CreditCard className="h-8 w-8 text-blue-500" />
               </div>
@@ -309,8 +263,8 @@ const AdminPaymentsPage: React.FC = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Success Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-normal text-gray-600">Success Rate</p>
+                  <p className="text-2xl font-normal text-gray-900">
                     {stats.totalPayments > 0 
                       ? `${((stats.successfulPayments / stats.totalPayments) * 100).toFixed(1)}%`
                       : '0%'
@@ -326,8 +280,8 @@ const AdminPaymentsPage: React.FC = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Payment</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-normal text-gray-600">Avg Payment</p>
+                  <p className="text-2xl font-normal text-gray-900">
                     {paymentService.formatCurrency(stats.averageAmount)}
                   </p>
                 </div>
@@ -361,8 +315,8 @@ const AdminPaymentsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-sm font-medium text-gray-600">Revenue Growth</p>
-                  <p className={`text-2xl font-bold ${revenueAnalytics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className="text-sm font-normal text-gray-600">Revenue Growth</p>
+                  <p className={`text-2xl font-normal ${revenueAnalytics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {revenueAnalytics.revenueGrowth >= 0 ? '+' : ''}{revenueAnalytics.revenueGrowth.toFixed(1)}%
                   </p>
                 </CardContent>
@@ -370,8 +324,8 @@ const AdminPaymentsPage: React.FC = () => {
 
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-sm font-medium text-gray-600">Profit Margin</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-normal text-gray-600">Profit Margin</p>
+                  <p className="text-2xl font-normal text-gray-900">
                     {revenueAnalytics.profitMargin.toFixed(1)}%
                   </p>
                 </CardContent>
@@ -379,8 +333,8 @@ const AdminPaymentsPage: React.FC = () => {
 
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-sm font-medium text-gray-600">Top Customers</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-normal text-gray-600">Top Customers</p>
+                  <p className="text-2xl font-normal text-gray-900">
                     {revenueAnalytics.topCustomers.length}
                   </p>
                 </CardContent>
@@ -395,7 +349,7 @@ const AdminPaymentsPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Top Customers
+                <h2 className="text-xl font-bold text-gray-900">Top Customers</h2>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -405,7 +359,7 @@ const AdminPaymentsPage: React.FC = () => {
                        onClick={() => handleViewCustomer(customer.id || '')}>
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-semibold text-gray-900">{customer.name}</h4>
+                        <h4 className="font-normal text-gray-900">{customer.name}</h4>
                         <p className="text-sm text-gray-600">{customer.email}</p>
                       </div>
                       <Badge variant="secondary">#{index + 1}</Badge>
@@ -413,13 +367,13 @@ const AdminPaymentsPage: React.FC = () => {
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <div>
                         <p className="text-sm text-gray-600">Total Spent</p>
-                        <p className="font-bold text-gray-900">
+                        <p className="font-normal text-gray-900">
                           {paymentService.formatCurrency(customer.amount)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600">Payments</p>
-                        <p className="font-bold text-gray-900">{customer.payments}</p>
+                        <p className="font-normal text-gray-900">{customer.payments}</p>
                       </div>
                     </div>
                   </div>
@@ -487,7 +441,7 @@ const AdminPaymentsPage: React.FC = () => {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>All Payments ({filteredPayments.length})</span>
+              <h2 className="text-xl font-bold text-gray-900">All Payments ({filteredPayments.length})</h2>
               <div className="text-sm text-gray-500">
                 Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredPayments.length)} of {filteredPayments.length}
               </div>
@@ -522,7 +476,7 @@ const AdminPaymentsPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">{payment.userFullName || 'Unknown'}</span>
+                            <span className="font-normal">{payment.userFullName || 'Unknown'}</span>
                             <span className="text-sm text-gray-600">{payment.userEmail || 'No email'}</span>
                           </div>
                         </TableCell>
@@ -530,7 +484,7 @@ const AdminPaymentsPage: React.FC = () => {
                           {payment.description}
                         </TableCell>
                         <TableCell>
-                          <div className="font-bold text-gray-900">
+                          <div className="font-normal text-gray-900">
                             {paymentService.formatCurrency(payment.amount, payment.currency)}
                           </div>
                           {payment.fee && (
@@ -613,19 +567,19 @@ const AdminPaymentsPage: React.FC = () => {
         <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-lg border">
             <p className="text-sm text-gray-600">Successful Payments</p>
-            <p className="text-xl font-bold text-green-600">{stats.successfulPayments}</p>
+            <p className="text-xl font-normal text-green-600">{stats.successfulPayments}</p>
           </div>
           <div className="bg-white p-4 rounded-lg border">
             <p className="text-sm text-gray-600">Failed Payments</p>
-            <p className="text-xl font-bold text-red-600">{stats.failedPayments}</p>
+            <p className="text-xl font-normal text-red-600">{stats.failedPayments}</p>
           </div>
           <div className="bg-white p-4 rounded-lg border">
             <p className="text-sm text-gray-600">Pending Payments</p>
-            <p className="text-xl font-bold text-yellow-600">{stats.pendingPayments}</p>
+            <p className="text-xl font-normal text-yellow-600">{stats.pendingPayments}</p>
           </div>
           <div className="bg-white p-4 rounded-lg border">
             <p className="text-sm text-gray-600">Refunded Amount</p>
-            <p className="text-xl font-bold text-blue-600">
+            <p className="text-xl font-normal text-blue-600">
               {paymentService.formatCurrency(stats.totalRevenue * 0.02)} {/* Example calculation */}
             </p>
           </div>

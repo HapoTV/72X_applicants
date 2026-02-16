@@ -7,6 +7,8 @@ import ApplicantsTab from './tabs/ApplicantsTab';
 import EventsTab from './tabs/EventsTab';
 import FundingTab from './tabs/FundingTab';
 import AdTab from './tabs/AdTab';
+import LearningTab from './tabs/LearningTab';
+import MentorshipTab from './tabs/MentorshipTab';
 import AdminProfile from './tabs/AdminProfile';
 import AdminMonitor from './tabs/AdminMonitor';
 import AdminPaymentsPage from '../../pages/payment/AdminPaymentsPage';
@@ -29,11 +31,6 @@ export default function AdminDashboard() {
     useEffect(() => {
         const path = location.pathname;
         
-        if (path === '/admin/payments') {
-            setActiveTab('payments');
-            return;
-        }
-        
         if (path === '/admin/analytics') {
             setActiveTab('analytics');
             return;
@@ -47,7 +44,7 @@ export default function AdminDashboard() {
         const base = '/admin/dashboard/';
         if (path.startsWith(base)) {
             const segment = path.slice(base.length).split('/')[0];
-            const validTabs = ['applicants', 'events', 'funding', 'ad', 'profile', 'monitoring'] as const;
+            const validTabs = ['applicants', 'events', 'learning', 'mentorship', 'funding', 'ad', 'payments', 'profile', 'monitoring'] as const;
             if (segment && (validTabs as readonly string[]).includes(segment)) {
                 setActiveTab(segment as typeof validTabs[number]);
                 return;
@@ -64,6 +61,10 @@ export default function AdminDashboard() {
                 return <ApplicantsTab />;
             case 'events':
                 return <EventsTab />;
+            case 'learning':
+                return <LearningTab />;
+            case 'mentorship':
+                return <MentorshipTab />;
             case 'funding':
                 return <FundingTab />;
             case 'ad':

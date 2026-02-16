@@ -161,8 +161,10 @@ const LearningModules: React.FC = () => {
       'TRUE_FALSE': 'multiple_choice',
       'FILL_BLANK': 'fill_blank',
       'MATCHING': 'match_pairs',
+      'MATCH_WORDING': 'match_pairs',
       'ORDERING': 'order_steps',
-      'CATEGORIZE': 'categorize'
+      'CATEGORIZE': 'categorize',
+      'DRAG_AND_DROP': 'categorize'
     };
     return typeMap[type] || 'multiple_choice';
   }, []);
@@ -178,7 +180,6 @@ const LearningModules: React.FC = () => {
       const baseQuestion: any = {
         id: q.id || `q${index + 1}`,
         type: mapQuestionType(questionType),
-        question: q.questionText || 'Sample question',
         explanation: q.explanation || 'Review the material to understand this concept better.',
         correctAnswer: q.correctAnswerIndex || 0,
       };
@@ -186,12 +187,26 @@ const LearningModules: React.FC = () => {
       switch (questionType) {
         case 'MULTIPLE_CHOICE':
         case 'TRUE_FALSE':
+          baseQuestion.question = q.questionText || 'Sample question';
           baseQuestion.options = q.options || ['Option A', 'Option B', 'Option C', 'Option D'];
           break;
         case 'FILL_BLANK':
+          baseQuestion.question = 'Fill in the blank';
           baseQuestion.template = q.questionText || '______ is a key concept.';
           baseQuestion.wordBank = [q.correctAnswerText || 'answer', 'concept', 'process', 'method', 'strategy'];
           baseQuestion.correctWord = q.correctAnswerText || 'answer';
+          break;
+        case 'MATCHING':
+        case 'MATCH_WORDING':
+          baseQuestion.pairs = q.pairs || q.matchPairs || [];
+          break;
+        case 'CATEGORIZE':
+        case 'DRAG_AND_DROP':
+          baseQuestion.categories = q.categories || [];
+          baseQuestion.items = q.items || [];
+          break;
+        case 'ORDERING':
+          baseQuestion.steps = q.steps || [];
           break;
         default:
           baseQuestion.options = q.options || ['Option A', 'Option B', 'Option C', 'Option D'];

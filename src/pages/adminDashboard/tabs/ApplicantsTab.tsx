@@ -114,7 +114,7 @@ export default function ApplicantsTab() {
     });
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
             {/* Stats Overview */}
             <div className="mb-8">
                 <div className="mb-6">

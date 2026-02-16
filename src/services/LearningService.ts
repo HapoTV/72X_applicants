@@ -1,10 +1,10 @@
 // src/services/LearningService.ts
 import axiosClient from '../api/axiosClient';
+import type { AxiosError } from 'axios';
 import type { 
   UserLearningModule, 
   LearningStats,
   LearningModuleFilter,
-  LearningMaterialUserProgress,
   LearningProgressEventRequest
 } from '../interfaces/LearningData';
 
@@ -20,7 +20,25 @@ class LearningService {
       .toLowerCase()
       .replace(/[_\s]+/g, '-');
     if (normalized === 'business-planning' || normalized === 'businessplanning') return 'business-plan';
+    if (normalized === 'marketing-sales' || normalized === 'marketingsales') return 'marketing';
+    if (normalized === 'financial-management' || normalized === 'financialmanagement') return 'finance';
+    if (normalized === 'standard-bank' || normalized === 'standardbank') return 'standardbank';
     return normalized;
+  }
+
+  /**
+   * Create a new learning material WITHOUT file (URL-based)
+   */
+  async createLearningMaterial(payload: {
+    title: string;
+    type: string;
+    category: string;
+    resourceUrl: string;
+    description?: string;
+    createdBy?: string;
+  }): Promise<any> {
+    const res = await axiosClient.post(`${this.baseUrl}`, payload);
+    return res.data;
   }
 
   /**
@@ -129,6 +147,14 @@ class LearningService {
         const target = this.normalizeCategory(filter.category);
         allModules = allModules.filter(module => this.normalizeCategory(module.category) === target);
       }
+
+      allModules.sort((a, b) => {
+        const aRaw = a.createdAt || a.updatedAt;
+        const bRaw = b.createdAt || b.updatedAt;
+        const aTime = aRaw ? new Date(aRaw).getTime() : 0;
+        const bTime = bRaw ? new Date(bRaw).getTime() : 0;
+        return aTime - bTime;
+      });
       
       if (allModules.length === 0) {
         console.warn(`⚠️ No modules found for filter:`, filter);
@@ -281,7 +307,8 @@ class LearningService {
       return response.data;
     } catch (error) {
       // 404 is expected (no quiz yet), other errors are problems
-      if (error.response?.status === 404) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.status === 404) {
         return null;
       }
       console.error('❌ Failed to fetch quiz:', error);
@@ -366,6 +393,8 @@ class LearningService {
         resourceUrl: item.resourceUrl,
         fileName: item.fileName,
         type: item.type,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
         quizStartedAt: item.quizStartedAt,
         quizPassedAt: item.quizPassedAt,
         quizAttempts: item.quizAttempts || 0,
@@ -414,9 +443,7 @@ class LearningService {
       if (metadata.category) formData.append('category', metadata.category);
       if (metadata.creatorEmail) formData.append('creatorEmail', metadata.creatorEmail);
 
-      const res = await axiosClient.post(`${this.baseUrl}/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await axiosClient.post(`${this.baseUrl}`, formData);
       
       if (!res.data) {
         throw new Error('No upload confirmation received');
@@ -430,6 +457,14 @@ class LearningService {
   }
 
   /**
+   * Upload a new learning material (admin FormData flow, allows onUploadProgress)
+   */
+  async uploadLearningMaterialFormData(formData: FormData, config?: any): Promise<any> {
+    const res = await axiosClient.post(`${this.baseUrl}`, formData, config);
+    return res;
+  }
+
+  /**
    * Delete a learning material
    */
   async deleteLearningMaterial(materialId: string): Promise<boolean> {
@@ -438,7 +473,8 @@ class LearningService {
       return res.status === 204 || res.status === 200;
     } catch (error) {
       console.error('❌ Failed to delete learning material:', error);
-      throw new Error('Failed to delete learning material');
+
+      throw error;
     }
   }
 }
