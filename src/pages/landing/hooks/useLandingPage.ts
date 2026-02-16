@@ -26,6 +26,7 @@ import {
   Home,
 } from 'lucide-react';
 import { adService } from '../../../services/AdService';
+import { buildAdRequestMailto } from '../../dashboard/utils/buildAdRequestMailto';
 
 export type ProductCategoryItem = {
   name: string;
@@ -379,66 +380,9 @@ export function useLandingPage() {
   const [additionalFlipped, setAdditionalFlipped] = useState<boolean[]>(Array(6).fill(false));
 
   const handleAdRequestSubmit = useCallback(
-    async (requestData: { businessName: string; email: string; phone: string; message: string }) => {
+    async (requestData: { businessName: string; email: string; phone: string; description: string; infoLink: string }) => {
       try {
-        const userId = localStorage.getItem('userId') || 'anonymous';
-        const userName = localStorage.getItem('fullName') || requestData.businessName;
-        const userEmail = localStorage.getItem('userEmail') || requestData.email;
-        const userPhone = localStorage.getItem('mobileNumber') || requestData.phone;
-        const companyName = localStorage.getItem('companyName') || requestData.businessName;
-        const industry = localStorage.getItem('industry') || 'Not specified';
-        const userPackage = localStorage.getItem('userPackage') || 'Free';
-
-        const subject = `New Advertising Space Request - ${requestData.businessName}`;
-        const body = `
-NEW ADVERTISING SPACE REQUEST
-
-========================================
-BUSINESS DETAILS:
-========================================
-Business Name: ${requestData.businessName}
-Contact Person: ${userName}
-Email: ${userEmail}
-Phone: ${requestData.phone || userPhone}
-Industry: ${industry}
-Package: ${userPackage}
-
-========================================
-USER DETAILS:
-========================================
-User ID: ${userId}
-Company: ${companyName}
-Email (from account): ${localStorage.getItem('userEmail') || 'Not available'}
-Phone (from account): ${localStorage.getItem('mobileNumber') || 'Not available'}
-
-========================================
-ADVERTISING REQUEST:
-========================================
-${requestData.message}
-
-========================================
-REQUEST DETAILS:
-========================================
-Request Date: ${new Date().toLocaleString('en-ZA', {
-          timeZone: 'Africa/Johannesburg',
-          dateStyle: 'full',
-          timeStyle: 'long',
-        })}
-
-========================================
-ACTION REQUIRED:
-========================================
-1. Review this request
-2. Contact the business if needed
-3. Create ad campaign in admin panel
-4. Notify user when ad is live
-
-ADMIN PANEL: ${window.location.origin}/admin/ads
-========================================
-      `;
-
-        const adminEmail = 'admin@hapogroup.co.za';
-        const mailtoLink = `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        const mailtoLink = buildAdRequestMailto(requestData);
         window.location.href = mailtoLink;
 
         await adService.recordEngagement('ACTION_COMPLETED', 15, 'Requested advertising space');

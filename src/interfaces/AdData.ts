@@ -70,6 +70,7 @@ export interface AdDTO {
   startDate?: string;
   endDate?: string;
   createdById: string;
+  createdAt?: string;
   priority: number;
   maxImpressions?: number;
   maxClicks?: number;

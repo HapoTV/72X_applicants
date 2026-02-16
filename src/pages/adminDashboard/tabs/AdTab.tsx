@@ -15,26 +15,6 @@ import Messages from './components/Messages';
 
 const AdTab: React.FC = () => {
   const { isSuperAdmin } = useAuth();
-  
-  // Check if user is super admin
-  if (!isSuperAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
-          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-600 mb-4">
-            Only Super Admins can manage advertisements.
-          </p>
-          <div className="bg-red-100 p-4 rounded-lg">
-            <p className="text-sm text-red-700">
-              If you need to manage ads, please contact your system administrator.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // State management
   const [ads, setAds] = useState<AdDTO[]>([]);
@@ -43,7 +23,7 @@ const AdTab: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
   const [editingAd, setEditingAd] = useState<AdDTO | null>(null);
-  
+
   // Filter and pagination
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<AdStatus | 'ALL'>('ALL');
@@ -54,12 +34,15 @@ const AdTab: React.FC = () => {
 
   // Fetch ads
   const fetchAds = useCallback(async () => {
+    if (!isSuperAdmin) {
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await adService.getUserAds(currentPage - 1, itemsPerPage);
-      
+
       // Ensure all ads have required fields with default values
       const safeAds = (response.content || []).map((ad: any) => ({
         ...ad,
@@ -79,7 +62,7 @@ const AdTab: React.FC = () => {
         createdById: ad.createdById || '',
         createdAt: ad.createdAt || new Date().toISOString()
       }));
-      
+
       setAds(safeAds);
       setTotalAds(response.totalElements || 0);
     } catch (error: any) {
@@ -90,11 +73,34 @@ const AdTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, isSuperAdmin]);
 
   useEffect(() => {
+    if (!isSuperAdmin) {
+      return;
+    }
     fetchAds();
-  }, [fetchAds]);
+  }, [fetchAds, isSuperAdmin]);
+
+  // Check if user is super admin
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
+          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600 mb-4">
+            Only Super Admins can manage advertisements.
+          </p>
+          <div className="bg-red-100 p-4 rounded-lg">
+            <p className="text-sm text-red-700">
+              If you need to manage ads, please contact your system administrator.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Handle edit ad
   const handleEdit = (ad: AdDTO) => {

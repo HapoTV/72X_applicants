@@ -116,7 +116,7 @@ export default function EventsTab() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="flex items-center space-x-3 mb-2">
@@ -142,7 +142,7 @@ export default function EventsTab() {
         </div>
         <button 
           onClick={() => setShowAddEventAdmin(true)} 
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
+          className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg flex items-center"
         >
           Add Event
         </button>

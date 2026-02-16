@@ -8,12 +8,15 @@ import { Crown, Building2, Globe } from 'lucide-react';
 interface LearningItem {
     id: string;
     title: string;
+
     type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT';
     category: string;
     resourceUrl?: string;
     fileName?: string;
     fileSize?: string;
     updated?: string;
+    updatedAt?: string;
+    createdAt?: string;
     createdBy: string;
     createdByOrganisation?: string; // NEW
     targetOrganisation?: string; // NEW
@@ -32,13 +35,14 @@ export default function LearningTab() {
         'finance': [],
         'operations': [],
         'leadership': [],
+        'standardbank': [],
     });
     const [showAddLearning, setShowAddLearning] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [newLearning, setNewLearning] = useState<{ 
-        title: string; 
-        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT'; 
+    const [newLearning, setNewLearning] = useState<{
+        title: string;
+        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT';
         category: LearningSection;
         resourceUrl: string;
         description: string;
@@ -46,8 +50,8 @@ export default function LearningTab() {
         targetOrganisation?: string; // NEW
         isPublic?: boolean; // NEW
         showAllOrganisations?: boolean; // NEW - for super admin to choose
-    }>({ 
-        title: '', 
+    }>({
+        title: '',
         type: 'ARTICLE',
         category: 'business-plan',
         resourceUrl: '',
@@ -65,7 +69,22 @@ export default function LearningTab() {
         'marketing': 'Marketing & Sales',
         'finance': 'Financial Management',
         'operations': 'Operations',
-        'leadership': 'Leadership'
+        'leadership': 'Leadership',
+        'standardbank': 'Standard Bank'
+    };
+
+    const normalizeSectionKey = (category: string): LearningSection | null => {
+        const normalized = (category || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[_\s]+/g, '-');
+        if (normalized === 'business-planning' || normalized === 'businessplanning') return 'business-plan';
+        if (normalized === 'marketing-sales' || normalized === 'marketingsales') return 'marketing';
+        if (normalized === 'financial-management' || normalized === 'financialmanagement') return 'finance';
+        if (normalized === 'standard-bank' || normalized === 'standardbank') return 'standardbank';
+        if (normalized === 'operations') return 'operations';
+        if (normalized === 'leadership') return 'leadership';
+        return null;
     };
 
     useEffect(() => {
@@ -79,23 +98,25 @@ export default function LearningTab() {
         try {
             setLoading(true);
             console.log('Fetching learning materials...');
-            const allMaterials = await learningService.getAllLearningMaterials();
+            const response = await axiosClient.get('/learning-materials');
+            const allMaterials = response.data;
             console.log('Fetched materials:', allMaterials);
-            
+
             const transformedData: Record<LearningSection, LearningItem[]> = {
                 'business-plan': [],
                 'marketing': [],
                 'finance': [],
                 'operations': [],
                 'leadership': [],
+                'standardbank': [],
             };
-            
+
             allMaterials.forEach((material: any) => {
-                const category = material.category as LearningSection;
-                
-                if (transformedData[category]) {
+                const category = normalizeSectionKey(material.category);
+
+                if (category && transformedData[category]) {
                     transformedData[category].push({
-                        id: material.id || '',
+                        id: material.materialId || material.id || '',
                         title: material.title || '',
                         type: (material.type as 'ARTICLE' | 'VIDEO' | 'DOCUMENT'),
                         category: material.category || '',
@@ -103,13 +124,26 @@ export default function LearningTab() {
                         fileName: material.fileName || '',
                         fileSize: material.fileSize || '',
                         description: material.description || '',
-                        updated: material.updated || new Date().toLocaleDateString(),
+                        updated: material.updatedAt || material.createdAt || material.updated || new Date().toLocaleDateString(),
+                        updatedAt: material.updatedAt,
+                        createdAt: material.createdAt,
                         createdBy: material.createdBy || 'admin@72x.co.za',
                         createdByOrganisation: material.createdByOrganisation,
                         targetOrganisation: material.targetOrganisation,
                         isPublic: material.isPublic
                     });
                 }
+            });
+
+            (Object.keys(transformedData) as LearningSection[]).forEach((section) => {
+                transformedData[section].sort((a, b) => {
+                    const aDateRaw = a.updatedAt || a.createdAt || a.updated;
+                    const bDateRaw = b.updatedAt || b.createdAt || b.updated;
+
+                    const aTime = aDateRaw ? new Date(aDateRaw).getTime() : 0;
+                    const bTime = bDateRaw ? new Date(bDateRaw).getTime() : 0;
+                    return bTime - aTime;
+                });
             });
             
             setLearningData(transformedData);
@@ -189,7 +223,8 @@ export default function LearningTab() {
                 'marketing': 'MARKETING_SALES', 
                 'finance': 'FINANCIAL_MANAGEMENT',
                 'operations': 'OPERATIONS',
-                'leadership': 'LEADERSHIP'
+                'leadership': 'LEADERSHIP',
+                'standardbank': 'STANDARD_BANK'
             };
             
             const backendCategory = backendCategoryMap[learningSection];
@@ -218,10 +253,7 @@ export default function LearningTab() {
 
                 console.log('Uploading file:', newLearning.file.name, 'Size:', getFileSize(newLearning.file.size));
 
-                const response = await axiosClient.post('/learning-materials', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    },
+                const response = await learningService.uploadLearningMaterialFormData(formData, {
                     onUploadProgress: (progressEvent: any) => {
                         const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
                         setUploadProgress(progress);
@@ -253,7 +285,7 @@ export default function LearningTab() {
                 }
 
                 console.log('Creating URL-based material:', requestData);
-                await axiosClient.post('/learning-materials', requestData);
+                await learningService.createLearningMaterial(requestData);
                 console.log('Material created successfully');
                 alert('Learning material added successfully!');
             }
@@ -302,13 +334,20 @@ export default function LearningTab() {
 
         try {
             console.log('Deleting material:', materialId);
-            await axiosClient.delete(`/learning-materials/${materialId}`);
+
+            await learningService.deleteLearningMaterial(materialId);
+
             await fetchLearningMaterials();
             alert('Learning material deleted successfully!');
         } catch (error: any) {
             console.error('Error deleting learning material:', error);
+
             if (error.response?.status === 400) {
                 alert('Delete failed. Backend rejected the request.');
+            } else if (error.response?.data?.message) {
+                alert(`Error deleting learning material: ${error.response.data.message}`);
+            } else if (error.response?.data?.error) {
+                alert(`Error deleting learning material: ${error.response.data.error}`);
             } else {
                 alert('Error deleting learning material.');
             }
@@ -412,7 +451,6 @@ export default function LearningTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TYPE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VISIBILITY</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FILE / RESOURCE</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SIZE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UPDATED</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
                             </tr>
@@ -471,10 +509,7 @@ export default function LearningTab() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{item.fileSize || '—'}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{item.updated || '—'}</div>
+                                            <div className="text-sm text-gray-500">{item.updatedAt || item.createdAt || item.updated || '—'}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                                             <button 
