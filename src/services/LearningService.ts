@@ -11,9 +11,6 @@ import type {
 class LearningService {
   private baseUrl = '/learning-materials';
 
-  // REMOVE safeGet and safePost - we want errors to throw!
-  // REMOVE getDefaultThumbnail - we require real thumbnails from backend
-
   private normalizeCategory(category: string): string {
     const normalized = (category || '')
       .trim()
@@ -42,7 +39,7 @@ class LearningService {
   }
 
   /**
-   * Get all learning materials
+   * Get all learning materials (filtered by organisation on backend)
    */
   async getAllLearningMaterials(): Promise<UserLearningModule[]> {
     try {
@@ -55,7 +52,7 @@ class LearningService {
   }
 
   /**
-   * Get learning materials by category
+   * Get learning materials by category (filtered by organisation on backend)
    */
   async getLearningMaterialsByCategory(category: string): Promise<UserLearningModule[]> {
     try {
@@ -81,7 +78,7 @@ class LearningService {
   }
 
   /**
-   * Search learning materials
+   * Search learning materials (filtered by organisation on backend)
    */
   async searchLearningMaterials(query: string): Promise<UserLearningModule[]> {
     try {
@@ -94,7 +91,7 @@ class LearningService {
   }
 
   /**
-   * Get learning modules for a user
+   * Get learning modules for a user (filtered by organisation on backend)
    */
   async getUserModules(userEmail: string, filter?: LearningModuleFilter): Promise<UserLearningModule[]> {
     try {
@@ -387,7 +384,7 @@ class LearningService {
         students: item.students || 0,
         isPremium: item.isPremium || false,
         progress: item.progress || 0,
-        thumbnail: item.thumbnailUrl, // REMOVED fallback - thumbnail must come from backend
+        thumbnail: item.thumbnailUrl,
         isCompleted: false,
         isLocked: false,
         resourceUrl: item.resourceUrl,
@@ -395,6 +392,9 @@ class LearningService {
         type: item.type,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
+        organisation: item.createdByOrganisation, // NEW
+        targetOrganisation: item.targetOrganisation, // NEW
+        isPublic: item.isPublic, // NEW
         quizStartedAt: item.quizStartedAt,
         quizPassedAt: item.quizPassedAt,
         quizAttempts: item.quizAttempts || 0,
@@ -432,9 +432,19 @@ class LearningService {
   }
 
   /**
-   * Upload a new learning material
+   * Upload a new learning material (Admin/Super Admin only)
    */
-  async uploadLearningMaterial(file: File, metadata: { title: string; description?: string; category?: string; creatorEmail?: string }): Promise<any> {
+  async uploadLearningMaterial(
+    file: File, 
+    metadata: { 
+      title: string; 
+      description?: string; 
+      category?: string; 
+      creatorEmail?: string;
+      targetOrganisation?: string; // NEW
+      isPublic?: boolean; // NEW
+    }
+  ): Promise<any> {
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -442,8 +452,12 @@ class LearningService {
       if (metadata.description) formData.append('description', metadata.description);
       if (metadata.category) formData.append('category', metadata.category);
       if (metadata.creatorEmail) formData.append('creatorEmail', metadata.creatorEmail);
+      if (metadata.targetOrganisation) formData.append('targetOrganisation', metadata.targetOrganisation);
+      if (metadata.isPublic !== undefined) formData.append('isPublic', String(metadata.isPublic));
 
-      const res = await axiosClient.post(`${this.baseUrl}`, formData);
+      const res = await axiosClient.post(`${this.baseUrl}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       
       if (!res.data) {
         throw new Error('No upload confirmation received');
@@ -465,6 +479,19 @@ class LearningService {
   }
 
   /**
+   * Create URL-based learning material (Admin/Super Admin only)
+   */
+  async createUrlMaterial(materialData: any): Promise<any> {
+    try {
+      const response = await axiosClient.post(`${this.baseUrl}`, materialData);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Failed to create learning material:', error);
+      throw new Error('Failed to create learning material');
+    }
+  }
+
+  /**
    * Delete a learning material
    */
   async deleteLearningMaterial(materialId: string): Promise<boolean> {
@@ -475,6 +502,32 @@ class LearningService {
       console.error('❌ Failed to delete learning material:', error);
 
       throw error;
+    }
+  }
+
+  /**
+   * Get materials by organisation (Super Admin only)
+   */
+  async getMaterialsByOrganisation(organisation: string): Promise<UserLearningModule[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseUrl}/admin/organisation/${organisation}`);
+      return this.transformBackendToUserModules(response.data);
+    } catch (error) {
+      console.error('❌ Failed to fetch materials by organisation:', error);
+      throw new Error('Failed to fetch materials by organisation');
+    }
+  }
+
+  /**
+   * Get public materials
+   */
+  async getPublicMaterials(): Promise<UserLearningModule[]> {
+    try {
+      const response = await axiosClient.get(`${this.baseUrl}/public`);
+      return this.transformBackendToUserModules(response.data);
+    } catch (error) {
+      console.error('❌ Failed to fetch public materials:', error);
+      throw new Error('Failed to fetch public materials');
     }
   }
 }

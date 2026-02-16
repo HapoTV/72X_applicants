@@ -20,12 +20,15 @@ export default function FundingTab() {
         contactInfo: '',
         applicationUrl: '',
         industry: DEFAULT_INDUSTRY,
-        type: DEFAULT_TYPE
+        type: DEFAULT_TYPE,
+        organisation: '', // New field
+        isPublic: false   // New field
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const adminEmail = user?.email || '';
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
     useEffect(() => {
         fetchFundingOpportunities();
@@ -107,7 +110,9 @@ export default function FundingTab() {
             contactInfo: '',
             applicationUrl: '',
             industry: DEFAULT_INDUSTRY,
-            type: DEFAULT_TYPE
+            type: DEFAULT_TYPE,
+            organisation: '',
+            isPublic: false
         });
     };
 
@@ -138,6 +143,8 @@ export default function FundingTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PROVIDER</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">INDUSTRY</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TYPE</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ORGANISATION</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VISIBILITY</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AMOUNT</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DEADLINE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACT</th>
@@ -147,13 +154,13 @@ export default function FundingTab() {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-6 text-center text-sm text-gray-600">
+                                    <td colSpan={10} className="px-6 py-6 text-center text-sm text-gray-600">
                                         Loading funding opportunities...
                                     </td>
                                 </tr>
                             ) : fundingItems.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-6 text-center text-sm text-gray-600">
+                                    <td colSpan={10} className="px-6 py-6 text-center text-sm text-gray-600">
                                         No funding opportunities yet
                                     </td>
                                 </tr>
@@ -180,6 +187,20 @@ export default function FundingTab() {
                                                     {funding.type}
                                                 </span>
                                             ) : '—'}
+                                        </td>
+                                        <td className="px-6 py-3 text-sm text-gray-600">
+                                            {funding.organisation || 'All Organisations'}
+                                        </td>
+                                        <td className="px-6 py-3 text-sm">
+                                            {funding.isPublic ? (
+                                                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                                                    Public
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                                                    Restricted
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-3 text-sm text-gray-600">{funding.fundingAmount || '—'}</td>
                                         <td className="px-6 py-3 text-sm text-gray-600">{funding.deadline || '—'}</td>
@@ -281,6 +302,35 @@ export default function FundingTab() {
                                     </select>
                                 </div>
                             </div>
+
+                            {/* Organisation selection for Super Admin */}
+                            {isSuperAdmin && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-700 mb-1">Target Organisation</label>
+                                        <input 
+                                            value={newFunding.organisation || ''} 
+                                            onChange={e => setNewFunding({...newFunding, organisation: e.target.value})} 
+                                            className="w-full px-3 py-2 border rounded-lg" 
+                                            placeholder="e.g., 72X, TechCorp (leave empty for all)"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Leave empty to make visible to all organisations
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center pt-6">
+                                        <label className="flex items-center space-x-2">
+                                            <input 
+                                                type="checkbox"
+                                                checked={newFunding.isPublic || false}
+                                                onChange={e => setNewFunding({...newFunding, isPublic: e.target.checked})}
+                                                className="rounded border-gray-300 text-primary-600"
+                                            />
+                                            <span className="text-sm text-gray-700">Make this funding public (visible to all)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>

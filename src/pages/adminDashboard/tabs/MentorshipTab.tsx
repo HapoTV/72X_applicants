@@ -1,9 +1,11 @@
 // src/pages/adminDashboard/tabs/MentorshipTab.tsx
 import { useState, useEffect } from 'react';
 import { mentorshipService } from '../../../services/MentorshipService';
+import { useAuth } from '../../../context/AuthContext';
 import type { Mentor } from '../../../interfaces/MentorshipData';
 
 export default function MentorshipTab() {
+    const { user } = useAuth();
     const [mentors, setMentors] = useState<Mentor[]>([]);
     const [showAddMentor, setShowAddMentor] = useState(false);
     const [newMentor, setNewMentor] = useState({
@@ -18,11 +20,15 @@ export default function MentorshipTab() {
         bio: '',
         sessionDuration: '60 minutes',
         sessionPrice: 'Free',
-        languages: ''
+        languages: '',
+        organisation: '', // New field
+        isPublic: false   // New field
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
     useEffect(() => {
         fetchMentors();
@@ -55,7 +61,12 @@ export default function MentorshipTab() {
             
             // Get current user email
             const currentUser = mentorshipService.getCurrentUser();
-            const userEmail = currentUser?.email || 'admin@example.com';
+            const userEmail = currentUser?.email || '';
+            
+            if (!userEmail) {
+                setError('User email not found');
+                return;
+            }
             
             // Create mentor data
             const mentorFormData = {
@@ -71,7 +82,9 @@ export default function MentorshipTab() {
                 sessionDuration: newMentor.sessionDuration,
                 sessionPrice: newMentor.sessionPrice,
                 languages: newMentor.languages,
-                imageUrl: ''
+                imageUrl: '',
+                organisation: newMentor.organisation,
+                isPublic: newMentor.isPublic
             };
             
             await mentorshipService.createMentor(mentorFormData, userEmail);
@@ -92,7 +105,9 @@ export default function MentorshipTab() {
                 bio: '',
                 sessionDuration: '60 minutes',
                 sessionPrice: 'Free',
-                languages: ''
+                languages: '',
+                organisation: '',
+                isPublic: false
             });
             
             // Refresh the list
@@ -114,7 +129,7 @@ export default function MentorshipTab() {
             
             // Get current user email
             const currentUser = mentorshipService.getCurrentUser();
-            const userEmail = currentUser?.email || 'admin@example.com';
+            const userEmail = currentUser?.email || '';
             
             await mentorshipService.deleteMentor(mentorId, userEmail);
             
@@ -180,6 +195,8 @@ export default function MentorshipTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EXPERIENCE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RATING</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AVAILABILITY</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ORGANISATION</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VISIBILITY</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACT</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CREATED BY</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
@@ -188,7 +205,7 @@ export default function MentorshipTab() {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-6 text-center">
+                                    <td colSpan={10} className="px-6 py-6 text-center">
                                         <div className="flex justify-center items-center">
                                             <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin"></div>
                                         </div>
@@ -196,7 +213,7 @@ export default function MentorshipTab() {
                                 </tr>
                             ) : mentors.length === 0 ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-6 text-center text-sm text-gray-600">
+                                    <td colSpan={10} className="px-6 py-6 text-center text-sm text-gray-600">
                                         No mentors yet. Click "Add Mentor" to create one.
                                     </td>
                                 </tr>
@@ -234,6 +251,20 @@ export default function MentorshipTab() {
                                             }`}>
                                                 {mentor.availability || 'Not specified'}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-3 text-sm text-gray-600">
+                                            {mentor.organisation || 'All Organisations'}
+                                        </td>
+                                        <td className="px-6 py-3 text-sm">
+                                            {mentor.isPublic ? (
+                                                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                                                    Public
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                                                    Restricted
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-6 py-3 text-sm text-gray-600">
                                             {mentor.contactInfo ? (
@@ -330,6 +361,38 @@ export default function MentorshipTab() {
                                         placeholder="e.g., 5+ years in marketing"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Organisation selection for Super Admin */}
+                            {isSuperAdmin && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm text-gray-700 mb-1">Target Organisation</label>
+                                        <input 
+                                            value={newMentor.organisation} 
+                                            onChange={e => setNewMentor({...newMentor, organisation: e.target.value})} 
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" 
+                                            placeholder="e.g., 72X, TechCorp (leave empty for all)"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Leave empty to make visible to all organisations
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center pt-6">
+                                        <label className="flex items-center space-x-2">
+                                            <input 
+                                                type="checkbox"
+                                                checked={newMentor.isPublic}
+                                                onChange={e => setNewMentor({...newMentor, isPublic: e.target.checked})}
+                                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                            />
+                                            <span className="text-sm text-gray-700">Make this mentor public (visible to all)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm text-gray-700 mb-1">Background</label>
                                     <input 
@@ -423,8 +486,8 @@ export default function MentorshipTab() {
                                 />
                             </div>
                             <div className="text-sm text-gray-600">
-                                <p className="mb-2">Note: The mentor will be created under your account ({mentorshipService.getCurrentUser()?.email || 'current user'}).</p>
-                                <p>Mentors created here will appear in the mentorship hub for users to connect with.</p>
+                                <p className="mb-2">Note: The mentor will be created under your account ({user?.email || 'current user'}).</p>
+                                <p>Mentors created here will appear to users in the specified organisation or to all users if marked public.</p>
                             </div>
                             <div className="flex gap-2 pt-2 justify-end">
                                 <button 

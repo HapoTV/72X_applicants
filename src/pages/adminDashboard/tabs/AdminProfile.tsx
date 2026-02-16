@@ -1,12 +1,12 @@
 // src/pages/adminDashboard/tabs/AdminProfile.tsx
 import React, { useState, useEffect } from 'react';
-import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building } from 'lucide-react';
+import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building2, Crown } from 'lucide-react';
 import { authService } from '../../../services/AuthService';
 import { useAuth } from '../../../context/AuthContext';
 import type { UserFormData } from '../../../interfaces/UserData';
 
 const AdminProfile: React.FC = () => {
-    const { user, login } = useAuth();
+    const { user, login, isSuperAdmin, userOrganisation } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [activeTab, setActiveTab] = useState('profile');
     const [profileData, setProfileData] = useState<UserFormData>({
@@ -14,6 +14,7 @@ const AdminProfile: React.FC = () => {
         email: '',
         mobileNumber: '',
         companyName: '',
+        organisation: '', // NEW
         industry: '',
         location: '',
         employees: '',
@@ -41,6 +42,7 @@ const AdminProfile: React.FC = () => {
                 email: userData.email || '',
                 mobileNumber: userData.mobileNumber || '',
                 companyName: userData.companyName || '',
+                organisation: userData.organisation || '', // NEW
                 industry: userData.industry || '',
                 location: userData.location || '',
                 employees: userData.employees || '',
@@ -111,7 +113,21 @@ const AdminProfile: React.FC = () => {
         <div className="space-y-6 animate-fade-in">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Profile Settings</h1>
+                <div className="flex items-center space-x-3 mb-2">
+                    <h1 className="text-2xl font-bold text-gray-900">Admin Profile Settings</h1>
+                    {!isSuperAdmin && userOrganisation && (
+                        <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                            <Building2 className="w-4 h-4" />
+                            {userOrganisation}
+                        </span>
+                    )}
+                    {isSuperAdmin && (
+                        <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm flex items-center gap-1">
+                            <Crown className="w-4 h-4" />
+                            Super Admin
+                        </span>
+                    )}
+                </div>
                 <p className="text-gray-600">Manage your admin account and information</p>
             </div>
 
@@ -170,9 +186,6 @@ const AdminProfile: React.FC = () => {
                             <div>
                                 <h3 className="text-xl font-semibold text-gray-900">{profileData.fullName}</h3>
                                 <p className="text-gray-600">Administrator</p>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Member for {calculateYearsWithPlatform()} years
-                                </p>
                                 {isEditing && (
                                     <button className="text-primary-600 text-sm hover:text-primary-700 mt-1">
                                         Change Photo
@@ -252,25 +265,27 @@ const AdminProfile: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Organization Information */}
+                            {/* Organisation Information */}
                             <div>
-                                <h4 className="text-md font-medium text-gray-900 mb-4">Organization Information</h4>
+                                <h4 className="text-md font-medium text-gray-900 mb-4">Organisation Information</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Organization Name
+                                            Referenced By
                                         </label>
                                         <div className="relative">
-                                            <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                             <input
                                                 type="text"
-                                                value={profileData.companyName}
-                                                onChange={(e) => handleInputChange('companyName', e.target.value)}
+                                                value={profileData.organisation}
+                                                onChange={(e) => handleInputChange('organisation', e.target.value)}
                                                 disabled={!isEditing}
                                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                                                placeholder="Your organisation"
                                             />
                                         </div>
                                     </div>
+
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -295,23 +310,11 @@ const AdminProfile: React.FC = () => {
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Years with Platform
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={`${calculateYearsWithPlatform()} years`}
-                                            disabled
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Role
                                         </label>
                                         <input
                                             type="text"
-                                            value="Administrator"
+                                            value={isSuperAdmin ? 'Super Administrator' : 'Administrator'}
                                             disabled
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
                                         />

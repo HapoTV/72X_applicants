@@ -11,18 +11,29 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
+    const organisation = localStorage.getItem("userOrganisation");
+    const userRole = localStorage.getItem("userRole");
 
     console.log("🔧 Axios Request Config:", {
       url: config.url,
       method: config.method,
       hasToken: !!token,
       token: token ? token.substring(0, 20) + "..." : "Missing",
+      organisation: organisation || "None",
+      role: userRole || "None",
       isFormData: config.data instanceof FormData
     });
 
     // ✅ Add token ONLY if it exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // ✅ Add organisation header for non-super-admins
+    // Super admins see all data, so don't add organisation header
+    if (organisation && userRole !== 'SUPER_ADMIN') {
+      config.headers['X-Organisation'] = organisation;
+      console.log("🏢 Added organisation header:", organisation);
     }
 
     // ✅ IMPORTANT:
@@ -64,11 +75,15 @@ axiosClient.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn("🔐 Unauthorized - Token invalid/expired");
       localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("userOrganisation");
       window.location.href = "/login";
     }
 
     if (error.response?.status === 403) {
       console.error("🚫 Forbidden - No permission");
+      // Could show a user-friendly message
     }
 
     return Promise.reject(error);

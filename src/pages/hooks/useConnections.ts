@@ -11,6 +11,7 @@ export interface ConnectionUser {
   role: string;
   location?: string;
   industry?: string;
+  organisation?: string;
   bio?: string;
   profileImage?: string;
   isOnline?: boolean;
@@ -19,7 +20,9 @@ export interface ConnectionUser {
 
 interface ConversationMeta {
   unread: number;
-  lastTimeMs: number;
+  lastMessageAt: string;
+  conversationId: string;
+  lastMessage: string;
 }
 
 export const DEFAULT_VISIBLE_CONNECTIONS = 10;
@@ -30,8 +33,10 @@ export function useConnections(authUserId?: string) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [selectedOrganisation, setSelectedOrganisation] = useState<string>('all');
   const [industries, setIndustries] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+  const [organisations, setOrganisations] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_CONNECTIONS);
   const [conversationMetaByUserId, setConversationMetaByUserId] = useState<Record<string, ConversationMeta>>({});
   const [loading, setLoading] = useState(true);
@@ -43,7 +48,7 @@ export function useConnections(authUserId?: string) {
 
   useEffect(() => {
     setVisibleCount(DEFAULT_VISIBLE_CONNECTIONS);
-  }, [searchTerm, selectedIndustry, selectedLocation]);
+  }, [searchTerm, selectedIndustry, selectedLocation, selectedOrganisation]);
 
   useEffect(() => {
     if (!authUserId) return;
@@ -52,11 +57,18 @@ export function useConnections(authUserId?: string) {
       try {
         const conversations: Conversation[] = await MessageServices.getUserConversations();
         const meta: Record<string, ConversationMeta> = {};
+        
         for (const c of conversations) {
-          const lastTimeMs = c.lastMessageTime ? Date.parse(c.lastMessageTime) : 0;
-          meta[c.userId] = {
-            unread: Number(c.unreadCount || 0),
-            lastTimeMs: Number.isFinite(lastTimeMs) ? lastTimeMs : 0,
+          // Determine which user is the other participant
+          const otherUserId = c.user1Id === authUserId ? c.user2Id : c.user1Id;
+          const otherUserName = c.user1Id === authUserId ? c.user2Name : c.user1Name;
+          const otherUserEmail = c.user1Id === authUserId ? c.user2Email : c.user1Email;
+          
+          meta[otherUserId] = {
+            unread: c.unreadCount || 0,
+            lastMessageAt: c.lastMessageAt,
+            conversationId: c.conversationId,
+            lastMessage: c.lastMessage || ''
           };
         }
         setConversationMetaByUserId(meta);
@@ -88,7 +100,10 @@ export function useConnections(authUserId?: string) {
           role: u.role,
           location: u.location,
           industry: u.industry,
+          organisation: u.organisation,
           profileImage: u.profileImageUrl,
+          isOnline: Math.random() > 0.5, // This should come from a real online status service
+          lastSeen: new Date(Date.now() - Math.random() * 3600000).toISOString()
         };
       });
 
@@ -103,8 +118,13 @@ export function useConnections(authUserId?: string) {
         new Set(mappedUsers.map((user) => user.location).filter(Boolean)),
       ) as string[];
 
+      const uniqueOrganisations = Array.from(
+        new Set(mappedUsers.map((user) => user.organisation).filter(Boolean)),
+      ) as string[];
+
       setIndustries(uniqueIndustries);
       setLocations(uniqueLocations);
+      setOrganisations(uniqueOrganisations);
     } catch (err) {
       console.error('Error fetching users:', err);
       setError('Failed to load users. Please try again.');
@@ -123,7 +143,8 @@ export function useConnections(authUserId?: string) {
         user.lastName?.toLowerCase().includes(term) ||
         user.email?.toLowerCase().includes(term) ||
         user.industry?.toLowerCase().includes(term) ||
-        user.location?.toLowerCase().includes(term),
+        user.location?.toLowerCase().includes(term) ||
+        user.organisation?.toLowerCase().includes(term)
       );
     }
 
@@ -135,28 +156,48 @@ export function useConnections(authUserId?: string) {
       filtered = filtered.filter((user) => user.location === selectedLocation);
     }
 
+    if (selectedOrganisation !== 'all') {
+      filtered = filtered.filter((user) => user.organisation === selectedOrganisation);
+    }
+
     setFilteredUsers(filtered);
-  }, [searchTerm, selectedIndustry, selectedLocation, users]);
+  }, [searchTerm, selectedIndustry, selectedLocation, selectedOrganisation, users]);
 
   const sortedFilteredUsers = useMemo(() => {
     const copy = [...filteredUsers];
-    copy.sort((a, b) => {
+    
+    // Split users into those with conversations and those without
+    const withConversations: ConnectionUser[] = [];
+    const withoutConversations: ConnectionUser[] = [];
+    
+    copy.forEach(user => {
+      if (conversationMetaByUserId[user.userId]) {
+        withConversations.push(user);
+      } else {
+        withoutConversations.push(user);
+      }
+    });
+    
+    // Sort users with conversations by lastMessageAt (most recent first)
+    withConversations.sort((a, b) => {
       const ma = conversationMetaByUserId[a.userId];
       const mb = conversationMetaByUserId[b.userId];
-
-      const ua = ma?.unread || 0;
-      const ub = mb?.unread || 0;
-      if (ua !== ub) return ub - ua;
-
-      const ta = ma?.lastTimeMs || 0;
-      const tb = mb?.lastTimeMs || 0;
-      if (ta !== tb) return tb - ta;
-
+      
+      const ta = ma?.lastMessageAt ? new Date(ma.lastMessageAt).getTime() : 0;
+      const tb = mb?.lastMessageAt ? new Date(mb.lastMessageAt).getTime() : 0;
+      
+      return tb - ta; // Descending (most recent first)
+    });
+    
+    // Sort users without conversations alphabetically
+    withoutConversations.sort((a, b) => {
       const an = `${a.firstName || ''} ${a.lastName || ''}`.trim();
       const bn = `${b.firstName || ''} ${b.lastName || ''}`.trim();
       return an.localeCompare(bn);
     });
-    return copy;
+    
+    // Return combined array: users with conversations first, then users without
+    return [...withConversations, ...withoutConversations];
   }, [filteredUsers, conversationMetaByUserId]);
 
   const visibleUsers = useMemo(
@@ -168,6 +209,7 @@ export function useConnections(authUserId?: string) {
     setSearchTerm('');
     setSelectedIndustry('all');
     setSelectedLocation('all');
+    setSelectedOrganisation('all');
   };
 
   return {
@@ -176,9 +218,11 @@ export function useConnections(authUserId?: string) {
     sortedFilteredUsers,
     industries,
     locations,
+    organisations,
     searchTerm,
     selectedIndustry,
     selectedLocation,
+    selectedOrganisation,
     loading,
     error,
     conversationMetaByUserId,
@@ -187,6 +231,7 @@ export function useConnections(authUserId?: string) {
     setSearchTerm,
     setSelectedIndustry,
     setSelectedLocation,
+    setSelectedOrganisation,
     clearFilters,
     refetch: fetchUsers,
   };

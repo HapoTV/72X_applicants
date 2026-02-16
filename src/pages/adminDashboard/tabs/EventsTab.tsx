@@ -4,9 +4,10 @@ import { eventService } from '../../../services/EventService';
 import { useAuth } from '../../../context/AuthContext';
 import type { AdminEventItem, EventFormData} from '../../../interfaces/EventData';
 import { DEFAULT_EVENT_TYPE, EventTypeOptions } from '../../../interfaces/EventData';
+import { Building2, Crown } from 'lucide-react';
 
 export default function EventsTab() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin, userOrganisation } = useAuth();
   const [eventsAdmin, setEventsAdmin] = useState<AdminEventItem[]>([]);
   const [showAddEventAdmin, setShowAddEventAdmin] = useState(false);
   const [newEvent, setNewEvent] = useState<EventFormData>({ 
@@ -34,7 +35,11 @@ export default function EventsTab() {
       setLoading(true);
       setError(null);
       const events = await eventService.getAllEvents();
-      setEventsAdmin(events);
+      // Filter events by organisation if not super admin
+      const filteredEvents = isSuperAdmin 
+        ? events 
+        : events.filter(event => event.organisation === userOrganisation);
+      setEventsAdmin(filteredEvents);
     } catch (err) {
       setError('Failed to load events');
       console.error('Error fetching events:', err);
@@ -113,7 +118,28 @@ export default function EventsTab() {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Events Management</h1>
+        <div>
+          <div className="flex items-center space-x-3 mb-2">
+            <h1 className="text-2xl font-bold text-gray-900">Events Management</h1>
+            {!isSuperAdmin && userOrganisation && (
+              <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                <Building2 className="w-4 h-4" />
+                {userOrganisation}
+              </span>
+            )}
+            {isSuperAdmin && (
+              <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm flex items-center gap-1">
+                <Crown className="w-4 h-4" />
+                Super Admin
+              </span>
+            )}
+          </div>
+          <p className="text-gray-600">
+            {isSuperAdmin 
+              ? 'Manage events across all organisations' 
+              : `Manage events for ${userOrganisation || 'your organisation'}`}
+          </p>
+        </div>
         <button 
           onClick={() => setShowAddEventAdmin(true)} 
           className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg flex items-center"
@@ -138,19 +164,22 @@ export default function EventsTab() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIME</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">LOCATION</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TYPE</th>
+                {isSuperAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ORGANISATION</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-6 text-center text-sm text-gray-600">
+                  <td colSpan={isSuperAdmin ? 7 : 6} className="px-6 py-6 text-center text-sm text-gray-600">
                     Loading events...
                   </td>
                 </tr>
               ) : eventsAdmin.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-6 text-center text-sm text-gray-600">
+                  <td colSpan={isSuperAdmin ? 7 : 6} className="px-6 py-6 text-center text-sm text-gray-600">
                     No events yet
                   </td>
                 </tr>
@@ -162,6 +191,16 @@ export default function EventsTab() {
                     <td className="px-6 py-3 text-sm text-gray-600">{event.time}</td>
                     <td className="px-6 py-3 text-sm text-gray-600">{event.location || '—'}</td>
                     <td className="px-6 py-3 text-sm text-gray-600">{event.eventType || '—'}</td>
+                    {isSuperAdmin && (
+                      <td className="px-6 py-3 text-sm text-gray-600">
+                        {event.organisation ? (
+                          <div className="flex items-center">
+                            <Building2 className="w-4 h-4 text-gray-400 mr-1" />
+                            {event.organisation}
+                          </div>
+                        ) : '—'}
+                      </td>
+                    )}
                     <td className="px-6 py-3 text-sm">
                       <button 
                         className="text-blue-600 hover:text-blue-800 mr-4"
@@ -289,6 +328,15 @@ export default function EventsTab() {
               <div><span className="font-medium">Date:</span> {viewEvent.date}</div>
               <div><span className="font-medium">Time:</span> {viewEvent.time}</div>
               <div><span className="font-medium">Location:</span> {viewEvent.location || '—'}</div>
+              {viewEvent.organisation && (
+                <div className="flex items-center">
+                  <span className="font-medium mr-2">Organisation:</span>
+                  <span className="flex items-center">
+                    <Building2 className="w-4 h-4 text-gray-400 mr-1" />
+                    {viewEvent.organisation}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <button 

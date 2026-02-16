@@ -9,6 +9,7 @@ export interface Notification {
   status: 'DRAFT' | 'SCHEDULED' | 'SENT' | 'FAILED';
   read: boolean;
   actionUrl?: string;
+  targetOrganisation?: string; // NEW
   timestamp: string;
   createdAt: string;
   userId?: string;
@@ -24,6 +25,7 @@ export interface CreateNotificationRequest {
   actionUrl?: string;
   scheduledFor?: string;
   broadcast?: boolean;
+  targetOrganisation?: string; // NEW: Target specific organisation
   userIds?: string[];
   subscriptionTypes?: Array<'START_UP' | 'ESSENTIAL' | 'PREMIUM'>;
   userRoles?: string[];
@@ -34,6 +36,8 @@ export interface CreateNotificationRequest {
 export interface NotificationResponse {
   notifications: Notification[];
   unreadCount: number;
+  organisation?: string; // NEW
+  isSuperAdmin?: boolean; // NEW
 }
 
 export interface MarkAsReadRequest {
@@ -49,6 +53,8 @@ export interface NotificationStats {
   broadcastNotifications: number;
   userSpecificNotifications: number;
   recentNotificationsCount: number;
+  organisation?: string; // NEW
+  isSuperAdmin?: boolean; // NEW
 }
 
 class NotificationService {
@@ -127,7 +133,7 @@ class NotificationService {
     }
   }
 
-  async getAllNotifications(status?: string): Promise<Notification[]> {
+  async getAllNotifications(status?: string): Promise<{ notifications: Notification[], organisation?: string, isSuperAdmin?: boolean }> {
     try {
       const url = status 
         ? `${this.baseURL}/admin/all?status=${status}`
@@ -135,7 +141,11 @@ class NotificationService {
       const response = await axiosClient.get(url, {
         headers: this.getAuthHeader()
       });
-      return response.data.notifications || [];
+      return {
+        notifications: response.data.notifications || [],
+        organisation: response.data.organisation,
+        isSuperAdmin: response.data.isSuperAdmin
+      };
     } catch (error) {
       console.error('Error fetching all notifications:', error);
       throw error;

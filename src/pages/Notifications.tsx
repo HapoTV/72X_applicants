@@ -7,12 +7,16 @@ import {
   AlertCircle, 
   Info,
   Clock,
-  Globe
+  Globe,
+  Building2, // NEW
+  Crown // NEW
 } from 'lucide-react';
 import NotificationService from '../services/NotificationService';
+import { useAuth } from '../context/AuthContext';
 import type { Notification } from '../services/NotificationService';
 
 const Notifications: React.FC = () => {
+  const { user, isSuperAdmin, userOrganisation } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'unread'>('all');
@@ -132,10 +136,26 @@ const Notifications: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-          <Bell className="w-8 h-8 text-primary-600" />
-          <span>Notifications</span>
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
+            <Bell className="w-8 h-8 text-primary-600" />
+            <span>Notifications</span>
+          </h1>
+          {userOrganisation && (
+            <div className="flex items-center space-x-2">
+              <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                <Building2 className="w-4 h-4" />
+                {userOrganisation}
+              </span>
+              {isSuperAdmin && (
+                <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm flex items-center gap-1">
+                  <Crown className="w-4 h-4" />
+                  Super Admin
+                </span>
+              )}
+            </div>
+          )}
+        </div>
         <p className="text-gray-600 mt-1">
           {unreadCount > 0
             ? `You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}`
@@ -224,8 +244,14 @@ const Notifications: React.FC = () => {
                           {notification.title}
                         </h3>
                         {!notification.userId && (
-                          <span title="Broadcast Notification">
+                          <span className="flex items-center gap-1" title="Broadcast Notification">
                             <Globe className="w-4 h-4 text-gray-400" />
+                            {notification.targetOrganisation && (
+                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Building2 className="w-3 h-3" />
+                                {notification.targetOrganisation}
+                              </span>
+                            )}
                           </span>
                         )}
                       </div>

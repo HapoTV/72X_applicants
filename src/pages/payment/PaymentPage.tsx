@@ -1,17 +1,31 @@
+// src/pages/payment/PaymentPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { paymentService } from '../../services/PaymentService';
 import { PaymentStatus } from '../../interfaces/PaymentData';
 import type { PaymentResponse } from '../../interfaces/PaymentData';
+import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Select } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
-import { Loader2, CreditCard, CheckCircle, Clock, RefreshCw, Eye, ArrowLeft, Home } from 'lucide-react';
+import { 
+  Loader2, 
+  CreditCard, 
+  CheckCircle, 
+  Clock, 
+  RefreshCw, 
+  Eye, 
+  ArrowLeft, 
+  Home,
+  Building2,
+  Crown
+} from 'lucide-react';
 
 const PaymentPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isSuperAdmin, userOrganisation } = useAuth();
   const [payments, setPayments] = useState<PaymentResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,15 +115,29 @@ const PaymentPage: React.FC = () => {
                 <p className="text-sm text-gray-600">View and manage all your payments</p>
               </div>
             </div>
-            <Button
-              onClick={() => navigate('/dashboard/overview')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Home className="h-4 w-4" />
-              Dashboard
-            </Button>
+            <div className="flex items-center gap-3">
+              {userOrganisation && (
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                  <Building2 className="w-4 h-4" />
+                  {userOrganisation}
+                </span>
+              )}
+              {isSuperAdmin && (
+                <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm flex items-center gap-1">
+                  <Crown className="w-4 h-4" />
+                  Super Admin
+                </span>
+              )}
+              <Button
+                onClick={() => navigate('/dashboard/overview')}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Home className="h-4 w-4" />
+                Dashboard
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -201,7 +229,12 @@ const PaymentPage: React.FC = () => {
         {/* Payments Table */}
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Recent Payments</CardTitle>
+            <CardTitle>
+              Recent Payments
+              {userOrganisation && (
+                <span className="text-sm font-normal text-gray-500 ml-2">for {userOrganisation}</span>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -212,13 +245,14 @@ const PaymentPage: React.FC = () => {
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Order ID</TableHead>
+                  {isSuperAdmin && <TableHead>Organisation</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPayments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-8 text-gray-500">
                       No payments found
                     </TableCell>
                   </TableRow>
@@ -242,6 +276,16 @@ const PaymentPage: React.FC = () => {
                           {payment.orderId}
                         </code>
                       </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell>
+                          {payment.organisation ? (
+                            <div className="flex items-center">
+                              <Building2 className="w-4 h-4 text-gray-400 mr-1" />
+                              <span className="text-sm">{payment.organisation}</span>
+                            </div>
+                          ) : '-'}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"

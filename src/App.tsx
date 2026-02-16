@@ -1,4 +1,4 @@
-
+// src/App.tsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -51,14 +51,13 @@ import RoadmapUpgrade from './pages/upgrades/RoadmapUpgrade';
 import AnalyticsUpgrade from './pages/upgrades/AnalyticsUpgrade';
 import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
 
-// Admin Dashboard
-import AdminDashboard from './pages/adminDashboard/AdminDashboard';
-import AdminNotifications from './pages/adminDashboard/tabs/AdminNotifications';
+// Admin Routes
+import AdminRoutes from './routes/AdminRoutes';
 
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 
-// Payment Route
+// Routes
 import PaymentRoutes from './routes/paymentRoutes';
 
 import MyConnections from './pages/MyConnections';
@@ -92,21 +91,12 @@ function App() {
             <Route path="/create-password" element={<CreatePassword />} />
             <Route path="/select-package" element={<SelectPackage />} />
 
-            {/* Admin routes - outside of main layout to avoid sidebar and chatbot */}
-            <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+            {/* Admin routes - OUTSIDE main layout to avoid user sidebar */}
             <Route
-              path="/admin/notifications"
+              path="/admin/*"
               element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminNotifications />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/dashboard/*"
-              element={
-                <ProtectedRoute requireAdmin={true}>
-                  <AdminDashboard />
+                  <AdminRoutes />
                 </ProtectedRoute>
               }
             />

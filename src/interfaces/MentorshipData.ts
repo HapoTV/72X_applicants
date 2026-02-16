@@ -16,6 +16,9 @@ export interface Mentor {
   imageUrl?: string;
   createdBy: string; // User email
   createdById?: string; // User ID who created the mentor
+  createdByUserId?: string; // User ID who created the mentor (alias)
+  organisation?: string; // New field: Organisation that can see this mentor
+  isPublic?: boolean; // New field: If true, visible to all organisations
   createdAt?: string;
   updatedAt?: string;
 }
@@ -34,6 +37,8 @@ export interface MentorshipFormData {
   sessionPrice: string;
   languages: string;
   imageUrl?: string;
+  organisation?: string; // New field
+  isPublic?: boolean; // New field
 }
 
 export interface PeerSupportGroup {
