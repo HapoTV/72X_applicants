@@ -5,7 +5,6 @@ import {
 	BookOpen,
 	Handshake,
 	DollarSign,
-	User,
 	Megaphone,
 	ShieldAlert,
 	CreditCard,
@@ -23,6 +22,7 @@ export type AdminTab =
 	| 'mentorship'
 	| 'funding'
 	| 'ad'
+	| 'profile'
 	| 'payments'
 	| 'monitoring'
 	| 'organisation'
@@ -33,7 +33,7 @@ interface AdminSidebarProps {
 	onTabChange: (tab: AdminTab) => void;
 }
 
-export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
+export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: AdminSidebarProps) {
     const navigate = useNavigate();
     const location = useLocation();
     const { isSuperAdmin, userOrganisation } = useAuth();

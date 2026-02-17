@@ -6,6 +6,10 @@ import { Building2, Shield, Eye, CheckCircle, XCircle } from 'lucide-react'; // 
 
 import type { Application as ApiApplication, ApplicationStatus } from '../../../interfaces/ApplicantData';
 
+type ApiApplicationWithOrganisation = ApiApplication & {
+    organisation?: string;
+};
+
 interface Application {
     id: string;
     referenceNumber: string;
@@ -74,7 +78,7 @@ export default function ApplicantsTab() {
             const apiApplications = await applicationService.getAllApplications();
             
             // Transform API response to match frontend interface
-            const transformedApplications: Application[] = apiApplications.map((app: ApiApplication) => ({
+            const transformedApplications: Application[] = apiApplications.map((app: ApiApplicationWithOrganisation) => ({
                 id: app.applicationId,
                 referenceNumber: app.applicationNumber,
                 businessName: app.userFullName || 'N/A',

@@ -341,8 +341,6 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isFlipped = feedback !== 'idle';
-
   const renderFrontInteraction = () => {
     if (!currentQ) return null;
     const t = getQuestionType(currentQ);
@@ -721,101 +719,90 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
             <div className="mb-6">
               <div
                 className="relative w-full h-[460px]"
-                style={{ perspective: '1200px' }}
               >
                 <div
-                  className="relative w-full h-full transition-transform duration-500"
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                  }}
+                  className={`absolute inset-0 rounded-2xl border p-6 transition-colors ${
+                    feedback === 'correct'
+                      ? 'border-green-300 bg-green-50'
+                      : feedback === 'incorrect'
+                        ? 'border-red-300 bg-red-50'
+                        : 'border-gray-200 bg-white'
+                  }`}
                 >
-                  <div
-                    className="absolute inset-0 rounded-2xl border border-gray-200 bg-white p-6"
-                    style={{ backfaceVisibility: 'hidden' }}
-                  >
-                    <div className="flex items-start gap-3 mb-4">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-10 h-10 bg-primary-50 border border-primary-100 rounded-xl flex items-center justify-center text-primary-700 font-bold">
                         {currentQuestionIndex + 1}
                       </div>
                       <div>
                         <p className="text-lg font-semibold text-gray-900 leading-snug">{currentQ?.question}</p>
-                        <p className="text-sm text-gray-600 mt-1">Choose one answer and submit to flip the card.</p>
+                        <p className="text-sm text-gray-600 mt-1">Choose your answer and submit.</p>
                       </div>
                     </div>
-
-                    {renderFrontInteraction()}
-
-                    <div className="mt-5 flex items-center justify-between">
-                      <div className="text-sm text-gray-600">Pass mark: {passPercentage}%</div>
-                      <button
-                        onClick={handleSubmit}
-                        disabled={!isResponseComplete(currentQ) || feedback !== 'idle'}
-                        className={`px-6 py-2 rounded-lg transition-all ${
-                          !isResponseComplete(currentQ) || feedback !== 'idle'
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'bg-primary-600 text-white hover:bg-primary-700 transform hover:scale-105'
-                        }`}
-                      >
-                        Submit Answer
-                      </button>
+                    <div className="text-sm font-semibold text-gray-800 bg-white/70 border border-gray-200 rounded-full px-3 py-1">
+                      Score {score}/{totalQuestions}
                     </div>
                   </div>
 
-                  <div
-                    className="absolute inset-0 rounded-2xl border p-6"
-                    style={{
-                      backfaceVisibility: 'hidden',
-                      transform: 'rotateY(180deg)',
-                      background:
-                        feedback === 'correct'
-                          ? 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04))'
-                          : 'linear-gradient(135deg, rgba(249,115,22,0.16), rgba(249,115,22,0.06))',
-                      borderColor: feedback === 'correct' ? 'rgba(16,185,129,0.35)' : 'rgba(249,115,22,0.35)',
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h4 className={`text-xl font-bold ${feedback === 'correct' ? 'text-green-800' : 'text-orange-900'}`}>
-                          {feedback === 'correct' ? 'Correct! Keep going.' : 'Almost there — review and try again!'}
-                        </h4>
-                        <p className={`mt-1 text-sm ${feedback === 'correct' ? 'text-green-800' : 'text-orange-900'}`}>
-                          {feedback === 'correct'
-                            ? `+${10 + Math.min(20, streak * 2)} XP earned. Your streak grows!`
-                            : 'No correct answer is revealed. You must demonstrate mastery to pass.'}
-                        </p>
-                      </div>
-                      <div className="text-sm font-semibold text-gray-800 bg-white/70 border border-white/60 rounded-full px-3 py-1">
-                        Score {score}/{totalQuestions}
-                      </div>
-                    </div>
+                  {renderFrontInteraction()}
 
-                    {feedback === 'correct' && currentQ?.explanation && (
-                      <div className="mt-5">
+                  <div className="mt-5 flex items-center justify-between">
+                    <div className="text-sm text-gray-600">Pass mark: {passPercentage}%</div>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={!isResponseComplete(currentQ) || feedback !== 'idle'}
+                      className={`px-6 py-2 rounded-lg transition-all ${
+                        !isResponseComplete(currentQ) || feedback !== 'idle'
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-primary-600 text-white hover:bg-primary-700 transform hover:scale-105'
+                      }`}
+                    >
+                      Submit Answer
+                    </button>
+                  </div>
+
+                  {feedback !== 'idle' && (
+                    <div className="mt-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h4 className={`text-xl font-bold ${feedback === 'correct' ? 'text-green-800' : 'text-red-800'}`}>
+                            {feedback === 'correct' ? 'Correct! Keep going.' : 'Incorrect — try again!'}
+                          </h4>
+                          <p className={`mt-1 text-sm ${feedback === 'correct' ? 'text-green-800' : 'text-red-800'}`}>
+                            {feedback === 'correct'
+                              ? `+${10 + Math.min(20, streak * 2)} XP earned. Your streak grows!`
+                              : 'No correct answer is revealed. You must demonstrate mastery to pass.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {feedback === 'correct' && currentQ?.explanation && (
+                        <div className="mt-5">
+                          <button
+                            onClick={() => setRevealedExplanation((p) => !p)}
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-white/70 border border-white/60 rounded-lg text-sm font-semibold text-gray-900 hover:bg-white"
+                          >
+                            {revealedExplanation ? 'Hide why this is correct' : 'Why is this correct?'}
+                            {revealedExplanation ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                          {revealedExplanation && (
+                            <div className="mt-3 p-4 bg-white/70 border border-white/60 rounded-xl text-gray-900">
+                              {currentQ.explanation}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="mt-6 flex justify-end gap-3">
                         <button
-                          onClick={() => setRevealedExplanation((p) => !p)}
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-white/70 border border-white/60 rounded-lg text-sm font-semibold text-gray-900 hover:bg-white"
+                          onClick={goNext}
+                          className="px-5 py-2 bg-gray-900 text-white rounded-lg hover:bg-black"
                         >
-                          {revealedExplanation ? 'Hide why this is correct' : 'Why is this correct?'}
-                          {revealedExplanation ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          Next Card
                         </button>
-                        {revealedExplanation && (
-                          <div className="mt-3 p-4 bg-white/70 border border-white/60 rounded-xl text-gray-900">
-                            {currentQ.explanation}
-                          </div>
-                        )}
                       </div>
-                    )}
-
-                    <div className="mt-6 flex justify-end gap-3">
-                      <button
-                        onClick={goNext}
-                        className="px-5 py-2 bg-gray-900 text-white rounded-lg hover:bg-black"
-                      >
-                        Next Card
-                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

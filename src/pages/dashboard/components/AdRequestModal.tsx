@@ -6,7 +6,7 @@ type Language = 'en' | 'af' | 'zu';
 interface AdRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { businessName: string; email: string; phone: string; message: string }) => void;
+  onSubmit: (data: { businessName: string; email: string; phone: string; description: string; infoLink: string }) => void;
   language: Language;
 }
 
@@ -14,7 +14,8 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [message, setMessage] = useState('');
+  const [description, setDescription] = useState('');
+  const [infoLink, setInfoLink] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const translations = {
@@ -23,29 +24,37 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
       businessName: "Business Name",
       email: "Email Address",
       phone: "Phone Number",
-      message: "Tell us about your advertising needs",
+      description: "Ad description / anything we should know",
+      infoLink: "Link with more information (optional)",
+      recommendedSize: "Note: Recommended banner size: 768 x 250 (Width 768, Height 250)",
       submit: "Send Request",
       cancel: "Cancel",
       required: "This field is required",
       submitting: "Sending..."
     },
+
     af: {
       requestAdSpace: "Versoek Advertensieruimte",
       businessName: "Besigheidsnaam",
       email: "E-posadres",
       phone: "Telefoonnommer",
-      message: "Vertel ons van u advertensiebehoeftes",
+      description: "Advertensie beskrywing / enigiets wat ons moet weet",
+      infoLink: "Skakel met meer inligting (opsioneel)",
+      recommendedSize: "Nota: Aanbevole baniergrootte: 768 x 250 (Wydte 768, Hoogte 250)",
       submit: "Stuur Versoek",
       cancel: "Kanselleer",
       required: "Hierdie veld is verpligtend",
       submitting: "Stuur..."
     },
+
     zu: {
       requestAdSpace: "Cela Isikhala Sokukhangisa",
       businessName: "Igama Lebhizinisi",
       email: "Ikheli Le-imeyili",
       phone: "Inombolo Yocingo",
-      message: "Sitshele ngemfuno yakho yokukhangisa",
+      description: "Incazelo yesikhangiso / okunye okufanele sikwazi",
+      infoLink: "Isixhumanisi solwazi olwengeziwe (kuyazikhethela)",
+      recommendedSize: "Qaphela: Usayizi onconyiwe webhena: 768 x 250 (Ububanzi 768, Ukuphakama 250)",
       submit: "Thumela Isicelo",
       cancel: "Khansela",
       required: "Le nsimu iyadingeka",
@@ -73,13 +82,13 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!businessName || !email || !message) {
+    if (!businessName || !email || !description) {
       alert(t.required);
       return;
     }
     
     setIsSubmitting(true);
-    onSubmit({ businessName, email, phone, message });
+    onSubmit({ businessName, email, phone, description, infoLink });
   };
 
   return (
@@ -131,15 +140,29 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.message} *
+                  {t.description} *
                 </label>
                 <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
-                  placeholder="E.g., I'd like to advertise my business for 1 month, targeting entrepreneurs in Johannesburg..."
+                  placeholder="E.g., What is your ad about and what should we know?"
+                />
+                <p className="text-xs text-gray-700 mt-1 font-semibold">{t.recommendedSize}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.infoLink}
+                </label>
+                <input
+                  type="url"
+                  value={infoLink}
+                  onChange={(e) => setInfoLink(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://..."
                 />
               </div>
             </div>

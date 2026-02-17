@@ -140,16 +140,10 @@ const AdminNotifications: React.FC = () => {
   
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-6xl mx-auto w-full p-6">
-        <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+    <div className="w-full space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-            <Bell className="w-8 h-8 text-primary-600" />
-            <span>Notification Management</span>
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">Notification Management</h1>
           <p className="text-gray-600 mt-1">Create and manage user notifications, announcements, and updates</p>
         </div>
         <button
@@ -455,9 +449,7 @@ const AdminNotifications: React.FC = () => {
           </p>
         </div>
       </div>
-            </div>
-          </main>
-        </div>
+    </div>
   );
 };
 

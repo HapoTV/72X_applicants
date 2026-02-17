@@ -100,11 +100,7 @@ const LandingPage: React.FC = () => {
         />
 
         <AdvertisingSection
-          onRequestAdSpace={() => {
-            const to = 'admin@hapogroup.co.za';
-            const subject = 'Request ad space';
-            window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}`;
-          }}
+          onRequestAdSpace={() => setShowAdRequestModal(true)}
         />
 
         <AudiencePartnersSection rotatingUsers={rotatingUsers} userWordIdx={userWordIdx} />

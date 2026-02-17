@@ -1,5 +1,6 @@
 // src/pages/adminDashboard/AdminDashboard.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminNavbar from './AdminNavbar';
 import AdminSidebar from './AdminSidebar';
@@ -20,7 +21,7 @@ import AdminManagement from './tabs/AdminManagement';
 export default function AdminDashboard() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { isSuperAdmin, userOrganisation } = useAuth();
+    const { isSuperAdmin } = useAuth();
     const [activeTab, setActiveTab] = useState<AdminTab>('applicants');
 
     const handleLogout = () => {
