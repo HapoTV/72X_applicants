@@ -15,17 +15,27 @@ const axiosClient = axios.create({
 axiosClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
+    const organisation = localStorage.getItem("userOrganisation");
+    const userRole = localStorage.getItem("userRole");
 
     console.log("🔧 Axios Request:", {
       url: config.url,
       method: config.method,
       hasToken: !!token,
-      isFormData: config.data instanceof FormData,
+      token: token ? token.substring(0, 20) + "..." : "Missing",
+      isFormData: config.data instanceof FormData
     });
 
     // ✅ Attach JWT if it exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // ✅ Add organisation header for non-super-admins
+    // Super admins see all data, so don't add organisation header
+    if (organisation && userRole !== 'SUPER_ADMIN') {
+      config.headers['X-Organisation'] = organisation;
+      console.log("🏢 Added organisation header:", organisation);
     }
 
     // ✅ Let browser handle multipart boundary
@@ -79,35 +89,14 @@ axiosClient.interceptors.response.use(
       );
     }
 
-    /**
-     * 🔐 401 Handling
-     * Only logout if token is truly invalid or expired.
-     * DO NOT logout for normal validation errors (like wrong current password).
-     */
-    if (status === 401) {
-      const messageLower = backendMessage.toLowerCase();
-
-      const tokenInvalid =
-        messageLower.includes("expired") ||
-        messageLower.includes("invalid") ||
-        messageLower.includes("jwt");
-
-      if (tokenInvalid) {
-        console.warn("🔐 Token expired or invalid. Logging out...");
-        localStorage.removeItem("authToken");
-        window.location.href = "/login";
-        return;
-      }
-
-      // Otherwise let component handle it (e.g., wrong password)
-      console.warn("⚠️ 401 received but not token-related. Passing to component.");
+    if (error.response?.status === 401) {
+      console.warn("🔐 Unauthorized - Token invalid/expired");
+      localStorage.removeItem("authToken");
+      window.location.href = "/login";
     }
 
-    /**
-     * 🚫 403 Handling
-     */
-    if (status === 403) {
-      console.warn("🚫 Forbidden - Insufficient permissions.");
+    if (error.response?.status === 403) {
+      console.error("🚫 Forbidden - No permission");
     }
 
     return Promise.reject(error);

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   BarChart3, 
@@ -19,7 +19,9 @@ import {
   ShoppingBag,
   Users,
   UserPlus,
-  Calendar
+  Calendar,
+  Gift,
+  LogOut
 } from 'lucide-react';
 
 type PackageType = 'startup' | 'essential' | 'premium';
@@ -34,6 +36,7 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle, onAppStoreToggle }) => {
+  const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
   const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
@@ -44,10 +47,41 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
   
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
-  const userName = userEmail.split('@')[0].replace('.', ' ').split(' ').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
-  const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+  const userInitials = userEmail
+    .split('@')[0]
+    .split(/[._\s-]+/)
+    .filter(Boolean)
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  const userStatus = localStorage.getItem('userStatus');
+  const isFreeTrial = userStatus === 'FREE_TRIAL';
+
+  const freeTrialRemainingDays = useMemo(() => {
+    if (!isFreeTrial) return null;
+    const startDateRaw = localStorage.getItem('freeTrialStartDate');
+    if (!startDateRaw) return null;
+    const startDate = new Date(startDateRaw);
+    if (Number.isNaN(startDate.getTime())) return null;
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 14);
+    const remainingDays = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, remainingDays);
+  }, [isFreeTrial]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('businessReference');
+    localStorage.removeItem('userPackage');
+    localStorage.removeItem('userStatus');
+    localStorage.removeItem('freeTrialStartDate');
+    onClose?.();
+    window.location.href = '/login';
+  };
 
   const navItems: Array<{
     path: string;
@@ -83,16 +117,16 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' as PackageType },
     
     // Essential Package Features (includes all startup + these)
-    { path: '/funding', icon: DollarSign, label: 'Funding Done', package: 'essential' },
-    { path: '/data-input', icon: Upload, label: 'Data Input Done', package: 'essential' },
+    { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
+    { path: '/data-input', icon: Upload, label: 'Data Input', package: 'essential' },
     
     // Premium Package Features (everything)
-    { path: '/analytics', icon: BarChart3, label: 'Analytics Done', package: 'premium' },
+    { path: '/analytics', icon: BarChart3, label: 'Analytics', package: 'premium' },
     { path: '/experts', icon: Video, label: 'Expert Q&A', package: 'premium' },
     { path: '/ai-analyst', icon: Brain, label: 'AI Business Analyst', package: 'premium' },
     
     // Profile (available in all packages)
-    { path: '/profile', icon: User, label: 'Profile Done', package: 'startup' },
+    { path: '/profile', icon: User, label: 'Profile', package: 'startup' },
   ];
 
   const isFeatureLocked = (_itemPackage: PackageType): boolean => {
@@ -150,18 +184,12 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
         </div>
 
         {/* User Profile Section */}
-        <div className="flex flex-col items-center pt-2 pb-4 border-b border-gray-200">
-          <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-3 shadow-md ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
+        <div className="flex flex-col items-center pt-2 pb-1 border-b border-gray-200">
+          <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-0 shadow-md ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
             <span className="text-white text-xl font-bold">
               {userInitials}
             </span>
           </div>
-          {!collapsed && (
-            <>
-              <h3 className="text-sm font-semibold text-gray-900 text-center">{userName}</h3>
-              <p className="text-xs text-gray-500 text-center mt-1">{userEmail}</p>
-            </>
-          )}
         </div>
       </div>
 
@@ -529,6 +557,43 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
             );
           })}
         </ul>
+
+        {onClose && (
+          <div className="mt-4 pt-4 border-t border-gray-200 md:hidden">
+            {isFreeTrial && (
+              <div className="mb-3 p-3 rounded-lg bg-green-50 border border-green-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <Gift className="w-4 h-4" />
+                    <span className="text-sm font-medium">Free Trial</span>
+                  </div>
+                  {typeof freeTrialRemainingDays === 'number' && (
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                      {freeTrialRemainingDays === 0 ? 'Ends today' : `${freeTrialRemainingDays} days left`}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    onClose?.();
+                    navigate('/select-package');
+                  }}
+                  className="mt-3 w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
+                >
+                  Upgrade
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Logout</span>
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

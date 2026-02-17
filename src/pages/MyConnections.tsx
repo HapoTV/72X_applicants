@@ -18,9 +18,11 @@ const MyConnections: React.FC = () => {
     sortedFilteredUsers,
     industries,
     locations,
+    organisations,
     searchTerm,
     selectedIndustry,
     selectedLocation,
+    selectedOrganisation,
     loading,
     error,
     conversationMetaByUserId,
@@ -29,6 +31,7 @@ const MyConnections: React.FC = () => {
     setSearchTerm,
     setSelectedIndustry,
     setSelectedLocation,
+    setSelectedOrganisation,
     clearFilters,
     refetch,
   } = useConnections(authUser?.userId);
@@ -80,8 +83,11 @@ const MyConnections: React.FC = () => {
         onIndustryChange={setSelectedIndustry}
         selectedLocation={selectedLocation}
         onLocationChange={setSelectedLocation}
+        selectedOrganisation={selectedOrganisation}
+        onOrganisationChange={setSelectedOrganisation}
         industries={industries}
         locations={locations}
+        organisations={organisations}
         onClearFilters={clearFilters}
       />
 
@@ -90,11 +96,14 @@ const MyConnections: React.FC = () => {
         <div className="text-sm text-gray-700">
           Showing {visibleUsers.length} of {sortedFilteredUsers.length} users
         </div>
-        {users.length > 0 && (
+        <div className="flex gap-2">
           <div className="text-xs px-2.5 py-1 rounded-full border border-blue-200 text-blue-700 bg-blue-50">
+            {Object.keys(conversationMetaByUserId).length} conversations
+          </div>
+          <div className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-700 bg-gray-50">
             {users.length} total users
           </div>
-        )}
+        </div>
       </div>
 
       {/* Users List */}

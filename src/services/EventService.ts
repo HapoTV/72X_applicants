@@ -188,6 +188,7 @@ class EventService {
       location: apiEvent.location,
       description: apiEvent.description,
       eventType: apiEvent.eventType,
+      organisation: apiEvent.organisation, // NEW
       createdBy: apiEvent.createdBy
     };
   }
@@ -202,6 +203,7 @@ class EventService {
       time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       location: apiEvent.location,
       type: this.getEventTypeDisplay(apiEvent.eventType as EventType),
+      organisation: apiEvent.organisation, // NEW
       hasReminder: false
     };
   }

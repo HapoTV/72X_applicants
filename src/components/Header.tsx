@@ -16,8 +16,10 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [freeTrialDropdownOpen, setFreeTrialDropdownOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const freeTrialRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [freeTrialInfo, setFreeTrialInfo] = useState<{
     remainingDays: number;
@@ -48,6 +50,10 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     const handleClickOutside = (event: MouseEvent) => {
       if (freeTrialRef.current && !freeTrialRef.current.contains(event.target as Node)) {
         setFreeTrialDropdownOpen(false);
+      }
+
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -241,7 +247,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
         <div className="flex items-center space-x-4">
           {/* Free Trial Indicator - Only show when user is on free trial */}
           {isFreeTrial && freeTrialInfo && (
-            <div ref={freeTrialRef} className="relative">
+            <div ref={freeTrialRef} className="relative hidden sm:block">
               <button
                 onClick={() => setFreeTrialDropdownOpen(!freeTrialDropdownOpen)}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:border-green-300 transition-all group"
@@ -338,12 +344,39 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
             )}
           </Link>
 
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+          <div ref={userMenuRef} className="relative flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={() => setUserMenuOpen((v) => !v)}
+              className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center"
+              aria-label="User menu"
+            >
               <span className="text-white text-sm font-medium">
                 {userEmail ? userEmail.charAt(0).toUpperCase() : 'U'}
               </span>
-            </div>
+            </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                <div className="p-3 border-b border-gray-100">
+                  <div className="text-sm font-medium text-gray-900">{userEmail || 'User'}</div>
+                  {userStatus && <div className="text-xs text-gray-500">Status: {userStatus}</div>}
+                </div>
+
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      navigate('/profile');
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 text-sm text-gray-700"
+                  >
+                    Profile
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleLogout}
               className="hidden md:flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -357,6 +390,6 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
       </div>
     </header>
   );
-};
+}
 
 export default Header;

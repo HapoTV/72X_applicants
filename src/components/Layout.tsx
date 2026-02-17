@@ -23,8 +23,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   const [showLayout, setShowLayout] = useState(true);
   const [userStatus, setUserStatus] = useState<string>('');
-  const [requiresPackageSelection, setRequiresPackageSelection] = useState(false);
-  
+
   const location = useLocation();
   const navigate = useNavigate();
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
@@ -39,8 +38,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     
     console.log('🏗️ Layout status check:', {
       userStatus: status,
-      requiresPackage,
-      selectedPackage: !!selectedPackage,
       currentPath,
       isSelectPackagePage: currentPath === '/select-package',
       isPaymentPage: currentPath.includes('/payments'),
@@ -55,33 +52,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     });
     
     setUserStatus(status || '');
-    setRequiresPackageSelection(requiresPackage);
     
     // Define allowed paths for non-ACTIVE users
-    const isPublicPage = [
-      '/', 
-      '/login', 
-      '/signup', 
-      '/pricing', 
+    const publicPrefixes = [
+      '/login',
+      '/signup',
+      '/pricing',
       '/request-demo',
       '/reset-password',
       '/create-password',
       '/signup/success'
-    ].some(path => currentPath.startsWith(path));
+    ];
+
+    const isPublicPage = currentPath === '/' || publicPrefixes.some((path) => currentPath.startsWith(path));
     
     const isSelectPackagePage = currentPath === '/select-package';
     const isPaymentPage = currentPath.includes('/payments');
-    const hideLayoutFlag = localStorage.getItem('hideLayout') === 'true';
-    
+    const isCheckoutPaymentPage = currentPath === '/payments/new';
+
     // Check if user is fully active
-    const isUserActive = status === 'ACTIVE';
+    const isUserActive = status === 'ACTIVE' || status === 'FREE_TRIAL';
     
-    // Show layout only if:
-    // 1. User is ACTIVE, OR
-    // 2. User is on a public page (login, signup, etc.), OR
-    // 3. User is on package selection page, OR
-    // 4. User is on payment page with hideLayout flag
-    const shouldShowLayout = isUserActive || isPublicPage || isSelectPackagePage || (isPaymentPage && !hideLayoutFlag);
+    const shouldShowLayout = (isUserActive && !isCheckoutPaymentPage) || isPublicPage || isSelectPackagePage;
     //const shouldShowLayout = isUserActive && !isPaymentPage && !isSelectPackagePage && !isPublicPage;
     
     console.log('🔍 Layout decision:', {
@@ -89,7 +81,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       isPublicPage,
       isSelectPackagePage,
       isPaymentPage,
-      hideLayoutFlag,
+      isCheckoutPaymentPage,
       shouldShowLayout
     });
     

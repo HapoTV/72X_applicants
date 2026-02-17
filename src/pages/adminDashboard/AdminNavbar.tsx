@@ -1,7 +1,7 @@
-// src/pages/adminDashboard/AdminNavbar.tsx
+// src/components/admin/AdminNavbar.tsx
 import React, { useState, useEffect } from 'react';
-import { Bell, BellRing, LogOut, User, ChevronDown } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom'; // Add useNavigate
+import { Bell, BellRing, LogOut, User, ChevronDown, Shield, Building2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import NotificationService from '../../services/NotificationService';
 
@@ -10,8 +10,8 @@ interface AdminNavbarProps {
 }
 
 const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
-    const { user } = useAuth();
-    const navigate = useNavigate(); // Add this hook
+    const { user, isSuperAdmin, userOrganisation } = useAuth();
+    const navigate = useNavigate();
     const [unreadCount, setUnreadCount] = useState(0);
     const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -32,7 +32,7 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
 
     const handleLogout = () => {
         onLogout();
-        navigate('/login'); // Navigate to login page after logout
+        navigate('/login');
     };
 
     return (
@@ -42,13 +42,30 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
                     {/* Left side: Logo and Brand */}
                     <div className="flex items-center">
                         <img src="/Logo2.png" alt="SeventyTwoX Logo" className="w-12 h-12" />
-                        <span className="text-xl font-bold ml-3 hidden md:inline">Admin Dashboard</span>
-                        <span className="text-xl font-bold ml-3 md:hidden">Admin</span>
+                        <span className="text-xl font-bold ml-3 hidden md:inline">
+                            {isSuperAdmin ? 'Super Admin' : 'Admin'} Dashboard
+                        </span>
+                        <span className="text-xl font-bold ml-3 md:hidden">
+                            {isSuperAdmin ? 'Super' : 'Admin'}
+                        </span>
+                        {userOrganisation && !isSuperAdmin && (
+                            <span className="ml-3 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full hidden md:inline">
+                                {userOrganisation}
+                            </span>
+                        )}
                     </div>
 
                     {/* Right side: Controls */}
                     <div className="flex items-center space-x-4">
-                        {/* Notification Button - CHANGED TO Link */}
+                        {/* Role Badge */}
+                        {isSuperAdmin && (
+                            <div className="hidden md:flex items-center space-x-1 px-3 py-1 bg-purple-50 text-purple-700 rounded-full">
+                                <Shield className="w-4 h-4" />
+                                <span className="text-xs font-medium">Super Admin</span>
+                            </div>
+                        )}
+
+                        {/* Notification Button */}
                         <Link
                             to="/admin/notifications"
                             className="relative p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-50 rounded-lg transition-colors"
@@ -93,7 +110,7 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
                                         className="fixed inset-0 z-10"
                                         onClick={() => setShowUserMenu(false)}
                                     />
-                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
                                         <div className="px-4 py-3 border-b border-gray-100">
                                             <p className="text-sm font-medium text-gray-900">
                                                 {user?.fullName || 'Admin User'}
@@ -101,33 +118,38 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
                                             <p className="text-xs text-gray-500 truncate">
                                                 {user?.email || 'admin@example.com'}
                                             </p>
-                                            <p className="text-xs text-blue-600 font-medium mt-1">
-                                                {user?.role || 'ADMIN'}
-                                            </p>
+                                            <div className="flex items-center space-x-2 mt-1">
+                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                                    {user?.role || 'ADMIN'}
+                                                </span>
+                                                {userOrganisation && !isSuperAdmin && (
+                                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full flex items-center">
+                                                        <Building2 className="w-3 h-3 mr-1" />
+                                                        {userOrganisation}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="py-1">
                                             <Link
-                                                to="/admin/profile"
+                                                to="/admin/dashboard/profile"
                                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                                 onClick={() => setShowUserMenu(false)}
                                             >
                                                 Profile Settings
                                             </Link>
-                                            <Link
-                                                to="/admin/notifications"
-                                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                                onClick={() => setShowUserMenu(false)}
-                                            >
-                                                Notifications
-                                                {unreadCount > 0 && (
-                                                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs bg-red-100 text-red-600 rounded-full">
-                                                        {unreadCount}
-                                                    </span>
-                                                )}
-                                            </Link>
+                                            {isSuperAdmin && (
+                                                <Link
+                                                    to="/admin/organisations"
+                                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                                    onClick={() => setShowUserMenu(false)}
+                                                >
+                                                    Manage Organisations
+                                                </Link>
+                                            )}
                                             <div className="border-t border-gray-100 my-1"></div>
                                             <button
-                                                onClick={handleLogout} // Use the updated logout handler
+                                                onClick={handleLogout}
                                                 className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
                                             >
                                                 <LogOut className="w-4 h-4 mr-2" />

@@ -35,9 +35,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         return <Navigate to="/login" replace state={{ from: location.pathname }} />;
     }
 
-    // If admin access is required but user is not admin
-    if (requireAuth && requireAdmin && userRole !== 'ADMIN') {
-        console.log('🚫 Not admin, redirecting to login');
+    // 🔴 FIXED: If admin access is required but user is not admin or super admin
+    if (requireAuth && requireAdmin && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+        console.log('🚫 Not admin or super admin, redirecting to login');
         return <Navigate to="/login" replace />;
     }
 
@@ -46,23 +46,23 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     // 🔴 FIX: Allow navigation BETWEEN payments/new and select-package
     if (requireAuth && userStatus === 'PENDING_PAYMENT' && selectedPackage) {
-    // Allow navigation to select-package from payments/new
-    if (currentPath === '/select-package') {
-        console.log('✅ Allowing navigation to select-package from payments page');
-        return <>{children}</>;
-    }
-    
-    // If already on payments/new, don't redirect
-    if (currentPath === '/payments/new') {
-        console.log('✅ Already on payment page, no redirect needed');
-        return <>{children}</>;
-    }
-    
-    // Only redirect if trying to access dashboard or other protected routes
-    if (currentPath === '/dashboard' || currentPath.startsWith('/dashboard/')) {
-        console.log('💳 PENDING_PAYMENT user with package, redirecting to payment');
-        return <Navigate to="/payments/new" replace />;
-    }
+        // Allow navigation to select-package from payments/new
+        if (currentPath === '/select-package') {
+            console.log('✅ Allowing navigation to select-package from payments page');
+            return <>{children}</>;
+        }
+        
+        // If already on payments/new, don't redirect
+        if (currentPath === '/payments/new') {
+            console.log('✅ Already on payment page, no redirect needed');
+            return <>{children}</>;
+        }
+        
+        // Only redirect if trying to access dashboard or other protected routes
+        if (currentPath === '/dashboard' || currentPath.startsWith('/dashboard/')) {
+            console.log('💳 PENDING_PAYMENT user with package, redirecting to payment');
+            return <Navigate to="/payments/new" replace />;
+        }
     }
 
     // 🔴 CRITICAL: Don't redirect if already on select-package
@@ -91,7 +91,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                 return <>{children}</>;
             }
             return <Navigate to="/payments/new" replace />;
-        } else if (userRole === 'ADMIN') {
+        } else if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+            // 🔴 FIXED: Check for both ADMIN and SUPER_ADMIN
             if (currentPath.startsWith('/admin/dashboard')) {
                 return <>{children}</>;
             }

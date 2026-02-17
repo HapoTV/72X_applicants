@@ -8,13 +8,16 @@ interface AuthContextType {
   login: (userData: User) => void;
   logout: () => void;
   updateUserStatus: (status: string) => void;
+  updateUserOrganisation: (organisation: string) => void; // NEW
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean; // NEW
   token: string | null;
   tempSessionToken: string | null;
   setTempSessionToken: (token: string | null) => void;
   twoFactorEnabled: boolean;
   setTwoFactorEnabled: (enabled: boolean) => void;
+  userOrganisation: string | null; // NEW
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,12 +32,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return localStorage.getItem("authToken");
   });
 
+  const [userOrganisation, setUserOrganisation] = useState<string | null>(() => {
+    return localStorage.getItem("userOrganisation");
+  });
+
   // Used for OTP / temporary sessions
   const [tempSessionToken, setTempSessionToken] = useState<string | null>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   const login = (userData: User) => {
     localStorage.setItem("user", JSON.stringify(userData));
+    if (userData.organisation) {
+      localStorage.setItem("userOrganisation", userData.organisation);
+      setUserOrganisation(userData.organisation);
+    }
     setUser(userData);
   };
 
@@ -53,27 +64,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     setTempSessionToken(null);
     setTwoFactorEnabled(false);
+    setUserOrganisation(null);
     
     // Redirect to login
     window.location.href = "/login";
   };
 
   const updateUserStatus = (status: string) => {
-  if (user) {
-    const updatedUser = { ...user, status };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    localStorage.setItem('userStatus', status);
-    
-    // Update requiresPackageSelection flag
-    if (status === 'PENDING_PACKAGE') {
-      localStorage.setItem('requiresPackageSelection', 'true');
-    } else {
-      localStorage.removeItem('requiresPackageSelection');
+    if (user) {
+      const updatedUser = { ...user, status };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('userStatus', status);
+      
+      // Update requiresPackageSelection flag
+      if (status === 'PENDING_PACKAGE') {
+        localStorage.setItem('requiresPackageSelection', 'true');
+      } else {
+        localStorage.removeItem('requiresPackageSelection');
+      }
+      
+      setUser(updatedUser);
     }
-    
-    setUser(updatedUser);
-  }
-};
+  };
+
+  const updateUserOrganisation = (organisation: string) => {
+    if (user) {
+      const updatedUser = { ...user, organisation };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('userOrganisation', organisation);
+      setUserOrganisation(organisation);
+      setUser(updatedUser);
+    } else {
+      localStorage.setItem('userOrganisation', organisation);
+      setUserOrganisation(organisation);
+    }
+  };
 
   // Update token when localStorage changes
   useEffect(() => {
@@ -83,6 +108,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       const storedUser = localStorage.getItem("user");
       setUser(storedUser ? JSON.parse(storedUser) : null);
+      
+      const storedOrg = localStorage.getItem("userOrganisation");
+      setUserOrganisation(storedOrg);
     };
 
     // Listen for storage changes
@@ -97,7 +125,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const isAuthenticated = !!token && !!user;
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'admin';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   return (
     <AuthContext.Provider
@@ -106,13 +135,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         login,
         logout,
         updateUserStatus,
+        updateUserOrganisation,
         isAuthenticated,
         isAdmin,
+        isSuperAdmin,
         token,
         tempSessionToken,
         setTempSessionToken,
         twoFactorEnabled,
         setTwoFactorEnabled,
+        userOrganisation,
       }}
     >
       {children}

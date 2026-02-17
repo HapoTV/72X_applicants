@@ -1,6 +1,9 @@
+// pages/adminDashboard/tabs/EventsTab.tsx (LearningTab)
 import { useState, useEffect } from 'react';
 import { learningService } from '../../../services/LearningService';
 import axiosClient from '../../../api/axiosClient';
+import { useAuth } from '../../../context/AuthContext';
+import { Crown, Building2, Globe } from 'lucide-react';
 
 interface LearningItem {
     id: string;
@@ -12,12 +15,16 @@ interface LearningItem {
     fileSize?: string;
     updated?: string;
     createdBy: string;
+    createdByOrganisation?: string; // NEW
+    targetOrganisation?: string; // NEW
+    isPublic?: boolean; // NEW
     description?: string;
 }
 
 type LearningSection = 'business-plan' | 'marketing' | 'finance' | 'operations' | 'leadership' | 'standardbank';
 
 export default function LearningTab() {
+    const { isSuperAdmin, userOrganisation } = useAuth();
     const [learningSection, setLearningSection] = useState<LearningSection>('business-plan');
     const [learningData, setLearningData] = useState<Record<LearningSection, LearningItem[]>>({
         'business-plan': [],
@@ -25,7 +32,6 @@ export default function LearningTab() {
         'finance': [],
         'operations': [],
         'leadership': [],
-        'standardbank': [],
     });
     const [showAddLearning, setShowAddLearning] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -37,14 +43,21 @@ export default function LearningTab() {
         resourceUrl: string;
         description: string;
         file?: File;
+        targetOrganisation?: string; // NEW
+        isPublic?: boolean; // NEW
+        showAllOrganisations?: boolean; // NEW - for super admin to choose
     }>({ 
         title: '', 
         type: 'ARTICLE',
         category: 'business-plan',
         resourceUrl: '',
         description: '',
-        file: undefined
+        file: undefined,
+        targetOrganisation: '',
+        isPublic: false,
+        showAllOrganisations: false
     });
+    const [organisations, setOrganisations] = useState<string[]>([]); // NEW
     const [loading, setLoading] = useState(true);
 
     const sectionTitles: Record<LearningSection, string> = {
@@ -52,13 +65,15 @@ export default function LearningTab() {
         'marketing': 'Marketing & Sales',
         'finance': 'Financial Management',
         'operations': 'Operations',
-        'leadership': 'Leadership',
-        'standardbank': 'StandardBank'
+        'leadership': 'Leadership'
     };
 
     useEffect(() => {
         fetchLearningMaterials();
-    }, []);
+        if (isSuperAdmin) {
+            fetchOrganisations(); // NEW: Fetch all organisations for super admin
+        }
+    }, [isSuperAdmin]);
 
     const fetchLearningMaterials = async () => {
         try {
@@ -73,7 +88,6 @@ export default function LearningTab() {
                 'finance': [],
                 'operations': [],
                 'leadership': [],
-                'standardbank': [],
             };
             
             allMaterials.forEach((material: any) => {
@@ -84,15 +98,16 @@ export default function LearningTab() {
                         id: material.id || '',
                         title: material.title || '',
                         type: (material.type as 'ARTICLE' | 'VIDEO' | 'DOCUMENT'),
-                    
-
                         category: material.category || '',
                         resourceUrl: material.resourceUrl || '',
                         fileName: material.fileName || '',
                         fileSize: material.fileSize || '',
                         description: material.description || '',
                         updated: material.updated || new Date().toLocaleDateString(),
-                        createdBy: material.createdBy || 'admin@72x.co.za'
+                        createdBy: material.createdBy || 'admin@72x.co.za',
+                        createdByOrganisation: material.createdByOrganisation,
+                        targetOrganisation: material.targetOrganisation,
+                        isPublic: material.isPublic
                     });
                 }
             });
@@ -103,6 +118,16 @@ export default function LearningTab() {
             alert('Error loading learning materials. Please try again.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchOrganisations = async () => {
+        try {
+            // This would be a real API call to get all organisations
+            const response = await axiosClient.get('/admin/organisations');
+            setOrganisations(response.data.map((org: any) => org.name));
+        } catch (error) {
+            console.error('Error fetching organisations:', error);
         }
     };
 
@@ -147,7 +172,6 @@ export default function LearningTab() {
             alert('Please select a file to upload');
             return;
         }
-        
 
         // Validate file if uploading
         if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && newLearning.file) {
@@ -165,8 +189,7 @@ export default function LearningTab() {
                 'marketing': 'MARKETING_SALES', 
                 'finance': 'FINANCIAL_MANAGEMENT',
                 'operations': 'OPERATIONS',
-                'leadership': 'LEADERSHIP',
-                'standardbank': 'STANDARD_BANK'
+                'leadership': 'LEADERSHIP'
             };
             
             const backendCategory = backendCategoryMap[learningSection];
@@ -182,6 +205,16 @@ export default function LearningTab() {
                 formData.append('type', newLearning.type);
                 formData.append('createdBy', 'admin@72x.co.za');
                 formData.append('file', newLearning.file);
+                
+                // NEW: Add organisation targeting for super admin
+                if (isSuperAdmin) {
+                    if (newLearning.showAllOrganisations) {
+                        formData.append('isPublic', 'true');
+                    } else if (newLearning.targetOrganisation) {
+                        formData.append('targetOrganisation', newLearning.targetOrganisation);
+                        formData.append('isPublic', 'false');
+                    }
+                }
 
                 console.log('Uploading file:', newLearning.file.name, 'Size:', getFileSize(newLearning.file.size));
 
@@ -200,7 +233,7 @@ export default function LearningTab() {
                 alert(`File "${newLearning.file.name}" uploaded successfully!`);
             } else {
                 // URL-based material
-                const requestData = {
+                const requestData: any = {
                     title: newLearning.title,
                     type: newLearning.type,
                     category: backendCategory,
@@ -208,6 +241,16 @@ export default function LearningTab() {
                     description: newLearning.description,
                     createdBy: 'admin@72x.co.za'
                 };
+                
+                // NEW: Add organisation targeting for super admin
+                if (isSuperAdmin) {
+                    if (newLearning.showAllOrganisations) {
+                        requestData.isPublic = true;
+                    } else if (newLearning.targetOrganisation) {
+                        requestData.targetOrganisation = newLearning.targetOrganisation;
+                        requestData.isPublic = false;
+                    }
+                }
 
                 console.log('Creating URL-based material:', requestData);
                 await axiosClient.post('/learning-materials', requestData);
@@ -226,7 +269,10 @@ export default function LearningTab() {
                 category: 'business-plan',
                 resourceUrl: '',
                 description: '',
-                file: undefined
+                file: undefined,
+                targetOrganisation: '',
+                isPublic: false,
+                showAllOrganisations: false
             });
             setUploadProgress(0);
         } catch (error: any) {
@@ -245,35 +291,28 @@ export default function LearningTab() {
     };
 
     const handleDeleteLearning = async (materialId: string, title: string) => {
-    if (!materialId) {
-        alert('Invalid material ID. Please refresh and try again.');
-        return;
-    }
-
-    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
-        return;
-    }
-
-    try {
-        console.log('Deleting material:', materialId);
-
-        await axiosClient.delete(`/learning-materials/${materialId}`, {
-            data: {
-                userEmail: 'admin@72x.co.za'
-            }
-        });
-
-        await fetchLearningMaterials();
-        alert('Learning material deleted successfully!');
-    } catch (error: any) {
-        console.error('Error deleting learning material:', error);
-
-        if (error.response?.status === 400) {
-            alert('Delete failed. Backend rejected the request.');
-        } else {
-            alert('Error deleting learning material.');
+        if (!materialId) {
+            alert('Invalid material ID. Please refresh and try again.');
+            return;
         }
-    }
+
+        if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
+            return;
+        }
+
+        try {
+            console.log('Deleting material:', materialId);
+            await axiosClient.delete(`/learning-materials/${materialId}`);
+            await fetchLearningMaterials();
+            alert('Learning material deleted successfully!');
+        } catch (error: any) {
+            console.error('Error deleting learning material:', error);
+            if (error.response?.status === 400) {
+                alert('Delete failed. Backend rejected the request.');
+            } else {
+                alert('Error deleting learning material.');
+            }
+        }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,11 +323,49 @@ export default function LearningTab() {
         }
     };
 
+    const getVisibilityBadge = (item: LearningItem) => {
+        if (item.isPublic) {
+            return (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <Globe className="w-3 h-3 mr-1" />
+                    Public
+                </span>
+            );
+        } else if (item.targetOrganisation) {
+            return (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <Building2 className="w-3 h-3 mr-1" />
+                    {item.targetOrganisation}
+                </span>
+            );
+        } else if (item.createdByOrganisation) {
+            return (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    <Building2 className="w-3 h-3 mr-1" />
+                    {item.createdByOrganisation}
+                </span>
+            );
+        }
+        return null;
+    };
+
     return (
         <div className="max-w-7xl mx-auto">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Learning Materials</h1>
-                <p className="text-gray-600">Manage and organize learning resources for all categories</p>
+            <div className="mb-6 flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Learning Materials</h1>
+                    <p className="text-gray-600">
+                        {isSuperAdmin 
+                            ? 'Manage learning resources across all organisations' 
+                            : `Manage learning resources for ${userOrganisation || 'your organisation'}`}
+                    </p>
+                </div>
+                {isSuperAdmin && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 rounded-lg">
+                        <Crown className="w-4 h-4" />
+                        <span className="text-sm font-medium">Super Admin</span>
+                    </div>
+                )}
             </div>
             
             {/* Horizontal nav for sections */}
@@ -315,6 +392,9 @@ export default function LearningTab() {
                 <div className="p-4 flex items-center justify-between border-b border-gray-200">
                     <div className="text-sm text-gray-700 font-medium">
                         {sectionTitles[learningSection]} • <span className="font-bold">{learningData[learningSection].length}</span> items
+                        {!isSuperAdmin && userOrganisation && (
+                            <span className="ml-2 text-xs text-gray-500">(only showing {userOrganisation} materials)</span>
+                        )}
                     </div>
                     <button 
                         onClick={() => setShowAddLearning(true)}
@@ -330,6 +410,7 @@ export default function LearningTab() {
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TITLE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TYPE</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VISIBILITY</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FILE / RESOURCE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SIZE</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UPDATED</th>
@@ -339,7 +420,7 @@ export default function LearningTab() {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center">
+                                    <td colSpan={7} className="px-6 py-8 text-center">
                                         <div className="text-center">
                                             <div className="text-2xl mb-2">⏳</div>
                                             <p className="text-sm text-gray-600">Loading learning materials...</p>
@@ -348,7 +429,7 @@ export default function LearningTab() {
                                 </tr>
                             ) : learningData[learningSection].length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-8 text-center">
+                                    <td colSpan={7} className="px-6 py-8 text-center">
                                         <div className="text-center">
                                             <div className="text-2xl mb-2">📚</div>
                                             <p className="text-sm text-gray-600">No content yet in this category</p>
@@ -374,6 +455,9 @@ export default function LearningTab() {
                                             }`}>
                                                 {item.type}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            {getVisibilityBadge(item)}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="text-sm text-gray-500">
@@ -435,9 +519,61 @@ export default function LearningTab() {
                                     <option value="ARTICLE">Article</option>
                                     <option value="VIDEO">Video</option>
                                     <option value="DOCUMENT">Document</option>
-                                    
                                 </select>
                             </div>
+                            
+                            {/* NEW: Organisation targeting for super admin */}
+                            {isSuperAdmin && (
+                                <div className="space-y-3 border-t border-gray-200 pt-3">
+                                    <label className="block text-sm font-medium text-gray-700">Target Audience</label>
+                                    
+                                    <div className="flex items-center space-x-2">
+                                        <input
+                                            type="checkbox"
+                                            id="showAllOrganisations"
+                                            checked={newLearning.showAllOrganisations}
+                                            onChange={(e) => setNewLearning({
+                                                ...newLearning, 
+                                                showAllOrganisations: e.target.checked,
+                                                targetOrganisation: e.target.checked ? '' : newLearning.targetOrganisation,
+                                                isPublic: e.target.checked ? true : false
+                                            })}
+                                            className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                                            disabled={uploading}
+                                        />
+                                        <label htmlFor="showAllOrganisations" className="text-sm text-gray-700">
+                                            Make this material public (visible to all organisations)
+                                        </label>
+                                    </div>
+
+                                    {!newLearning.showAllOrganisations && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Target Specific Organisation
+                                            </label>
+                                            <select
+                                                value={newLearning.targetOrganisation || ''}
+                                                onChange={(e) => setNewLearning({
+                                                    ...newLearning, 
+                                                    targetOrganisation: e.target.value,
+                                                    isPublic: false
+                                                })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                                disabled={uploading}
+                                            >
+                                                <option value="">Select an organisation (optional)</option>
+                                                {organisations.map(org => (
+                                                    <option key={org} value={org}>{org}</option>
+                                                ))}
+                                            </select>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Leave empty to make it visible only to your organisation
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {(newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') ? (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Upload File *</label>

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// src/interfaces/MessageData.ts
+>>>>>>> caaa3d1841a66dee031dc2aec0bf8a81bac8f137
 export interface Message {
   messageId: string;
   senderId: string;
@@ -21,13 +25,18 @@ export interface MessageSendRequest {
 }
 
 export interface Conversation {
-  userId: string;
-  userName: string;
-  userEmail: string;
+  conversationId: string;
+  user1Id: string;
+  user1Name: string;
+  user1Email: string;
+  user2Id: string;
+  user2Name: string;
+  user2Email: string;
   lastMessage: string;
-  lastMessageTime: string;
+  lastMessageAt: string;
   unreadCount: number;
-  userProfileImage?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ChatWindowProps {

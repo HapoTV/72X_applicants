@@ -28,13 +28,19 @@ class MessageServices {
     try {
       const senderId = this.getCurrentUserId();
       const messageRequest = {
-        ...messageData,
-        senderId: senderId
+        content: messageData.content,
+        senderId: senderId,
+        receiverId: messageData.receiverId,
+        messageType: messageData.messageType || 'TEXT'
       };
+      
+      console.log('Sending message request:', messageRequest);
       
       const response = await axiosClient.post('/messaging/send', messageRequest, {
         headers: this.getAuthHeader()
       });
+      
+      console.log('Send message response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error sending message:', error);
@@ -45,9 +51,14 @@ class MessageServices {
   // Get messages between two users
   async getMessagesBetweenUsers(receiverId: string): Promise<Message[]> {
     try {
+      const currentUserId = this.getCurrentUserId();
+      console.log('Fetching messages between:', currentUserId, 'and', receiverId);
+      
       const response = await axiosClient.get(`/messaging/messages/${receiverId}`, {
         headers: this.getAuthHeader()
       });
+      
+      console.log('Messages response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -58,9 +69,12 @@ class MessageServices {
   // Get conversations for current user
   async getUserConversations(): Promise<Conversation[]> {
     try {
+      console.log('Fetching conversations...');
       const response = await axiosClient.get('/messaging/conversations', {
         headers: this.getAuthHeader()
       });
+      
+      console.log('Conversations response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching conversations:', error);
@@ -71,6 +85,7 @@ class MessageServices {
   // Mark messages as read
   async markMessagesAsRead(senderId: string): Promise<void> {
     try {
+      console.log('Marking messages as read from sender:', senderId);
       await axiosClient.post(`/messaging/mark-read/${senderId}`, {}, {
         headers: this.getAuthHeader()
       });
@@ -116,7 +131,6 @@ class MessageServices {
       return response.data;
     } catch (error) {
       console.error('Error fetching chat users:', error);
-      // If endpoint doesn't exist, return empty array
       return [];
     }
   }
@@ -131,12 +145,11 @@ class MessageServices {
       return response.data;
     } catch (error) {
       console.error('Error searching users:', error);
-      // If endpoint doesn't exist, return empty array
       return [];
     }
   }
 
-  // Alternative method to get user by ID
+  // Get user by ID
   async getUserById(userId: string): Promise<User | null> {
     try {
       const response = await axiosClient.get(`/users/${userId}`, {

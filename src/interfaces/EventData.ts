@@ -10,12 +10,13 @@ export interface Event {
   location?: string;
   description?: string;
   eventType: EventType;
+  organisation?: string; // NEW
   createdBy: string;
   invitees: string[]; // Array of email addresses
 }
 
 /**
- * Event types supported by the system - using union type instead of enum
+ * Event types supported by the system
  */
 export type EventType = 
   | 'MEETING' 
@@ -74,6 +75,7 @@ export interface AdminEventItem {
   location?: string;
   description?: string;
   eventType?: string;
+  organisation?: string; // NEW
   createdBy: string;
 }
 
@@ -87,6 +89,7 @@ export interface UserEventItem {
   time: string; // Formatted time
   location?: string;
   type: string;
+  organisation?: string; // NEW
   hasReminder?: boolean;
 }
 
@@ -110,6 +113,7 @@ export interface EventApiResponse {
   location?: string;
   description?: string;
   eventType: string;
+  organisation?: string; // NEW
   createdBy: string;
   invitees: string[];
 }
@@ -135,4 +139,5 @@ export interface EventStats {
   todayEvents: number;
   upcomingEvents: number;
   byType: Record<string, number>;
+  byOrganisation?: Record<string, number>; // NEW
 }

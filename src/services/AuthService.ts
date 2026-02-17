@@ -7,7 +7,9 @@ import type {
   ChangePasswordRequest, 
   LoginResponse,
   CreateUserRequest,
-  CreateUserResponse 
+  CreateUserResponse,
+  OrganisationUserRequest,
+  UserAvailability
 } from '../interfaces/UserData';
 
 // Base URL for public axios (no auth required)
@@ -35,6 +37,7 @@ class AuthService {
         email: userData.email,
         mobileNumber: userData.mobileNumber,
         companyName: userData.companyName,
+        organisation: userData.organisation || null, // NEW: Include organisation
         employees: userData.employees,
         founded: userData.founded,
         industry: userData.industry,
@@ -54,11 +57,15 @@ class AuthService {
       console.log("✅ User created successfully:", {
         userId: createdUser.userId,
         email: createdUser.email,
+        organisation: createdUser.organisation,
         status: createdUser.status
       });
       
       // Store temporary user data for password creation flow
       localStorage.setItem('userEmail', createdUser.email);
+      if (createdUser.organisation) {
+        localStorage.setItem('userOrganisation', createdUser.organisation);
+      }
       localStorage.setItem('tempUserData', JSON.stringify(createdUser));
       
       return createdUser;
@@ -94,31 +101,29 @@ class AuthService {
   }
 
   /**
-   * Login user or admin.
-   *
-   * Note: Do NOT assume a token is always returned immediately.
-   * For OTP / two-factor flows, the backend may first respond with
-   * requiresOtpVerification/ requiresTwoFactor flags and only
-   * return a token after OTP verification. Token storage and
-   * redirects are handled by the Login page (completeLogin).
+   * Login user, admin, or super admin.
    */
   async login(loginData: LoginRequest): Promise<LoginResponse> {
     try {
-      console.log("🔐 Attempting login...", loginData);
+      console.log("🔐 Attempting login...", { 
+        email: loginData.email, 
+        loginType: loginData.loginType,
+        hasBusinessRef: !!loginData.businessReference 
+      });
+      
       const response = await axiosClient.post('/authentication/login', loginData);
 
       const loginResponse: LoginResponse = response.data;
       console.log("✅ Login response received:", {
         ...loginResponse,
         token: loginResponse.token ? "***MASKED***" : undefined,
+        role: loginResponse.role,
+        organisation: loginResponse.organisation,
         status: loginResponse.status,
         requiresPackageSelection: loginResponse.requiresPackageSelection,
-        requiresOtpVerification: loginResponse.requiresOtpVerification,
-        requiresTwoFactor: loginResponse.requiresTwoFactor
+        requiresOtpVerification: loginResponse.requiresOtpVerification
       });
 
-      // Do NOT store token or user here; let the caller decide
-      // based on whether OTP verification is required.
       return loginResponse;
     } catch (error: any) {
       console.error('❌ Login error details:', error);
@@ -142,6 +147,12 @@ class AuthService {
   async getCurrentUser(): Promise<User> {
     try {
       const response = await axiosClient.get('/users/me');
+      
+      // Store organisation in localStorage if present
+      if (response.data.organisation) {
+        localStorage.setItem('userOrganisation', response.data.organisation);
+      }
+      
       return response.data;
     } catch (error: any) {
       console.error('Get current user error:', error);
@@ -150,6 +161,7 @@ class AuthService {
       if (error.response?.status === 401) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
+        localStorage.removeItem('userOrganisation');
         window.location.href = '/login';
       }
 
@@ -199,6 +211,11 @@ class AuthService {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const updatedUser = { ...currentUser, ...response.data };
       localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Update organisation if present
+      if (response.data.organisation) {
+        localStorage.setItem('userOrganisation', response.data.organisation);
+      }
       
       return response.data;
     } catch (error) {
@@ -348,7 +365,7 @@ class AuthService {
   }
 
   /**
-   * OTP verification (from demo branch)
+   * OTP verification
    */
   async verifyOtp(verifyOtpRequest: any): Promise<LoginResponse> {
     try {
@@ -361,11 +378,12 @@ class AuthService {
   }
 
   /**
-   * Resend OTP (from demo branch)
+   * Resend OTP
    */
-  async resendOtp(resendOtpRequest: any): Promise<void> {
+  async resendOtp(resendOtpRequest: any): Promise<LoginResponse> {
     try {
-      await axios.post(`${API_URL}/authentication/resend-otp`, resendOtpRequest);
+      const response = await axios.post(`${API_URL}/authentication/resend-otp`, resendOtpRequest);
+      return response.data;
     } catch (error) {
       console.error('Resend OTP error:', error);
       throw error;
@@ -373,7 +391,7 @@ class AuthService {
   }
 
   /**
-   * Set default Authorization header for axios (from demo branch)
+   * Set default Authorization header for axios
    */
   setAxiosAuthHeader(token: string): void {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -383,10 +401,16 @@ class AuthService {
    * Logout user
    */
   logout(): void {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('tempUserData');
-    localStorage.removeItem('userEmail');
+    // Clear all auth-related localStorage items
+    const itemsToKeep = ['language', 'theme']; // Items to preserve
+    const allItems = Object.keys(localStorage);
+    
+    allItems.forEach(key => {
+      if (!itemsToKeep.includes(key)) {
+        localStorage.removeItem(key);
+      }
+    });
+    
     window.location.href = '/login';
   }
 
@@ -402,6 +426,36 @@ class AuthService {
    */
   getToken(): string | null {
     return localStorage.getItem('authToken');
+  }
+
+  /**
+   * Get current user role
+   */
+  getUserRole(): string | null {
+    return localStorage.getItem('userRole');
+  }
+
+  /**
+   * Get current user organisation
+   */
+  getUserOrganisation(): string | null {
+    return localStorage.getItem('userOrganisation');
+  }
+
+  /**
+   * Check if current user is super admin
+   */
+  isSuperAdmin(): boolean {
+    const role = localStorage.getItem('userRole');
+    return role === 'SUPER_ADMIN';
+  }
+
+  /**
+   * Check if current user is admin (including super admin)
+   */
+  isAdmin(): boolean {
+    const role = localStorage.getItem('userRole');
+    return role === 'ADMIN' || role === 'SUPER_ADMIN';
   }
 
   /**

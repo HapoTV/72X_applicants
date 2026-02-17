@@ -10,8 +10,11 @@ export interface Funding {
   contactInfo?: string;
   applicationUrl?: string;
   industry?: string;
-  type?: string; // Changed from fundingType to type
+  type?: string;
   createdBy: string;
+  createdByUserId?: string; // New field
+  organisation?: string; // New field: Organisation that can see this funding
+  isPublic?: boolean; // New field: If true, visible to all organisations
   createdAt?: string;
   updatedAt?: string;
 }
@@ -26,7 +29,9 @@ export interface FundingFormData {
   contactInfo: string;
   applicationUrl: string;
   industry: string;
-  type: string; // Changed from fundingType to type
+  type: string;
+  organisation?: string; // New field
+  isPublic?: boolean; // New field
 }
 
 export interface AdminFundingItem {
@@ -39,7 +44,9 @@ export interface AdminFundingItem {
   contactInfo?: string;
   applicationUrl?: string;
   industry?: string;
-  type?: string; // Changed from fundingType to type
+  type?: string;
+  organisation?: string; // New field
+  isPublic?: boolean; // New field
   createdBy: string;
 }
 
@@ -53,7 +60,8 @@ export interface UserFundingItem {
   applicationUrl?: string;
   contactInfo?: string;
   industry?: string;
-  type?: string; // Changed from fundingType to type
+  type?: string;
+  organisation?: string; // New field
   daysLeft?: number;
   isExpired?: boolean;
 }
@@ -72,8 +80,11 @@ export interface FundingApiResponse {
   contactInfo?: string;
   applicationUrl?: string;
   industry?: string;
-  type?: string; // Changed from fundingType to type
+  type?: string;
   createdBy: string;
+  createdByUserId?: string;
+  organisation?: string;
+  isPublic?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -91,8 +102,11 @@ export interface FundingRequest {
   contactInfo?: string;
   applicationUrl?: string;
   industry?: string;
-  type?: string; // Changed from fundingType to type
+  type?: string;
   createdBy: string;
+  createdByUserId?: string;
+  organisation?: string;
+  isPublic?: boolean;
 }
 
 /**

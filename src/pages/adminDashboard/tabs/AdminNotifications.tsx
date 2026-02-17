@@ -10,7 +10,9 @@ import {
   Calendar,
   Users,
   Filter,
-  BarChart3
+  BarChart3,
+  Building2,
+  Crown
 } from 'lucide-react';
 import NotificationService from '../../../services/NotificationService';
 import type { 
@@ -21,7 +23,7 @@ import type {
 import { useAuth } from '../../../context/AuthContext';
 
 const AdminNotifications: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isSuperAdmin, userOrganisation } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'sent' | 'scheduled' | 'draft'>('all');
   const [stats, setStats] = useState<NotificationStats | null>(null);
@@ -37,7 +39,8 @@ const AdminNotifications: React.FC = () => {
     targetAdmins: false,
     targetAllUsers: false,
     subscriptionTypes: [],
-    userRoles: []
+    userRoles: [],
+    targetOrganisation: !isSuperAdmin ? userOrganisation : undefined // Default to user's organisation for regular admins
   });
 
   useEffect(() => {
@@ -51,13 +54,15 @@ const AdminNotifications: React.FC = () => {
       let data: Notification[];
       
       if (filterType === 'all') {
-        data = await NotificationService.getAllNotifications();
+        const response = await NotificationService.getAllNotifications();
+        data = response.notifications;
       } else if (filterType === 'unread') {
         // Filter unread from all notifications
-        const all = await NotificationService.getAllNotifications();
-        data = all.filter(n => !n.read);
+        const response = await NotificationService.getAllNotifications();
+        data = response.notifications.filter(n => !n.read);
       } else {
-        data = await NotificationService.getAllNotifications(filterType.toUpperCase());
+        const response = await NotificationService.getAllNotifications(filterType.toUpperCase());
+        data = response.notifications;
       }
       
       setNotifications(data);
@@ -80,6 +85,11 @@ const AdminNotifications: React.FC = () => {
   const handleCreateNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // For regular admins, ensure organisation is set
+      if (!isSuperAdmin && !formData.targetOrganisation) {
+        formData.targetOrganisation = userOrganisation;
+      }
+      
       await NotificationService.createNotification(formData);
       setShowCreateForm(false);
       setFormData({
@@ -90,7 +100,8 @@ const AdminNotifications: React.FC = () => {
         targetAdmins: false,
         targetAllUsers: false,
         subscriptionTypes: [],
-        userRoles: []
+        userRoles: [],
+        targetOrganisation: !isSuperAdmin ? userOrganisation : undefined
       });
       fetchNotifications();
       fetchStats();
@@ -159,7 +170,8 @@ const AdminNotifications: React.FC = () => {
     return NotificationService.formatTimestamp(timestamp);
   };
 
-  if (!user || user.role !== 'ADMIN') {
+  // Check if user has admin access (ADMIN or SUPER_ADMIN)
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -175,12 +187,30 @@ const AdminNotifications: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-          <Bell className="w-8 h-8 text-primary-600" />
-          <span>Notification Management</span>
-        </h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
+              <Bell className="w-8 h-8 text-primary-600" />
+              <span>Notification Management</span>
+            </h1>
+            {!isSuperAdmin && userOrganisation && (
+              <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                <Building2 className="w-4 h-4" />
+                {userOrganisation}
+              </span>
+            )}
+            {isSuperAdmin && (
+              <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm flex items-center gap-1">
+                <Crown className="w-4 h-4" />
+                Super Admin
+              </span>
+            )}
+          </div>
+        </div>
         <p className="text-gray-600 mt-1">
-          Manage system notifications and create new announcements
+          {isSuperAdmin 
+            ? 'Manage system notifications for all organisations' 
+            : `Manage notifications for ${userOrganisation || 'your organisation'}`}
         </p>
       </div>
 
@@ -251,6 +281,26 @@ const AdminNotifications: React.FC = () => {
                 <option value="draft">Draft</option>
               </select>
             </div>
+            
+            {/* Organisation Filter (Super Admin only) */}
+            {isSuperAdmin && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-2">
+                  <Building2 className="w-4 h-4 inline mr-2" />
+                  Organisation
+                </label>
+                <select
+                  value={formData.targetOrganisation || ''}
+                  onChange={(e) => setFormData({ ...formData, targetOrganisation: e.target.value || undefined })}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">All Organisations</option>
+                  <option value="TechCorp">TechCorp</option>
+                  <option value="InnovateLabs">InnovateLabs</option>
+                  <option value="StartupHub">StartupHub</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Create Button */}
@@ -337,6 +387,25 @@ const AdminNotifications: React.FC = () => {
                 </div>
               </div>
 
+              {/* Organisation Targeting (Super Admin only) */}
+              {isSuperAdmin && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Target Organisation
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.targetOrganisation || ''}
+                    onChange={(e) => setFormData({ ...formData, targetOrganisation: e.target.value })}
+                    placeholder="Leave empty for all organisations"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    If specified, only users in this organisation will receive the notification
+                  </p>
+                </div>
+              )}
+
               {/* Scheduling */}
               {formData.status === 'SCHEDULED' && (
                 <div>
@@ -379,7 +448,7 @@ const AdminNotifications: React.FC = () => {
                       onChange={(e) => setFormData({ ...formData, broadcast: e.target.checked })}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="ml-2 text-gray-700">Broadcast (All users)</span>
+                    <span className="ml-2 text-gray-700">Broadcast (All users in organisation)</span>
                   </label>
 
                   {/* Target Admins */}
@@ -437,7 +506,7 @@ const AdminNotifications: React.FC = () => {
                       User Roles
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {['ADMIN', 'USER'].map((role) => (
+                      {['ADMIN', 'USER', 'SUPER_ADMIN'].map((role) => (
                         <label key={role} className="flex items-center">
                           <input
                             type="checkbox"
@@ -504,7 +573,7 @@ const AdminNotifications: React.FC = () => {
                 <div className="flex-grow min-w-0">
                   <div className="flex items-start justify-between">
                     <div className="flex-grow">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-wrap gap-2">
                         <h3 className="font-medium text-gray-900">
                           {notification.title}
                         </h3>
@@ -516,11 +585,17 @@ const AdminNotifications: React.FC = () => {
                             Unread
                           </span>
                         )}
+                        {notification.targetOrganisation && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-600 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            {notification.targetOrganisation}
+                          </span>
+                        )}
                       </div>
                       <p className="text-gray-600 text-sm mt-1">
                         {notification.message}
                       </p>
-                      <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2">
+                      <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2 flex-wrap gap-2">
                         <span>Created: {formatTime(notification.createdAt)}</span>
                         {notification.sentAt && (
                           <span>Sent: {formatTime(notification.sentAt)}</span>
