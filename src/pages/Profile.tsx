@@ -1,10 +1,6 @@
 // src/pages/Profile.tsx
 import React, { useState, useEffect } from 'react';
-<<<<<<< HEAD
-import { User, Edit, Save, Bell, Shield, Trash2, X, Eye, EyeOff } from 'lucide-react';
-=======
-import { User, Edit, Save, Bell, Shield, Trash2, Building2 } from 'lucide-react';
->>>>>>> caaa3d1841a66dee031dc2aec0bf8a81bac8f137
+import { User, Edit, Save, Bell, Shield, Eye, EyeOff, X, Trash2, Building2 } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
 import type { UserFormData } from '../interfaces/UserData';
@@ -96,11 +92,7 @@ const Profile: React.FC = () => {
       }
 
       const updatedUser = await authService.updateUserProfile(profileData);
-<<<<<<< HEAD
-      
-      // Update auth context with new data
-=======
->>>>>>> caaa3d1841a66dee031dc2aec0bf8a81bac8f137
+
       login(updatedUser);
       setIsEditing(false);
       console.log('Profile saved:', updatedUser);

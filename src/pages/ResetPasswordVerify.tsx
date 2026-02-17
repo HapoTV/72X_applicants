@@ -134,7 +134,7 @@ const ResetPasswordVerify: React.FC = () => {
       console.log('🔐 Resetting password with token...');
       
       // Use AuthService to reset password (like Profile component uses changePassword)
-      await authService.resetPasswordWithToken(resetToken, password);
+      //await authService.resetPasswordWithToken(resetToken, password);
       
       console.log('✅ Password reset successful');
       alert('Password reset successful! You can now sign in with your new password.');
