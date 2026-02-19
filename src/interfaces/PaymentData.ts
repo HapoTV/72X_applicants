@@ -76,6 +76,7 @@ export interface PaymentResponse {
   userId: string;
   userEmail: string;
   userFullName: string;
+  organisation?: string;
   paystackCustomerId: string;
   paystackReference: string;
   amount: number;
@@ -194,6 +195,7 @@ export interface PaymentFilters {
   maxAmount?: number;
   isRecurring?: boolean;
   search?: string;
+  organisation?: string;
 }
 
 export interface PaymentSummary {

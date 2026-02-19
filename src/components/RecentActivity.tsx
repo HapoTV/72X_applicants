@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Clock } from 'lucide-react';
+import { adService } from '../services/AdService';
+import type { EngagementDTO } from '../interfaces/AdData';
 
 interface ActivityItem {
   type: string;
@@ -10,10 +12,48 @@ interface ActivityItem {
 
 const RecentActivity: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const activityLog: ActivityItem[] = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('activityLog') || '[]'); } catch { return []; }
+  const [activityLog, setActivityLog] = useState<ActivityItem[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('activityLog') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        const res = await adService.getUserEngagements(0, 50);
+        const items: ActivityItem[] = (res.content || []).map((e: EngagementDTO) => {
+          const title = String(e.engagementType || '')
+            .replace(/_/g, ' ')
+            .toLowerCase()
+            .replace(/\b\w/g, (c) => c.toUpperCase());
+
+          return {
+            type: String(e.engagementType || ''),
+            title: title || 'Activity',
+            description: e.description || undefined,
+            timestamp: e.createdAt || new Date().toISOString(),
+          };
+        });
+
+        if (!mounted) return;
+        setActivityLog(items);
+      } catch {
+        // Keep localStorage fallback
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
   }, []);
-  const recent = activityLog.slice(-5).reverse();
+
+  const recent = useMemo(() => activityLog.slice(-5).reverse(), [activityLog]);
 
   return (
     <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">

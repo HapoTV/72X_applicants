@@ -149,7 +149,7 @@ export function useLogin() {
     }
 
     console.log('✅ No OTP required, completing login...');
-    await completeLogin(loginResponse, login, navigate);
+    await completeLogin(loginResponse, login);
   };
 
   // Error handler
@@ -217,8 +217,7 @@ export function useLogin() {
 
 async function completeLogin(
   loginResponse: LoginResponse,
-  login: (user: User) => void,
-  navigate: ReturnType<typeof useNavigate>
+  login: (user: User, authToken?: string) => void
 ) {
   try {
     console.log('🎯 Starting completeLogin with role from backend:', loginResponse.role);
@@ -257,7 +256,7 @@ async function completeLogin(
       profileImageUrl: loginResponse.profileImageUrl,
     };
 
-    login(userData);
+    login(userData, loginResponse.token);
 
     console.log('🎉 Login complete! Token:', loginResponse.token ? loginResponse.token.substring(0, 30) + '...' : 'none');
     console.log('📊 Post-login status check:', {

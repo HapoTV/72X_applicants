@@ -1,5 +1,6 @@
 import React from 'react';
 import { Lock, Star, Zap, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface UpgradePageProps {
   featureName: string;
@@ -16,6 +17,8 @@ const UpgradePage: React.FC<UpgradePageProps> = ({
   description,
   benefits,
 }) => {
+  const navigate = useNavigate();
+
   const packageInfo = {
     essential: {
       name: 'Essential',
@@ -93,6 +96,8 @@ const UpgradePage: React.FC<UpgradePageProps> = ({
             {/* Upgrade Button */}
             <div className="text-center">
               <button
+                type="button"
+                onClick={() => navigate('/select-package')}
                 className={`${info.buttonBg} text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg inline-flex items-center space-x-2`}
               >
                 <PackageIcon className="w-5 h-5" />

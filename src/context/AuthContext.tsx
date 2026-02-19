@@ -2,6 +2,7 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { User } from "../interfaces/UserData";
+import userSubscriptionService from "../services/UserSubscriptionService";
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +19,7 @@ interface AuthContextType {
   twoFactorEnabled: boolean;
   setTwoFactorEnabled: (enabled: boolean) => void;
   userOrganisation: string | null;
+  userPackage: 'startup' | 'essential' | 'premium';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +36,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const [userOrganisation, setUserOrganisation] = useState<string | null>(() => {
     return localStorage.getItem("userOrganisation");
+  });
+
+  const [userPackage, setUserPackage] = useState<'startup' | 'essential' | 'premium'>(() => {
+    const stored = localStorage.getItem('userPackage');
+    if (stored === 'essential' || stored === 'premium' || stored === 'startup') return stored;
+    return 'startup';
   });
 
   // Used for OTP / temporary sessions
@@ -55,9 +63,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (userData.organisation) {
       localStorage.setItem("userOrganisation", userData.organisation);
       setUserOrganisation(userData.organisation);
-      console.log("✅ Organisation saved to AuthContext:", userData.organisation);
+      console.log(" Organisation saved to AuthContext:", userData.organisation);
     } else {
-      console.warn("⚠️ No organisation found in user data:", userData);
+      console.warn(" No organisation found in user data:", userData);
     }
   };
 
@@ -106,11 +114,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('userOrganisation', organisation);
       setUserOrganisation(organisation);
       setUser(updatedUser);
-      console.log("✅ Organisation updated to:", organisation);
+      console.log(" Organisation updated to:", organisation);
     } else {
       localStorage.setItem('userOrganisation', organisation);
       setUserOrganisation(organisation);
-      console.log("✅ Organisation set (no user):", organisation);
+      console.log(" Organisation set (no user):", organisation);
     }
   };
 
@@ -125,6 +133,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       const storedOrg = localStorage.getItem("userOrganisation");
       setUserOrganisation(storedOrg);
+
+      const storedPkg = localStorage.getItem('userPackage');
+      if (storedPkg === 'essential' || storedPkg === 'premium' || storedPkg === 'startup') {
+        setUserPackage(storedPkg);
+      }
     };
 
     // Listen for storage changes
@@ -133,10 +146,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Also check on mount
     handleStorageChange();
 
+    const handlePackageUpdated = () => {
+      const storedPkg = localStorage.getItem('userPackage');
+      if (storedPkg === 'essential' || storedPkg === 'premium' || storedPkg === 'startup') {
+        setUserPackage(storedPkg);
+      }
+    };
+
+    window.addEventListener('user-package-updated', handlePackageUpdated as EventListener);
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('user-package-updated', handlePackageUpdated as EventListener);
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateUserPackage = async () => {
+      if (!token) return;
+      try {
+        const subscription = await userSubscriptionService.getCurrentUserPackage();
+        if (cancelled) return;
+
+        const subscriptionType = subscription?.subscriptionType;
+        const mapped =
+          subscriptionType === 'ESSENTIAL'
+            ? 'essential'
+            : subscriptionType === 'PREMIUM'
+              ? 'premium'
+              : 'startup';
+
+        localStorage.setItem('userPackage', mapped);
+        setUserPackage(mapped);
+        window.dispatchEvent(new CustomEvent('user-package-updated'));
+      } catch {
+        if (cancelled) return;
+        const storedPkg = localStorage.getItem('userPackage');
+        if (storedPkg === 'essential' || storedPkg === 'premium' || storedPkg === 'startup') {
+          setUserPackage(storedPkg);
+        }
+      }
+    };
+
+    void hydrateUserPackage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   const isAuthenticated = !!token && !!user;
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
@@ -159,6 +218,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         twoFactorEnabled,
         setTwoFactorEnabled,
         userOrganisation,
+        userPackage,
       }}
     >
       {children}

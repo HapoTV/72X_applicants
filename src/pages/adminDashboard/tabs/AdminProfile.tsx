@@ -1,6 +1,6 @@
 // src/pages/adminDashboard/tabs/AdminProfile.tsx
 import React, { useRef, useState, useEffect } from 'react';
-import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building2, Crown, Eye, EyeOff, X } from 'lucide-react';
+import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building2, Eye, EyeOff, X } from 'lucide-react';
 import { authService } from '../../../services/AuthService';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
@@ -43,6 +43,10 @@ const AdminProfile: React.FC = () => {
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
     const [profileImageUrl, setProfileImageUrl] = useState<string>('');
     const [uploadingPicture, setUploadingPicture] = useState(false);
+
+    const handleInputChange = (field: keyof UserFormData, value: string) => {
+        setProfileData((prev) => ({ ...prev, [field]: value }));
+    };
 
     const [downloadingOrgData, setDownloadingOrgData] = useState(false);
     const [deletingAccount, setDeletingAccount] = useState(false);
@@ -133,14 +137,6 @@ const AdminProfile: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
-
-    const calculateYearsWithPlatform = (): string => {
-        if (!user?.createdAt) return '0';
-        
-        const createdYear = new Date(user.createdAt).getFullYear();
-        const currentYear = new Date().getFullYear();
-        return (currentYear - createdYear).toString();
     };
 
     const handleSave = async () => {

@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 type KBEntry = {
   keywords: string[];
@@ -286,8 +287,10 @@ const DEFAULT_RESPONSES: string[] = Array.isArray(KNOWLEDGE_BASE.default.respons
   : [String(KNOWLEDGE_BASE.default.response)];
 
 export default function BizBoostChatbot() {
+  const { userPackage } = useAuth();
   const [isOpen, setIsOpen] = useState(false);  // <-- changed from true to false
   const [input, setInput] = useState("");
+  const [isHoveringLocked, setIsHoveringLocked] = useState(false);
   const [history, setHistory] = useState<{ from: "user" | "bot"; text: string }[]>(() => {
     try {
       const raw = localStorage.getItem("bizboost_chat_history");
@@ -298,11 +301,13 @@ export default function BizBoostChatbot() {
   });
   const maxHistoryItems = 10;
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  
-  // Locking is off by default; enable by setting localStorage.lockFeatures = '1'
-  const userPackage = localStorage.getItem('userPackage') || 'premium';
-  const lockingOn = localStorage.getItem('lockFeatures') === '1';
-  const isLocked = lockingOn && userPackage === 'startup';
+
+  const isLocked = useMemo(() => {
+    const ls = localStorage.getItem('userPackage');
+    const pkg = (userPackage || ls || 'startup') as 'startup' | 'essential' | 'premium';
+    const order: Record<'startup' | 'essential' | 'premium', number> = { startup: 0, essential: 1, premium: 2 };
+    return (order[pkg] ?? 0) < order.essential;
+  }, [userPackage]);
 
   useEffect(() => {
     localStorage.setItem("bizboost_chat_history", JSON.stringify(history));
@@ -467,58 +472,25 @@ export default function BizBoostChatbot() {
     "How can I contact support?",
   ];
 
-  // If locked, show upgrade message
-  if (isLocked) {
-    return (
-      <div className="fixed right-6 bottom-6 z-50">
-        <div className="w-[300px] md:w-[360px] shadow-2xl rounded-2xl overflow-hidden bg-white border">
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center font-bold">🔒</div>
-              <div>
-                <div className="text-sm font-semibold">SeventyTwoX Assistant</div>
-                <div className="text-xs opacity-90">Locked - Upgrade Required</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsOpen((s) => !s)}
-                className="text-xs bg-white/20 px-2 py-1 rounded-md"
-              >
-                {isOpen ? "Hide" : "Info"}
-              </button>
-            </div>
-          </div>
-
-          {isOpen && (
-            <div className="p-6 text-center">
-              <div className="mb-4">
-                <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-3">
-                  <span className="text-3xl">💬</span>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Chatbot Assistant</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Get instant answers to your business questions with our AI-powered chatbot assistant.
-                </p>
-                <div className="bg-blue-50 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-gray-700 font-medium mb-2">Available with Essential & Premium packages:</p>
-                  <ul className="text-xs text-gray-600 text-left space-y-1">
-                    <li>✓ 24/7 instant support</li>
-                    <li>✓ Business guidance and tips</li>
-                    <li>✓ Quick answers to common questions</li>
-                    <li>✓ Platform navigation help</li>
-                  </ul>
-                </div>
-                <button className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors">
-                  Upgrade to Essential
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+  const openLockedDrawer = () => {
+    window.dispatchEvent(
+      new CustomEvent('open-locked-feature', {
+        detail: {
+          title: 'AI Chatbot Assistant',
+          requiredPackage: 'essential',
+          description:
+            'Get instant answers to business questions, how-to guidance inside the platform, and quick support when you need it.',
+          benefits: [
+            '24/7 instant support',
+            'Business guidance and tips',
+            'Quick answers to common questions',
+            'Platform navigation help',
+          ],
+          upgradePath: '/select-package',
+        },
+      })
     );
-  }
+  };
 
   // Add this style for the bouncing animation
   const bounceAnimation = `
@@ -536,11 +508,37 @@ export default function BizBoostChatbot() {
       <div className="fixed right-6 bottom-6 z-50">
         <style>{bounceAnimation}</style>
         <button
-          onClick={() => setIsOpen(true)}
-          className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-600 to-sky-500 text-white flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300 bounce"
+          onClick={() => {
+            if (isLocked) {
+              openLockedDrawer();
+              return;
+            }
+            setIsOpen(true);
+          }}
+          onMouseEnter={() => {
+            if (isLocked) setIsHoveringLocked(true);
+          }}
+          onMouseLeave={() => setIsHoveringLocked(false)}
+          className={`w-16 h-16 rounded-full text-white flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300 ${
+            isLocked ? 'bg-gradient-to-r from-gray-400 to-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-sky-500 bounce'
+          }`}
+          aria-disabled={isLocked}
         >
           <span className="text-xl font-bold">72X</span>
         </button>
+
+        {isLocked && isHoveringLocked && (
+          <div
+            className="fixed bg-orange-50 border-2 border-orange-400 text-gray-800 px-4 py-2 rounded-lg text-sm shadow-lg whitespace-nowrap flex items-center space-x-2"
+            style={{ right: '92px', bottom: '40px', zIndex: 9999 }}
+          >
+            <span className="text-orange-500">⚠</span>
+            <span>
+              This feature is for <span className="font-semibold text-orange-600">Essential</span> package. <br />
+              Upgrade to unlock it!
+            </span>
+          </div>
+        )}
       </div>
     );
   }

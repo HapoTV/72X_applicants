@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PackageSelectionRedirect from './components/PackageSelectionRedirect';
 import PaymentRedirect from './components/PaymentRedirect';
+import RequirePackage from './components/RequirePackage';
 import DashboardOverview from './pages/dashboard/Overview';
 import DashboardMetrics from './pages/dashboard/Metrics';
 import DashboardCommunityFeed from './pages/dashboard/CommunityFeed';
@@ -57,6 +58,8 @@ import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
 import MentorshipUpgrade from './pages/upgrades/MentorshipUpgrade';
 import FundingUpgrade from './pages/upgrades/FundingUpgrade';
 import DataInputUpgrade from './pages/upgrades/DataInputUpgrade';
+import AppStoreUpgrade from './pages/upgrades/AppStoreUpgrade';
+import ConnectionsUpgrade from './pages/upgrades/ConnectionsUpgrade';
 import RoadmapUpgrade from './pages/upgrades/RoadmapUpgrade';
 import AnalyticsUpgrade from './pages/upgrades/AnalyticsUpgrade';
 import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
@@ -148,44 +151,127 @@ function App() {
                           <Route path="/community" element={<Community />} />
                           <Route path="/community/discussions" element={<CommunityDiscussions />} />
                           <Route path="/community/networking" element={<CommunityNetworking />} />
-                          <Route path="/community/mentorship" element={<CommunityMentorship />} />
+                          <Route
+                            path="/community/mentorship"
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/mentorship">
+                                <CommunityMentorship />
+                              </RequirePackage>
+                            }
+                          />
 
                           {/* Other Protected Routes */}
                           <Route
                             path="/applications"
                             element={<Navigate to="/applications/crm" replace />}
                           />
-                          <Route path="/applications/crm/*" element={<CRM />} />
+                          <Route
+                            path="/applications/crm/*"
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
+                                <CRM />
+                              </RequirePackage>
+                            }
+                          />
                           <Route
                             path="/applications/finance-manager"
-                            element={<FinanceManager />}
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
+                                <FinanceManager />
+                              </RequirePackage>
+                            }
                           />
-                          <Route path="/applications/tenderlyai" element={<TenderlyAI />} />
+                          <Route
+                            path="/applications/tenderlyai"
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
+                                <TenderlyAI />
+                              </RequirePackage>
+                            }
+                          />
                           <Route path="/profile" element={<Profile />} />
 
                           <Route path="/notifications" element={<Notifications />} />
 
                           {/* Essential Package Features */}
-                          <Route path="/marketplace" element={<Marketplace />} />
-                          <Route path="/mentorship" element={<MentorshipHub />} />
-                          <Route path="/funding" element={<FundingFinder />} />
-                          <Route path="/data-input" element={<DataInput />} />
+                          <Route
+                            path="/marketplace"
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/marketplace">
+                                <Marketplace />
+                              </RequirePackage>
+                            }
+                          />
+                          <Route
+                            path="/mentorship"
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/mentorship">
+                                <MentorshipHub />
+                              </RequirePackage>
+                            }
+                          />
+                          <Route
+                            path="/funding"
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/funding">
+                                <FundingFinder />
+                              </RequirePackage>
+                            }
+                          />
+                          <Route
+                            path="/data-input"
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/data-input">
+                                <DataInput />
+                              </RequirePackage>
+                            }
+                          />
 
                           {/* Premium Package Features */}
-                          <Route path="/roadmap" element={<RoadmapGenerator />} />
-                          <Route path="/analytics" element={<Analytics />} />
-                          <Route path="/ai-analyst" element={<AIBusinessAnalyst />} />
+                          <Route
+                            path="/roadmap"
+                            element={
+                              <RequirePackage required="premium" upgradePath="/upgrade/roadmap">
+                                <RoadmapGenerator />
+                              </RequirePackage>
+                            }
+                          />
+                          <Route
+                            path="/analytics"
+                            element={
+                              <RequirePackage required="premium" upgradePath="/upgrade/analytics">
+                                <Analytics />
+                              </RequirePackage>
+                            }
+                          />
+                          <Route
+                            path="/ai-analyst"
+                            element={
+                              <RequirePackage required="premium" upgradePath="/upgrade/ai-analyst">
+                                <AIBusinessAnalyst />
+                              </RequirePackage>
+                            }
+                          />
 
                           {/* Upgrade Pages */}
                           <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
                           <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
                           <Route path="/upgrade/funding" element={<FundingUpgrade />} />
                           <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
+                          <Route path="/upgrade/app-store" element={<AppStoreUpgrade />} />
+                          <Route path="/upgrade/connections" element={<ConnectionsUpgrade />} />
                           <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
                           <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
                           <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
 
-                          <Route path="/connections" element={<MyConnections />} />
+                          <Route
+                            path="/connections"
+                            element={
+                              <RequirePackage required="essential" upgradePath="/upgrade/connections">
+                                <MyConnections />
+                              </RequirePackage>
+                            }
+                          />
 
                           {/* Payment Pages - Use PaymentRoutes component */}
                           <Route

@@ -6,8 +6,9 @@ import MobileNav from './MobileNav';
 import DashboardSubNav from './DashboardSubNav';
 import ScheduleSubNav from './ScheduleSubNav';
 import LearningSubNav from './LearningSubNav';
-import CommunitySubNav from './CommunitySubNav';
 import AppStoreSubNav from './AppStoreSubNav';
+import LockedFeatureDrawer from './LockedFeatureDrawer';
+import type { LockedFeaturePayload } from './LockedFeatureDrawer';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
@@ -15,11 +16,11 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
   const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
   const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
-  const [isCommunitySubNavOpen, setIsCommunitySubNavOpen] = useState(false);
   const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   const [showLayout, setShowLayout] = useState(true);
   const [userStatus, setUserStatus] = useState<string>('');
@@ -27,6 +28,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
+
+  const [lockedFeatureOpen, setLockedFeatureOpen] = useState(false);
+  const [lockedFeature, setLockedFeature] = useState<LockedFeaturePayload | null>(null);
 
   // Check if layout should be hidden
   useEffect(() => {
@@ -116,6 +120,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const onToggle = () => setNavCollapsed(localStorage.getItem('navCollapsed') === '1');
     window.addEventListener('nav-collapsed-changed', onToggle as EventListener);
     return () => window.removeEventListener('nav-collapsed-changed', onToggle as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const detail = (event as CustomEvent<LockedFeaturePayload>).detail;
+      if (!detail) return;
+      setLockedFeature(detail);
+      setLockedFeatureOpen(true);
+    };
+
+    window.addEventListener('open-locked-feature', onOpen as EventListener);
+    return () => window.removeEventListener('open-locked-feature', onOpen as EventListener);
   }, []);
 
   // Lightweight engagement tracker - Only run if layout is shown and user is ACTIVE
@@ -233,7 +249,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (isOpen) {
       setIsScheduleSubNavOpen(false);
       setIsLearningSubNavOpen(false);
-      setIsCommunitySubNavOpen(false);
     }
   };
 
@@ -243,7 +258,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (isOpen) {
       setIsDashboardSubNavOpen(false);
       setIsLearningSubNavOpen(false);
-      setIsCommunitySubNavOpen(false);
     }
   };
 
@@ -253,18 +267,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (isOpen) {
       setIsDashboardSubNavOpen(false);
       setIsScheduleSubNavOpen(false);
-      setIsCommunitySubNavOpen(false);
-      setIsAppStoreSubNavOpen(false);
-    }
-  };
-
-  // Handle Community toggle - close others
-  const handleCommunityToggle = (isOpen: boolean) => {
-    setIsCommunitySubNavOpen(isOpen);
-    if (isOpen) {
-      setIsDashboardSubNavOpen(false);
-      setIsScheduleSubNavOpen(false);
-      setIsLearningSubNavOpen(false);
       setIsAppStoreSubNavOpen(false);
     }
   };
@@ -276,7 +278,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       setIsDashboardSubNavOpen(false);
       setIsScheduleSubNavOpen(false);
       setIsLearningSubNavOpen(false);
-      setIsCommunitySubNavOpen(false);
     }
   };
 
@@ -362,16 +363,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex">
             <Navigation 
+              onClose={() => setIsMobileNavOpen(false)}
               onDashboardToggle={handleDashboardToggle}
               onScheduleToggle={handleScheduleToggle}
               onLearningToggle={handleLearningToggle}
-              onCommunityToggle={handleCommunityToggle}
               onAppStoreToggle={handleAppStoreToggle}
             />
             {isDashboardSubNavOpen && <DashboardSubNav onClose={() => setIsDashboardSubNavOpen(false)} />}
             {isScheduleSubNavOpen && <ScheduleSubNav onClose={() => setIsScheduleSubNavOpen(false)} />}
             {isLearningSubNavOpen && <LearningSubNav onClose={() => setIsLearningSubNavOpen(false)} />}
-            {isCommunitySubNavOpen && <CommunitySubNav onClose={() => setIsCommunitySubNavOpen(false)} />}
             {isAppStoreSubNavOpen && <AppStoreSubNav onClose={() => setIsAppStoreSubNavOpen(false)} />}
             <div className={`flex-1 ${navCollapsed ? 'ml-20' : 'ml-56'} transition-all duration-200`}>
               <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
@@ -380,6 +380,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </main>
             </div>
           </div>
+
+          <LockedFeatureDrawer
+            open={lockedFeatureOpen}
+            feature={lockedFeature}
+            onClose={() => setLockedFeatureOpen(false)}
+          />
 
           {/* Mobile Layout */}
           <div className="md:hidden">

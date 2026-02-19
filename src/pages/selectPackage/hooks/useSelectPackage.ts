@@ -340,8 +340,15 @@ export function useSelectPackage() {
 
           localStorage.setItem('selectedPackage', JSON.stringify(serializablePackageData));
 
+          const mappedUserPackage = selectedPkg.id as 'startup' | 'essential' | 'premium';
+          localStorage.setItem('userPackage', mappedUserPackage);
+          window.dispatchEvent(new CustomEvent('user-package-updated'));
+
           localStorage.setItem('userStatus', 'FREE_TRIAL');
           localStorage.setItem('requiresPackageSelection', 'false');
+          if (!localStorage.getItem('freeTrialStartDate')) {
+            localStorage.setItem('freeTrialStartDate', new Date().toISOString());
+          }
           setUserStatus('FREE_TRIAL');
 
           alert(
@@ -392,6 +399,10 @@ export function useSelectPackage() {
         };
 
         localStorage.setItem('selectedPackage', JSON.stringify(serializablePackageData));
+
+        const mappedUserPackage = selectedPkg.id as 'startup' | 'essential' | 'premium';
+        localStorage.setItem('userPackage', mappedUserPackage);
+        window.dispatchEvent(new CustomEvent('user-package-updated'));
 
         await userSubscriptionService.selectPackage(selectedPkg.backendType);
 

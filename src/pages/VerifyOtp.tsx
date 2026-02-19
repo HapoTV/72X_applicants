@@ -107,7 +107,7 @@ const VerifyOtp: React.FC = () => {
                     requiresTwoFactor: response.requiresTwoFactor
                 };
                 
-                login(userData);
+                login(userData, response.token);
                 
                 // Use setTimeout to ensure state updates are complete
                 setTimeout(() => {

@@ -3,8 +3,10 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Clock, Star, BookOpen, Lock, X, Brain, CheckCircle } from 'lucide-react';
 import { learningService } from '../services/LearningService';
+import { adService } from '../services/AdService';
 import { useAuth } from '../context/AuthContext';
 import type { UserLearningModule } from '../interfaces/LearningData';
+import { EngagementType } from '../interfaces/AdData';
 import FlipCardQuizModal from '../components/learning/FlipCardQuizModal';
 // import CelebrationModal from '../components/learning/CelebrationModal';
 
@@ -20,9 +22,9 @@ const LearningModules: React.FC = () => {
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
+  const [, setShowCelebration] = useState(false);
   const [quizMaterial, setQuizMaterial] = useState<UserLearningModule | null>(null);
-  const [completedModule, setCompletedModule] = useState<UserLearningModule | null>(null);
+  const [, setCompletedModule] = useState<UserLearningModule | null>(null);
   const [startedMaterialIds, setStartedMaterialIds] = useState<string[]>([]);
   const [quizPassedMaterialIds, setQuizPassedMaterialIds] = useState<string[]>([]);
   const [materialReadyForQuiz, setMaterialReadyForQuiz] = useState(false);
@@ -227,6 +229,26 @@ useEffect(() => {
     });
   }, [mapQuestionType]);
 
+  const recordMaterialFinished = useCallback(async (material: UserLearningModule) => {
+    try {
+      if (user?.email) {
+        await learningService.recordFinished(user.email, material.id);
+      }
+    } catch {
+      // non-critical
+    }
+
+    try {
+      await adService.recordEngagement(
+        EngagementType.ACTION_COMPLETED,
+        5,
+        `Finished learning material: ${material.title}`
+      );
+    } catch {
+      // non-critical
+    }
+  }, [user?.email]);
+
   const beginQuizForMaterial = useCallback(async (material: UserLearningModule) => {
     setQuizLoading(true);
     setError(null);
@@ -255,6 +277,16 @@ useEffect(() => {
       if (user?.email) {
         await learningService.recordQuizStarted(user.email, material.id);
       }
+
+      try {
+        await adService.recordEngagement(
+          EngagementType.ACTION_COMPLETED,
+          5,
+          `Started knowledge check: ${material.title}`
+        );
+      } catch {
+        // non-critical
+      }
       
       console.log(`✅ Quiz ready with ${transformedQuestions.length} questions`);
       
@@ -281,6 +313,17 @@ useEffect(() => {
         );
       }
 
+      try {
+        await adService.recordEngagement(
+          EngagementType.ACHIEVEMENT_UNLOCKED,
+          50,
+          `Passed knowledge check: ${quizMaterial.title} (${Math.round(percentage)}%)`
+        );
+      } catch {
+        // non-critical
+      }
+      
+
       setQuizPassedMaterialIds(prev => 
         prev.includes(quizMaterial.id) ? prev : [...prev, quizMaterial.id]
       );
@@ -303,18 +346,6 @@ useEffect(() => {
       setCompletedModule(null);
     }
   }, [user?.email, quizMaterial]);
-
-  const handleStartQuiz = useCallback(() => {
-    setShowCelebration(false);
-    if (completedModule) {
-      beginQuizForMaterial(completedModule);
-    }
-  }, [completedModule, beginQuizForMaterial]);
-
-  const handleCloseCelebration = useCallback(() => {
-    setShowCelebration(false);
-    setCompletedModule(null);
-  }, []);
 
   const handleCloseQuiz = useCallback(() => {
     setShowQuiz(false);
@@ -348,7 +379,7 @@ useEffect(() => {
     return (
       <div className="space-y-6 animate-fade-in px-2 sm:px-0">
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-6"></div>
           <p className="mt-4 text-gray-600">Loading learning materials...</p>
         </div>
       </div>
@@ -549,7 +580,10 @@ useEffect(() => {
                           Read for a moment, then confirm when finished to unlock the knowledge check.
                         </div>
                         <button
-                          onClick={() => setMaterialReadyForQuiz(true)}
+                          onClick={async () => {
+                            setMaterialReadyForQuiz(true);
+                            await recordMaterialFinished(openMaterial);
+                          }}
                           disabled={!readTimerDone}
                           className={`px-3 py-2 rounded-lg text-xs font-semibold ${
                             readTimerDone 
@@ -571,7 +605,10 @@ useEffect(() => {
                         className="w-full rounded-lg bg-black"
                         controls
                         controlsList="nodownload"
-                        onEnded={() => setMaterialReadyForQuiz(true)}
+                        onEnded={async () => {
+                          setMaterialReadyForQuiz(true);
+                          await recordMaterialFinished(openMaterial);
+                        }}
                       >
                         <source src={url} />
                       </video>
@@ -595,7 +632,10 @@ useEffect(() => {
                     </a>
                     <div className="mt-4">
                       <button
-                        onClick={() => setMaterialReadyForQuiz(true)}
+                        onClick={async () => {
+                          setMaterialReadyForQuiz(true);
+                          await recordMaterialFinished(openMaterial);
+                        }}
                         disabled={!readTimerDone}
                         className={`px-4 py-2 rounded-lg text-sm font-semibold ${
                           readTimerDone 

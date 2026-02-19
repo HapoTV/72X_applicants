@@ -13,7 +13,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { 
   Loader2, 
   Search, 
-  Download, 
   Eye, 
   User, 
   CreditCard, 

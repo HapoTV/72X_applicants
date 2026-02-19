@@ -23,8 +23,9 @@ import {
   Gift,
   LogOut
 } from 'lucide-react';
-import MessageServices from '../services/MessageServices'; // Add this import
+import MessageServices from '../services/MessageServices';
 import { authService } from '../services/AuthService';
+import { useAuth } from '../context/AuthContext';
 
 type PackageType = 'startup' | 'essential' | 'premium';
 
@@ -39,18 +40,16 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle, onAppStoreToggle }) => {
   const navigate = useNavigate();
+  const { userPackage } = useAuth();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
   const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
   const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
   const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
-  const [isCommunitySubNavOpen, setIsCommunitySubNavOpen] = useState(false);
   const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   
-  // Add state for unread count
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
-  // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
   const [profileImageUrl, setProfileImageUrl] = useState<string>(() => {
     try {
@@ -139,11 +138,9 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     return Math.max(0, remainingDays);
   }, [isFreeTrial]);
 
-  // Fetch unread count on mount and set up polling
   useEffect(() => {
     fetchUnreadCount();
     
-    // Set up polling every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     
     return () => clearInterval(interval);
@@ -176,57 +173,50 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     label: string;
     package: PackageType;
   }> = [
-    // Dashboard
     { path: '/dashboard', icon: Home, label: 'Dashboard', package: 'startup' as PackageType },
     
-    // Roadmap
     { path: '/roadmap', icon: BarChart3, label: 'Roadmap', package: 'premium' as PackageType },
     
-    // Schedule
     { path: '/schedule', icon: Calendar, label: 'Schedule', package: 'startup' as PackageType },
     
-    // Learning
-    { path: '/learning', icon: BookOpen, label: 'Learning', package: 'startup' as PackageType },
-
-    // Connections - THIS IS THE ONE WE NEED TO NOTIFY
     { path: '/connections', icon: UserPlus, label: 'Connections', package: 'essential' as PackageType },
     
-    // Marketplace
+    { path: '/learning', icon: BookOpen, label: 'Learning', package: 'startup' as PackageType },
+    
     { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' as PackageType },
     
-    // Community
     { path: '/community/discussions', icon: Users, label: 'Community', package: 'startup' as PackageType },
     
-    // Mentorship
     { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' as PackageType },
     
-    // Applications
     { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' as PackageType },
     
-    // Essential Package Features (includes all startup + these)
     { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
     { path: '/data-input', icon: Upload, label: 'Data Input', package: 'essential' },
     
-    // Premium Package Features (everything)
     { path: '/analytics', icon: BarChart3, label: 'Analytics', package: 'premium' },
-    { path: '/ai-analyst', icon: Brain, label: 'AI Business Analyst', package: 'premium' },
+    { path: '/business-analyst', icon: Brain, label: 'Business Analyst', package: 'premium' },
     
-    // Profile (available in all packages)
     { path: '/profile', icon: User, label: 'Profile', package: 'startup' },
   ];
 
   const isFeatureLocked = (_itemPackage: PackageType): boolean => {
-    void _itemPackage;
-    // By default, everything is unlocked. If you want to re-enable gating,
-    // set localStorage.lockFeatures = '1' or set a lower userPackage.
-    return false;
+    const lockFlag = localStorage.getItem('lockFeatures');
+    const gatingEnabled = lockFlag === null ? true : lockFlag === '1';
+    if (!gatingEnabled) return false;
+
+    const ls = localStorage.getItem('userPackage');
+    const userPackageRaw = (userPackage || ls || 'startup') as PackageType;
+    const order: Record<PackageType, number> = { startup: 0, essential: 1, premium: 2 };
+    const userOrder = order[userPackageRaw] ?? 0;
+    const requiredOrder = order[_itemPackage] ?? 0;
+    return userOrder < requiredOrder;
   };
 
   const closeAllSecondaryNavs = () => {
     setIsDashboardSubNavOpen(false);
     setIsScheduleSubNavOpen(false);
     setIsLearningSubNavOpen(false);
-    setIsCommunitySubNavOpen(false);
     setIsAppStoreSubNavOpen(false);
     onDashboardToggle?.(false);
     onScheduleToggle?.(false);
@@ -293,27 +283,23 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
           {navItems.map((item) => {
             const locked = isFeatureLocked(item.package);
             // Create upgrade path by removing leading slash and adding /upgrade prefix
-            const upgradePath = `/upgrade${item.path}`;
+            // Some sections have custom upgrade routes.
+            const upgradePath =
+              item.path === '/applications' ? '/upgrade/app-store' : `/upgrade${item.path}`;
 
             // Special handling for Dashboard - add arrow button with click
             if (item.path === '/dashboard') {
               return (
-                <li 
-                  key={item.path}
-                  className="relative group"
-                >
+                <li key={item.path} className="relative group">
                   <NavLink
                     to="/dashboard/overview"
                     onClick={() => {
                       onClose?.();
-                      // Close other secondary sidebars
                       setIsScheduleSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
-                      setIsCommunitySubNavOpen(false);
                       setIsAppStoreSubNavOpen(false);
                       onScheduleToggle?.(false);
                       onLearningToggle?.(false);
-                      onCommunityToggle?.(false);
                       onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
@@ -325,18 +311,9 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
+                      {React.createElement(item.icon, { className: 'w-4 h-4 flex-shrink-0' }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
-                    {!collapsed && (
-                      <div className="flex items-center space-x-1">
-                        {item.package === "essential" ? (
-                          <Star className="w-3 h-3 text-blue-500" />
-                        ) : item.package === "premium" ? (
-                          <Zap className="w-3 h-3 text-purple-500" />
-                        ) : null}
-                      </div>
-                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -357,22 +334,16 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
             // Special handling for Schedule - add arrow button with click
             if (item.path === '/schedule') {
               return (
-                <li 
-                  key={item.path}
-                  className="relative group"
-                >
+                <li key={item.path} className="relative group">
                   <NavLink
                     to="/schedule/events"
                     onClick={() => {
                       onClose?.();
-                      // Close other secondary sidebars
                       setIsDashboardSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
-                      setIsCommunitySubNavOpen(false);
                       setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onLearningToggle?.(false);
-                      onCommunityToggle?.(false);
                       onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
@@ -384,18 +355,9 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
+                      {React.createElement(item.icon, { className: 'w-4 h-4 flex-shrink-0' }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
-                    {!collapsed && (
-                      <div className="flex items-center space-x-1">
-                        {item.package === "essential" ? (
-                          <Star className="w-3 h-3 text-blue-500" />
-                        ) : item.package === "premium" ? (
-                          <Zap className="w-3 h-3 text-purple-500" />
-                        ) : null}
-                      </div>
-                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -416,22 +378,16 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
             // Special handling for Learning - add arrow button with click
             if (item.path === '/learning') {
               return (
-                <li 
-                  key={item.path}
-                  className="relative group"
-                >
+                <li key={item.path} className="relative group">
                   <NavLink
                     to="/learning?category=business-plan"
                     onClick={() => {
                       onClose?.();
-                      // Close other secondary sidebars
                       setIsDashboardSubNavOpen(false);
                       setIsScheduleSubNavOpen(false);
-                      setIsCommunitySubNavOpen(false);
                       setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onScheduleToggle?.(false);
-                      onCommunityToggle?.(false);
                       onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
@@ -443,18 +399,9 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
+                      {React.createElement(item.icon, { className: 'w-4 h-4 flex-shrink-0' }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
-                    {!collapsed && (
-                      <div className="flex items-center space-x-1">
-                        {item.package === "essential" ? (
-                          <Star className="w-3 h-3 text-blue-500" />
-                        ) : item.package === "premium" ? (
-                          <Zap className="w-3 h-3 text-purple-500" />
-                        ) : null}
-                      </div>
-                    )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -472,113 +419,55 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
               );
             }
 
-            // Special handling for Community - add arrow button with click
-            if (item.path === '/community/discussions') {
-              return (
-                <li 
-                  key={item.path}
-                  className="relative group"
-                >
-                  <NavLink
-                    to="/community/discussions"
-                    onClick={() => {
-                      onClose?.();
-                      // Close other secondary sidebars
-                      setIsDashboardSubNavOpen(false);
-                      setIsScheduleSubNavOpen(false);
-                      setIsLearningSubNavOpen(false);
-                      setIsAppStoreSubNavOpen(false);
-                      onDashboardToggle?.(false);
-                      onScheduleToggle?.(false);
-                      onLearningToggle?.(false);
-                      onAppStoreToggle?.(false);
-                    }}
-                    className={({ isActive }) =>
-                      `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }`
-                    }
-                  >
-                    <div className="flex items-center space-x-2">
-                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
-                      {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
-                    </div>
-                    {!collapsed && (
-                      <div className="flex items-center space-x-1">
-                        {item.package === "essential" ? (
-                          <Star className="w-3 h-3 text-blue-500" />
-                        ) : item.package === "premium" ? (
-                          <Zap className="w-3 h-3 text-purple-500" />
-                        ) : null}
-                      </div>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newState = !isCommunitySubNavOpen;
-                        setIsCommunitySubNavOpen(newState);
-                        onCommunityToggle?.(newState);
-                      }}
-                      className="p-1 hover:bg-white/20 rounded transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </NavLink>
-                </li>
-              );
-            }
-
             // Special handling for App Store - add arrow button with click
             if (item.path === '/applications') {
               return (
-                <li 
-                  key={item.path}
-                  className="relative group"
-                >
+                <li key={item.path} className="relative group">
                   <NavLink
-                    to="/applications/crm"
+                    to={locked ? upgradePath : '/applications/crm'}
                     onClick={() => {
                       onClose?.();
-                      // Close other secondary sidebars
                       setIsDashboardSubNavOpen(false);
                       setIsScheduleSubNavOpen(false);
                       setIsLearningSubNavOpen(false);
-                      setIsCommunitySubNavOpen(false);
                       setIsAppStoreSubNavOpen(false);
                       onDashboardToggle?.(false);
                       onScheduleToggle?.(false);
                       onLearningToggle?.(false);
-                      onCommunityToggle?.(false);
                       onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-primary-50 text-primary-700'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        locked
+                          ? 'text-gray-400 hover:bg-gray-50'
+                          : isActive
+                            ? 'bg-primary-50 text-primary-700'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                       }`
                     }
                   >
                     <div className="flex items-center space-x-2">
-                      {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" }, null)}
+                      {React.createElement(item.icon, { className: 'w-4 h-4 flex-shrink-0' }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
                     {!collapsed && (
                       <div className="flex items-center space-x-1">
-                        {item.package === "essential" ? (
+                        {item.package === 'essential' ? (
                           <Star className="w-3 h-3 text-blue-500" />
-                        ) : item.package === "premium" ? (
+                        ) : item.package === 'premium' ? (
                           <Zap className="w-3 h-3 text-purple-500" />
                         ) : null}
+                        {locked && <Lock className="w-3 h-3" />}
                       </div>
                     )}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (locked) {
+                          navigate(upgradePath);
+                          return;
+                        }
                         const newState = !isAppStoreSubNavOpen;
                         setIsAppStoreSubNavOpen(newState);
                         onAppStoreToggle?.(newState);
@@ -678,6 +567,32 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
             );
           })}
         </ul>
+
+        {!onClose && isFreeTrial && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mb-3 p-3 rounded-lg bg-green-50 border border-green-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-green-800">
+                  <Gift className="w-4 h-4" />
+                  <span className="text-sm font-medium">Free Trial</span>
+                </div>
+                {typeof freeTrialRemainingDays === 'number' && (
+                  <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                    {freeTrialRemainingDays === 0 ? 'Ends today' : `${freeTrialRemainingDays} days left`}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  navigate('/select-package');
+                }}
+                className="mt-3 w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
+              >
+                Upgrade
+              </button>
+            </div>
+          </div>
+        )}
 
         {onClose && (
           <div className="mt-4 pt-4 border-t border-gray-200 md:hidden">

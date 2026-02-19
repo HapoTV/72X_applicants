@@ -1,11 +1,10 @@
 import React from 'react';
-import { AlertCircle, Clock, Gift, Check, Sparkles } from 'lucide-react';
+import { AlertCircle, Clock, Gift } from 'lucide-react';
 import Logo from '../../../assets/Logo.svg';
 
 interface PageHeaderProps {
   userStatus: string;
   currentSubscription: any;
-  eligibilityCheck: any;
   shouldShowFreeTrial: boolean;
   freeTrialStatus: any;
   isMandatorySelection: boolean;
@@ -17,7 +16,6 @@ interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({
   userStatus,
   currentSubscription,
-  eligibilityCheck,
   shouldShowFreeTrial,
   freeTrialStatus,
   isMandatorySelection,
@@ -136,10 +134,6 @@ const PageHeader: React.FC<PageHeaderProps> = ({
         </div>
       )}
 
-      <div className="hidden">
-        <Check className="h-4 w-4" />
-        <Sparkles className="h-4 w-4" />
-      </div>
     </div>
   );
 };

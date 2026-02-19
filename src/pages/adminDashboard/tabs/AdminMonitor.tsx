@@ -10,7 +10,6 @@ import {
 import { adminMonitoringService } from '../../../services/AdminMonitoringService';
 import { useAuth } from '../../../context/AuthContext';
 import type {
-  AdminDashboard,
   SystemMetrics,
   SupabaseMetrics,
   UserSubscription,
@@ -20,7 +19,6 @@ import type {
 
 const AdminMonitor: React.FC = () => {
   const { isSuperAdmin } = useAuth();
-  const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [supabaseMetrics, setSupabaseMetrics] = useState<SupabaseMetrics | null>(null);
@@ -56,8 +54,7 @@ const AdminMonitor: React.FC = () => {
       setError(null);
 
       // Fetch all data in parallel
-      const [dashboardData, statsData, metricsData, supabaseData, issuesData, subscriptionsData] = await Promise.all([
-        adminMonitoringService.getAdminDashboard(),
+      const [statsData, metricsData, supabaseData, issuesData, subscriptionsData] = await Promise.all([
         adminMonitoringService.getDashboardStats(),
         adminMonitoringService.getSystemMetrics(),
         adminMonitoringService.getSupabaseMetrics(),
@@ -65,7 +62,6 @@ const AdminMonitor: React.FC = () => {
         adminMonitoringService.getUserSubscriptions()
       ]);
 
-      setDashboard(dashboardData);
       setStats(statsData);
       setMetrics(metricsData);
       setSupabaseMetrics(supabaseData);
@@ -79,11 +75,6 @@ const AdminMonitor: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  const refreshData = () => {
-    setRefreshing(true);
-    fetchAllData();
   };
 
   useEffect(() => {

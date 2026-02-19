@@ -1,7 +1,7 @@
 // src/components/Header.tsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Menu, Bell, Search, LogOut, Clock, Gift, ChevronDown, BellRing } from 'lucide-react';
+import { Menu, Bell, Search, Clock, Gift, ChevronDown, BellRing } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationService from '../services/NotificationService';
 import UserSubscriptionService from '../services/UserSubscriptionService';
@@ -38,6 +38,24 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
 
   // Check if user is on free trial - using both status and trial info
   const isFreeTrial = userStatus === 'FREE_TRIAL';
+
+  const localFreeTrialInfo = useMemo<FreeTrialInfo | null>(() => {
+    if (!isFreeTrial) return null;
+    const startDateRaw = localStorage.getItem('freeTrialStartDate');
+    if (!startDateRaw) return null;
+    const startDate = new Date(startDateRaw);
+    if (Number.isNaN(startDate.getTime())) return null;
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 14);
+    const remainingDays = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    return {
+      remainingDays: Math.max(0, remainingDays),
+      endDate: endDate.toISOString(),
+      isActive: remainingDays > 0,
+    };
+  }, [isFreeTrial]);
+
+  const effectiveFreeTrialInfo = freeTrialInfo ?? localFreeTrialInfo;
 
   useEffect(() => {
     fetchUnreadCount();
@@ -137,9 +155,9 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   };
 
   const getTrialProgressPercentage = (): number => {
-    if (!freeTrialInfo) return 0;
+    if (!effectiveFreeTrialInfo) return 0;
     const totalDays = 14;
-    const usedDays = totalDays - freeTrialInfo.remainingDays;
+    const usedDays = totalDays - effectiveFreeTrialInfo.remainingDays;
     return Math.min(100, Math.max(0, (usedDays / totalDays) * 100));
   };
 
@@ -216,14 +234,6 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     navigate('/');
   };
 
-  // Debug log to check conditions
-  console.log('Header render - Conditions:', {
-    isFreeTrial,
-    hasFreeTrialInfo: !!freeTrialInfo,
-    remainingDays: freeTrialInfo?.remainingDays,
-    userStatus
-  });
-
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
@@ -269,30 +279,45 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* Free Trial Indicator - Show if user is on free trial AND has trial info */}
-          {isFreeTrial && freeTrialInfo && (
-            <div ref={freeTrialRef} className="relative hidden sm:block">
+          {/* Free Trial Indicator - Show for FREE_TRIAL users (details only if trial info available) */}
+          {isFreeTrial && (
+            <div ref={freeTrialRef} className="relative">
               <button
-                onClick={() => setFreeTrialDropdownOpen(!freeTrialDropdownOpen)}
+                onClick={() => {
+                  if (!effectiveFreeTrialInfo) {
+                    handleUpgradeClick();
+                    return;
+                  }
+                  setFreeTrialDropdownOpen(!freeTrialDropdownOpen);
+                }}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:border-green-300 transition-all group"
               >
                 <div className="flex items-center space-x-2">
                   <Gift className="w-4 h-4 text-green-600" />
                   <span className="text-sm font-medium text-green-700">Free Trial</span>
                 </div>
-                <div className="flex items-center space-x-1">
+
+                {effectiveFreeTrialInfo ? (
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                      {effectiveFreeTrialInfo.remainingDays > 0
+                        ? formatRemainingTime(effectiveFreeTrialInfo.remainingDays)
+                        : 'Expired'}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-green-600 transition-transform ${
+                        freeTrialDropdownOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </div>
+                ) : (
                   <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
-                    {freeTrialInfo.remainingDays > 0 
-                      ? formatRemainingTime(freeTrialInfo.remainingDays)
-                      : 'Expired'}
+                    Active
                   </span>
-                  <ChevronDown className={`w-4 h-4 text-green-600 transition-transform ${
-                    freeTrialDropdownOpen ? 'rotate-180' : ''
-                  }`} />
-                </div>
+                )}
               </button>
 
-              {freeTrialDropdownOpen && (
+              {effectiveFreeTrialInfo && freeTrialDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 overflow-hidden">
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -301,7 +326,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                         <h3 className="font-semibold text-gray-900">Free Trial Status</h3>
                       </div>
                       <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
-                        {freeTrialInfo.remainingDays > 0 ? 'Active' : 'Expired'}
+                        {effectiveFreeTrialInfo.remainingDays > 0 ? 'Active' : 'Expired'}
                       </span>
                     </div>
                     
@@ -309,7 +334,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-gray-600">Trial Progress</span>
                         <span className="font-medium text-gray-900">
-                          {14 - freeTrialInfo.remainingDays} of 14 days used
+                          {14 - effectiveFreeTrialInfo.remainingDays} of 14 days used
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -325,7 +350,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                         <Clock className="w-4 h-4 text-blue-600" />
                         <div>
                           <p className="text-xs text-blue-700 font-medium">Ends on</p>
-                          <p className="text-sm text-gray-900">{formatDate(freeTrialInfo.endDate)}</p>
+                          <p className="text-sm text-gray-900">{formatDate(effectiveFreeTrialInfo.endDate)}</p>
                         </div>
                       </div>
                       
@@ -333,7 +358,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                         <Gift className="w-4 h-4 text-amber-600" />
                         <div>
                           <p className="text-xs text-amber-700 font-medium">Remaining</p>
-                          <p className="text-sm text-gray-900">{formatRemainingTime(freeTrialInfo.remainingDays)}</p>
+                          <p className="text-sm text-gray-900">{formatRemainingTime(effectiveFreeTrialInfo.remainingDays)}</p>
                         </div>
                       </div>
                     </div>
