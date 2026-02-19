@@ -13,7 +13,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { 
   Loader2, 
   Search, 
-  Filter, 
   Download, 
   Eye, 
   User, 
@@ -78,6 +77,26 @@ const AdminPaymentsTab: React.FC = () => {
   const [revenueAnalytics, setRevenueAnalytics] = useState<RevenueAnalytics | null>(null);
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days' | '1year'>('30days');
 
+  // Check if user is super admin
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
+          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600 mb-4">
+            Only Super Admins can access the Payment Administration page.
+          </p>
+          <div className="bg-red-100 p-4 rounded-lg">
+            <p className="text-sm text-red-700">
+              If you need payment administration access, please contact your system administrator.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     fetchPayments();
     fetchStats();
@@ -95,6 +114,7 @@ const AdminPaymentsTab: React.FC = () => {
       }
       
       const data = await paymentService.getAllPayments(apiFilters);
+      console.log('Fetched payments:', data);
       setPayments(data);
       
       // Extract unique organisations for filter
@@ -112,6 +132,7 @@ const AdminPaymentsTab: React.FC = () => {
   const fetchStats = async () => {
     try {
       const statsData = await paymentService.getAdminPaymentStats();
+      console.log('Fetched stats:', statsData);
       setStats(statsData);
     } catch (err: any) {
       console.error('Error fetching stats:', err);
@@ -153,6 +174,7 @@ const AdminPaymentsTab: React.FC = () => {
         startDate.toISOString(),
         endDate
       );
+      console.log('Fetched revenue analytics:', analytics);
       setRevenueAnalytics(analytics);
     } catch (err: any) {
       console.error('Error fetching revenue analytics:', err);
@@ -274,6 +296,7 @@ const AdminPaymentsTab: React.FC = () => {
   };
 
   const formatCurrency = (amount: number, currency: string = 'ZAR'): string => {
+    if (!amount && amount !== 0) return 'R0';
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: currency,
@@ -283,13 +306,18 @@ const AdminPaymentsTab: React.FC = () => {
   };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-ZA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-ZA', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return dateString;
+    }
   };
 
   if (loading && payments.length === 0) {
@@ -397,7 +425,7 @@ const AdminPaymentsTab: React.FC = () => {
       </div>
 
       {/* Time Range Filter for Analytics */}
-      {revenueAnalytics && (
+      {revenueAnalytics && revenueAnalytics.monthlyRevenue && revenueAnalytics.monthlyRevenue.length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -438,9 +466,9 @@ const AdminPaymentsTab: React.FC = () => {
               </div>
 
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-600">Top Customers</p>
+                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {revenueAnalytics.topCustomers.length}
+                  {formatCurrency(revenueAnalytics.totalRevenue)}
                 </p>
               </div>
             </div>
@@ -449,7 +477,7 @@ const AdminPaymentsTab: React.FC = () => {
       )}
 
       {/* Top Customers */}
-      {stats.topCustomers.length > 0 && (
+      {stats.topCustomers && stats.topCustomers.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -741,7 +769,7 @@ const AdminPaymentsTab: React.FC = () => {
         <div className="bg-white p-4 rounded-lg border">
           <p className="text-sm text-gray-600">Unique Customers</p>
           <p className="text-xl font-bold text-blue-600">
-            {stats.topCustomers.length}
+            {stats.topCustomers?.length || 0}
           </p>
         </div>
       </div>

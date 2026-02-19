@@ -23,7 +23,10 @@ import Marketplace from './pages/Marketplace';
 import MentorshipHub from './pages/MentorshipHub';
 import AIBusinessAnalyst from './pages/AIBusinessAnalyst';
 import Notifications from './pages/Notifications';
-import Login from './pages/Login';
+// Login pages
+import UserLogin from './pages/login/UserLogin';
+import AdminLogin from './pages/login/AdminLogin';
+import SuperAdminLogin from './pages/login/SuperAdminLogin';
 import VerifyOtp from './pages/VerifyOtp';
 import BizBoostChatbot from './components/Chatbot';
 import LandingPage from './pages/LandingPage';
@@ -42,6 +45,13 @@ import ResetPasswordVerify from './pages/ResetPasswordVerify';
 import CRM from './pages/applications/CRM';
 import FinanceManager from './pages/applications/FinanceManager';
 
+import BusinessPlanning from './pages/learning/BusinessPlanning';
+import MarketingSales from './pages/learning/MarketingSales';
+import FinancialManagement from './pages/learning/FinancialManagement';
+import Operations from './pages/learning/Operations';
+import Leadership from './pages/learning/Leadership';
+import Technical from './pages/learning/Technical';
+
 // Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
 import MentorshipUpgrade from './pages/upgrades/MentorshipUpgrade';
@@ -53,13 +63,11 @@ import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
 
 // Admin Routes
 import AdminRoutes from './routes/AdminRoutes';
-
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 
 // Routes
 import PaymentRoutes from './routes/paymentRoutes';
-
 import MyConnections from './pages/MyConnections';
 
 function App() {
@@ -77,8 +85,11 @@ function App() {
             {/* Public landing page */}
             <Route path="/" element={<LandingPage />} />
 
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
+            {/* Public routes - Split Login Pages */}
+            <Route path="/login" element={<UserLogin />} />
+            <Route path="/login/asadmin" element={<AdminLogin />} />
+            <Route path="/login/haposuperadmin" element={<SuperAdminLogin />} />
+            
             <Route path="/verify-otp" element={<VerifyOtp />} />
             <Route path="/request-demo" element={<RequestDemo />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -125,7 +136,13 @@ function App() {
 
                           {/* Learning Routes */}
                           <Route path="/learning" element={<LearningModules />} />
-                          <Route path="/learning/:category" element={<LearningModules />} />
+                          
+                          <Route path="/learning/business-planning" element={<BusinessPlanning />} />
+                          <Route path="/learning/marketing-sales" element={<MarketingSales />} />
+                          <Route path="/learning/financial-management" element={<FinancialManagement />} />
+                          <Route path="/learning/operations" element={<Operations />} />
+                          <Route path="/learning/leadership" element={<Leadership />} />
+                          <Route path="/learning/technical" element={<Technical />} />
 
                           {/* Community Routes */}
                           <Route path="/community" element={<Community />} />

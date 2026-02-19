@@ -34,6 +34,7 @@ const MyConnections: React.FC = () => {
     setSelectedOrganisation,
     clearFilters,
     refetch,
+    refreshConversations, // Make sure this is exported from useConnections
   } = useConnections(authUser?.userId);
 
   const handleStartChat = (user: ConnectionUser) => {
@@ -44,6 +45,13 @@ const MyConnections: React.FC = () => {
   const handleCloseChat = () => {
     setChatOpen(false);
     setSelectedUser(null);
+    // Refresh conversations when chat closes to update unread counts
+    refreshConversations();
+  };
+
+  const handleMarkAsRead = () => {
+    // Refresh conversations after marking messages as read
+    refreshConversations();
   };
 
   if (loading) {
@@ -143,7 +151,12 @@ const MyConnections: React.FC = () => {
       )}
 
       {/* Chat Dialog */}
-      <ChatDialog selectedUser={selectedUser} isOpen={chatOpen} onClose={handleCloseChat} />
+      <ChatDialog 
+        selectedUser={selectedUser} 
+        isOpen={chatOpen} 
+        onClose={handleCloseChat}
+        onMarkAsRead={handleMarkAsRead}
+      />
     </div>
   );
 };

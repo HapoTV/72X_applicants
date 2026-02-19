@@ -50,8 +50,9 @@ export function useConnections(authUserId?: string) {
     setVisibleCount(DEFAULT_VISIBLE_CONNECTIONS);
   }, [searchTerm, selectedIndustry, selectedLocation, selectedOrganisation]);
 
+  // Separate effect for loading conversations after users are loaded
   useEffect(() => {
-    if (!authUserId) return;
+    if (!authUserId || users.length === 0) return;
 
     const loadConversations = async () => {
       try {
@@ -72,19 +73,24 @@ export function useConnections(authUserId?: string) {
           };
         }
         setConversationMetaByUserId(meta);
-      } catch {
-        // ignore; list still works without conversation ordering
+      } catch (error) {
+        console.error('Error loading conversations:', error);
+        // Don't set error state here to avoid blocking the UI
       }
     };
 
     loadConversations();
+    
+    // Set up polling every 15 seconds
     const interval = window.setInterval(loadConversations, 15000);
     return () => window.clearInterval(interval);
-  }, [authUserId]);
+  }, [authUserId, users.length]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       const response = await MessageServices.getChatUsers();
       const mappedUsers: ConnectionUser[] = (response as any[]).map((u) => {
         const fullName = (u.fullName || '').trim();
@@ -212,6 +218,29 @@ export function useConnections(authUserId?: string) {
     setSelectedOrganisation('all');
   };
 
+  // Function to refresh conversations (can be called after sending a message)
+  const refreshConversations = async () => {
+    if (!authUserId) return;
+    
+    try {
+      const conversations: Conversation[] = await MessageServices.getUserConversations();
+      const meta: Record<string, ConversationMeta> = {};
+      
+      for (const c of conversations) {
+        const otherUserId = c.user1Id === authUserId ? c.user2Id : c.user1Id;
+        meta[otherUserId] = {
+          unread: c.unreadCount || 0,
+          lastMessageAt: c.lastMessageAt,
+          conversationId: c.conversationId,
+          lastMessage: c.lastMessage || ''
+        };
+      }
+      setConversationMetaByUserId(meta);
+    } catch (error) {
+      console.error('Error refreshing conversations:', error);
+    }
+  };
+
   return {
     users,
     visibleUsers,
@@ -234,5 +263,6 @@ export function useConnections(authUserId?: string) {
     setSelectedOrganisation,
     clearFilters,
     refetch: fetchUsers,
+    refreshConversations, // Export this to use in components
   };
 }

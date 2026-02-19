@@ -68,11 +68,12 @@ class UserSubscriptionService {
 
   async getFreeTrialStatus(): Promise<any> {
     try {
-      const userId = this.getCurrentUserId();
+      // CORRECTED: Remove userId from path - use the correct endpoint that matches your backend
       const response = await axios.get(
-        `${API_BASE_URL}/free-trial/status/${userId}`,
+        `${API_BASE_URL}/free-trial/status`,
         { headers: this.getAuthHeaders() }
       );
+      console.log('Free trial status response:', response.data); // Add logging to debug
       return response.data;
     } catch (error) {
       console.error('Error getting free trial status:', error);
@@ -145,19 +146,18 @@ class UserSubscriptionService {
     return userId;
   }
 
-async checkFreeTrialEligibility(): Promise<any> {
-  try {
-    const response = await axios.get(
-      `${API_BASE_URL}/free-trial/check-eligibility`,
-      { headers: this.getAuthHeaders() }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Error checking free trial eligibility:', error);
-    throw error;
+  async checkFreeTrialEligibility(): Promise<any> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/free-trial/check-eligibility`,
+        { headers: this.getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error checking free trial eligibility:', error);
+      throw error;
+    }
   }
-}
-
 }
 
 export default new UserSubscriptionService();

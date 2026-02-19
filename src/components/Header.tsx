@@ -1,34 +1,43 @@
 // src/components/Header.tsx
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Menu, Bell, Search, LogOut, Clock, Gift, ChevronDown } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Menu, Bell, Search, LogOut, Clock, Gift, ChevronDown, BellRing } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import NotificationService from '../services/NotificationService';
 import UserSubscriptionService from '../services/UserSubscriptionService';
+import NotificationPopup from './NotificationPopup';
+import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
 }
 
+interface FreeTrialInfo {
+  remainingDays: number;
+  endDate: string;
+  isActive: boolean;
+}
+
 const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const navigate = useNavigate();
+  const { user, isSuperAdmin, userOrganisation } = useAuth();
   const userEmail = localStorage.getItem('userEmail');
   const userStatus = localStorage.getItem('userStatus');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [freeTrialDropdownOpen, setFreeTrialDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationPopupOpen, setNotificationPopupOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const freeTrialRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [freeTrialInfo, setFreeTrialInfo] = useState<{
-    remainingDays: number;
-    endDate: string;
-    isActive: boolean;
-  } | null>(null);
+  const [freeTrialInfo, setFreeTrialInfo] = useState<FreeTrialInfo | null>(null);
+  const [isLoadingTrial, setIsLoadingTrial] = useState(false);
 
-  // Check if user is on free trial
-  const isFreeTrial = userStatus === 'FREE_TRIAL' || freeTrialInfo?.isActive;
+  // Check if user is on free trial - using both status and trial info
+  const isFreeTrial = userStatus === 'FREE_TRIAL';
 
   useEffect(() => {
     fetchUnreadCount();
@@ -39,13 +48,12 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   useEffect(() => {
     if (isFreeTrial) {
       fetchFreeTrialInfo();
-      // Update every hour to show accurate remaining time
-      const interval = setInterval(fetchFreeTrialInfo, 3600000);
+      // Update more frequently to keep countdown accurate (every 30 minutes)
+      const interval = setInterval(fetchFreeTrialInfo, 30 * 60 * 1000); // 30 minutes
       return () => clearInterval(interval);
     }
   }, [isFreeTrial]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (freeTrialRef.current && !freeTrialRef.current.contains(event.target as Node)) {
@@ -62,62 +70,68 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
 
   const fetchUnreadCount = async () => {
     try {
-      const response = await NotificationService.getUserNotifications(true);
-      setUnreadCount(response.unreadCount);
+      const count = await NotificationService.getUnreadCount();
+      setUnreadCount(count);
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
   };
 
   const fetchFreeTrialInfo = async () => {
+    if (isLoadingTrial) return;
+    
+    setIsLoadingTrial(true);
     try {
       const response = await UserSubscriptionService.getFreeTrialStatus();
-      if (response.success && response.remainingDays !== undefined) {
+      console.log('Free trial API response:', response);
+      
+      // Check if we have valid trial data
+      if (response && response.success === true && response.remaining_days !== undefined && response.remaining_days !== null) {
+        // Calculate end date if not provided
+        let endDate = response.trial_end_date;
+        if (!endDate && response.remaining_days > 0) {
+          const date = new Date();
+          date.setDate(date.getDate() + response.remaining_days);
+          endDate = date.toISOString();
+        }
+        
         setFreeTrialInfo({
-          remainingDays: response.remainingDays,
-          endDate: response.trialEndDate || calculateEndDate(response.remainingDays),
-          isActive: true
+          remainingDays: response.remaining_days,
+          endDate: endDate || new Date().toISOString(),
+          isActive: response.remaining_days > 0
+        });
+        console.log('Set free trial info:', {
+          remainingDays: response.remaining_days,
+          endDate: endDate
         });
       } else {
-        // If API doesn't return data, calculate based on user status
-        if (isFreeTrial) {
-          // Calculate approximate end date (14 days from start)
-          // You might want to store the actual start date somewhere
-          const startDate = localStorage.getItem('freeTrialStartDate') || new Date().toISOString();
-          const endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + 14);
-          const remainingDays = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-          
-          setFreeTrialInfo({
-            remainingDays: Math.max(0, remainingDays),
-            endDate: endDate.toISOString(),
-            isActive: remainingDays > 0
-          });
-        }
+        // No active trial
+        setFreeTrialInfo(null);
       }
     } catch (error) {
       console.error('Error fetching free trial info:', error);
+      setFreeTrialInfo(null);
+    } finally {
+      setIsLoadingTrial(false);
     }
   };
 
-  const calculateEndDate = (remainingDays: number): string => {
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + remainingDays);
-    return endDate.toISOString();
-  };
-
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Date unavailable';
+    }
   };
 
   const formatRemainingTime = (remainingDays: number): string => {
-    if (remainingDays === 0) return 'Ends today';
+    if (remainingDays <= 0) return 'Expired';
     if (remainingDays === 1) return '1 day left';
     return `${remainingDays} days left`;
   };
@@ -140,6 +154,11 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     navigate('/select-package');
   };
 
+  const handleNotificationClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setNotificationPopupOpen(!notificationPopupOpen);
+  };
+
   const index = useMemo(
     () => [
       { title: 'Dashboard', path: '/', keywords: ['home', 'overview', 'metrics'] },
@@ -157,7 +176,6 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
       { title: 'Settings', path: '/profile', keywords: ['profile', 'account', 'my info', 'my information'] },
       { title: 'Analytics', path: '/analytics', keywords: ['data', 'insights', 'reports', 'customers', 'growth'] },
       { title: 'Data Input', path: '/data-input', keywords: ['data', 'input', 'capture', 'customers', 'growth'] },
-      { title: 'Notifications', path: '/notifications', keywords: ['alerts', 'messages', 'updates', 'bell'] },
     ],
     []
   );
@@ -199,6 +217,14 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     localStorage.removeItem('freeTrialStartDate');
     navigate('/');
   };
+
+  // Debug log to check conditions
+  console.log('Header render - Conditions:', {
+    isFreeTrial,
+    hasFreeTrialInfo: !!freeTrialInfo,
+    remainingDays: freeTrialInfo?.remainingDays,
+    userStatus
+  });
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
@@ -245,7 +271,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
         </div>
 
         <div className="flex items-center space-x-4">
-          {/* Free Trial Indicator - Only show when user is on free trial */}
+          {/* Free Trial Indicator - Show if user is on free trial AND has trial info */}
           {isFreeTrial && freeTrialInfo && (
             <div ref={freeTrialRef} className="relative hidden sm:block">
               <button
@@ -258,7 +284,9 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                 </div>
                 <div className="flex items-center space-x-1">
                   <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
-                    {formatRemainingTime(freeTrialInfo.remainingDays)}
+                    {freeTrialInfo.remainingDays > 0 
+                      ? formatRemainingTime(freeTrialInfo.remainingDays)
+                      : 'Expired'}
                   </span>
                   <ChevronDown className={`w-4 h-4 text-green-600 transition-transform ${
                     freeTrialDropdownOpen ? 'rotate-180' : ''
@@ -266,7 +294,6 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                 </div>
               </button>
 
-              {/* Free Trial Dropdown */}
               {freeTrialDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 overflow-hidden">
                   <div className="p-4">
@@ -276,7 +303,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                         <h3 className="font-semibold text-gray-900">Free Trial Status</h3>
                       </div>
                       <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">
-                        Active
+                        {freeTrialInfo.remainingDays > 0 ? 'Active' : 'Expired'}
                       </span>
                     </div>
                     
@@ -332,35 +359,58 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
           )}
 
           {/* Notification Button */}
-          <Link
-            to="/notifications"
-            className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          <button
+            ref={notificationButtonRef}
+            onClick={handleNotificationClick}
+            className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
-            <Bell className="w-5 h-5 text-gray-600" />
+            {unreadCount > 0 ? (
+              <BellRing className="w-5 h-5 text-primary-600" />
+            ) : (
+              <Bell className="w-5 h-5 text-gray-600" />
+            )}
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
-          </Link>
+          </button>
+
+          <NotificationPopup
+            isOpen={notificationPopupOpen}
+            onClose={() => setNotificationPopupOpen(false)}
+            anchorEl={notificationButtonRef as React.RefObject<HTMLElement>}
+          />
 
           <div ref={userMenuRef} className="relative flex items-center space-x-3">
             <button
               type="button"
               onClick={() => setUserMenuOpen((v) => !v)}
-              className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center"
+              className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center hover:bg-primary-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               aria-label="User menu"
             >
               <span className="text-white text-sm font-medium">
-                {userEmail ? userEmail.charAt(0).toUpperCase() : 'U'}
+                {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 
+                 userEmail ? userEmail.charAt(0).toUpperCase() : 'U'}
               </span>
             </button>
 
             {userMenuOpen && (
               <div className="absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
                 <div className="p-3 border-b border-gray-100">
-                  <div className="text-sm font-medium text-gray-900">{userEmail || 'User'}</div>
-                  {userStatus && <div className="text-xs text-gray-500">Status: {userStatus}</div>}
+                  <div className="text-sm font-medium text-gray-900">
+                    {user?.fullName || userEmail || 'User'}
+                  </div>
+                  <div className="text-xs text-gray-500">{user?.email || userEmail}</div>
+                  {userStatus && <div className="text-xs text-gray-500 mt-1">Status: {userStatus}</div>}
+                  {freeTrialInfo && (
+                    <div className="text-xs text-green-600 mt-1">
+                      Trial: {freeTrialInfo.remainingDays} days left
+                    </div>
+                  )}
+                  {userOrganisation && (
+                    <div className="text-xs text-blue-600 mt-1">{userOrganisation}</div>
+                  )}
                 </div>
 
                 <div className="p-2">
@@ -373,18 +423,38 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                   >
                     Profile
                   </button>
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      navigate('/notifications');
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 text-sm text-gray-700"
+                  >
+                    Notifications
+                  </button>
+                  {isSuperAdmin && (
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        navigate('/admin/notifications');
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 text-sm text-gray-700"
+                    >
+                      Admin Panel
+                    </button>
+                  )}
+                </div>
+
+                <div className="border-t border-gray-100 p-2">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 rounded-md hover:bg-red-50 text-sm text-red-600"
+                  >
+                    Logout
+                  </button>
                 </div>
               </div>
             )}
-
-            <button
-              onClick={handleLogout}
-              className="hidden md:flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm">Logout</span>
-            </button>
           </div>
         </div>
       </div>

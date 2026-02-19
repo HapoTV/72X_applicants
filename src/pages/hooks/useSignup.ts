@@ -16,6 +16,7 @@ export interface SignupFormState {
   employees: string;
   hasBankReference: boolean;
   businessReference: string;
+  organisation: string; // Added organisation
   acceptTerms: boolean;
 }
 
@@ -79,11 +80,13 @@ export function useSignup() {
       setError('Number of employees is required');
       return false;
     }
-    const employeesNum = parseInt(form.employees.replace(/,/g, ''));
-    if (isNaN(employeesNum) || employeesNum < 1 || employeesNum > 1000000) {
-      setError('Please enter a valid number of employees (1 - 1,000,000)');
+    
+    // Validate organisation if hasBankReference is true
+    if (form.hasBankReference && !form.organisation) {
+      setError('Please select an organisation');
       return false;
     }
+    
     if (!form.acceptTerms) {
       setError('Please accept the terms and conditions');
       return false;
@@ -108,6 +111,7 @@ export function useSignup() {
         employees: form.employees,
         hasReference: form.hasBankReference,
         businessReference: form.businessReference || undefined,
+        organisation: form.organisation, // Pass organisation
         role: 'USER',
         status: 'PENDING_PASSWORD',
       };

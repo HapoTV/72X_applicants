@@ -1,417 +1,484 @@
 // src/pages/adminDashboard/tabs/ApplicantsTab.tsx
 import { useState, useEffect } from 'react';
-import { applicationService } from '../../../services/ApplicantService';
-import { useAuth } from '../../../context/AuthContext'; // Add this import
-import { Building2, Shield, Eye, CheckCircle, XCircle } from 'lucide-react'; // Add icons
+import axiosClient from '../../../api/axiosClient';
+import { useAuth } from '../../../context/AuthContext';
 
-import type { Application as ApiApplication, ApplicationStatus } from '../../../interfaces/ApplicantData';
+import { UserManagementHeader } from './components/UserManagementHeader';
+import { UserStats } from './components/UserStats';
+import { UserFilters } from './components/UserFilters';
+import { UserTable } from './components/UserTable';
+import { AddUserModal } from './components/AddUserModal';
 
-interface Application {
-    id: string;
-    referenceNumber: string;
-    businessName: string;
-    businessOwner: string;
-    package: string;
-    submitted: string;
-    actions: string;
-    status: 'Pending' | 'Active' | 'Inactive';
-    userEmail: string;
-    organisation?: string; // NEW: Add organisation field
-}
+import type { User } from '../../../interfaces/UserData';
+import type { UserWithSubscription, StatsData, NewUserData } from './components/types';
 
 export default function ApplicantsTab() {
-    const { isSuperAdmin, userOrganisation } = useAuth(); // NEW: Get auth context
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All');
-    const [organisationFilter, setOrganisationFilter] = useState<string>('all'); // NEW: Organisation filter
-    const [applications, setApplications] = useState<Application[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [organisations, setOrganisations] = useState<string[]>([]); // NEW: List of unique organisations
+  const { isSuperAdmin, userOrganisation, user, updateUserOrganisation } = useAuth();
+  const [users, setUsers] = useState<UserWithSubscription[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserWithSubscription[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [roleFilter, setRoleFilter] = useState('All');
+  const [organisationFilter, setOrganisationFilter] = useState<string>('all');
+  const [organisations, setOrganisations] = useState<string[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [stats, setStats] = useState<StatsData>({
+    totalUsers: 0,
+    activeUsers: 0,
+    onlineUsers: 0,
+    offlineUsers: 0,
+    inactiveUsers: 0,
+    freeTrialUsers: 0,
+    totalOrganisations: 0,
+    adminsCount: 0,
+    usersCount: 0
+  });
+  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+  const [newAdminData, setNewAdminData] = useState<NewUserData>({
+    fullName: '',
+    email: '',
+    mobileNumber: '',
+    companyName: '',
+    organisation: '',
+    employees: '',
+    founded: '',
+    industry: '',
+    location: '',
+    role: 'ADMIN',
+    status: 'ACTIVE'
+  });
+  const [addingAdmin, setAddingAdmin] = useState(false);
 
-    // Stats calculation with organisation filtering
-    const filteredForStats = applications.filter(app => {
-        // For non-super-admins, filter by their organisation
-        if (!isSuperAdmin && userOrganisation) {
-            return app.organisation === userOrganisation;
-        }
-        return true;
-    });
-
-    const stats = [
-        { 
-            title: 'Total Applicants', 
-            value: filteredForStats.length.toString(), 
-            icon: '📄',
-            color: 'blue'
-        },
-        { 
-            title: 'Active', 
-            value: filteredForStats.filter(app => app.status === 'Active').length.toString(), 
-            icon: '✅',
-            color: 'green'
-        },
-        { 
-            title: 'Pending', 
-            value: filteredForStats.filter(app => app.status === 'Pending').length.toString(), 
-            icon: '⏳',
-            color: 'yellow'
-        },
-        { 
-            title: 'Inactive', 
-            value: filteredForStats.filter(app => app.status === 'Inactive').length.toString(), 
-            icon: '❌',
-            color: 'red'
-        },
-    ];
-
-    useEffect(() => {
-        fetchApplications();
-    }, []);
-
-    const fetchApplications = async () => {
+  // Fetch current user's organisation if missing
+  useEffect(() => {
+    const fetchCurrentUserOrganisation = async () => {
+      if (!isSuperAdmin && !userOrganisation && user) {
         try {
-            setLoading(true);
-            const apiApplications = await applicationService.getAllApplications();
-            
-            // Transform API response to match frontend interface
-            const transformedApplications: Application[] = apiApplications.map((app: ApiApplication) => ({
-                id: app.applicationId,
-                referenceNumber: app.applicationNumber,
-                businessName: app.userFullName || 'N/A',
-                businessOwner: app.userFullName || 'N/A',
-                package: 'startup',
-                submitted: new Date(app.submittedAt).toLocaleDateString(),
-                actions: 'view',
-                status: mapStatus(app.status),
-                userEmail: app.userEmail,
-                organisation: app.organisation || 'Unassigned' // NEW: Get organisation from API
-            }));
-            
-            setApplications(transformedApplications);
-            
-            // Extract unique organisations for filter dropdown
-            const uniqueOrgs = [...new Set(transformedApplications
-                .map(app => app.organisation)
-                .filter((org): org is string => org !== undefined && org !== null)
-            )];
-            setOrganisations(uniqueOrgs);
-            
+          console.log('🔍 Fetching current user organisation...');
+          const response = await axiosClient.get('/users/me');
+          const currentUser = response.data;
+          
+          if (currentUser.organisation) {
+            console.log('✅ Fetched organisation:', currentUser.organisation);
+            updateUserOrganisation(currentUser.organisation);
+          } else {
+            console.error('❌ User has no organisation in backend');
+            setFetchError('Your account has no organisation assigned. Please contact support.');
+          }
         } catch (error) {
-            console.error('Error fetching applications:', error);
-        } finally {
-            setLoading(false);
+          console.error('❌ Failed to fetch current user:', error);
+          setFetchError('Failed to load your profile. Please try refreshing.');
         }
+      }
     };
 
-    const mapStatus = (apiStatus: string): 'Pending' | 'Active' | 'Inactive' => {
-        switch (apiStatus?.toUpperCase()) {
-            case 'APPROVED':
-            case 'ACTIVE':
-                return 'Active';
-            case 'REJECTED':
-            case 'INACTIVE':
-                return 'Inactive';
-            default:
-                return 'Pending';
-        }
-    };
+    fetchCurrentUserOrganisation();
+  }, [isSuperAdmin, userOrganisation, user, updateUserOrganisation]);
 
-    const updateApplicationStatus = async (applicationId: string, status: ApplicationStatus, reviewNotes?: string) => {
-        try {
-            await applicationService.updateApplicationStatus(
-                applicationId,
-                status,
-                reviewNotes || `Status updated to ${status} by ${isSuperAdmin ? 'Super Admin' : 'Admin'}`
+  useEffect(() => {
+    if (!isSuperAdmin && !userOrganisation) {
+      // Wait for organisation to be fetched
+      console.log('⏳ Waiting for organisation to be fetched...');
+      return;
+    }
+    
+    fetchAllUsers();
+  }, [isSuperAdmin, userOrganisation]);
+
+  const fetchAllUsers = async () => {
+    try {
+      setLoading(true);
+      setFetchError(null);
+      
+      console.log("Current auth state:", {
+        isSuperAdmin,
+        userOrganisation,
+        userRole: user?.role,
+        userEmail: user?.email
+      });
+      
+      let response;
+      let allUsers: User[] = [];
+      
+      if (isSuperAdmin) {
+        // Super admin - fetch all users
+        console.log('👑 Super admin fetching all users...');
+        response = await axiosClient.get('/users/admin/all');
+        allUsers = response.data;
+        console.log(`✅ Super Admin fetched ${allUsers.length} users from backend`);
+      } else {
+        // Regular admin - fetch users from their organisation only
+        if (userOrganisation) {
+          console.log(`👤 Admin fetching users for organisation: ${userOrganisation}`);
+          
+          try {
+            // Try the organisation-specific endpoint first
+            response = await axiosClient.get(`/users/organisation/${userOrganisation}`);
+            allUsers = response.data;
+            console.log(`✅ Admin fetched ${allUsers.length} users for organisation: ${userOrganisation}`);
+          } catch (orgError: any) {
+            console.warn('⚠️ Organisation endpoint failed, falling back to filtering:', orgError.message);
+            
+            // Fallback: fetch all and filter
+            response = await axiosClient.get('/users/admin/all');
+            const allUsersData = response.data;
+            allUsers = allUsersData.filter((u: User) => 
+              u.organisation === userOrganisation
             );
-            fetchApplications(); // Refresh the list
-        } catch (error) {
-            console.error('Error updating application status:', error);
-            alert('Error updating application status. Please try again.');
+            console.log(`✅ Admin fetched and filtered ${allUsers.length} users for organisation: ${userOrganisation}`);
+          }
+        } else {
+          console.error('❌ No organisation found for admin');
+          setFetchError('Your account has no organisation assigned. Please contact support.');
+          setLoading(false);
+          return;
         }
-    };
-
-    // Filter applications based on search, status, organisation, and user role
-    const filteredApplications = applications.filter((app: Application) => {
-        // For non-super-admins, filter by their organisation
-        if (!isSuperAdmin && userOrganisation) {
-            if (app.organisation !== userOrganisation) {
-                return false;
+      }
+      
+      // Filter out SUPER_ADMIN users for non-super admins
+      if (!isSuperAdmin) {
+        allUsers = allUsers.filter(u => u.role !== 'SUPER_ADMIN');
+        console.log(`🔍 Filtered out super admins, remaining: ${allUsers.length} users`);
+      }
+      
+      // Enhance users with subscription and online status
+      const enhancedUsers = await Promise.all(
+        allUsers.map(async (userData) => {
+          try {
+            let subscription = null;
+            try {
+              // You can implement bulk subscription fetch here
+              // subscription = await userSubscriptionService.getUserPackage(userData.userId);
+            } catch (error) {
+              // Silently fail
             }
-        }
-        
-        // Search filter
-        const searchable = [
-            app.referenceNumber, 
-            app.businessName, 
-            app.businessOwner, 
-            app.package, 
-            app.userEmail,
-            app.organisation
-        ].filter(Boolean) as string[];
-        
-        const matchesSearch = searchTerm === '' || searchable.some(value => 
-            value.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        
-        // Status filter
-        const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
-        
-        // Organisation filter (for super admins only)
-        const matchesOrganisation = !isSuperAdmin || 
-            organisationFilter === 'all' || 
-            app.organisation === organisationFilter;
-        
-        return matchesSearch && matchesStatus && matchesOrganisation;
-    });
+            
+            const isOnline = checkUserOnlineStatus(userData);
+            
+            return {
+              ...userData,
+              subscription,
+              isOnline,
+              lastActive: userData.lastSeenAt || userData.updatedAt || new Date().toISOString()
+            };
+          } catch (error) {
+            return {
+              ...userData,
+              subscription: null,
+              isOnline: false,
+              lastActive: userData.lastSeenAt || userData.updatedAt || new Date().toISOString()
+            };
+          }
+        })
+      );
 
-    // Check if user can approve/reject applications
-    const canApprove = (app: Application): boolean => {
-        // Super admin can approve any application
-        if (isSuperAdmin) return true;
-        
-        // Admin can only approve applications from their organisation
-        if (userOrganisation && app.organisation === userOrganisation) return true;
-        
-        return false;
-    };
+      setUsers(enhancedUsers);
+      
+      // Extract unique organisations (for super admin only)
+      if (isSuperAdmin) {
+        const uniqueOrgs = [...new Set(enhancedUsers
+          .map(u => u.organisation)
+          .filter((org): org is string => org !== undefined && org !== null && org !== '')
+        )];
+        setOrganisations(uniqueOrgs);
+      }
+      
+      calculateStats(enhancedUsers);
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching users:', error);
+      setFetchError(`Failed to load users: ${error.message}`);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-    return (
-        <div className="max-w-7xl mx-auto">
-            {/* Header with role indicator */}
-            <div className="mb-6 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                        Applications Overview
-                        {isSuperAdmin ? (
-                            <span className="ml-3 px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full flex items-center">
-                                <Shield className="w-4 h-4 mr-1" />
-                                Super Admin View
-                            </span>
-                        ) : (
-                            <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full flex items-center">
-                                <Building2 className="w-4 h-4 mr-1" />
-                                {userOrganisation || 'Admin View'}
-                            </span>
-                        )}
-                    </h1>
-                    <p className="text-gray-600">
-                        {isSuperAdmin 
-                            ? 'Track and manage all business applications across organisations'
-                            : `Track and manage applications for ${userOrganisation || 'your organisation'}`}
-                    </p>
-                </div>
-                
-                {/* Refresh button */}
-                <button
-                    onClick={fetchApplications}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                    Refresh
-                </button>
-            </div>
+  const checkUserOnlineStatus = (userData: User): boolean => {
+    if (userData.availabilityStatus === 'ONLINE') return true;
+    
+    if (userData.lastSeenAt) {
+      const lastSeen = new Date(userData.lastSeenAt).getTime();
+      const now = new Date().getTime();
+      const fiveMinutes = 5 * 60 * 1000;
+      return (now - lastSeen) < fiveMinutes;
+    }
+    
+    return false;
+  };
 
-            {/* Stats Overview */}
-            <div className="mb-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {stats.map((stat, index) => (
-                        <div key={index} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-sm font-medium text-gray-500">{stat.title}</h3>
-                                <div className={`p-2 rounded-lg ${
-                                    stat.title === 'Active' ? 'bg-green-50' : 
-                                    stat.title === 'Inactive' ? 'bg-red-50' : 
-                                    stat.title === 'Pending' ? 'bg-yellow-50' : 
-                                    'bg-blue-50'
-                                }`}>
-                                    <span className="text-xl">{stat.icon}</span>
-                                </div>
-                            </div>
-                            <div className="mt-4">
-                                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                                {!isSuperAdmin && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        from {userOrganisation}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
+  const calculateStats = (usersList: UserWithSubscription[]) => {
+    // No need to filter again since usersList is already filtered
+    const relevantUsers = usersList;
 
-            {/* Applications Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-200">
-                    <div className="flex flex-col sm:flex-row gap-4 w-full">
-                        {/* Search input */}
-                        <div className="relative flex-1">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <span className="text-gray-400">🔍</span>
-                            </div>
-                            <input
-                                type="text"
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
-                                placeholder={isSuperAdmin 
-                                    ? "Search by name, email, business, organisation, or reference..." 
-                                    : "Search by name, email, business, or reference..."}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        
-                        {/* Status filter */}
-                        <div className="w-40">
-                            <select
-                                className="w-full appearance-none bg-white border border-gray-300 rounded-lg pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                            >
-                                <option value="All">All Status</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-                        
-                        {/* Organisation filter - only for super admins */}
-                        {isSuperAdmin && (
-                            <div className="w-48">
-                                <select
-                                    className="w-full appearance-none bg-white border border-gray-300 rounded-lg pl-3 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    value={organisationFilter}
-                                    onChange={(e) => setOrganisationFilter(e.target.value)}
-                                >
-                                    <option value="all">All Organisations</option>
-                                    {organisations.map(org => (
-                                        <option key={org} value={org}>{org}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">REFERENCE NUMBER</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BUSINESS NAME</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OWNER</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EMAIL</th>
-                                {/* Show organisation column only for super admins */}
-                                {isSuperAdmin && (
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ORGANISATION</th>
-                                )}
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PACKAGE</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SUBMITTED</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={isSuperAdmin ? 9 : 8} className="px-6 py-12 text-center">
-                                        <div className="text-center">
-                                            <div className="text-4xl mb-2">⏳</div>
-                                            <p className="mt-1 text-sm text-gray-500">Loading applications...</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filteredApplications.length > 0 ? (
-                                filteredApplications.map((app) => (
-                                    <tr key={app.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">{app.referenceNumber}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{app.businessName}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{app.businessOwner}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{app.userEmail}</div>
-                                        </td>
-                                        {/* Show organisation column only for super admins */}
-                                        {isSuperAdmin && (
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <Building2 className="w-4 h-4 text-gray-400 mr-1" />
-                                                    <span className="text-sm text-gray-600">{app.organisation || '-'}</span>
-                                                </div>
-                                            </td>
-                                        )}
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500 capitalize">{app.package}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                app.status === 'Active' ? 'bg-green-100 text-green-800' : 
-                                                app.status === 'Inactive' ? 'bg-red-100 text-red-800' : 
-                                                'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                                {app.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{app.submitted}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            {canApprove(app) ? (
-                                                <>
-                                                    <button 
-                                                        className="text-green-600 hover:text-green-900 mr-3 inline-flex items-center"
-                                                        onClick={() => updateApplicationStatus(app.id, 'APPROVED', 'Application approved by admin')}
-                                                        title="Approve application"
-                                                    >
-                                                        <CheckCircle className="w-4 h-4 mr-1" />
-                                                        Approve
-                                                    </button>
-                                                    <button 
-                                                        className="text-red-600 hover:text-red-900 inline-flex items-center"
-                                                        onClick={() => updateApplicationStatus(app.id, 'REJECTED', 'Application rejected by admin')}
-                                                        title="Reject application"
-                                                    >
-                                                        <XCircle className="w-4 h-4 mr-1" />
-                                                        Reject
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <span className="text-gray-400 text-sm italic">
-                                                    No access
-                                                </span>
-                                            )}
-                                            <button 
-                                                className="text-blue-600 hover:text-blue-900 ml-3 inline-flex items-center"
-                                                onClick={() => {/* View details modal */}}
-                                                title="View details"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={isSuperAdmin ? 9 : 8} className="px-6 py-12 text-center">
-                                        <div className="text-center">
-                                            <div className="text-4xl mb-2">📄</div>
-                                            <h3 className="mt-2 text-sm font-medium text-gray-900">No applications found</h3>
-                                            <p className="mt-1 text-sm text-gray-500">
-                                                {searchTerm || statusFilter !== 'All' || (isSuperAdmin && organisationFilter !== 'all') 
-                                                    ? 'No applications match your search criteria.' 
-                                                    : 'There are no applications to display.'}
-                                            </p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+    const activeUsers = relevantUsers.filter(u => 
+      u.status === 'ACTIVE' || u.status === 'active'
     );
+    
+    const onlineUsers = relevantUsers.filter(u => u.isOnline);
+    
+    const freeTrialUsers = relevantUsers.filter(u => 
+      u.subscription?.subscriptionType === 'START_UP' && 
+      u.subscription?.trialEndsAt && 
+      new Date(u.subscription.trialEndsAt) > new Date()
+    );
+    
+    const uniqueOrgs = isSuperAdmin 
+      ? [...new Set(usersList.map(u => u.organisation).filter(Boolean))]
+      : [];
+
+    setStats({
+      totalUsers: relevantUsers.length,
+      activeUsers: activeUsers.length,
+      onlineUsers: onlineUsers.length,
+      offlineUsers: relevantUsers.length - onlineUsers.length,
+      inactiveUsers: relevantUsers.filter(u => u.status === 'INACTIVE' || u.status === 'inactive').length,
+      freeTrialUsers: freeTrialUsers.length,
+      totalOrganisations: uniqueOrgs.length,
+      adminsCount: relevantUsers.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length,
+      usersCount: relevantUsers.filter(u => u.role === 'USER').length
+    });
+  };
+
+  useEffect(() => {
+    let filtered = [...users];
+
+    // For non-super admins, ensure filtering is applied correctly
+    if (!isSuperAdmin && userOrganisation) {
+      filtered = filtered.filter(u => u.organisation === userOrganisation);
+    }
+
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(u => 
+        u.fullName?.toLowerCase().includes(searchLower) ||
+        u.email?.toLowerCase().includes(searchLower) ||
+        u.mobileNumber?.toLowerCase().includes(searchLower) ||
+        u.companyName?.toLowerCase().includes(searchLower) ||
+        u.organisation?.toLowerCase().includes(searchLower) ||
+        u.userId?.toLowerCase().includes(searchLower) ||
+        u.businessReference?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter(u => {
+        if (statusFilter === 'Active') return u.status === 'ACTIVE' || u.status === 'active';
+        if (statusFilter === 'Inactive') return u.status === 'INACTIVE' || u.status === 'inactive';
+        if (statusFilter === 'Pending') return u.status === 'PENDING' || u.status === 'pending' || u.status === 'PENDING_PASSWORD';
+        if (statusFilter === 'Online') return u.isOnline;
+        if (statusFilter === 'Offline') return !u.isOnline;
+        return true;
+      });
+    }
+
+    if (roleFilter !== 'All') {
+      filtered = filtered.filter(u => u.role === roleFilter);
+    }
+
+    if (isSuperAdmin && organisationFilter !== 'all') {
+      filtered = filtered.filter(u => u.organisation === organisationFilter);
+    }
+
+    setFilteredUsers(filtered);
+  }, [users, searchTerm, statusFilter, roleFilter, organisationFilter, isSuperAdmin, userOrganisation]);
+
+  const handleAddAdmin = async () => {
+    if (!newAdminData.email || !newAdminData.fullName) {
+      alert('Please fill in required fields');
+      return;
+    }
+    
+    setAddingAdmin(true);
+    try {
+      await axiosClient.post('/users/admin', {
+        ...newAdminData,
+        organisation: newAdminData.organisation || userOrganisation || '',
+        role: newAdminData.role,
+        status: 'ACTIVE'
+      });
+      
+      alert(`${newAdminData.role} created successfully.`);
+      setShowAddAdminModal(false);
+      setNewAdminData({
+        fullName: '',
+        email: '',
+        mobileNumber: '',
+        companyName: '',
+        organisation: '',
+        employees: '',
+        founded: '',
+        industry: '',
+        location: '',
+        role: 'ADMIN',
+        status: 'ACTIVE'
+      });
+      
+      fetchAllUsers();
+      
+    } catch (error: any) {
+      console.error('Error creating admin:', error);
+      alert(`Error creating user: ${error.response?.data || error.message}`);
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userRole: string, userOrg?: string) => {
+    if (!isSuperAdmin && userRole === 'SUPER_ADMIN') {
+      alert('You cannot delete a super admin.');
+      return;
+    }
+    
+    if (!isSuperAdmin && userRole === 'ADMIN' && user?.role !== 'SUPER_ADMIN') {
+      if (userOrg !== userOrganisation) {
+        alert('You can only delete users from your own organisation.');
+        return;
+      }
+    }
+    
+    if (userId === user?.userId) {
+      alert('You cannot delete your own account.');
+      return;
+    }
+    
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      try {
+        await axiosClient.delete(`/users/admin/${userId}`);
+        alert('User deleted successfully');
+        fetchAllUsers();
+      } catch (error: any) {
+        console.error('Error deleting user:', error);
+        alert(`Error deleting user: ${error.response?.data || error.message}`);
+      }
+    }
+  };
+
+  const formatLastSeen = (lastSeenAt: string): string => {
+    const lastSeen = new Date(lastSeenAt);
+    const now = new Date();
+    const diffMs = now.getTime() - lastSeen.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  };
+
+  const handleViewDetails = (user: UserWithSubscription) => {
+    // Implement view details logic
+    console.log('View details for user:', user);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setRoleFilter('All');
+    if (isSuperAdmin) setOrganisationFilter('all');
+  };
+
+  const hasActiveFilters = searchTerm !== '' || 
+    statusFilter !== 'All' || 
+    roleFilter !== 'All' || 
+    (isSuperAdmin && organisationFilter !== 'all');
+
+  // Show error state
+  if (fetchError) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Users</h3>
+          <p className="text-red-600">{fetchError}</p>
+          <button
+            onClick={() => {
+              setFetchError(null);
+              fetchAllUsers();
+            }}
+            className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      <UserManagementHeader
+        isSuperAdmin={isSuperAdmin}
+        userOrganisation={userOrganisation}
+        totalUsers={users.length}
+        totalOrganisations={stats.totalOrganisations}
+        statsTotalUsers={stats.totalUsers}
+        onAddUser={() => setShowAddAdminModal(true)}
+        onRefresh={() => {
+          setRefreshing(true);
+          fetchAllUsers();
+        }}
+        isRefreshing={refreshing}
+      />
+
+      <UserStats stats={stats} isSuperAdmin={isSuperAdmin} />
+
+      <UserFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        roleFilter={roleFilter}
+        onRoleChange={setRoleFilter}
+        organisationFilter={organisationFilter}
+        onOrganisationChange={setOrganisationFilter}
+        organisations={organisations}
+        isSuperAdmin={isSuperAdmin}
+        filteredCount={filteredUsers.length}
+      />
+
+      <UserTable
+        users={users}
+        filteredUsers={filteredUsers}
+        loading={loading}
+        isSuperAdmin={isSuperAdmin}
+        currentUser={user}
+        userOrganisation={userOrganisation}
+        onViewDetails={handleViewDetails}
+        onDelete={handleDeleteUser}
+        formatLastSeen={formatLastSeen}
+        onClearFilters={handleClearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
+
+      <AddUserModal
+        isOpen={showAddAdminModal}
+        onClose={() => {
+          setShowAddAdminModal(false);
+          setNewAdminData({
+            fullName: '',
+            email: '',
+            mobileNumber: '',
+            companyName: '',
+            organisation: '',
+            employees: '',
+            founded: '',
+            industry: '',
+            location: '',
+            role: 'ADMIN',
+            status: 'ACTIVE'
+          });
+        }}
+        onAdd={handleAddAdmin}
+        newUserData={newAdminData}
+        setNewUserData={setNewAdminData}
+        isSuperAdmin={isSuperAdmin}
+        userOrganisation={userOrganisation}
+        adding={addingAdmin}
+      />
+    </div>
+  );
 }

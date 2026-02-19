@@ -5,19 +5,19 @@ import type { User } from "../interfaces/UserData";
 
 interface AuthContextType {
   user: User | null;
-  login: (userData: User) => void;
+  login: (userData: User, authToken?: string) => void; // Modified to accept token
   logout: () => void;
   updateUserStatus: (status: string) => void;
-  updateUserOrganisation: (organisation: string) => void; // NEW
+  updateUserOrganisation: (organisation: string) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isSuperAdmin: boolean; // NEW
+  isSuperAdmin: boolean;
   token: string | null;
   tempSessionToken: string | null;
   setTempSessionToken: (token: string | null) => void;
   twoFactorEnabled: boolean;
   setTwoFactorEnabled: (enabled: boolean) => void;
-  userOrganisation: string | null; // NEW
+  userOrganisation: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,13 +40,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [tempSessionToken, setTempSessionToken] = useState<string | null>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
-  const login = (userData: User) => {
+  const login = (userData: User, authToken?: string) => {
+    // Save user data
     localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+    
+    // Save token if provided
+    if (authToken) {
+      localStorage.setItem("authToken", authToken);
+      setToken(authToken);
+    }
+    
+    // Save organisation if present in user data
     if (userData.organisation) {
       localStorage.setItem("userOrganisation", userData.organisation);
       setUserOrganisation(userData.organisation);
+      console.log("✅ Organisation saved to AuthContext:", userData.organisation);
+    } else {
+      console.warn("⚠️ No organisation found in user data:", userData);
     }
-    setUser(userData);
   };
 
   const logout = () => {
@@ -94,9 +106,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('userOrganisation', organisation);
       setUserOrganisation(organisation);
       setUser(updatedUser);
+      console.log("✅ Organisation updated to:", organisation);
     } else {
       localStorage.setItem('userOrganisation', organisation);
       setUserOrganisation(organisation);
+      console.log("✅ Organisation set (no user):", organisation);
     }
   };
 

@@ -7,9 +7,15 @@ import type { LoginRequest, LoginResponse, User } from '../../interfaces/UserDat
 
 export type LoginType = 'user' | 'admin' | 'superadmin';
 
-interface FormData {
+interface UserFormData {
   email: string;
   businessReference: string;
+  password: string;
+  rememberMe: boolean;
+}
+
+interface AdminFormData {
+  email: string;
   password: string;
   rememberMe: boolean;
 }
@@ -29,120 +35,183 @@ export function useLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [loginType, setLoginType] = useState<LoginType>('user');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const handleLogin = async (formData: FormData) => {
+  // User login handler
+  const handleUserLogin = async (formData: UserFormData) => {
     setIsLoading(true);
     setErrorMessage('');
 
     try {
-      console.log('🚀 Starting login process...');
-      console.log('📝 Selected login type from UI:', loginType);
+      console.log('🚀 Starting user login process...');
       console.log('📧 Email:', formData.email);
 
       const loginRequest: LoginRequest = {
         email: formData.email,
         password: formData.password,
-        businessReference: loginType === 'user' ? formData.businessReference : undefined,
-        loginType, // This is just for the backend, we won't use it for routing
+        businessReference: formData.businessReference,
+        loginType: 'user',
       };
 
       console.log('🔑 Calling login endpoint...');
       const loginResponse = await authService.login(loginRequest);
       console.log('✅ Login response received:', loginResponse);
-      console.log('👤 User role from backend:', loginResponse.role);
-      console.log('👤 User status from backend:', loginResponse.status);
 
-      const requiresOtp =
-        isTruthyFlag((loginResponse as any).requiresOtpVerification) ||
-        isTruthyFlag((loginResponse as any).requiresTwoFactor);
-
-      console.log('🔍 requiresOtp check result:', requiresOtp);
-
-      if (requiresOtp) {
-        console.log('📱 OTP verification required, redirecting...');
-        navigate('/verify-otp', {
-          state: {
-            email: formData.email,
-            loginType: loginType, // This is just for OTP flow
-            businessReference: loginType === 'user' ? formData.businessReference : undefined,
-            userId: loginResponse.userId,
-            requiresOtpVerification: true,
-            otpCode: loginResponse.otpCode,
-          },
-        });
-        return;
-      }
-
-      console.log('✅ No OTP required, completing login...');
-      await completeLogin(loginResponse, login, navigate);
+      await handleLoginResponse(loginResponse, formData.email, formData.businessReference, 'user');
     } catch (error: any) {
-      console.error('❌ Login error:', error);
-      console.error('❌ Error response:', (error as any).response?.data);
-      console.error('❌ Error status:', (error as any).response?.status);
-
-      let message = error.message || 'An error occurred during login. Please try again.';
-
-      if (message.includes('Network Error') || message.includes('Cannot connect')) {
-        message = 'Cannot connect to server. Please check if the backend is running.';
-      } else if (message.includes('Invalid credentials')) {
-        message = 'Invalid email or password. Please try again.';
-      } else if (message.includes('Business reference is required')) {
-        message = 'Business reference is required for user login.';
-      }
-
-      setErrorMessage(message);
+      handleLoginError(error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fillDemoCredentials = (setFormData: (updater: (prev: FormData) => FormData) => void) => {
-    const demoCredentials = {
-      user: {
-        email: 'asandile.nkala@example.com',
-        businessReference: '7272002',
-        password: '@TesterAsandile123',
-      },
-      admin: {
-        email: 'asavela.mbengashe@example.com',
-        businessReference: '',
-        password: '@TesterAsavela123',
-      },
-      superadmin: {
-        email: 'misa@gmail.com',
-        businessReference: '',
-        password: 'Misa@123',
-      },
-    } as const;
+  // Admin login handler
+  const handleAdminLogin = async (formData: AdminFormData) => {
+    setIsLoading(true);
+    setErrorMessage('');
 
-    // Safely get credentials based on login type
-    const credentials = demoCredentials[loginType as keyof typeof demoCredentials];
-    
-    if (!credentials) {
-      console.error(`No credentials found for login type: ${loginType}`);
+    try {
+      console.log('🚀 Starting admin login process...');
+      console.log('📧 Email:', formData.email);
+
+      const loginRequest: LoginRequest = {
+        email: formData.email,
+        password: formData.password,
+        loginType: 'admin',
+      };
+
+      console.log('🔑 Calling login endpoint...');
+      const loginResponse = await authService.login(loginRequest);
+      console.log('✅ Login response received:', loginResponse);
+
+      await handleLoginResponse(loginResponse, formData.email, undefined, 'admin');
+    } catch (error: any) {
+      handleLoginError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Super Admin login handler
+  const handleSuperAdminLogin = async (formData: AdminFormData) => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      console.log('🚀 Starting super admin login process...');
+      console.log('📧 Email:', formData.email);
+
+      const loginRequest: LoginRequest = {
+        email: formData.email,
+        password: formData.password,
+        loginType: 'superadmin',
+      };
+
+      console.log('🔑 Calling login endpoint...');
+      const loginResponse = await authService.login(loginRequest);
+      console.log('✅ Login response received:', loginResponse);
+
+      await handleLoginResponse(loginResponse, formData.email, undefined, 'superadmin');
+    } catch (error: any) {
+      handleLoginError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Common response handler
+  const handleLoginResponse = async (
+    loginResponse: LoginResponse,
+    email: string,
+    businessReference?: string,
+    loginType?: LoginType
+  ) => {
+    const requiresOtp =
+      isTruthyFlag((loginResponse as any).requiresOtpVerification) ||
+      isTruthyFlag((loginResponse as any).requiresTwoFactor);
+
+    console.log('🔍 requiresOtp check result:', requiresOtp);
+
+    if (requiresOtp) {
+      console.log('📱 OTP verification required, redirecting...');
+      navigate('/verify-otp', {
+        state: {
+          email: email,
+          loginType: loginType || 'user',
+          businessReference: businessReference,
+          userId: loginResponse.userId,
+          requiresOtpVerification: true,
+          otpCode: loginResponse.otpCode,
+        },
+      });
       return;
     }
 
+    console.log('✅ No OTP required, completing login...');
+    await completeLogin(loginResponse, login, navigate);
+  };
+
+  // Error handler
+  const handleLoginError = (error: any) => {
+    console.error('❌ Login error:', error);
+    console.error('❌ Error response:', (error as any).response?.data);
+    console.error('❌ Error status:', (error as any).response?.status);
+
+    let message = error.message || 'An error occurred during login. Please try again.';
+
+    if (message.includes('Network Error') || message.includes('Cannot connect')) {
+      message = 'Cannot connect to server. Please check if the backend is running.';
+    } else if (message.includes('Invalid credentials')) {
+      message = 'Invalid email or password. Please try again.';
+    } else if (message.includes('Business reference is required')) {
+      message = 'Business reference is required for user login.';
+    }
+
+    setErrorMessage(message);
+  };
+
+  // Fill demo credentials for user
+  const fillUserCredentials = (setFormData: (updater: (prev: UserFormData) => UserFormData) => void) => {
     setFormData((prev) => ({
       ...prev,
-      email: credentials.email,
-      businessReference: credentials.businessReference || '',
-      password: credentials.password,
+      email: 'asandile.nkala@example.com',
+      businessReference: '7272002',
+      password: '@TesterAsandile123',
+    }));
+    setErrorMessage('');
+  };
+
+  // Fill demo credentials for admin
+  const fillAdminCredentials = (setFormData: (updater: (prev: AdminFormData) => AdminFormData) => void) => {
+    setFormData((prev) => ({
+      ...prev,
+      email: 'asavela.mbengashe@example.com',
+      password: '@TesterAsavela123',
+    }));
+    setErrorMessage('');
+  };
+
+  // Fill demo credentials for super admin
+  const fillSuperAdminCredentials = (setFormData: (updater: (prev: AdminFormData) => AdminFormData) => void) => {
+    setFormData((prev) => ({
+      ...prev,
+      email: 'misa@gmail.com',
+      password: 'Misa@123',
     }));
     setErrorMessage('');
   };
 
   return {
-    loginType,
-    setLoginType,
     isLoading,
     errorMessage,
     setErrorMessage,
-    handleLogin,
-    fillDemoCredentials,
+    handleUserLogin,
+    handleAdminLogin,
+    handleSuperAdminLogin,
+    fillUserCredentials,
+    fillAdminCredentials,
+    fillSuperAdminCredentials,
   };
 }
 

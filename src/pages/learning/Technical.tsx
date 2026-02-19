@@ -1,9 +1,9 @@
-// src/pages/categories/Operations.tsx
+// src/pages/categories/Technical.tsx
 import React from 'react';
 import LearningModules from '../LearningModules';
 
-const Operations: React.FC = () => {
+const Technical: React.FC = () => {
   return <LearningModules />;
 };
 
-export default Operations;
+export default Technical;

@@ -6,13 +6,13 @@ import { learningService } from '../services/LearningService';
 import { useAuth } from '../context/AuthContext';
 import type { UserLearningModule } from '../interfaces/LearningData';
 import FlipCardQuizModal from '../components/learning/FlipCardQuizModal';
+// import CelebrationModal from '../components/learning/CelebrationModal';
 
 const LearningModules: React.FC = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   
-  // ALL HOOKS MUST BE AT THE TOP LEVEL - NO CONDITIONALS BEFORE HOOKS
-  const [selectedCategory, setSelectedCategory] = useState<'all' | string>('business-plan');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | string>('BUSINESS_PLANNING');
   const [modules, setModules] = useState<UserLearningModule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,31 +20,51 @@ const LearningModules: React.FC = () => {
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [quizMaterial, setQuizMaterial] = useState<UserLearningModule | null>(null);
+  const [completedModule, setCompletedModule] = useState<UserLearningModule | null>(null);
   const [startedMaterialIds, setStartedMaterialIds] = useState<string[]>([]);
   const [quizPassedMaterialIds, setQuizPassedMaterialIds] = useState<string[]>([]);
   const [materialReadyForQuiz, setMaterialReadyForQuiz] = useState(false);
   const [readTimerDone, setReadTimerDone] = useState(false);
 
   const categories = [
-    { id: 'business-plan', name: 'Business Planning' },
-    { id: 'marketing', name: 'Marketing & Sales' },
-    { id: 'finance', name: 'Financial Management' },
-    { id: 'operations', name: 'Operations' },
-    { id: 'leadership', name: 'Leadership' },
-    { id: 'standardbank', name: 'Standard Bank' },
-    { id: 'technology', name: 'Technology' },
-    { id: 'sales', name: 'Sales' },
-    { id: 'strategy', name: 'Strategy' }
+    { id: 'BUSINESS_PLANNING', name: 'Business Planning' },
+    { id: 'MARKETING_SALES', name: 'Marketing & Sales' },
+    { id: 'FINANCIAL_MANAGEMENT', name: 'Financial Management' },
+    { id: 'OPERATIONS', name: 'Operations' },
+    { id: 'LEADERSHIP', name: 'Leadership' },
+    { id: 'TECHNICAL', name: 'Technical' }
   ];
 
-  // Update selected category from URL params - only when searchParams actually changes
-  useEffect(() => {
-    const category = searchParams.get('category') || 'business-plan';
-    if (category !== selectedCategory) {
-      setSelectedCategory(category);
-    }
-  }, [searchParams, selectedCategory]);
+  // Update selected category from URL params
+  // In LearningModules.tsx, update the useEffect that reads from URL params:
+
+useEffect(() => {
+  const category = searchParams.get('category') || 'BUSINESS_PLANNING';
+  
+  // Normalize the category to match backend expectations
+  let normalizedCategory = category;
+  
+  // Handle legacy lowercase formats
+  const categoryMap: Record<string, string> = {
+    'business-plan': 'BUSINESS_PLANNING',
+    'marketing': 'MARKETING_SALES',
+    'finance': 'FINANCIAL_MANAGEMENT',
+    'operations': 'OPERATIONS',
+    'leadership': 'LEADERSHIP',
+    'technical': 'TECHNICAL',
+    'standardbank': 'TECHNICAL'
+  };
+  
+  if (categoryMap[category.toLowerCase()]) {
+    normalizedCategory = categoryMap[category.toLowerCase()];
+  }
+  
+  if (normalizedCategory !== selectedCategory) {
+    setSelectedCategory(normalizedCategory);
+  }
+}, [searchParams, selectedCategory]);
 
   // Memoized values
   const completedCount = useMemo(() => {
@@ -55,7 +75,6 @@ const LearningModules: React.FC = () => {
     const startedSet = new Set<string>(startedMaterialIds);
     if (openMaterial?.id) startedSet.add(openMaterial.id);
   
-    // Convert array to Set for O(1) lookup
     const passedSet = new Set<string>(quizPassedMaterialIds);
   
     let count = 0;
@@ -102,7 +121,6 @@ const LearningModules: React.FC = () => {
     }
   }, [user?.email, selectedCategory]);
 
-  // Single fetch effect - this is the key fix
   useEffect(() => {
     if (user?.email) {
       fetchLearningData();
@@ -130,7 +148,13 @@ const LearningModules: React.FC = () => {
     }
   }, [openMaterial]);
 
-  // Callback definitions
+  const handleModuleCompletion = useCallback((module: UserLearningModule) => {
+    if (module.progress === 100 && !quizPassedMaterialIds.includes(module.id)) {
+      setCompletedModule(module);
+      setShowCelebration(true);
+    }
+  }, [quizPassedMaterialIds]);
+
   const getIsLockedByGate = useCallback((moduleId: string): { isLocked: boolean; gateText: string } => {
     const idx = modules.findIndex((m) => m.id === moduleId);
     if (idx <= 0) return { isLocked: false, gateText: '' };
@@ -153,7 +177,9 @@ const LearningModules: React.FC = () => {
     if (user?.email) {
       learningService.recordOpened(user.email, material.id);
     }
-  }, [user?.email]);
+
+    handleModuleCompletion(material);
+  }, [user?.email, handleModuleCompletion]);
 
   const mapQuestionType = useCallback((type: string): string => {
     const typeMap: Record<string, string> = {
@@ -203,23 +229,19 @@ const LearningModules: React.FC = () => {
 
   const beginQuizForMaterial = useCallback(async (material: UserLearningModule) => {
     setQuizLoading(true);
-    setError(null); // Clear any previous errors
+    setError(null);
     
     try {
-      // First try to get existing quiz
       let quiz = await learningService.getQuiz(material.id);
       
-      // If no quiz exists, generate one
       if (!quiz) {
         quiz = await learningService.generateQuiz(material.id, 20);
       }
       
-      // Validate we have a valid quiz with questions
       if (!quiz?.questions || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
         throw new Error('Server returned invalid quiz data');
       }
       
-      // Transform backend questions to flip card format
       const transformedQuestions = transformBackendQuestionsToFlipCardFormat(quiz.questions);
       
       if (transformedQuestions.length === 0) {
@@ -230,7 +252,6 @@ const LearningModules: React.FC = () => {
       setQuizMaterial(material);
       setShowQuiz(true);
       
-      // Record that user started the quiz
       if (user?.email) {
         await learningService.recordQuizStarted(user.email, material.id);
       }
@@ -276,10 +297,24 @@ const LearningModules: React.FC = () => {
       console.error('Error recording quiz pass:', error);
     } finally {
       setShowQuiz(false);
+      setShowCelebration(false);
       setQuizMaterial(null);
       setQuizQuestions([]);
+      setCompletedModule(null);
     }
   }, [user?.email, quizMaterial]);
+
+  const handleStartQuiz = useCallback(() => {
+    setShowCelebration(false);
+    if (completedModule) {
+      beginQuizForMaterial(completedModule);
+    }
+  }, [completedModule, beginQuizForMaterial]);
+
+  const handleCloseCelebration = useCallback(() => {
+    setShowCelebration(false);
+    setCompletedModule(null);
+  }, []);
 
   const handleCloseQuiz = useCallback(() => {
     setShowQuiz(false);
@@ -297,7 +332,6 @@ const LearningModules: React.FC = () => {
     return 'unknown';
   }, []);
 
-  // Early returns - AFTER all hooks
   if (!user?.email) {
     return (
       <div className="space-y-6 animate-fade-in px-2 sm:px-0">

@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+// src/components/Navigation.tsx
+import React, { useMemo, useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Home, 
@@ -23,6 +24,7 @@ import {
   Gift,
   LogOut
 } from 'lucide-react';
+import MessageServices from '../services/MessageServices'; // Add this import
 
 type PackageType = 'startup' | 'essential' | 'premium';
 
@@ -45,6 +47,9 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
   const [isCommunitySubNavOpen, setIsCommunitySubNavOpen] = useState(false);
   const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
   
+  // Add state for unread count
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
   const userInitials = userEmail
@@ -70,6 +75,25 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     const remainingDays = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     return Math.max(0, remainingDays);
   }, [isFreeTrial]);
+
+  // Fetch unread count on mount and set up polling
+  useEffect(() => {
+    fetchUnreadCount();
+    
+    // Set up polling every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const count = await MessageServices.getUnreadCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -101,7 +125,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     // Learning
     { path: '/learning', icon: BookOpen, label: 'Learning', package: 'startup' as PackageType },
 
-    // Connections
+    // Connections - THIS IS THE ONE WE NEED TO NOTIFY
     { path: '/connections', icon: UserPlus, label: 'Connections', package: 'essential' as PackageType },
     
     // Marketplace
@@ -510,6 +534,13 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     onClose?.();
                     // Close all secondary sidebars
                     closeAllSecondaryNavs();
+                    
+                    // If this is the connections page, refresh unread counts after visiting
+                    if (item.path === '/connections') {
+                      setTimeout(() => {
+                        fetchUnreadCount();
+                      }, 1000);
+                    }
                   }}
                   className={({ isActive }) =>
                     `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -521,10 +552,22 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     }`
                   }
                 >
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 relative">
                     {React.createElement(item.icon, { className: "w-4 h-4 flex-shrink-0" })}
+                    
+                    {/* Show unread badge for Connections */}
+                    {item.path === '/connections' && unreadCount > 0 && (
+                      <span className="absolute -top-2 -right-2 flex h-5 w-5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-[10px] text-white items-center justify-center font-bold">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      </span>
+                    )}
+                    
                     {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                   </div>
+                  
                   {!collapsed && (
                     <div className="flex items-center space-x-1">
                       {item.package === 'essential' ? (
@@ -533,6 +576,13 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       <Zap className="w-3 h-3 text-purple-500" />
                     ) : null}
                       {locked && <Lock className="w-3 h-3" />}
+                      
+                      {/* Show small unread badge in collapsed view if needed */}
+                      {collapsed && item.path === '/connections' && unreadCount > 0 && (
+                        <span className="ml-1 inline-flex items-center justify-center px-1 py-0.5 text-[8px] font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
                     </div>
                   )}
                 </NavLink>

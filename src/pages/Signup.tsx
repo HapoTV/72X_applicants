@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 import { useSignup } from './hooks/useSignup';
+import { ORGANISATIONS } from '../interfaces/OrganisationLists';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -18,14 +19,23 @@ const Signup: React.FC = () => {
     employees: '',
     hasBankReference: false,
     businessReference: '',
+    organisation: 'Hapo', // Default to Hapo
     acceptTerms: false,
   });
   const { isLoading, error, setError, submit } = useSignup();
+  
   const update = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validate organisation if hasBankReference is true
+    if (form.hasBankReference && !form.organisation) {
+      setError('Please select an organisation');
+      return;
+    }
+    
     await submit(form as any);
   };
 
@@ -59,6 +69,13 @@ const Signup: React.FC = () => {
     '1001-5000',
     '5000+'
   ];
+
+  // Generate year options from 1980 to current year
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: currentYear - 1980 + 1 }, (_, i) => {
+    const year = (currentYear - i).toString();
+    return year;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
@@ -224,24 +241,21 @@ const Signup: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Year Established *
               </label>
-              <input
-                type="number"
+              <select
                 value={form.founded}
-                onChange={e => {
-                  const value = e.target.value;
-                  const currentYear = new Date().getFullYear();
-                  if (value === '' || (parseInt(value) >= 1800 && parseInt(value) <= currentYear)) {
-                    update('founded', value);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                onChange={e => update('founded', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors bg-white"
                 required
-                min="1800"
-                max={new Date().getFullYear()}
-                placeholder="2020"
-              />
+              >
+                <option value="">Select year established</option>
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
               <p className="text-xs text-gray-500 mt-1">
-                Must be between 1800 and {new Date().getFullYear()}
+                Your business must be established since at least 1980
               </p>
             </div>
 
@@ -289,6 +303,7 @@ const Signup: React.FC = () => {
                   onChange={() => { 
                     update('hasBankReference', false); 
                     update('businessReference', ''); 
+                    update('organisation', 'Hapo'); // Reset to Hapo when No is selected
                   }}
                   className="w-4 h-4 text-primary-600 border-gray-300 cursor-pointer"
                 />
@@ -297,20 +312,52 @@ const Signup: React.FC = () => {
             </div>
 
             {form.hasBankReference && (
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Business Reference Number (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={form.businessReference}
-                  onChange={e => update('businessReference', e.target.value)}
-                  placeholder="Enter your business reference"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-                  maxLength={50}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  If you have a reference from your bank, enter it here
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Organisation *
+                  </label>
+                  <select
+                    value={form.organisation}
+                    onChange={e => update('organisation', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors bg-white"
+                    required
+                  >
+                    <option value="">Select an organisation</option>
+                    {ORGANISATIONS.map((org) => (
+                      <option key={org} value={org}>
+                        {org}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select the organisation that provided your business reference
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Reference Number
+                  </label>
+                  <input
+                    type="text"
+                    value={form.businessReference}
+                    onChange={e => update('businessReference', e.target.value)}
+                    placeholder="Enter your business reference"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                    maxLength={50}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    If you have a reference from your bank, enter it here
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!form.hasBankReference && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  Your account will be created under <strong>Hapo</strong> organisation.
                 </p>
               </div>
             )}

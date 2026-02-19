@@ -1,379 +1,413 @@
-// src/pages/adminDashboard/AdminNotifications.tsx
-import React, { useState } from 'react';
-import { Bell, Plus, Trash2, Edit, Send, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-
-interface NotificationRecord {
-  id: string;
-  title: string;
-  message: string;
-  type: 'announcement' | 'update' | 'alert' | 'maintenance';
-  recipientCount: number;
-  status: 'draft' | 'scheduled' | 'sent';
-  createdAt: Date;
-  scheduledFor?: Date;
-  sentAt?: Date;
-}
-
-interface CreateNotificationForm {
-  title: string;
-  message: string;
-  type: 'announcement' | 'update' | 'alert' | 'maintenance';
-  recipientType: 'all' | 'specific';
-  recipients: string[];
-  scheduleNow: boolean;
-  scheduledTime?: string;
-}
+// src/pages/admin/AdminNotifications.tsx
+import React, { useState, useEffect } from 'react';
+import { 
+  Bell, 
+  Trash2, 
+  CheckCircle, 
+  AlertCircle, 
+  Info, 
+  Send, 
+  Calendar,
+  Building2,
+  Crown,
+  X
+} from 'lucide-react';
+import NotificationService from '../../services/NotificationService';
+import type { 
+  Notification, 
+  CreateNotificationRequest
+} from '../../services/NotificationService';
+import { useAuth } from '../../context/AuthContext';
 
 const AdminNotifications: React.FC = () => {
-  
-  const [notifications, setNotifications] = useState<NotificationRecord[]>([
-
-    
-  ]);
-
+  const { user, isSuperAdmin, userOrganisation } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState<CreateNotificationForm>({
+  const [loading, setLoading] = useState(true);
+  const [createSuccess, setCreateSuccess] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState<CreateNotificationRequest>({
     title: '',
     message: '',
-    type: 'announcement',
-    recipientType: 'all',
-    recipients: [],
-    scheduleNow: true,
-    scheduledTime: '',
+    type: 'INFO',
+    targetOrganisation: !isSuperAdmin ? userOrganisation : undefined
   });
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      // Get all notifications for this user (admin sees all their created + received)
+      const data = await NotificationService.getUserNotifications(false);
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateError(null);
+    setCreateSuccess(false);
+    
+    try {
+      // Validate form
+      if (!formData.title || !formData.message) {
+        setCreateError('Title and message are required');
+        return;
+      }
+
+      // For regular admins, ensure organisation is set
+      if (!isSuperAdmin && !formData.targetOrganisation) {
+        formData.targetOrganisation = userOrganisation;
+      }
+      
+      await NotificationService.createNotification(formData);
+      
+      // Show success message
+      setCreateSuccess(true);
+      
+      // Close form after 2 seconds
+      setTimeout(() => {
+        setShowCreateForm(false);
+        setCreateSuccess(false);
+        // Refresh notifications
+        fetchNotifications();
+        // Reset form
+        setFormData({
+          title: '',
+          message: '',
+          type: 'INFO',
+          targetOrganisation: !isSuperAdmin ? userOrganisation : undefined
+        });
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('Error creating notification:', error);
+      setCreateError(error.message || 'Failed to create notification');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this notification?')) {
+      try {
+        await NotificationService.deleteNotification(id);
+        fetchNotifications();
+      } catch (error) {
+        console.error('Error deleting notification:', error);
+      }
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    try {
+      await NotificationService.markAsRead([id], true);
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'announcement':
-        return <Bell className="w-5 h-5 text-blue-500" />;
-      case 'update':
+      case 'SUCCESS':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'alert':
+      case 'WARNING':
+        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+      case 'ERROR':
         return <AlertCircle className="w-5 h-5 text-red-500" />;
-      case 'maintenance':
-        return <Clock className="w-5 h-5 text-yellow-500" />;
+      case 'ANNOUNCEMENT':
+        return <Bell className="w-5 h-5 text-purple-500" />;
+      case 'ALERT':
+        return <AlertCircle className="w-5 h-5 text-orange-500" />;
+      case 'MAINTENANCE':
+        return <Calendar className="w-5 h-5 text-gray-500" />;
+      case 'UPDATE':
+        return <CheckCircle className="w-5 h-5 text-blue-500" />;
+      case 'INFO':
       default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
+        return <Info className="w-5 h-5 text-blue-500" />;
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'announcement':
-        return 'bg-blue-50 border-blue-200';
-      case 'update':
+      case 'SUCCESS':
         return 'bg-green-50 border-green-200';
-      case 'alert':
-        return 'bg-red-50 border-red-200';
-      case 'maintenance':
+      case 'WARNING':
         return 'bg-yellow-50 border-yellow-200';
-      default:
+      case 'ERROR':
+        return 'bg-red-50 border-red-200';
+      case 'ANNOUNCEMENT':
+        return 'bg-purple-50 border-purple-200';
+      case 'ALERT':
+        return 'bg-orange-50 border-orange-200';
+      case 'MAINTENANCE':
         return 'bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return 'bg-gray-100 text-gray-800';
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800';
-      case 'sent':
-        return 'bg-green-100 text-green-800';
+      case 'UPDATE':
+        return 'bg-blue-50 border-blue-200';
+      case 'INFO':
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-blue-50 border-blue-200';
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatTime = (timestamp: string) => {
+    return NotificationService.formatTimestamp(timestamp);
   };
 
-  const handleCreateNotification = () => {
-    if (!formData.title.trim() || !formData.message.trim()) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    const newNotification: NotificationRecord = {
-      id: Date.now().toString(),
-      title: formData.title,
-      message: formData.message,
-      type: formData.type,
-      recipientCount: formData.recipientType === 'all' ? 5320 : formData.recipients.length,
-      status: formData.scheduleNow ? 'sent' : 'scheduled',
-      createdAt: new Date(),
-      sentAt: formData.scheduleNow ? new Date() : undefined,
-      scheduledFor: !formData.scheduleNow && formData.scheduledTime ? new Date(formData.scheduledTime) : undefined,
-    };
-
-    setNotifications(prev => [newNotification, ...prev]);
-    resetForm();
-    setShowCreateForm(false);
-    alert(`Notification ${formData.scheduleNow ? 'sent' : 'scheduled'} successfully!`);
-  };
-
-  const handleDeleteNotification = (id: string) => {
-    if (confirm('Are you sure you want to delete this notification?')) {
-      setNotifications(prev => prev.filter(notif => notif.id !== id));
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      message: '',
-      type: 'announcement',
-      recipientType: 'all',
-      recipients: [],
-      scheduleNow: true,
-      scheduledTime: '',
-    });
-  };
-
-  
+  // Check if user has admin access
+  if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900">Access Denied</h3>
+          <p className="text-gray-600">You need admin privileges to access this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-6xl mx-auto w-full p-6">
-        <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-            <Bell className="w-8 h-8 text-primary-600" />
-            <span>Notification Management</span>
-          </h1>
-          <p className="text-gray-600 mt-1">Create and manage user notifications, announcements, and updates</p>
+      <div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
+              <Bell className="w-8 h-8 text-primary-600" />
+              <span>Notification Management</span>
+            </h1>
+            {!isSuperAdmin && userOrganisation && (
+              <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
+                <Building2 className="w-4 h-4" />
+                {userOrganisation}
+              </span>
+            )}
+            {isSuperAdmin && (
+              <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm flex items-center gap-1">
+                <Crown className="w-4 h-4" />
+                Super Admin
+              </span>
+            )}
+          </div>
         </div>
+        <p className="text-gray-600 mt-1">
+          {isSuperAdmin 
+            ? 'Create notifications for specific organisations or all users' 
+            : `Create notifications for ${userOrganisation || 'your organisation'}`}
+        </p>
+      </div>
+
+      {/* Create Button */}
+      <div className="flex justify-end">
         <button
-          onClick={() => {
-            resetForm();
-            setShowCreateForm(true);
-          }}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+          onClick={() => setShowCreateForm(true)}
+          className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium flex items-center"
         >
-          <Plus className="w-5 h-5" />
-          <span>New Notification</span>
+          <Send className="w-4 h-4 mr-2" />
+          Create Notification
         </button>
       </div>
 
-      {/* Create/Edit Form */}
+      {/* Create Notification Form Modal */}
       {showCreateForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Create New Notification</h2>
-            <button
-              onClick={() => {
-                setShowCreateForm(false);
-                resetForm();
-              }}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g., New Feature Available"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Message */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Message *
-              </label>
-              <textarea
-                value={formData.message}
-                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                placeholder="Enter your notification message..."
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notification Type
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="announcement">Announcement</option>
-                <option value="update">Update</option>
-                <option value="alert">Alert</option>
-                <option value="maintenance">Maintenance</option>
-              </select>
-            </div>
-
-            {/* Recipients */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Send To
-                </label>
-                <select
-                  value={formData.recipientType}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      recipientType: e.target.value as 'all' | 'specific',
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="all">All Users (5,320)</option>
-                  <option value="specific">Specific Users</option>
-                </select>
-              </div>
-
-              {formData.recipientType === 'specific' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Recipients
-                  </label>
-                  <select
-                    multiple
-                    value={formData.recipients}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        recipients: Array.from(e.target.selectedOptions, (option) => option.value),
-                      })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  >
-                    <option value="premium">Premium Users (1,200)</option>
-                    <option value="essential">Essential Users (2,100)</option>
-                    <option value="trial">Trial Users (2,020)</option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple</p>
-                </div>
-              )}
-            </div>
-
-            {/* Schedule */}
-            <div className="border-t pt-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={formData.scheduleNow}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      scheduleNow: e.target.checked,
-                      scheduledTime: '',
-                    })
-                  }
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <span className="text-sm font-medium text-gray-700">Send Now</span>
-              </label>
-              <p className="text-xs text-gray-500 mt-1">
-                Uncheck to schedule for a later time
-              </p>
-            </div>
-
-            {!formData.scheduleNow && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Schedule For
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.scheduledTime}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      scheduledTime: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-4 border-t">
-              <button
-                onClick={handleCreateNotification}
-                className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-              >
-                <Send className="w-4 h-4" />
-                <span>{formData.scheduleNow ? 'Send Notification' : 'Schedule Notification'}</span>
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Create New Notification</h2>
               <button
                 onClick={() => {
                   setShowCreateForm(false);
-                  resetForm();
+                  setCreateError(null);
+                  setCreateSuccess(false);
                 }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                Cancel
+                <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
+            
+            {/* Success Message */}
+            {createSuccess && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-700 text-sm">✓ Notification created successfully!</p>
+              </div>
+            )}
+            
+            {/* Error Message */}
+            {createError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm">Error: {createError}</p>
+              </div>
+            )}
+            
+            <form onSubmit={handleCreateNotification} className="space-y-4">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  required
+                  disabled={createSuccess}
+                  placeholder="e.g., System Maintenance"
+                />
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Message *
+                </label>
+                <textarea
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  rows={4}
+                  required
+                  disabled={createSuccess}
+                  placeholder="Enter notification message..."
+                />
+              </div>
+
+              {/* Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type *
+                </label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  disabled={createSuccess}
+                >
+                  <option value="INFO">Information</option>
+                  <option value="SUCCESS">Success</option>
+                  <option value="WARNING">Warning</option>
+                  <option value="ERROR">Error</option>
+                  <option value="ANNOUNCEMENT">Announcement</option>
+                  <option value="UPDATE">Update</option>
+                  <option value="ALERT">Alert</option>
+                  <option value="MAINTENANCE">Maintenance</option>
+                </select>
+              </div>
+
+              {/* Organisation Targeting */}
+              {isSuperAdmin && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Target Organisation
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.targetOrganisation || ''}
+                    onChange={(e) => setFormData({ ...formData, targetOrganisation: e.target.value })}
+                    placeholder="Leave empty for all users"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    disabled={createSuccess}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    If specified, only users in this organisation will receive the notification
+                  </p>
+                </div>
+              )}
+
+              {/* Form Actions */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setCreateError(null);
+                    setCreateSuccess(false);
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={createSuccess}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createSuccess}
+                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {createSuccess ? 'Created!' : 'Create Notification'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {notifications.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            <p className="mt-2 text-gray-600">Loading notifications...</p>
+          </div>
+        ) : notifications.length > 0 ? (
           notifications.map((notification) => (
             <div
               key={notification.id}
-              className={`border rounded-lg p-4 transition-all ${getTypeColor(
-                notification.type
-              )} hover:shadow-md`}
+              className={`border rounded-lg p-4 transition-all ${getTypeColor(notification.type)} hover:shadow-md`}
             >
               <div className="flex items-start space-x-4">
                 {/* Icon */}
-                <div className="flex-shrink-0 pt-1">{getTypeIcon(notification.type)}</div>
+                <div className="flex-shrink-0 pt-1">
+                  {getTypeIcon(notification.type)}
+                </div>
 
                 {/* Content */}
-                <div className="flex-grow">
+                <div className="flex-grow min-w-0">
                   <div className="flex items-start justify-between">
                     <div className="flex-grow">
-                      <div className="flex items-center space-x-3 mb-1">
-                        <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                        <span
-                          className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(
-                            notification.status
-                          )}`}
-                        >
-                          {notification.status.charAt(0).toUpperCase() +
-                            notification.status.slice(1)}
-                        </span>
-                      </div>
-                      <p className="text-gray-700 text-sm">{notification.message}</p>
-                      <div className="flex items-center space-x-4 mt-3 text-xs text-gray-600">
-                        <span>📊 {notification.recipientCount.toLocaleString()} recipients</span>
-                        <span>📅 Created: {formatDate(notification.createdAt)}</span>
-                        {notification.status === 'sent' && notification.sentAt && (
-                          <span>✓ Sent: {formatDate(notification.sentAt)}</span>
+                      <div className="flex items-center space-x-2 flex-wrap gap-2">
+                        <h3 className="font-medium text-gray-900">
+                          {notification.title}
+                        </h3>
+                        {!notification.read && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-600">
+                            Unread
+                          </span>
                         )}
-                        {notification.status === 'scheduled' && notification.scheduledFor && (
-                          <span>⏰ Scheduled: {formatDate(notification.scheduledFor)}</span>
+                        {notification.targetOrganisation && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-600 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            {notification.targetOrganisation}
+                          </span>
+                        )}
+                        {notification.isBroadcast && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-600">
+                            Broadcast
+                          </span>
+                        )}
+                        {notification.createdByUserName && notification.createdByUserId === user?.id && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-600">
+                            Created by you
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-600 text-sm mt-1">
+                        {notification.message}
+                      </p>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500 mt-2 flex-wrap gap-2">
+                        <span>Received: {formatTime(notification.timestamp)}</span>
+                        {notification.sentAt && (
+                          <span>Sent: {formatTime(notification.sentAt)}</span>
                         )}
                       </div>
                     </div>
@@ -382,19 +416,17 @@ const AdminNotifications: React.FC = () => {
 
                 {/* Actions */}
                 <div className="flex-shrink-0 flex items-center space-x-2">
-                  {notification.status === 'draft' && (
+                  {!notification.read && (
                     <button
-                      onClick={() => {
-                        setShowCreateForm(true);
-                      }}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="Edit"
+                      onClick={() => markAsRead(notification.id)}
+                      className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                      title="Mark as read"
                     >
-                      <Edit className="w-4 h-4" />
+                      <CheckCircle className="w-4 h-4" />
                     </button>
                   )}
                   <button
-                    onClick={() => handleDeleteNotification(notification.id)}
+                    onClick={() => handleDelete(notification.id)}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                     title="Delete"
                   >
@@ -407,57 +439,16 @@ const AdminNotifications: React.FC = () => {
         ) : (
           <div className="bg-white rounded-lg border border-gray-100 p-12 text-center">
             <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications created</h3>
-            <p className="text-gray-600 mb-4">
-              Start by creating your first notification to communicate with users
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No notifications found
+            </h3>
+            <p className="text-gray-600">
+              Create your first notification using the button above
             </p>
-            <button
-              onClick={() => {
-                resetForm();
-                setShowCreateForm(true);
-              }}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Create First Notification</span>
-            </button>
           </div>
         )}
       </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-100 p-4">
-          <p className="text-gray-600 text-sm">Total Sent</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {notifications.filter(n => n.status === 'sent').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-100 p-4">
-          <p className="text-gray-600 text-sm">Scheduled</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {notifications.filter(n => n.status === 'scheduled').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-100 p-4">
-          <p className="text-gray-600 text-sm">Drafts</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {notifications.filter(n => n.status === 'draft').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-100 p-4">
-          <p className="text-gray-600 text-sm">Total Recipients</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {notifications
-              .filter(n => n.status === 'sent')
-              .reduce((sum, n) => sum + n.recipientCount, 0)
-              .toLocaleString()}
-          </p>
-        </div>
-      </div>
-            </div>
-          </main>
-        </div>
+    </div>
   );
 };
 

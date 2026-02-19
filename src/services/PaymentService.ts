@@ -1,3 +1,4 @@
+// src/services/PaymentService.ts
 import axiosClient from '../api/axiosClient';
 import type {
   PaymentRequest,
@@ -5,7 +6,6 @@ import type {
   RefundRequest,
   PaymentStatistics,
   RevenueAnalytics,
-  InitializePaymentRequest,
   Invoice,
   PaymentFilters
 } from '../interfaces/PaymentData';
@@ -72,18 +72,65 @@ class PaymentService {
     }
   }
 
-  // Verify Paystack payment
-  async verifyPaystackPayment(reference: string): Promise<PaymentResponse> {
-    try {
-      const response = await axiosClient.get(`${this.baseURL}/verify/${reference}`, {
-        headers: this.getAuthHeader()
-      });
-      
-      return this.transformPaymentResponse(response.data);
-    } catch (error: any) {
-      console.error('Error verifying Paystack payment:', error);
-      throw error;
+  // Verify Paystack payment with retry logic
+  async verifyPaystackPayment(reference: string, maxRetries = 10, delay = 1000): Promise<PaymentResponse> {
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Verification attempt ${attempt}/${maxRetries} for reference: ${reference}`);
+        
+        const response = await axiosClient.get(`${this.baseURL}/verify/${reference}`, {
+          headers: this.getAuthHeader(),
+          timeout: 5000 // 5 second timeout
+        });
+        
+        console.log(`✅ Payment verified successfully on attempt ${attempt}`);
+        return this.transformPaymentResponse(response.data);
+        
+      } catch (error: any) {
+        lastError = error;
+        
+        // If it's a 400 error, check if it's "Payment not found" or other
+        if (error.response?.status === 400) {
+          const errorMessage = error.response?.data?.failureMessage || error.response?.data?.message || '';
+          
+          if (errorMessage.includes('not found')) {
+            console.log(`⏳ Payment not yet processed (attempt ${attempt}/${maxRetries})`);
+            
+            if (attempt < maxRetries) {
+              // Wait with exponential backoff
+              const waitTime = delay * Math.pow(1.5, attempt - 1);
+              console.log(`Waiting ${waitTime}ms before next attempt...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              continue;
+            }
+          } else {
+            // Other 400 errors - don't retry
+            throw error;
+          }
+        } else if (error.response?.status === 404) {
+          console.log(`⏳ Payment reference not found (attempt ${attempt}/${maxRetries})`);
+          
+          if (attempt < maxRetries) {
+            const waitTime = delay * Math.pow(1.5, attempt - 1);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
+          }
+        } else {
+          // Network errors or other status codes
+          if (attempt < maxRetries) {
+            const waitTime = delay * Math.pow(1.5, attempt - 1);
+            console.log(`Network error, retrying in ${waitTime}ms...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
+          }
+        }
+      }
     }
+    
+    console.error('❌ All verification attempts failed:', lastError);
+    throw lastError;
   }
 
   // Get current user's payments
@@ -135,16 +182,25 @@ class PaymentService {
         headers: this.getAuthHeader()
       });
       
+      console.log('Raw getAllPayments response:', response.data);
+      
       if (!response.data) {
         return [];
       }
       
-      return Array.isArray(response.data) 
-        ? response.data.map(this.transformPaymentResponse)
-        : [];
+      // Handle both array and single object responses
+      if (Array.isArray(response.data)) {
+        return response.data.map(this.transformPaymentResponse);
+      } else if (response.data.content && Array.isArray(response.data.content)) {
+        // Handle paginated response
+        return response.data.content.map(this.transformPaymentResponse);
+      } else {
+        return [this.transformPaymentResponse(response.data)];
+      }
     } catch (error: any) {
       console.error('Error fetching all payments:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent UI crashes
+      return [];
     }
   }
 
@@ -164,7 +220,7 @@ class PaymentService {
         : [];
     } catch (error: any) {
       console.error('Error fetching payments by status:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -185,7 +241,7 @@ class PaymentService {
         : [];
     } catch (error: any) {
       console.error('Error fetching recent payments:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -205,7 +261,7 @@ class PaymentService {
         : [];
     } catch (error: any) {
       console.error('Error fetching order payments:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -315,7 +371,7 @@ class PaymentService {
         : [];
     } catch (error: any) {
       console.error('Error fetching subscription payments:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -331,6 +387,8 @@ class PaymentService {
         headers: this.getAuthHeader()
       });
       
+      console.log('Raw revenue analytics response:', response.data);
+      
       if (!response.data) {
         throw new Error('No revenue analytics data received');
       }
@@ -338,7 +396,17 @@ class PaymentService {
       return this.transformRevenueAnalytics(response.data);
     } catch (error: any) {
       console.error('Error fetching revenue analytics:', error);
-      throw error;
+      // Return default analytics instead of throwing
+      return {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        totalProfit: 0,
+        revenueGrowth: 0,
+        profitMargin: 0,
+        monthlyRevenue: [],
+        topCustomers: [],
+        paymentMethods: []
+      };
     }
   }
 
@@ -356,7 +424,7 @@ class PaymentService {
       return Array.isArray(response.data) ? response.data : [];
     } catch (error: any) {
       console.error('Error fetching invoices:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -420,10 +488,16 @@ class PaymentService {
         headers: this.getAuthHeader()
       });
       
+      console.log('Raw admin stats response:', response.data);
+      
+      if (!response.data) {
+        return this.getDefaultAdminStats();
+      }
+      
       return response.data;
     } catch (error: any) {
       console.error('Error fetching admin stats:', error);
-      throw error;
+      return this.getDefaultAdminStats();
     }
   }
 
@@ -444,7 +518,7 @@ class PaymentService {
         : [];
     } catch (error: any) {
       console.error('Error searching payments:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -466,11 +540,16 @@ class PaymentService {
 
   // Transform response data to PaymentResponse
   private transformPaymentResponse(data: any): PaymentResponse {
+    // Handle null or undefined
+    if (!data) {
+      return this.getDefaultPaymentResponse();
+    }
+
     return {
-      id: data.id || '',
-      userId: data.userId || '',
-      userEmail: data.userEmail || '',
-      userFullName: data.userFullName || '',
+      id: data.id || data.paymentId || '',
+      userId: data.userId || (data.user && data.user.userId ? data.user.userId.toString() : ''),
+      userEmail: data.userEmail || (data.user ? data.user.email : '') || '',
+      userFullName: data.userFullName || (data.user ? data.user.fullName : '') || '',
       paystackCustomerId: data.paystackCustomerId || '',
       paystackReference: data.paystackReference || '',
       amount: data.amount || 0,
@@ -490,7 +569,7 @@ class PaymentService {
       paymentMethodId: data.paymentMethodId,
       isRecurring: data.isRecurring || false,
       recurringInterval: data.recurringInterval,
-      metadata: data.metadata,
+      metadata: typeof data.metadata === 'object' ? JSON.stringify(data.metadata) : data.metadata,
       // Additional Paystack fields
       channel: data.channel,
       ipAddress: data.ipAddress,
@@ -498,12 +577,44 @@ class PaymentService {
       amountSettled: data.amountSettled,
       verifiedAt: data.verifiedAt,
       authorizationUrl: data.authorizationUrl,
-      accessCode: data.accessCode
+      accessCode: data.accessCode,
+      organisation: data.organisation || (data.user ? data.user.organisation : '')
+    };
+  }
+
+  private getDefaultPaymentResponse(): PaymentResponse {
+    return {
+      id: '',
+      userId: '',
+      userEmail: '',
+      userFullName: '',
+      paystackCustomerId: '',
+      paystackReference: '',
+      amount: 0,
+      currency: 'ZAR',
+      description: '',
+      status: 'PENDING',
+      orderId: '',
+      receiptEmail: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isRecurring: false
     };
   }
 
   // Transform statistics data
   private transformPaymentStatistics(data: any): PaymentStatistics {
+    if (!data) {
+      return {
+        userId: '',
+        totalAmountPaid: 0,
+        totalSuccessfulPayments: 0,
+        totalFailedPayments: 0,
+        totalRefundedAmount: 0,
+        averagePaymentAmount: 0
+      };
+    }
+
     return {
       userId: data.userId || '',
       totalAmountPaid: data.totalAmountPaid || 0,
@@ -518,6 +629,19 @@ class PaymentService {
 
   // Transform revenue analytics data
   private transformRevenueAnalytics(data: any): RevenueAnalytics {
+    if (!data) {
+      return {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        totalProfit: 0,
+        revenueGrowth: 0,
+        profitMargin: 0,
+        monthlyRevenue: [],
+        topCustomers: [],
+        paymentMethods: []
+      };
+    }
+
     return {
       totalRevenue: data.totalRevenue || 0,
       totalExpenses: data.totalExpenses || 0,
@@ -525,8 +649,27 @@ class PaymentService {
       revenueGrowth: data.revenueGrowth || 0,
       profitMargin: data.profitMargin || 0,
       monthlyRevenue: data.monthlyRevenue || [],
-      topCustomers: data.topCustomers || [],
+      topCustomers: (data.topCustomers || []).map((customer: any) => ({
+        userId: customer.userId,
+        userEmail: customer.userEmail || customer.email || '',
+        userFullName: customer.userFullName || customer.name || '',
+        totalSpent: customer.totalSpent || customer.amount || 0,
+        paymentCount: customer.paymentCount || customer.payments || 0,
+        lastPaymentDate: customer.lastPaymentDate || ''
+      })),
       paymentMethods: data.paymentMethods || []
+    };
+  }
+
+  private getDefaultAdminStats() {
+    return {
+      totalRevenue: 0,
+      totalPayments: 0,
+      successfulPayments: 0,
+      failedPayments: 0,
+      pendingPayments: 0,
+      averageAmount: 0,
+      topCustomers: []
     };
   }
 
@@ -560,6 +703,8 @@ class PaymentService {
 
   // Utility methods
   formatCurrency(amount: number, currency: string = 'R'): string {
+    if (amount === undefined || amount === null) return 'R0';
+    
     if (currency === 'ZAR' || currency === 'R') {
       return new Intl.NumberFormat('en-ZA', {
         style: 'currency',
@@ -578,30 +723,36 @@ class PaymentService {
   }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-ZA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return 'N/A';
+    
+    try {
+      return new Date(dateString).toLocaleDateString('en-ZA', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return dateString;
+    }
   }
 
   getStatusColor(status: string): string {
     switch (status) {
       case 'SUCCEEDED':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 border-green-200';
       case 'PROCESSING':
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'FAILED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'REFUNDED':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'CANCELED':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   }
 

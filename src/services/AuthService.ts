@@ -8,8 +8,6 @@ import type {
   LoginResponse,
   CreateUserRequest,
   CreateUserResponse,
-  OrganisationUserRequest,
-  UserAvailability
 } from '../interfaces/UserData';
 
 // Base URL for public axios (no auth required)
@@ -272,7 +270,7 @@ class AuthService {
    */
   async resetPasswordWithToken(token: string, newPassword: string): Promise<void> {
     try {
-      await axiosClient.post('/authentication/reset-password', {
+      await axiosClient.put('/authentication/reset-password', {
         token,
         newPassword
       });
@@ -283,14 +281,90 @@ class AuthService {
   }
 
   /**
-   * Change password
+   * Reset password verify
    */
+  async resetPasswordVerify(token: string, newPassword: string): Promise<void> {
+    try {
+    console.log("🔐 Verifying password reset...");
+
+    await publicAxios.put('/authentication/reset-password', {
+    token,
+    newPassword
+    });
+
+    console.log("✅ Password reset successful");
+
+    } catch (error: any) {
+
+    let errorMessage = 'Failed to reset password.';
+
+    if (error.response?.data) {
+    errorMessage = typeof error.response.data === 'string'
+    ? error.response.data
+    : error.response.data.message || errorMessage;
+    } else if (error.message) {
+    errorMessage = error.message;
+    }
+
+    if (error.response?.status === 400) {
+    errorMessage = 'Invalid or expired reset link.';
+    }
+
+    if (error.response?.status === 404) {
+    errorMessage = 'Reset request not found.';
+    }
+
+    throw new Error(errorMessage);
+    }
+    }
+
+  // src/services/AuthService.ts
+
+/**
+ * Change password - Matches backend API: PUT /authentication/change-password
+ */
   async changePassword(passwords: ChangePasswordRequest): Promise<void> {
     try {
-      await axiosClient.put('/authentication/change-password', passwords);
-    } catch (error) {
-      console.error('Change password error:', error);
-      throw new Error('Failed to change password.');
+      console.log("🔐 Changing password...");
+
+      // Backend expects "oldPassword" and "newPassword" keys
+      const requestBody = {
+        oldPassword: passwords.currentPassword,
+        newPassword: passwords.newPassword
+      };
+
+      // REMOVED: ${userId} from the URL - just use the base endpoint
+      await axiosClient.put(`/authentication/change-password`, requestBody);
+      
+      console.log("✅ Password changed successfully");
+    } catch (error: any) {
+      console.error('❌ Change password error:', error);
+      console.error('Error response:', error.response);
+
+      let errorMessage = 'Failed to change password.';
+
+      // Extract error message from response
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Handle specific HTTP status codes
+      if (error.response?.status === 401) {
+        errorMessage = 'Current password is incorrect. Please try again.';
+      } else if (error.response?.status === 400) {
+        // Keep the backend's validation message if available
+        if (!error.response.data?.message) {
+          errorMessage = 'Invalid password format. Please check the requirements.';
+        }
+      } else if (error.response?.status === 404) {
+        errorMessage = 'User not found. Please log in again.';
+      }
+
+      throw new Error(errorMessage);
     }
   }
 
