@@ -1,6 +1,6 @@
 // src/pages/adminDashboard/tabs/components/UserManagementHeader.tsx
 import React from 'react';
-import { Users, Shield, Building2, UserPlus, RefreshCw } from 'lucide-react';
+import { Users, Shield, Building2, UserPlus } from 'lucide-react';
 
 interface UserManagementHeaderProps {
   isSuperAdmin: boolean;
@@ -9,8 +9,6 @@ interface UserManagementHeaderProps {
   totalOrganisations: number;
   statsTotalUsers: number;
   onAddUser: () => void;
-  onRefresh: () => void;
-  isRefreshing: boolean;
 }
 
 export const UserManagementHeader: React.FC<UserManagementHeaderProps> = ({
@@ -19,9 +17,7 @@ export const UserManagementHeader: React.FC<UserManagementHeaderProps> = ({
   totalUsers,
   totalOrganisations,
   statsTotalUsers,
-  onAddUser,
-  onRefresh,
-  isRefreshing
+  onAddUser
 }) => {
   return (
     <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -32,7 +28,7 @@ export const UserManagementHeader: React.FC<UserManagementHeaderProps> = ({
           {isSuperAdmin ? (
             <span className="ml-3 px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full flex items-center">
               <Shield className="w-4 h-4 mr-1" />
-              Super Admin • Viewing All {totalUsers} Users
+              Viewing All {totalUsers} Users
             </span>
           ) : (
             <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full flex items-center">
@@ -59,15 +55,6 @@ export const UserManagementHeader: React.FC<UserManagementHeaderProps> = ({
             Add {isSuperAdmin ? 'Admin/User' : 'User'}
           </button>
         )}
-        
-        <button
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
       </div>
     </div>
   );

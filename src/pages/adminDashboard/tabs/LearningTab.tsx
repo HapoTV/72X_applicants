@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { learningService } from '../../../services/LearningService';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
-import { Crown } from 'lucide-react';
 import { LearningTabs } from './components/LearningTabs';
 import { LearningTable } from './components/LearningTable';
 import { LearningModal } from './components/LearningModal';
@@ -354,7 +353,7 @@ export default function LearningTab() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
             <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Learning Materials</h1>
@@ -364,12 +363,6 @@ export default function LearningTab() {
                             : `Manage learning resources for ${userOrganisation || 'your organisation'}`}
                     </p>
                 </div>
-                {isSuperAdmin && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 rounded-lg">
-                        <Crown className="w-4 h-4" />
-                        <span className="text-sm font-medium">Super Admin</span>
-                    </div>
-                )}
             </div>
             
             <LearningTabs 

@@ -1,6 +1,7 @@
 // src/pages/VerifyOtp.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Crown, Shield, User } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../assets/Logo.svg';
@@ -224,7 +225,24 @@ const VerifyOtp: React.FC = () => {
                 
                 <div className="flex justify-center mb-6">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${loginType === 'admin' || loginType === 'superadmin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                        {loginType === 'admin' ? '👑 Admin Login' : loginType === 'superadmin' ? '👑 Super Admin Login' : '👤 User Login'}
+                        <span className="inline-flex items-center gap-2">
+                            {loginType === 'admin' ? (
+                                <>
+                                    <Shield className="w-4 h-4" />
+                                    Admin Login
+                                </>
+                            ) : loginType === 'superadmin' ? (
+                                <>
+                                    <Crown className="w-4 h-4" />
+                                    Super Admin Login
+                                </>
+                            ) : (
+                                <>
+                                    <User className="w-4 h-4" />
+                                    User Login
+                                </>
+                            )}
+                        </span>
                     </span>
                 </div>
                 

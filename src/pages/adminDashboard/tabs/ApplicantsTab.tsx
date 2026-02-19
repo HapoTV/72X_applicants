@@ -17,11 +17,11 @@ export default function ApplicantsTab() {
   const [users, setUsers] = useState<UserWithSubscription[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserWithSubscription[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All');
   const [organisationFilter, setOrganisationFilter] = useState<string>('all');
+
   const [organisations, setOrganisations] = useState<string[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData>({
@@ -192,7 +192,6 @@ export default function ApplicantsTab() {
       setFetchError(`Failed to load users: ${error.message}`);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -390,7 +389,7 @@ export default function ApplicantsTab() {
   // Show error state
   if (fetchError) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Users</h3>
           <p className="text-red-600">{fetchError}</p>
@@ -409,7 +408,7 @@ export default function ApplicantsTab() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       <UserManagementHeader
         isSuperAdmin={isSuperAdmin}
         userOrganisation={userOrganisation}
@@ -417,11 +416,6 @@ export default function ApplicantsTab() {
         totalOrganisations={stats.totalOrganisations}
         statsTotalUsers={stats.totalUsers}
         onAddUser={() => setShowAddAdminModal(true)}
-        onRefresh={() => {
-          setRefreshing(true);
-          fetchAllUsers();
-        }}
-        isRefreshing={refreshing}
       />
 
       <UserStats stats={stats} isSuperAdmin={isSuperAdmin} />

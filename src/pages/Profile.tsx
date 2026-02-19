@@ -11,6 +11,7 @@ const Profile: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [notificationSaving, setNotificationSaving] = useState(false);
   const [downloadingData, setDownloadingData] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [profileImageUrl, setProfileImageUrl] = useState<string>('');
   const [uploadingPicture, setUploadingPicture] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -208,6 +209,25 @@ const Profile: React.FC = () => {
       alert('Failed to download your data');
     } finally {
       setDownloadingData(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deletingAccount) return;
+
+    const confirmed = window.confirm(
+      'Are you sure you want to delete your account? This action is permanent and cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingAccount(true);
+      await authService.deactivateUser();
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      alert(error?.message || 'Failed to delete account');
+    } finally {
+      setDeletingAccount(false);
     }
   };
 
@@ -793,11 +813,16 @@ const Profile: React.FC = () => {
                     </div>
                   </button>
                   
-                  <button className="w-full text-left p-4 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={deletingAccount}
+                    className="w-full text-left p-4 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-red-900">Delete Account</p>
-                        <p className="text-sm text-red-600">Permanently delete your account and data</p>
+                        <p className="text-sm text-red-600">Permanently delete your account and data (cannot be undone)</p>
                       </div>
                       <Trash2 className="w-5 h-5 text-red-600" />
                     </div>

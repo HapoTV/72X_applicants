@@ -155,15 +155,11 @@ const AdTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Super Admin Badge */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-2xl font-bold text-gray-800">Ad Management</h2>
-            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium flex items-center gap-1">
-              <Crown className="w-4 h-4" />
-              Super Admin Only
-            </span>
           </div>
           <p className="text-gray-600">Create, manage, and track advertisements</p>
         </div>

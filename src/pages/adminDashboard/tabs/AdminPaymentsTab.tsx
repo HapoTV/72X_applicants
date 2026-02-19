@@ -24,7 +24,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
   Shield,
@@ -280,12 +279,6 @@ const AdminPaymentsTab: React.FC = () => {
     }
   };
 
-  const handleRefresh = () => {
-    fetchPayments();
-    fetchStats();
-    fetchRevenueAnalytics();
-  };
-
   const handleStatusFilter = (status: string) => {
     if (status === 'all') {
       setFilters({ ...filters, status: undefined });
@@ -338,29 +331,11 @@ const AdminPaymentsTab: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Shield className="h-5 w-5 text-green-600" />
-            <span className="text-sm font-medium text-gray-600">Super Admin Payment Portal</span>
-            {isSuperAdmin && (
-              <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-full text-xs flex items-center gap-1">
-                <Crown className="w-3 h-3" />
-                Super Admin Only
-              </span>
-            )}
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Payment Administration</h1>
           <p className="text-gray-600 mt-1">
             Manage and monitor all payments across all organisations
           </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={loading}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
         </div>
       </div>
 

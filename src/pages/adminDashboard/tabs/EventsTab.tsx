@@ -4,7 +4,7 @@ import { eventService } from '../../../services/EventService';
 import { useAuth } from '../../../context/AuthContext';
 import type { AdminEventItem, EventFormData} from '../../../interfaces/EventData';
 import { DEFAULT_EVENT_TYPE, EventTypeOptions } from '../../../interfaces/EventData';
-import { Building2, Crown } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 export default function EventsTab() {
   const { user, isSuperAdmin, userOrganisation } = useAuth();
@@ -116,7 +116,7 @@ export default function EventsTab() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="flex items-center space-x-3 mb-2">
@@ -125,12 +125,6 @@ export default function EventsTab() {
               <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm flex items-center gap-1">
                 <Building2 className="w-4 h-4" />
                 {userOrganisation}
-              </span>
-            )}
-            {isSuperAdmin && (
-              <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm flex items-center gap-1">
-                <Crown className="w-4 h-4" />
-                Super Admin
               </span>
             )}
           </div>

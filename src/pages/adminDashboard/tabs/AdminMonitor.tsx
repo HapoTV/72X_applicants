@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, CreditCard, AlertTriangle, Server, Activity, 
-  Shield, BarChart, RefreshCw,
+  Shield, BarChart,
   Loader2, AlertCircle, CheckCircle, XCircle, Cpu, HardDrive,
   Crown
 } from 'lucide-react';
+
 import { adminMonitoringService } from '../../../services/AdminMonitoringService';
 import { useAuth } from '../../../context/AuthContext';
 import type {
@@ -120,26 +121,14 @@ const AdminMonitor: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header with Super Admin Badge */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">System Monitoring</h1>
-            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium flex items-center gap-1">
-              <Crown className="w-4 h-4" />
-              Super Admin Only
-            </span>
           </div>
           <p className="text-gray-600">Monitor system health, users, and performance metrics</p>
         </div>
-        <button
-          onClick={refreshData}
-          disabled={refreshing}
-          className="flex items-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
-        </button>
       </div>
 
       {/* Stats Grid */}

@@ -14,7 +14,6 @@ import {
   X,
   User,
   DollarSign,
-  Video,
   BookOpen,
   Upload,
   ShoppingBag,
@@ -178,7 +177,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     package: PackageType;
   }> = [
     // Dashboard
-    { path: '/', icon: Home, label: 'Dashboard', package: 'startup' as PackageType },
+    { path: '/dashboard', icon: Home, label: 'Dashboard', package: 'startup' as PackageType },
     
     // Roadmap
     { path: '/roadmap', icon: BarChart3, label: 'Roadmap', package: 'premium' as PackageType },
@@ -196,7 +195,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' as PackageType },
     
     // Community
-    { path: '/community', icon: Users, label: 'Community', package: 'startup' as PackageType },
+    { path: '/community/discussions', icon: Users, label: 'Community', package: 'startup' as PackageType },
     
     // Mentorship
     { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' as PackageType },
@@ -210,7 +209,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     
     // Premium Package Features (everything)
     { path: '/analytics', icon: BarChart3, label: 'Analytics', package: 'premium' },
-    { path: '/experts', icon: Video, label: 'Expert Q&A', package: 'premium' },
     { path: '/ai-analyst', icon: Brain, label: 'AI Business Analyst', package: 'premium' },
     
     // Profile (available in all packages)
@@ -298,7 +296,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
             const upgradePath = `/upgrade${item.path}`;
 
             // Special handling for Dashboard - add arrow button with click
-            if (item.path === '/') {
+            if (item.path === '/dashboard') {
               return (
                 <li 
                   key={item.path}
@@ -475,7 +473,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
             }
 
             // Special handling for Community - add arrow button with click
-            if (item.path === '/community') {
+            if (item.path === '/community/discussions') {
               return (
                 <li 
                   key={item.path}

@@ -154,9 +154,12 @@ export default function MentorshipTab() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
             <div className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl font-bold text-gray-900">Mentorship Program</h1>
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Mentorship Program</h1>
+                    <p className="text-gray-600 mt-1">Manage mentors, availability, and visibility in the mentorship program</p>
+                </div>
                 <button 
                     onClick={() => setShowAddMentor(true)}
                     className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"

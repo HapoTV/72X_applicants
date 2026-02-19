@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Bell, 
+  ArrowLeft,
   Trash2, 
   CheckCircle, 
   AlertCircle, 
@@ -12,6 +13,7 @@ import {
   Crown,
   X
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import NotificationService from '../../services/NotificationService';
 import type { 
   Notification, 
@@ -21,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const AdminNotifications: React.FC = () => {
   const { user, isSuperAdmin, userOrganisation } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -32,7 +35,7 @@ const AdminNotifications: React.FC = () => {
     title: '',
     message: '',
     type: 'INFO',
-    targetOrganisation: !isSuperAdmin ? userOrganisation : undefined
+    targetOrganisation: !isSuperAdmin ? (userOrganisation ?? undefined) : undefined
   });
 
   useEffect(() => {
@@ -66,7 +69,7 @@ const AdminNotifications: React.FC = () => {
 
       // For regular admins, ensure organisation is set
       if (!isSuperAdmin && !formData.targetOrganisation) {
-        formData.targetOrganisation = userOrganisation;
+        formData.targetOrganisation = userOrganisation ?? undefined;
       }
       
       await NotificationService.createNotification(formData);
@@ -85,7 +88,7 @@ const AdminNotifications: React.FC = () => {
           title: '',
           message: '',
           type: 'INFO',
-          targetOrganisation: !isSuperAdmin ? userOrganisation : undefined
+          targetOrganisation: !isSuperAdmin ? (userOrganisation ?? undefined) : undefined
         });
       }, 2000);
       
@@ -182,6 +185,15 @@ const AdminNotifications: React.FC = () => {
       <div>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={() => navigate('/admin/dashboard/applicants')}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="Back to Admin Dashboard"
+              title="Back to Admin Dashboard"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
               <Bell className="w-8 h-8 text-primary-600" />
               <span>Notification Management</span>
@@ -395,7 +407,7 @@ const AdminNotifications: React.FC = () => {
                             Broadcast
                           </span>
                         )}
-                        {notification.createdByUserName && notification.createdByUserId === user?.id && (
+                        {notification.createdByUserName && notification.createdByUserId === user?.userId && (
                           <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-600">
                             Created by you
                           </span>

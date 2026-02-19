@@ -79,15 +79,16 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
                             {isSuperAdmin ? (
                                 <span className="flex items-center">
                                     <Crown className="w-5 h-5 text-purple-600 mr-1" />
-                                    Super Admin Dashboard
+                                    Admin Dashboard
                                 </span>
                             ) : (
                                 'Admin Dashboard'
                             )}
                         </span>
                         <span className="text-xl font-bold ml-3 md:hidden">
-                            {isSuperAdmin ? 'Super' : 'Admin'}
+                            Admin
                         </span>
+
                         {userOrganisation && !isSuperAdmin && (
                             <span className="ml-3 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full hidden md:inline">
                                 {userOrganisation}
@@ -98,12 +99,7 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
                     {/* Right side: Controls */}
                     <div className="flex items-center space-x-4">
                         {/* Role Badge */}
-                        {isSuperAdmin ? (
-                            <div className="hidden md:flex items-center space-x-1 px-3 py-1 bg-purple-50 text-purple-700 rounded-full">
-                                <Crown className="w-4 h-4" />
-                                <span className="text-xs font-medium">Super Admin</span>
-                            </div>
-                        ) : (
+                        {!isSuperAdmin && (
                             <div className="hidden md:flex items-center space-x-1 px-3 py-1 bg-green-50 text-green-700 rounded-full">
                                 <Shield className="w-4 h-4" />
                                 <span className="text-xs font-medium">Admin</span>

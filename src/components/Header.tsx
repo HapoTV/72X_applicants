@@ -161,16 +161,14 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
 
   const index = useMemo(
     () => [
-      { title: 'Dashboard', path: '/', keywords: ['home', 'overview', 'metrics'] },
+      { title: 'Dashboard', path: '/dashboard/overview', keywords: ['home', 'overview', 'metrics'] },
       { title: 'Notifications', path: '/notifications', keywords: ['alerts', 'messages', 'updates', 'bell'] },
-      { title: 'Schedule', path: '/schedule', keywords: ['calendar', 'events'] },
-      { title: 'Learning', path: '/learning', keywords: ['modules', 'courses'] },
-      { title: 'Community', path: '/community', keywords: ['discussions', 'networking', 'mentorship'] },
+      { title: 'Schedule', path: '/schedule/events', keywords: ['calendar', 'events'] },
+      { title: 'Learning', path: '/learning?category=business-plan', keywords: ['modules', 'courses'] },
+      { title: 'Community', path: '/community/discussions', keywords: ['discussions', 'networking', 'mentorship'] },
       { title: 'Funding Finder', path: '/funding', keywords: ['grants', 'loans', 'investors'] },
-      { title: 'Expert Sessions', path: '/experts', keywords: ['q&a', 'videos', 'mentors'] },
-      { title: 'Toolkit', path: '/toolkit', keywords: ['tools', 'resources'] },
       { title: 'Marketplace', path: '/marketplace', keywords: ['products', 'store'] },
-      { title: 'Mentorship Hub', path: '/mentorship-hub', keywords: ['mentors', 'peers'] },
+      { title: 'Mentorship', path: '/mentorship', keywords: ['mentors', 'peers'] },
       { title: 'Applications', path: '/applications', keywords: ['apps', 'store'] },
       { title: 'Profile', path: '/profile', keywords: ['settings', 'my profile', 'my information', 'account', 'user'] },
       { title: 'Settings', path: '/profile', keywords: ['profile', 'account', 'my info', 'my information'] },
