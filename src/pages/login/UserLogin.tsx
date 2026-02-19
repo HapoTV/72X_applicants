@@ -157,7 +157,7 @@ const UserLogin: React.FC = () => {
                                     Signing in...
                                 </>
                             ) : (
-                                'Sign In as User'
+                                'Sign In'
                             )}
                         </button>
                     </form>
