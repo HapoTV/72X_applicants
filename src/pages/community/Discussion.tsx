@@ -157,7 +157,7 @@ const Discussions: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Community Forum</h1>
-        <p className="text-gray-600">Connect with fellow entrepreneurs, share experiences, and grow together</p>
+        <p className="text-gray-600">Share business advice and experiences with other entrepreneurs in the community</p>
       </div>
 
       <CommunityStats stats={communityStats} />
@@ -175,7 +175,7 @@ const Discussions: React.FC = () => {
             className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
-            <span>New Discussion</span>
+            <span>Post Business Advice</span>
           </button>
         </div>
 

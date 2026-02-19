@@ -203,7 +203,22 @@ class AuthService {
    */
   async updateUserProfile(userData: Partial<User>): Promise<User> {
     try {
-      const response = await axiosClient.put('/users/me', userData);
+      const userId =
+        userData.userId ||
+        (() => {
+          try {
+            const raw = localStorage.getItem('user');
+            const parsed = raw ? JSON.parse(raw) : null;
+            return parsed?.userId || localStorage.getItem('userId') || undefined;
+          } catch {
+            return localStorage.getItem('userId') || undefined;
+          }
+        })();
+
+      const response = await axiosClient.put('/users/me', {
+        ...userData,
+        userId,
+      });
       
       // Update stored user data
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');

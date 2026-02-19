@@ -40,7 +40,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             <div className="flex items-center justify-center gap-3">
               <Gift className="h-5 w-5 text-green-600" />
               <div>
-                <p className="text-sm font-medium text-green-800">🎁 Start with a 14-day free trial!</p>
+                <p className="text-sm font-medium text-green-800">Start with a 14-day free trial!</p>
                 <p className="text-xs text-green-600 mt-1">
                   Try all features for free. No credit card required until trial ends.
                 </p>
@@ -57,7 +57,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
               <Clock className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium text-blue-800">
-                  ⏳ Free Trial Active: {freeTrialStatus.remainingDays} days remaining
+                  Free Trial Active: {freeTrialStatus.remainingDays} days remaining
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   Your free trial ends in {freeTrialStatus.remainingDays} days
@@ -76,7 +76,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
                 <AlertCircle className="h-5 w-5 text-yellow-400" />
               </div>
               <div className="ml-3">
-                <p className="text-sm text-yellow-700 font-medium">⚠️ Package Selection Required</p>
+                <p className="text-sm text-yellow-700 font-medium">Package Selection Required</p>
                 <p className="text-sm text-yellow-600 mt-1">
                   You need to select a package to continue using the platform. This is a one-time selection that
                   will unlock all features.

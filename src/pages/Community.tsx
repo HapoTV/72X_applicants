@@ -143,7 +143,7 @@ const Community: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Community Forum</h1>
-        <p className="text-gray-600">Connect with fellow entrepreneurs, share experiences, and grow together</p>
+        <p className="text-gray-600">Share business advice and experiences with other entrepreneurs in the community</p>
       </div>
 
       {/* Community Stats */}

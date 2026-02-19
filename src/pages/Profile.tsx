@@ -1,5 +1,5 @@
 // src/pages/Profile.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Edit, Save, Bell, Shield, Eye, EyeOff, X, Trash2, Building2 } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,24 @@ const Profile: React.FC = () => {
   const { user, login, userOrganisation } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  const [notificationSaving, setNotificationSaving] = useState(false);
+  const [downloadingData, setDownloadingData] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string>('');
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    email: {
+      dailyQuotes: true,
+      aiInsights: true,
+      dataAnalysis: true,
+      weeklyReports: false,
+    },
+    push: {
+      urgentAlerts: true,
+      goalMilestones: true,
+      newResources: false,
+    },
+  });
   const [profileData, setProfileData] = useState<UserFormData>({
     fullName: '',
     email: '',
@@ -37,7 +55,7 @@ const Profile: React.FC = () => {
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [changingPassword, setChangingPassword] = useState(false);
-  
+
   // Real-time password requirements (like CreatePassword)
   const [passwordRequirements, setPasswordRequirements] = useState({
     minLength: false,
@@ -57,6 +75,28 @@ const Profile: React.FC = () => {
     fetchUserProfile();
   }, []);
 
+  useEffect(() => {
+    if (activeTab !== 'notifications') return;
+
+    const userKey = user?.userId || user?.email || localStorage.getItem('userEmail') || 'anonymous';
+    const storageKey = `notificationPreferences:${userKey}`;
+
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        setNotificationPreferences((prev) => ({
+          email: { ...prev.email, ...(parsed.email || {}) },
+          push: { ...prev.push, ...(parsed.push || {}) },
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading notification preferences:', error);
+    }
+  }, [activeTab, user?.userId, user?.email]);
+
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
@@ -72,11 +112,102 @@ const Profile: React.FC = () => {
         employees: userData.employees || '',
         founded: userData.founded || '',
       });
+      setProfileImageUrl(userData.profileImageUrl || '');
+
+      try {
+        const raw = localStorage.getItem('user');
+        const parsed = raw ? JSON.parse(raw) : {};
+        const nextUser = { ...parsed, ...userData };
+        localStorage.setItem('user', JSON.stringify(nextUser));
+        window.dispatchEvent(new CustomEvent('user-updated'));
+      } catch (e) {
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       alert('Failed to load profile data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveNotificationPreferences = async () => {
+    try {
+      setNotificationSaving(true);
+      const userKey = user?.userId || user?.email || localStorage.getItem('userEmail') || 'anonymous';
+      const storageKey = `notificationPreferences:${userKey}`;
+      localStorage.setItem(storageKey, JSON.stringify(notificationPreferences));
+      alert('Preferences saved successfully!');
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+      alert('Failed to save preferences');
+    } finally {
+      setNotificationSaving(false);
+    }
+  };
+
+  const handleDownloadUserData = async () => {
+    try {
+      setDownloadingData(true);
+
+      const userKey = user?.userId || user?.email || localStorage.getItem('userEmail') || 'anonymous';
+      const notificationPrefsKey = `notificationPreferences:${userKey}`;
+
+      const rows: Array<{ key: string; value: string }> = [];
+      const addRow = (key: string, value: unknown) => {
+        if (value === undefined || value === null) return;
+        const str = typeof value === 'string' ? value : JSON.stringify(value);
+        rows.push({ key, value: str });
+      };
+
+      addRow('fullName', profileData.fullName);
+      addRow('email', profileData.email);
+      addRow('mobileNumber', profileData.mobileNumber);
+      addRow('companyName', profileData.companyName);
+      addRow('organisation', profileData.organisation);
+      addRow('industry', profileData.industry);
+      addRow('location', profileData.location);
+      addRow('employees', profileData.employees);
+      addRow('founded', profileData.founded);
+
+      addRow('monthlyRevenue', localStorage.getItem('monthlyRevenue'));
+      addRow('activeCustomers', localStorage.getItem('activeCustomers'));
+      addRow('growthRate', localStorage.getItem('growthRate'));
+      addRow('goalsAchieved', localStorage.getItem('goalsAchieved'));
+
+      const registrationDataRaw = localStorage.getItem('registrationData');
+      if (registrationDataRaw) {
+        addRow('registrationData', registrationDataRaw);
+      }
+
+      const storedNotificationPrefs = localStorage.getItem(notificationPrefsKey);
+      if (storedNotificationPrefs) {
+        addRow('notificationPreferences', storedNotificationPrefs);
+      }
+
+      const escapeCsv = (value: string) => {
+        const needsQuotes = /[",\n\r]/.test(value);
+        const escaped = value.replace(/"/g, '""');
+        return needsQuotes ? `"${escaped}"` : escaped;
+      };
+
+      const csvLines = ['Key,Value', ...rows.map((r) => `${escapeCsv(r.key)},${escapeCsv(r.value)}`)];
+      const csv = csvLines.join('\r\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeName = (profileData.fullName || 'user').replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '_');
+      a.href = url;
+      a.download = `72X_${safeName}_data.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading user data:', error);
+      alert('Failed to download your data');
+    } finally {
+      setDownloadingData(false);
     }
   };
 
@@ -230,6 +361,32 @@ const Profile: React.FC = () => {
     </div>
   );
 
+  const handleUploadPictureClick = () => {
+    uploadInputRef.current?.click();
+  };
+
+  const handleUploadPictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingPicture(true);
+      const updatedUser = await authService.updateProfileImage(file);
+      login(updatedUser);
+      setProfileImageUrl(updatedUser.profileImageUrl || '');
+      window.dispatchEvent(new CustomEvent('user-updated'));
+      alert('Profile picture updated successfully!');
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      alert('Failed to upload profile picture');
+    } finally {
+      setUploadingPicture(false);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = '';
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -316,10 +473,19 @@ const Profile: React.FC = () => {
 
             {/* Profile Picture */}
             <div className="flex items-center space-x-6 mb-8">
-              <div className="w-20 h-20 bg-primary-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-2xl font-bold">
-                  {profileData.fullName.split(' ').map(n => n[0]).join('')}
-                </span>
+              <div className="w-20 h-20 bg-primary-500 rounded-full flex items-center justify-center overflow-hidden">
+                {profileImageUrl ? (
+                  <img
+                    src={profileImageUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={() => setProfileImageUrl('')}
+                  />
+                ) : (
+                  <span className="text-white text-2xl font-bold">
+                    {profileData.fullName.split(' ').map(n => n[0]).join('')}
+                  </span>
+                )}
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">{profileData.fullName}</h3>
@@ -331,9 +497,23 @@ const Profile: React.FC = () => {
                   </p>
                 )}
                 {isEditing && (
-                  <button className="text-primary-600 text-sm hover:text-primary-700 mt-1">
-                    Change Photo
-                  </button>
+                  <>
+                    <input
+                      ref={uploadInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleUploadPictureChange}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleUploadPictureClick}
+                      disabled={uploadingPicture}
+                      className="text-primary-600 text-sm hover:text-primary-700 mt-1 disabled:opacity-50"
+                    >
+                      {uploadingPicture ? 'Uploading...' : 'Upload picture'}
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -492,16 +672,31 @@ const Profile: React.FC = () => {
                 <h4 className="text-md font-medium text-gray-900 mb-4">Email Notifications</h4>
                 <div className="space-y-3">
                   {[
-                    { id: 'daily-quotes', label: 'Daily motivation quotes', checked: true },
-                    { id: 'ai-insights', label: 'AI insights and recommendations', checked: true },
-                    { id: 'data-analysis', label: 'Data analysis completion', checked: true },
-                    { id: 'weekly-reports', label: 'Weekly business reports', checked: false },
+                    { id: 'daily-quotes', label: 'Daily motivation quotes', checked: notificationPreferences.email.dailyQuotes },
+                    { id: 'ai-insights', label: 'AI insights and recommendations', checked: notificationPreferences.email.aiInsights },
+                    { id: 'data-analysis', label: 'Data analysis completion', checked: notificationPreferences.email.dataAnalysis },
+                    { id: 'weekly-reports', label: 'Weekly business reports', checked: notificationPreferences.email.weeklyReports },
                   ].map(item => (
                     <label key={item.id} className="flex items-center space-x-3">
                       <input
                         type="checkbox"
-                        defaultChecked={item.checked}
-                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                        checked={item.checked}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setNotificationPreferences((prev) => {
+                            if (item.id === 'daily-quotes') {
+                              return { ...prev, email: { ...prev.email, dailyQuotes: checked } };
+                            }
+                            if (item.id === 'ai-insights') {
+                              return { ...prev, email: { ...prev.email, aiInsights: checked } };
+                            }
+                            if (item.id === 'data-analysis') {
+                              return { ...prev, email: { ...prev.email, dataAnalysis: checked } };
+                            }
+                            return { ...prev, email: { ...prev.email, weeklyReports: checked } };
+                          });
+                        }}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
                       />
                       <span className="text-gray-700">{item.label}</span>
                     </label>
@@ -513,15 +708,27 @@ const Profile: React.FC = () => {
                 <h4 className="text-md font-medium text-gray-900 mb-4">Push Notifications</h4>
                 <div className="space-y-3">
                   {[
-                    { id: 'urgent-alerts', label: 'Urgent business alerts', checked: true },
-                    { id: 'goal-milestones', label: 'Goal milestone achievements', checked: true },
-                    { id: 'new-resources', label: 'New resources available', checked: false },
+                    { id: 'urgent-alerts', label: 'Urgent business alerts', checked: notificationPreferences.push.urgentAlerts },
+                    { id: 'goal-milestones', label: 'Goal milestone achievements', checked: notificationPreferences.push.goalMilestones },
+                    { id: 'new-resources', label: 'New resources available', checked: notificationPreferences.push.newResources },
                   ].map(item => (
                     <label key={item.id} className="flex items-center space-x-3">
                       <input
                         type="checkbox"
-                        defaultChecked={item.checked}
-                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                        checked={item.checked}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setNotificationPreferences((prev) => {
+                            if (item.id === 'urgent-alerts') {
+                              return { ...prev, push: { ...prev.push, urgentAlerts: checked } };
+                            }
+                            if (item.id === 'goal-milestones') {
+                              return { ...prev, push: { ...prev.push, goalMilestones: checked } };
+                            }
+                            return { ...prev, push: { ...prev.push, newResources: checked } };
+                          });
+                        }}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
                       />
                       <span className="text-gray-700">{item.label}</span>
                     </label>
@@ -530,8 +737,12 @@ const Profile: React.FC = () => {
               </div>
             </div>
 
-            <button className="mt-6 px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
-              Save Preferences
+            <button
+              onClick={handleSaveNotificationPreferences}
+              disabled={notificationSaving}
+              className="mt-6 px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
+            >
+              {notificationSaving ? 'Saving...' : 'Save Preferences'}
             </button>
           </div>
         )}
@@ -556,25 +767,29 @@ const Profile: React.FC = () => {
                 <h4 className="text-md font-medium text-gray-900 mb-4">Two-Factor Authentication</h4>
                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900">Enable 2FA</p>
-                    <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
+                    <p className="font-medium text-gray-900">Two-Factor Authentication is enabled</p>
+                    <p className="text-sm text-gray-600">For security, 2FA is enabled by default for all applicants.</p>
                   </div>
-                  <button className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
-                    Enable
-                  </button>
+                  <span className="px-3 py-1 bg-green-50 text-green-700 border border-green-200 rounded-full text-xs font-semibold">
+                    Enabled
+                  </span>
                 </div>
               </div>
 
               <div>
                 <h4 className="text-md font-medium text-gray-900 mb-4">Data & Privacy</h4>
                 <div className="space-y-3">
-                  <button className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <button
+                    onClick={handleDownloadUserData}
+                    disabled={downloadingData}
+                    className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">Download Your Data</p>
                         <p className="text-sm text-gray-600">Get a copy of your business data</p>
                       </div>
-                      <span className="text-primary-600">Download</span>
+                      <span className="text-primary-600">{downloadingData ? 'Preparing…' : 'Download'}</span>
                     </div>
                   </button>
                   

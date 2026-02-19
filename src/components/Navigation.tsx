@@ -25,6 +25,7 @@ import {
   LogOut
 } from 'lucide-react';
 import MessageServices from '../services/MessageServices'; // Add this import
+import { authService } from '../services/AuthService';
 
 type PackageType = 'startup' | 'essential' | 'premium';
 
@@ -52,6 +53,17 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
 
   // Get user info and package from localStorage
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
+  const [profileImageUrl, setProfileImageUrl] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('user');
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed?.profileImageUrl || '';
+    } catch {
+      return '';
+    }
+  });
+  const [isHydratingProfileImage, setIsHydratingProfileImage] = useState(false);
+
   const userInitials = userEmail
     .split('@')[0]
     .split(/[._\s-]+/)
@@ -60,6 +72,58 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     .join('')
     .slice(0, 2)
     .toUpperCase();
+
+  useEffect(() => {
+    const refreshProfileImage = () => {
+      try {
+        const raw = localStorage.getItem('user');
+        const parsed = raw ? JSON.parse(raw) : null;
+        setProfileImageUrl(parsed?.profileImageUrl || '');
+      } catch {
+        setProfileImageUrl('');
+      }
+    };
+
+    const hydrateFromBackendIfMissing = async () => {
+      if (isHydratingProfileImage) return;
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      if (profileImageUrl) return;
+
+      setIsHydratingProfileImage(true);
+      try {
+        const userData = await authService.getCurrentUser();
+        const url = userData.profileImageUrl || '';
+        if (url) {
+          setProfileImageUrl(url);
+          try {
+            const raw = localStorage.getItem('user');
+            const parsed = raw ? JSON.parse(raw) : {};
+            const nextUser = { ...parsed, profileImageUrl: url };
+            localStorage.setItem('user', JSON.stringify(nextUser));
+          } catch (e) {}
+        }
+      } catch (error) {
+        console.error('Error hydrating profile image:', error);
+      } finally {
+        setIsHydratingProfileImage(false);
+      }
+    };
+
+    const handleUserUpdated = () => {
+      refreshProfileImage();
+    };
+
+    window.addEventListener('storage', refreshProfileImage);
+    window.addEventListener('user-updated', handleUserUpdated as EventListener);
+    refreshProfileImage();
+    void hydrateFromBackendIfMissing();
+
+    return () => {
+      window.removeEventListener('storage', refreshProfileImage);
+      window.removeEventListener('user-updated', handleUserUpdated as EventListener);
+    };
+  }, [isHydratingProfileImage, profileImageUrl]);
 
   const userStatus = localStorage.getItem('userStatus');
   const isFreeTrial = userStatus === 'FREE_TRIAL';
@@ -209,10 +273,19 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
 
         {/* User Profile Section */}
         <div className="flex flex-col items-center pt-2 pb-1 border-b border-gray-200">
-          <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-0 shadow-md ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
-            <span className="text-white text-xl font-bold">
-              {userInitials}
-            </span>
+          <div className={`bg-primary-500 rounded-full flex items-center justify-center mb-0 shadow-md overflow-hidden ${collapsed ? 'w-10 h-10' : 'w-16 h-16'}`}>
+            {profileImageUrl ? (
+              <img
+                src={profileImageUrl}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={() => setProfileImageUrl('')}
+              />
+            ) : (
+              <span className="text-white text-xl font-bold">
+                {userInitials}
+              </span>
+            )}
           </div>
         </div>
       </div>

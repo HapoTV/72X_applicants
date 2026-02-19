@@ -67,7 +67,13 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
           <div className="flex flex-col sm:flex-row gap-4">
             {!isMandatorySelection && !shouldShowFreeTrial && (
               <button
-                onClick={() => onNavigate(isAuthenticated ? '/dashboard' : '/create-password')}
+                type="button"
+                onClick={() => {
+                  if (isAuthenticated) {
+                    localStorage.removeItem('selectedPackage');
+                  }
+                  onNavigate(isAuthenticated ? '/dashboard' : '/create-password');
+                }}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
               >
                 {isAuthenticated ? 'Skip for now' : 'Back'}

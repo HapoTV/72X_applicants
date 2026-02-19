@@ -29,9 +29,10 @@ axiosClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // ✅ Add organisation header for non-super-admins
-    // Super admins see all data, so don't add organisation header
-    if (organisation && userRole !== 'SUPER_ADMIN') {
+    const url = typeof config.url === 'string' ? config.url : '';
+    const shouldSkipOrganisationHeader = url.startsWith('/users/me');
+
+    if (!shouldSkipOrganisationHeader && organisation && userRole !== 'SUPER_ADMIN') {
       config.headers['X-Organisation'] = organisation;
       console.log("🏢 Added organisation header:", organisation);
     }

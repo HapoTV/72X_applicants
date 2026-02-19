@@ -50,7 +50,7 @@ const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Start New Discussion</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Post Business Advice</h3>
           <button
             onClick={handleCancel}
             className="p-1 hover:bg-gray-100 rounded"
@@ -61,13 +61,13 @@ const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Discussion Title</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Advice Title</label>
             <input
               type="text"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-              placeholder="Enter discussion title"
+              placeholder="Give your advice a clear title"
               required
               disabled={isLoading}
             />
@@ -88,13 +88,13 @@ const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Advice</label>
             <textarea
               rows={4}
               value={form.content}
               onChange={(e) => setForm({ ...form, content: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-              placeholder="Share your thoughts, questions, or experiences..."
+              placeholder="Share your business advice or experience..."
               required
               disabled={isLoading}
             />
@@ -114,7 +114,7 @@ const NewDiscussionModal: React.FC<NewDiscussionModalProps> = ({
               className="flex-1 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm disabled:opacity-50"
               disabled={isLoading}
             >
-              {isLoading ? 'Posting...' : 'Post Discussion'}
+              {isLoading ? 'Posting...' : 'Post Advice'}
             </button>
           </div>
         </form>

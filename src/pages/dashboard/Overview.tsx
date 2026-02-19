@@ -28,6 +28,7 @@ const Overview: React.FC = () => {
     businessName: string; 
     email: string; 
     phone: string; 
+    adLink: string;
     message: string 
   }) => {
     try {
@@ -56,7 +57,7 @@ const Overview: React.FC = () => {
       
     } catch (error) {
       console.error('Error submitting ad request:', error);
-      alert('Failed to open email client. Please contact admin@seventytwox.com directly with your advertising request.');
+      alert('Failed to open email client. Please contact admin@hapogroup.co.za directly with your advertising request.');
     }
   };
 

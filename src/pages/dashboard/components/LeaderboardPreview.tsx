@@ -12,7 +12,12 @@ const LeaderboardPreview: React.FC<LeaderboardPreviewProps> = ({ engagementData 
 
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-      <h3 className="text-sm font-semibold text-gray-700 mb-2">Weekly Leaders</h3>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <h3 className="text-sm font-semibold text-gray-700">Top Engagers This Week</h3>
+        <div className="text-[11px] text-primary-700 bg-primary-50 border border-primary-100 px-2 py-1 rounded-full whitespace-nowrap">
+          Engage more to reach the Top 3
+        </div>
+      </div>
       <div className="space-y-2">
         {engagementData.leaderboard.slice(0, 3).map((user: any, index: number) => (
           <div key={user.userId || index} className="flex items-center justify-between">

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Heart, MessageCircle, Share } from 'lucide-react';
 import type { UserDiscussionItem } from '../../interfaces/CommunityData';
 
 interface DiscussionItemProps {
@@ -42,21 +41,6 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
           </div>
 
           <p className="text-gray-600 text-sm mb-3">{discussion.preview}</p>
-
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
-            <div className="flex items-center space-x-1">
-              <MessageCircle className="w-4 h-4" />
-              <span>{discussion.replies || 0} replies</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Heart className="w-4 h-4" />
-              <span>{discussion.likes || 0} likes</span>
-            </div>
-            <button className="flex items-center space-x-1 hover:text-primary-600">
-              <Share className="w-4 h-4" />
-              <span>Share</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>
