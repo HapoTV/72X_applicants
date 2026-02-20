@@ -62,8 +62,8 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({
               <div className="flex items-start space-x-3">
                 <Check className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-medium text-gray-900">Full access for 14 days</p>
-                  <p className="text-sm text-gray-600">Experience all features</p>
+                  <p className="font-medium text-gray-900">Access for 14 days</p>
+                  <p className="text-sm text-gray-600">Trial access follows the package you select (Premium unlocks everything)</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">

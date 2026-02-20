@@ -18,6 +18,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const userRole = localStorage.getItem('userRole')?.toUpperCase();
     const userStatus = localStorage.getItem('userStatus');
     const selectedPackage = localStorage.getItem('selectedPackage');
+    const skipUntilRaw = localStorage.getItem('skipPackageSelectionUntil');
+    const skipUntil = skipUntilRaw ? Number(skipUntilRaw) : 0;
+    const hasActiveSkip = !!(skipUntil && !Number.isNaN(skipUntil) && Date.now() < skipUntil);
 
     console.log('🛡️ ProtectedRoute check:', {
         path: location.pathname,
@@ -67,6 +70,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     // 🔴 CRITICAL: Don't redirect if already on select-package
     if (requireAuth && userStatus === 'PENDING_PACKAGE') {
+        if (hasActiveSkip) {
+            return <>{children}</>;
+        }
         // If already on select-package, don't redirect (avoid infinite loop)
         if (currentPath === '/select-package') {
             console.log('✅ Already on package selection page, no redirect needed');
@@ -82,6 +88,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         
         // Check if user needs to complete setup
         if (userStatus === 'PENDING_PACKAGE') {
+            if (hasActiveSkip) {
+                return <>{children}</>;
+            }
             if (currentPath === '/select-package') {
                 return <>{children}</>;
             }

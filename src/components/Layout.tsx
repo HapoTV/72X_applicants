@@ -38,6 +38,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const status = localStorage.getItem('userStatus');
     const requiresPackage = localStorage.getItem('requiresPackageSelection') === 'true';
     const selectedPackage = localStorage.getItem('selectedPackage');
+    const skipUntilRaw = localStorage.getItem('skipPackageSelectionUntil');
+    const skipUntil = skipUntilRaw ? Number(skipUntilRaw) : 0;
+    const hasActiveSkip = !!(skipUntil && !Number.isNaN(skipUntil) && Date.now() < skipUntil);
     const currentPath = location.pathname;
     
     console.log('🏗️ Layout status check:', {
@@ -95,7 +98,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (!isUserActive && !isPublicPage && !isSelectPackagePage && !isPaymentPage) {
       console.log('🔄 Non-active user trying to access protected route');
       
-      if (status === 'PENDING_PACKAGE' || requiresPackage) {
+      if (!hasActiveSkip && (status === 'PENDING_PACKAGE' || requiresPackage)) {
         console.log('📦 Redirecting to package selection (PENDING_PACKAGE)');
         navigate('/select-package');
       } else if (status === 'PENDING_PAYMENT' && selectedPackage) {

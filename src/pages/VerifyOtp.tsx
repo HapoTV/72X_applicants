@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Crown, Shield, User } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
-import Logo from '../assets/Logo.svg';
 
 const VerifyOtp: React.FC = () => {
     const navigate = useNavigate();
@@ -212,7 +211,7 @@ const VerifyOtp: React.FC = () => {
         <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <div className="flex justify-center mb-4">
-                    <img src={Logo} alt="SeventyTwoX Logo" className="w-16 h-16" />
+                    <img src="/Logo2.png" alt="SeventyTwoX Logo" className="w-16 h-16" />
                 </div>
                 <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
                     Verify OTP

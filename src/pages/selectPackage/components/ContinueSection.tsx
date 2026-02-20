@@ -65,14 +65,20 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            {!isMandatorySelection && !shouldShowFreeTrial && (
+            {!isMandatorySelection && (
               <button
                 type="button"
                 onClick={() => {
                   if (isAuthenticated) {
                     localStorage.removeItem('selectedPackage');
+                    localStorage.setItem('requiresPackageSelection', 'false');
+                    localStorage.setItem('skipPackageSelectionUntil', String(Date.now() + 15000));
                   }
-                  onNavigate(isAuthenticated ? '/dashboard' : '/create-password');
+                  if (isAuthenticated) {
+                    window.location.href = '/dashboard/overview';
+                    return;
+                  }
+                  onNavigate('/create-password');
                 }}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
               >
@@ -120,7 +126,7 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
               <Clock className="h-4 w-4 text-blue-500" />
               <span className="text-sm font-medium text-gray-900">14-Day Free Trial</span>
             </div>
-            <p className="text-xs text-gray-600">Full access to all features</p>
+            <p className="text-xs text-gray-600">Access depends on the package you choose (Premium unlocks everything)</p>
           </div>
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -144,7 +150,7 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
         </p>
         <p className="text-gray-400 text-sm mt-2">
           {shouldShowFreeTrial
-            ? 'Choose between starting with a free trial or immediate payment. Both options give you full access.'
+            ? 'Choose between starting with a free trial or immediate payment. Your access depends on the package you choose (Premium unlocks everything).'
             : isMandatorySelection
               ? 'You must select a package to continue. No credit card required during 14-day trial.'
               : currentSubscription
