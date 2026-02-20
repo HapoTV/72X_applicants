@@ -18,8 +18,29 @@ export const useAdCarousel = (params: {
 
   const carouselTimerRef = useRef<NodeJS.Timeout | null>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const currentAdIndexRef = useRef<number>(0);
+  const videoEndedRef = useRef<boolean>(false);
 
   const currentAd = useMemo(() => ads?.[currentAdIndex], [ads, currentAdIndex]);
+
+  useEffect(() => {
+    currentAdIndexRef.current = currentAdIndex;
+  }, [currentAdIndex]);
+
+  useEffect(() => {
+    videoEndedRef.current = videoEnded;
+  }, [videoEnded]);
+
+  useEffect(() => {
+    if (!ads || ads.length === 0) {
+      if (currentAdIndex !== 0) setCurrentAdIndex(0);
+      return;
+    }
+
+    if (currentAdIndex < 0 || currentAdIndex >= ads.length) {
+      setCurrentAdIndex(0);
+    }
+  }, [ads, ads?.length, currentAdIndex]);
 
   const stopCarousel = useCallback(() => {
     if (carouselTimerRef.current) {
@@ -28,24 +49,48 @@ export const useAdCarousel = (params: {
     }
   }, []);
 
+  const nextAd = useCallback(async () => {
+    if (!ads || ads.length <= 1) return;
+
+    setIsTransitioning(true);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    setCurrentAdIndex((prev) => {
+      const nextIndex = (prev + 1) % ads.length;
+
+      if (ads[nextIndex] && !adImpressions.has(ads[nextIndex].adId)) {
+        adService.recordAdImpression(ads[nextIndex].adId);
+        setAdImpressions((prevSet) => new Set(prevSet).add(ads[nextIndex].adId));
+      }
+
+      setVideoEnded(false);
+      return nextIndex;
+    });
+
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 300);
+  }, [adImpressions, ads]);
+
   const startCarousel = useCallback(() => {
     stopCarousel();
 
     if (!ads || ads.length <= 1) return;
 
     carouselTimerRef.current = setInterval(() => {
-      const ad = ads[currentAdIndex];
+      const index = currentAdIndexRef.current;
+      const ad = ads[index];
 
       if (ad?.mediaType === 'VIDEO') {
         const videoElement = videoRefs.current.get(ad.adId);
-        if (videoElement && !videoElement.ended && !videoEnded) {
+        if (videoElement && !videoElement.ended && !videoEndedRef.current) {
           return;
         }
       }
 
       void nextAd();
     }, 10000);
-  }, [ads, currentAdIndex, stopCarousel, videoEnded]);
+  }, [ads, nextAd, stopCarousel]);
 
   useEffect(() => {
     if (ads && ads.length > 0) {
@@ -98,29 +143,6 @@ export const useAdCarousel = (params: {
       v.src = ad.bannerUrl;
     }
   }, [aspectRatioByAdId, currentAd]);
-
-  const nextAd = useCallback(async () => {
-    if (!ads || ads.length <= 1) return;
-
-    setIsTransitioning(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    setCurrentAdIndex((prev) => {
-      const nextIndex = (prev + 1) % ads.length;
-
-      if (ads[nextIndex] && !adImpressions.has(ads[nextIndex].adId)) {
-        adService.recordAdImpression(ads[nextIndex].adId);
-        setAdImpressions((prevSet) => new Set(prevSet).add(ads[nextIndex].adId));
-      }
-
-      setVideoEnded(false);
-      return nextIndex;
-    });
-
-    setTimeout(() => {
-      setIsTransitioning(false);
-    }, 300);
-  }, [adImpressions, ads]);
 
   const prevAd = useCallback(async () => {
     if (!ads || ads.length <= 1) return;
