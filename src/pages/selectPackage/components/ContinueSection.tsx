@@ -31,6 +31,13 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
 }) => {
   if (!show) return null;
 
+  const handleContactSales = () => {
+    const to = 'admin@hapogroup.co.za';
+    const subject = 'Package enquiry';
+    const body = `Hi Support Team,\n\nI need help choosing a package.\n\nThank you.`;
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
   return (
     <div className="max-w-6xl mx-auto mt-10">
       <div className="bg-white rounded-2xl border border-gray-200 p-8">
@@ -70,12 +77,22 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
                 type="button"
                 onClick={() => {
                   if (isAuthenticated) {
-                    localStorage.removeItem('selectedPackage');
-                    localStorage.setItem('requiresPackageSelection', 'false');
-                    localStorage.setItem('skipPackageSelectionUntil', String(Date.now() + 15000));
+                    if (!currentSubscription) {
+                      localStorage.removeItem('selectedPackage');
+                    }
+                    localStorage.removeItem('requiresPackageSelection');
+                    if (currentSubscription) {
+                      const status = localStorage.getItem('userStatus');
+                      const shouldRelaxRedirects =
+                        !status || status === 'PENDING_PACKAGE' || status === 'PENDING_PAYMENT';
+                      if (shouldRelaxRedirects) {
+                        localStorage.setItem('userStatus', 'FREE_TRIAL');
+                      }
+                    }
+                    localStorage.setItem('skipPackageSelectionUntil', String(Date.now() + 24 * 60 * 60 * 1000));
                   }
                   if (isAuthenticated) {
-                    window.location.href = '/dashboard/overview';
+                    onNavigate('/dashboard/overview');
                     return;
                   }
                   onNavigate('/create-password');
@@ -146,7 +163,9 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
 
         <p className="text-gray-500 text-sm">
           Need help choosing?{' '}
-          <button className="text-primary-600 hover:text-primary-700 font-medium">Contact our sales team</button>
+          <button type="button" onClick={handleContactSales} className="text-primary-600 hover:text-primary-700 font-medium">
+            Contact our sales team
+          </button>
         </p>
         <p className="text-gray-400 text-sm mt-2">
           {shouldShowFreeTrial

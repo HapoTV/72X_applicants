@@ -341,8 +341,6 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isFlipped = feedback !== 'idle';
-
   const renderFrontInteraction = () => {
     if (!currentQ) return null;
     const t = getQuestionType(currentQ);
@@ -355,10 +353,17 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
               key={idx}
               onClick={() => setSelectedAnswer(idx)}
               className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                selectedAnswer === idx
-                  ? 'border-primary-500 bg-primary-50 text-primary-700'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
+                feedback !== 'idle'
+                  ? selectedAnswer === idx
+                    ? feedback === 'correct'
+                      ? 'border-green-500 bg-green-50 text-green-800'
+                      : 'border-orange-500 bg-orange-50 text-orange-900'
+                    : 'border-gray-200 bg-white text-gray-700'
+                  : selectedAnswer === idx
+                    ? 'border-primary-500 bg-primary-50 text-primary-700'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
               }`}
+              disabled={feedback !== 'idle'}
             >
               <span className="font-medium">{option}</span>
             </button>
@@ -555,17 +560,10 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
     }
 
     if (t === 'fill_blank') {
-      const template = currentQ.template || '';
       const bank = currentQ.wordBank || [];
-      const rendered = template.includes('____')
-        ? template.replace('____', fillBlankSelected ? fillBlankSelected : '____')
-        : template;
 
       return (
         <div className="space-y-4">
-          <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900">
-            {rendered}
-          </div>
           <div>
             <div className="text-xs font-semibold text-gray-600 mb-2">Word bank</div>
             <div className="flex flex-wrap gap-2">
@@ -719,64 +717,57 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
         ) : (
           <div>
             <div className="mb-6">
-              <div
-                className="relative w-full h-[460px]"
-                style={{ perspective: '1200px' }}
-              >
-                <div
-                  className="relative w-full h-full transition-transform duration-500"
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                  }}
-                >
-                  <div
-                    className="absolute inset-0 rounded-2xl border border-gray-200 bg-white p-6"
-                    style={{ backfaceVisibility: 'hidden' }}
-                  >
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="flex-shrink-0 w-10 h-10 bg-primary-50 border border-primary-100 rounded-xl flex items-center justify-center text-primary-700 font-bold">
-                        {currentQuestionIndex + 1}
-                      </div>
-                      <div>
-                        <p className="text-lg font-semibold text-gray-900 leading-snug">{currentQ?.question}</p>
-                        <p className="text-sm text-gray-600 mt-1">Choose one answer and submit to flip the card.</p>
-                      </div>
-                    </div>
-
-                    {renderFrontInteraction()}
-
-                    <div className="mt-5 flex items-center justify-between">
-                      <div className="text-sm text-gray-600">Pass mark: {passPercentage}%</div>
-                      <button
-                        onClick={handleSubmit}
-                        disabled={!isResponseComplete(currentQ) || feedback !== 'idle'}
-                        className={`px-6 py-2 rounded-lg transition-all ${
-                          !isResponseComplete(currentQ) || feedback !== 'idle'
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'bg-primary-600 text-white hover:bg-primary-700 transform hover:scale-105'
-                        }`}
-                      >
-                        Submit Answer
-                      </button>
-                    </div>
+              <div className="w-full rounded-2xl border border-gray-200 bg-white p-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-primary-50 border border-primary-100 rounded-xl flex items-center justify-center text-primary-700 font-bold">
+                    {currentQuestionIndex + 1}
                   </div>
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900 leading-snug">
+                      {(() => {
+                        if (!currentQ) return '';
+                        const t = getQuestionType(currentQ);
+                        if (t !== 'fill_blank') return currentQ.question;
 
+                        const template = currentQ.template || currentQ.question || '';
+                        if (!template) return '';
+                        return template.includes('____')
+                          ? template.replace('____', fillBlankSelected ? fillBlankSelected : '____')
+                          : template;
+                      })()}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">Choose an answer and submit.</p>
+                  </div>
+                </div>
+
+                {renderFrontInteraction()}
+
+                <div className="mt-5 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">Pass mark: {passPercentage}%</div>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!isResponseComplete(currentQ) || feedback !== 'idle'}
+                    className={`px-6 py-2 rounded-lg transition-all ${
+                      !isResponseComplete(currentQ) || feedback !== 'idle'
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-primary-600 text-white hover:bg-primary-700 transform hover:scale-105'
+                    }`}
+                  >
+                    Submit Answer
+                  </button>
+                </div>
+
+                {feedback !== 'idle' && (
                   <div
-                    className="absolute inset-0 rounded-2xl border p-6"
-                    style={{
-                      backfaceVisibility: 'hidden',
-                      transform: 'rotateY(180deg)',
-                      background:
-                        feedback === 'correct'
-                          ? 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04))'
-                          : 'linear-gradient(135deg, rgba(249,115,22,0.16), rgba(249,115,22,0.06))',
-                      borderColor: feedback === 'correct' ? 'rgba(16,185,129,0.35)' : 'rgba(249,115,22,0.35)',
-                    }}
+                    className={`mt-5 rounded-xl border p-4 ${
+                      feedback === 'correct'
+                        ? 'border-green-300 bg-green-50'
+                        : 'border-orange-300 bg-orange-50'
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <h4 className={`text-xl font-bold ${feedback === 'correct' ? 'text-green-800' : 'text-orange-900'}`}>
+                        <h4 className={`text-lg font-bold ${feedback === 'correct' ? 'text-green-800' : 'text-orange-900'}`}>
                           {feedback === 'correct' ? 'Correct! Keep going.' : 'Almost there — review and try again!'}
                         </h4>
                         <p className={`mt-1 text-sm ${feedback === 'correct' ? 'text-green-800' : 'text-orange-900'}`}>
@@ -791,7 +782,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
                     </div>
 
                     {feedback === 'correct' && currentQ?.explanation && (
-                      <div className="mt-5">
+                      <div className="mt-4">
                         <button
                           onClick={() => setRevealedExplanation((p) => !p)}
                           className="inline-flex items-center gap-2 px-3 py-2 bg-white/70 border border-white/60 rounded-lg text-sm font-semibold text-gray-900 hover:bg-white"
@@ -807,7 +798,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
                       </div>
                     )}
 
-                    <div className="mt-6 flex justify-end gap-3">
+                    <div className="mt-5 flex justify-end gap-3">
                       <button
                         onClick={goNext}
                         className="px-5 py-2 bg-gray-900 text-white rounded-lg hover:bg-black"
@@ -816,7 +807,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
                       </button>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

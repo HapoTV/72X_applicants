@@ -4,7 +4,6 @@ import type {
   UserLearningModule, 
   LearningStats,
   LearningModuleFilter,
-  LearningMaterialUserProgress,
   LearningProgressEventRequest
 } from '../interfaces/LearningData';
 
@@ -264,23 +263,25 @@ class LearningService {
    */
   async getQuiz(materialId: string): Promise<any> {
     try {
-      const response = await axiosClient.get(`${this.baseUrl}/${materialId}/quiz`);
-      
-      if (!response.data) {
-        return null; // No quiz exists yet - this is expected
+      const response = await axiosClient.get(`${this.baseUrl}/${materialId}/quiz`, {
+        validateStatus: (status) => (status >= 200 && status < 300) || status === 404,
+      });
+
+      if (response.status === 404) {
+        return null;
       }
-      
+
+      if (!response.data) {
+        return null;
+      }
+
       if (!response.data.questions || !Array.isArray(response.data.questions)) {
         throw new Error('Invalid quiz data format from server');
       }
-      
+
       console.log(`✅ Quiz retrieved successfully with ${response.data.questions.length} questions`);
       return response.data;
     } catch (error) {
-      // 404 is expected (no quiz yet), other errors are problems
-      if (error.response?.status === 404) {
-        return null;
-      }
       console.error('❌ Failed to fetch quiz:', error);
       throw new Error('Failed to load quiz from server');
     }
@@ -292,14 +293,14 @@ class LearningService {
   async submitQuiz(quizId: string, answers: Record<string, any>, timeSpentSeconds: number): Promise<any> {
     try {
       const response = await axiosClient.post(
-        `${this.baseUrl}/quiz/${quizId}/submit?timeSpentSeconds=${timeSpentSeconds}`, 
+        `${this.baseUrl}/quiz/${quizId}/submit?timeSpentSeconds=${timeSpentSeconds}`,
         answers
       );
-      
+
       if (!response.data) {
         throw new Error('No submission result received from server');
       }
-      
+
       console.log(`✅ Quiz submitted successfully, score: ${response.data.score}/${response.data.totalPoints}`);
       return response.data;
     } catch (error) {

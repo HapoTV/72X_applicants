@@ -61,12 +61,24 @@ axiosClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error("❌ Axios Response Error:", {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.message,
-      data: error.response?.data
-    });
+    const url = error.config?.url as string | undefined;
+    const method = (error.config?.method as string | undefined)?.toLowerCase();
+    const status = error.response?.status as number | undefined;
+
+    const isExpectedMissingQuiz =
+      method === 'get' &&
+      status === 404 &&
+      typeof url === 'string' &&
+      /^\/learning-materials\/[^/]+\/quiz$/.test(url);
+
+    if (!isExpectedMissingQuiz) {
+      console.error("❌ Axios Response Error:", {
+        url,
+        status,
+        message: error.message,
+        data: error.response?.data
+      });
+    }
 
     if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
       console.error("🌐 Network error - Check backend/CORS");

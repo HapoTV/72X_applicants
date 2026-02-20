@@ -27,6 +27,13 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({
 }) => {
   if (!show || !selectedPackage || !shouldShowFreeTrial) return null;
 
+  const handleContactSales = () => {
+    const to = 'admin@hapogroup.co.za';
+    const subject = 'Package enquiry';
+    const body = `Hi Support Team,\n\nI need help deciding on a package.\n\nThank you.`;
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
   return (
     <div className="max-w-6xl mx-auto mt-8">
       <div className="bg-white rounded-2xl border border-gray-200 p-8">
@@ -174,7 +181,7 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({
         <div className="mt-6 pt-6 border-t border-gray-200 text-center">
           <p className="text-sm text-gray-500">
             Need help deciding?{' '}
-            <button className="text-primary-600 hover:text-primary-700 font-medium">
+            <button type="button" onClick={handleContactSales} className="text-primary-600 hover:text-primary-700 font-medium">
               Contact our sales team
             </button>
           </p>

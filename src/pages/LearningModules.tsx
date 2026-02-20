@@ -189,8 +189,10 @@ useEffect(() => {
       'TRUE_FALSE': 'multiple_choice',
       'FILL_BLANK': 'fill_blank',
       'MATCHING': 'match_pairs',
+      'MATCH_WORDING': 'match_pairs',
       'ORDERING': 'order_steps',
-      'CATEGORIZE': 'categorize'
+      'CATEGORIZE': 'categorize',
+      'DRAG_AND_DROP': 'categorize'
     };
     return typeMap[type] || 'multiple_choice';
   }, []);
@@ -220,6 +222,15 @@ useEffect(() => {
           baseQuestion.template = q.questionText || '______ is a key concept.';
           baseQuestion.wordBank = [q.correctAnswerText || 'answer', 'concept', 'process', 'method', 'strategy'];
           baseQuestion.correctWord = q.correctAnswerText || 'answer';
+          break;
+        case 'MATCH_WORDING':
+          baseQuestion.pairs = Array.isArray(q.pairs) ? q.pairs : [];
+          baseQuestion.options = [];
+          break;
+        case 'DRAG_AND_DROP':
+          baseQuestion.categories = Array.isArray(q.categories) ? q.categories : [];
+          baseQuestion.items = Array.isArray(q.items) ? q.items : [];
+          baseQuestion.options = [];
           break;
         default:
           baseQuestion.options = q.options || ['Option A', 'Option B', 'Option C', 'Option D'];
