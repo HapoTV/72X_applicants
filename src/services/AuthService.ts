@@ -1,6 +1,5 @@
 // src/services/AuthService.ts
-import axios from "axios";
-import axiosClient from '../api/axiosClient';
+import axiosClient, { publicAxios } from '../api/axiosClient';
 import type { 
   User, 
   LoginRequest, 
@@ -9,17 +8,6 @@ import type {
   CreateUserRequest,
   CreateUserResponse,
 } from '../interfaces/UserData';
-
-// Base URL for public axios (no auth required)
-const API_URL = 'http://localhost:8080/api';
-
-// Separate axios instance for public endpoints
-const publicAxios = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
 
 class AuthService {
   /**
@@ -416,7 +404,7 @@ class AuthService {
    */
   async verifyOtp(verifyOtpRequest: any): Promise<LoginResponse> {
     try {
-      const response = await axios.post(`${API_URL}/authentication/verify-otp`, verifyOtpRequest);
+      const response = await publicAxios.post(`/authentication/verify-otp`, verifyOtpRequest);
       return response.data;
     } catch (error) {
       console.error('Verify OTP error:', error);
@@ -429,7 +417,7 @@ class AuthService {
    */
   async resendOtp(resendOtpRequest: any): Promise<LoginResponse> {
     try {
-      const response = await axios.post(`${API_URL}/authentication/resend-otp`, resendOtpRequest);
+      const response = await publicAxios.post(`/authentication/resend-otp`, resendOtpRequest);
       return response.data;
     } catch (error) {
       console.error('Resend OTP error:', error);
@@ -441,7 +429,7 @@ class AuthService {
    * Set default Authorization header for axios
    */
   setAxiosAuthHeader(token: string): void {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    axiosClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
 
   /**

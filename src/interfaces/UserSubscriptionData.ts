@@ -21,6 +21,7 @@ export interface PackageSelectionData {
   packageType: UserSubscriptionType;
   amount?: number;
   currency?: string;
+  organisation?: string;
   paymentMethodId?: string;
   paymentIntentId?: string;
 }

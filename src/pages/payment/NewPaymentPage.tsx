@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import userSubscriptionService from '../../services/UserSubscriptionService';
 import { UserSubscriptionType } from '../../interfaces/UserSubscriptionData';
+import axiosClient from '../../api/axiosClient';
 
 interface SelectedPackage {
   id: string;
@@ -183,15 +184,9 @@ const NewPaymentPage: React.FC = () => {
       console.log('✅ Confirm payment response:', confirmResponse);
 
       // Step 2: Fetch updated user data
-      const userResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api/users/me`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (userResponse.ok) {
-        const updatedUser = await userResponse.json();
+      try {
+        const userResponse = await axiosClient.get('/users/me');
+        const updatedUser = userResponse.data;
         console.log('✅ Updated user from backend:', updatedUser);
 
         // CRITICAL: Check if status is actually ACTIVE
@@ -207,7 +202,7 @@ const NewPaymentPage: React.FC = () => {
 
         localStorage.setItem('user', JSON.stringify(updatedUser));
         localStorage.setItem('userStatus', 'ACTIVE');
-      } else {
+      } catch {
         // Fallback with force ACTIVE status
         console.warn('Could not fetch updated user, forcing ACTIVE status');
         const currentUser = JSON.parse(localStorage.getItem('user') || '{}');

@@ -1,8 +1,15 @@
 // src/api/axiosClient.ts
 import axios from "axios";
 
+export const publicAxios = axios.create({
+  baseURL: "http://localhost:8081/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 const axiosClient = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: "http://localhost:8081/api",
   // 🚫 DO NOT set Content-Type globally
   // Let axios automatically set it depending on request type
   // withCredentials: false (default)

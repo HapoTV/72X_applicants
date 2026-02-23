@@ -7,14 +7,17 @@ import Logo from '../assets/Logo.svg';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const [loginType, setLoginType] = useState<'user' | 'admin' | 'superadmin'>('user');
     const {
-        loginType,
-        setLoginType,
         isLoading,
         errorMessage,
         setErrorMessage,
-        handleLogin,
-        fillDemoCredentials,
+        handleUserLogin,
+        handleAdminLogin,
+        handleSuperAdminLogin,
+        fillUserCredentials,
+        fillAdminCredentials,
+        fillSuperAdminCredentials,
     } = useLogin();
     const [formData, setFormData] = useState({
         email: '',
@@ -31,7 +34,23 @@ const Login: React.FC = () => {
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await handleLogin(formData);
+        if (loginType === 'user') {
+            await handleUserLogin(formData);
+            return;
+        }
+
+        const adminFormData = {
+            email: formData.email,
+            password: formData.password,
+            rememberMe: formData.rememberMe,
+        };
+
+        if (loginType === 'admin') {
+            await handleAdminLogin(adminFormData);
+            return;
+        }
+
+        await handleSuperAdminLogin(adminFormData);
     };
 
     const getLoginTypeLabel = () => {
@@ -99,7 +118,7 @@ const Login: React.FC = () => {
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                             <p className="text-red-700 text-sm">{errorMessage}</p>
                             <p className="text-red-600 text-xs mt-1">
-                                Backend URL: http://localhost:8080/api/authentication/login
+                                Backend URL: http://localhost:8081/api/authentication/login
                             </p>
                         </div>
                     )}
@@ -224,7 +243,30 @@ const Login: React.FC = () => {
                         </div>
                         <button
                             type="button"
-                            onClick={() => fillDemoCredentials(setFormData)}
+                            onClick={() => {
+                                if (loginType === 'user') {
+                                    fillUserCredentials(setFormData);
+                                    return;
+                                }
+
+                                const setAdminFormData = (updater: (prev: any) => any) => {
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        ...updater({
+                                            email: prev.email,
+                                            password: prev.password,
+                                            rememberMe: prev.rememberMe,
+                                        }),
+                                    }));
+                                };
+
+                                if (loginType === 'admin') {
+                                    fillAdminCredentials(setAdminFormData);
+                                    return;
+                                }
+
+                                fillSuperAdminCredentials(setAdminFormData);
+                            }}
                             className="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
                             disabled={isLoading}
                         >
