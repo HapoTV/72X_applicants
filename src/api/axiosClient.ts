@@ -9,7 +9,7 @@ export const publicAxios = axios.create({
 });
 
 const axiosClient = axios.create({
-  baseURL: "http://localhost:8081/api",
+  baseURL: "http://localhost:8080/api",
   // 🚫 DO NOT set Content-Type globally
   // Let axios automatically set it depending on request type
   // withCredentials: false (default)
