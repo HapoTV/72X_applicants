@@ -87,6 +87,8 @@ function App() {
           <Routes>
             {/* Public landing page */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/72X_applicants" element={<LandingPage />} />
+            <Route path="/72X_applicants/" element={<LandingPage />} />
 
             {/* Public routes - Split Login Pages */}
             <Route path="/login" element={<UserLogin />} />
