@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
-    base: "/72X_applicants",
+    base: "/72X_applicants/",
     define: {
       'process.env.NODE_ENV': `"${mode}"`,
       'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify('https://oxabqoodvqvqskrztrsq.supabase.co'),
