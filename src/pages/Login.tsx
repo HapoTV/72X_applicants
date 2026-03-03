@@ -6,6 +6,8 @@ import { useLogin } from './hooks/useLogin';
 import Logo from '../assets/Logo.svg';
 
 const Login: React.FC = () => {
+
+    const VITE_PRODUCTION_URL = import.meta.env.VITE_PRODUCTION_URL;
     const navigate = useNavigate();
     const [loginType, setLoginType] = useState<'user' | 'admin' | 'superadmin'>('user');
     const {
@@ -118,7 +120,7 @@ const Login: React.FC = () => {
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                             <p className="text-red-700 text-sm">{errorMessage}</p>
                             <p className="text-red-600 text-xs mt-1">
-                                Backend URL: http://localhost:8080/api/authentication/login
+                                Backend URL: {VITE_PRODUCTION_URL}/api/authentication/login
                             </p>
                         </div>
                     )}
