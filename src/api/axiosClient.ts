@@ -2,10 +2,10 @@
 import axios from "axios";
 
 // Get API URL from environment variable with fallback
-const API_URL = import.meta.env.VITE_BACKEND_URL;
+const API_URL = import.meta.env.VITE_PRODUCTION_URL;
 
 // For Production
-// const API_URL = import.meta.env. VITE_BACKEND_PRODUCTION_URL;
+// const API_URL = import.meta.env. VITE_BACKEND_URL;
 
 export const publicAxios = axios.create({
   baseURL: `${API_URL}/api`,
