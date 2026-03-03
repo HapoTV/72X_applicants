@@ -1,15 +1,21 @@
 // src/api/axiosClient.ts
 import axios from "axios";
 
+// Get API URL from environment variable with fallback
+const API_URL = import.meta.env.VITE_BACKEND_URL;
+
+// For Production
+// const API_URL = import.meta.env. VITE_BACKEND_PRODUCTION_URL;
+
 export const publicAxios = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: `${API_URL}/api`,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 const axiosClient = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: `${API_URL}/api`,
   // 🚫 DO NOT set Content-Type globally
   // Let axios automatically set it depending on request type
   // withCredentials: false (default)
