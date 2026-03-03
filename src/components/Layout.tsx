@@ -316,7 +316,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="max-w-7xl mx-auto">
               <div className="flex justify-center mb-6">
                 <img 
-                  src="/Logo.svg" 
+                  src={`${import.meta.env.BASE_URL}Logo2.svg`} 
                   alt="SeventyTwoX Logo" 
                   className="w-12 h-12 cursor-pointer"
                   onClick={() => navigate('/')}

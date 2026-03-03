@@ -1,6 +1,8 @@
 import React from 'react';
 import { AlertCircle, Clock, Gift } from 'lucide-react';
 
+const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
+
 interface PageHeaderProps {
   userStatus: string;
   currentSubscription: any;
@@ -25,7 +27,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <div className="text-center mb-10">
       <div className="flex justify-center mb-4">
-        <img src="/Logo2.png" alt="SeventyTwoX Logo" className="w-16 h-16" />
+        <img src={logoUrl} alt="SeventyTwoX Logo" className="w-16 h-16" />
       </div>
 
       <h1 className="text-3xl font-bold text-gray-900 mb-2">

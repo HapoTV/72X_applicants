@@ -27,6 +27,8 @@ import MessageServices from '../services/MessageServices';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
 
+const appLogoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
+
 type PackageType = 'startup' | 'essential' | 'premium';
 
 interface NavigationProps {
@@ -237,7 +239,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
       <div className="p-4 flex-shrink-0 relative min-h-[88px]">
         <div className="flex items-center justify-between mb-0">
           <div className="flex items-center justify-center flex-1">
-            {!collapsed && <img src="/Logo2.png" alt="SeventyTwoX Logo" className="w-24 h-24" />}
+            {!collapsed && <img src={appLogoUrl} alt="SeventyTwoX Logo" className="w-24 h-24" />}
           </div>
           {onClose && (
             <button

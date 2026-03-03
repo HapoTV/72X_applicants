@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { ProductCategory, ProductCategoryItem } from '../hooks/useLandingPage';
 
-const logoUrl = '/Logo2.png';
+const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
 
 interface LandingHeaderProps {
   navigate: (to: string) => void;
@@ -32,7 +32,7 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
               className="h-16 md:h-20 w-auto"
               onError={(e) => {
                 (e.target as HTMLImageElement).onerror = null;
-                (e.target as HTMLImageElement).src = '/logo.png';
+                (e.target as HTMLImageElement).src = logoUrl;
               }}
             />
 

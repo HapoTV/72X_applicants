@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const footerLogo = '/Logo3.png';
 const legalPdfPath = '/legal/terms-and-privacy.pdf';
 const supportEmail = 'admin@hapogroup.co.za';
 
@@ -12,7 +11,7 @@ const LandingFooter: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center mb-4">
-              <img src={footerLogo} alt="72X Logo" className="h-8" />
+              <img src={`${import.meta.env.BASE_URL}Logo3.svg`} alt="72X Logo" className="h-8" />
             </div>
             <p className="text-white/90 text-sm mb-4">
               Empowering businesses with AI-driven insights and growth tools.

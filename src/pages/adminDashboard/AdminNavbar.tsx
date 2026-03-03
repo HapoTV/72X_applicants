@@ -6,6 +6,8 @@ import { useAuth } from '../../context/AuthContext';
 import NotificationService from '../../services/NotificationService';
 import NotificationPopup from '../../components/NotificationPopup';
 
+const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
+
 interface AdminNavbarProps {
     onLogout: () => void;
 }
@@ -74,7 +76,7 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
                 <div className="flex justify-between h-16">
                     {/* Left side: Logo and Brand */}
                     <div className="flex items-center">
-                        <img src="/Logo2.png" alt="SeventyTwoX Logo" className="w-12 h-12" />
+                        <img src={logoUrl} alt="SeventyTwoX Logo" className="w-12 h-12" />
                         <span className="text-xl font-bold ml-3 hidden md:inline">
                             {isSuperAdmin ? (
                                 <span className="flex items-center">

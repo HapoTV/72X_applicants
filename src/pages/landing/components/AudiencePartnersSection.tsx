@@ -22,13 +22,13 @@ const AudiencePartnersSection: React.FC<AudiencePartnersSectionProps> = ({ rotat
 
         <div className="flex justify-center items-center gap-12 md:gap-16">
           <img
-            src="/StardandBank.png"
+            src={`${import.meta.env.BASE_URL}StardandBank.svg`}
             alt="Standard Bank"
             className="h-16 w-auto object-contain"
             style={{ maxWidth: '180px' }}
           />
           <img
-            src="/COC pic.png"
+            src={`${import.meta.env.BASE_URL}COC%20pic.svg`}
             alt="Chamber of Commerce"
             className="h-16 w-auto object-contain"
             style={{ maxWidth: '180px' }}

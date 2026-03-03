@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
-import logoSvg from "../assets/Logo.svg";
+
+const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
 
 const Pricing: React.FC = () => {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ const Pricing: React.FC = () => {
             {/* Logo and Navigation */}
             <div className="flex items-center space-x-12">
               <img
-                src={logoSvg}
+                src={logoUrl}
                 alt="72X Logo"
                 className="h-14 md:h-16 w-auto"
               />
@@ -230,16 +231,7 @@ const Pricing: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <img 
-                  src="/Logo3.png" 
-                  alt="72X Logo" 
-                  className="h-8"
-                  onError={(e) => {
-                    // Fallback in case the image fails to load
-                    (e.target as HTMLImageElement).onerror = null;
-                    (e.target as HTMLImageElement).src = '/Logo2.png';
-                  }}
-                />
+                <img src={`${import.meta.env.BASE_URL}Logo3.svg`} alt="72X Logo" className="h-8" />
               </div>
               <p className="text-white/90 text-sm mb-4">
                 Empowering businesses with AI-driven insights and growth tools.
