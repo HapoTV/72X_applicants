@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig(({ mode }) => {
+  console.log('🔧 Building with VITE_PRODUCTION_URL:', process.env.VITE_PRODUCTION_URL);
+  
   return {
     plugins: [react()],
     base: "/72X_applicants/",
