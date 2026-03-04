@@ -267,13 +267,14 @@ async function completeLogin(
 
     // Use setTimeout to ensure state updates are complete
     setTimeout(() => {
+      const baseUrl = import.meta.env.BASE_URL;
       // Check role from response - this is the ONLY place we determine where to redirect
       const role = userRole.toUpperCase();
       console.log('🔍 Determining redirect based on role:', role);
       
       if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
         console.log('👑 Redirecting to admin dashboard for role:', role);
-        window.location.href = '/admin/dashboard/overview';
+        window.location.href = `${baseUrl}admin/dashboard/overview`;
         return; // Important: return to prevent further execution
       }
       
@@ -290,16 +291,16 @@ async function completeLogin(
 
       if (userStatus === 'PENDING_PACKAGE') {
         console.log('📦 User needs package selection, redirecting to /select-package');
-        window.location.href = '/select-package';
+        window.location.href = `${baseUrl}select-package`;
       } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
         console.log('💳 User needs payment for selected package, redirecting to /payments/new');
-        window.location.href = '/payments/new';
+        window.location.href = `${baseUrl}payments/new`;
       } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
         console.log('⚠️ User PENDING_PAYMENT but no package selected, redirecting to package selection');
-        window.location.href = '/select-package';
+        window.location.href = `${baseUrl}select-package`;
       } else {
         console.log('🏠 User is active, going to dashboard');
-        window.location.href = '/dashboard/overview';
+        window.location.href = `${baseUrl}dashboard/overview`;
       }
     }, 100);
   } catch (error: any) {
