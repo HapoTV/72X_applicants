@@ -6,7 +6,12 @@ import { supabase } from '../lib/supabaseClient';
 const getPublicSiteUrl = (): string => {
   const fromEnv = (import.meta as any)?.env?.VITE_PUBLIC_SITE_URL as string | undefined;
   const trimmed = (fromEnv || '').trim();
-  return trimmed ? trimmed.replace(/\/$/, '') : window.location.origin;
+  if (trimmed) return trimmed.replace(/\/$/, '');
+  const base = ((import.meta as any)?.env?.BASE_URL as string | undefined) || '/';
+  const normalizedBase = String(base).trim() || '/';
+  const baseNoTrailingSlash = normalizedBase.replace(/\/$/, '');
+  const origin = window.location.origin.replace(/\/$/, '');
+  return baseNoTrailingSlash && baseNoTrailingSlash !== '/' ? `${origin}${baseNoTrailingSlash}` : origin;
 };
 
 const SignupSuccessProvided: React.FC = () => {
