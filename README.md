@@ -1,6 +1,6 @@
-72X – Empowering South African Entrepreneurs
+#72X – Empowering South African Entrepreneurs
 
-72X (SeventyTwoX) is a web-based platform designed to support and grow small businesses in South Africa, particularly those operating in townships and rural communities.
+##72X (SeventyTwoX) is a web-based platform designed to support and grow small businesses in South Africa, particularly those operating in townships and rural communities.
 
 The platform provides entrepreneurs with:
 
@@ -18,8 +18,8 @@ AI-powered business insights
 
 The platform is structured around a three-tier package model and delivered through a phase-based rollout strategy to ensure stability and controlled feature growth.
 
-🎁 Package Structure
-🟢 Startup Package (Default – Phase 1)
+### Package Structure
+  Startup Package (Default – Phase 1)
 
 All new users are automatically assigned to the Startup Package when they register.
 
@@ -39,7 +39,7 @@ Profile Management
 
 At this stage, advanced features are visible but locked, allowing users to see what additional tools are available as they grow.
 
-🟠 Essential Package (Phase 2)
+  Essential Package (Phase 2)
 
 The Essential Package unlocks additional tools that help entrepreneurs expand their operations and engage more deeply with the platform.
 
@@ -61,7 +61,7 @@ App Store access (TenderyAI, Inventory, CRM, etc.)
 
 This tier is designed for entrepreneurs ready to scale their businesses with structured tools and support networks.
 
-🔴 Premium Package (Phase 3)
+  Premium Package (Phase 3)
 
 The Premium Package provides full access to advanced tools and AI-driven insights that support strategic decision-making.
 
@@ -77,7 +77,7 @@ AI Business Analyst
 
 This package is intended for established entrepreneurs seeking deeper data insights and expert guidance.
 
-🚀 Phased Delivery Strategy
+####🚀 Phased Delivery Strategy
 
 To maintain a stable platform while continuously developing new features, 72X is released in three development phases.
 
@@ -121,7 +121,7 @@ Launch AI-powered business insights
 
 Enable expert-led guidance features
 
-🌍 Target Audience
+  ####Target Audience
 
 72X is built for:
 
@@ -133,8 +133,8 @@ Freelancers and solo business operators
 
 Community-based businesses seeking digital transformation
 
-✨ Key Platform Features
-📊 Business Management Tools
+### Key Platform Features
+#### Business Management Tools
 
 Overview Dashboard
 
@@ -144,7 +144,7 @@ Data Input System (Essential+)
 
 Business Roadmap (Premium)
 
-📚 Learning & Development
+  Learning & Development
 
 Interactive Learning Modules
 
@@ -154,7 +154,7 @@ Resource Library
 
 Daily business tips
 
-🤝 Community & Collaboration
+ Community & Collaboration
 
 Community Forum
 
@@ -164,17 +164,17 @@ Mentorship Hub (Essential+)
 
 Marketplace (Essential+)
 
-🤖 AI & Smart Tools
+ AI & Smart Tools
 
 AI Chatbot Assistance (Essential+)
 
 AI Business Analyst (Premium)
 
-🧠 Expert Support
+ Expert Support
 
 Expert Q&A Sessions (Premium)
 
-💼 Business Applications
+ Business Applications
 
 Accessible through the 72X App Store:
 
@@ -212,7 +212,7 @@ Routing:
 
 React Router DOM
 
-📱 Mobile-First Design
+ ####Mobile-First Design
 
 72X is designed with accessibility and connectivity challenges in mind.
 
@@ -226,7 +226,7 @@ Touch-first interface
 
 Responsive layouts
 
-💰 Revenue Model
+#### Revenue Model
 
 72X follows a Freemium structure.
 
@@ -243,11 +243,11 @@ Tool	Price
 Helpdesk	R299/month
 Inventory Portal	R199/month
 POS System	R149/month
-🔧 Deployment & Branching Strategy
+Deployment & Branching Strategy
 
 To ensure platform stability, development follows a phase-based Git branching structure.
 
-Branch Overview
+####Branch Overview
 main-phase-1 → Production branch (Startup features)
 
 main-phase-2 → Development branch for Essential features
@@ -273,7 +273,7 @@ Enables parallel development
 
 Allows easier rollback if issues occur
 
-🔐 Feature Locking & Access Control
+Feature Locking & Access Control
 
 Locked features are restricted at multiple levels:
 
@@ -285,10 +285,10 @@ Backend level – package validation checks
 
 This ensures a secure and consistent upgrade experience.
 
-🧪 Getting Started
+#### Getting Started
 Prerequisites
 
-Node.js 18+
+IDE: VS Code and IntelliJ
 
 npm or yarn
 
@@ -306,6 +306,7 @@ Other Commands
 npm run build      # Production build
 npm run preview    # Preview production build
 npm run lint       # Run ESLint
+
 📁 Project Structure
 src/
 ├── components/
@@ -337,7 +338,7 @@ Advanced payment integrations
 
 AI-generated business reports
 
-🤝 Contributing
+ Contributing
 
 We welcome contributions from the community. Please review the contributing guidelines before submitting pull requests.
 
