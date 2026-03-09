@@ -1,261 +1,355 @@
-# 72X - Empowering South African Entrepreneurs
+72X – Empowering South African Entrepreneurs
 
-SeventyTwoX is a comprehensive web application designed to help small businesses in South Africa accelerate their growth by providing actionable insights, educational resources, and personalized tools. The platform focuses on underserved markets like townships and rural areas, offering localized content and mobile-first design.
+72X (SeventyTwoX) is a web-based platform designed to support and grow small businesses in South Africa, particularly those operating in townships and rural communities.
 
+The platform provides entrepreneurs with:
 
-With the latest update, 72X is now structured into three packages to support users at different stages of their business journey:
+Practical business tools
 
-## 🎁 Package Structure
-### 🟢 Startup Package (Default for all new users)
+Localised learning resources
 
-All users begin with the Startup package upon registration. It includes essential onboarding features and a clear overview of the application. Core accessible features include:
+Community collaboration
+
+Mentorship opportunities
+
+AI-powered business insights
+
+72X follows a mobile-first, low-bandwidth-friendly approach, ensuring accessibility for users with limited connectivity.
+
+The platform is structured around a three-tier package model and delivered through a phase-based rollout strategy to ensure stability and controlled feature growth.
+
+🎁 Package Structure
+🟢 Startup Package (Default – Phase 1)
+
+All new users are automatically assigned to the Startup Package when they register.
+
+This package focuses on onboarding entrepreneurs and providing essential tools for business organisation and learning.
+
+Includes:
+
+Overview Dashboard (with advertising space)
+
+Business Schedule & Calendar
+
+Learning Modules (gamified content)
+
+Community Forum
+
+Profile Management
+
+At this stage, advanced features are visible but locked, allowing users to see what additional tools are available as they grow.
+
+🟠 Essential Package (Phase 2)
+
+The Essential Package unlocks additional tools that help entrepreneurs expand their operations and engage more deeply with the platform.
+
+Includes everything in Startup plus:
+
+Marketplace (product and service listings)
+
+Connections (networking with other entrepreneurs)
+
+Mentorship Hub
+
+Funding Finder
+
+Data Input System for business performance tracking
+
+AI Chatbot Assistance
+
+App Store access (TenderyAI, Inventory, CRM, etc.)
+
+This tier is designed for entrepreneurs ready to scale their businesses with structured tools and support networks.
+
+🔴 Premium Package (Phase 3)
+
+The Premium Package provides full access to advanced tools and AI-driven insights that support strategic decision-making.
+
+Includes everything in Startup and Essential plus:
+
+Business Roadmap Generator
+
+Advanced Analytics
+
+Expert Q&A Sessions
+
+AI Business Analyst
+
+This package is intended for established entrepreneurs seeking deeper data insights and expert guidance.
+
+🚀 Phased Delivery Strategy
+
+To maintain a stable platform while continuously developing new features, 72X is released in three development phases.
+
+Phase 1 – Initial Launch (Startup Package)
+
+Goal: Deliver a stable core platform.
+
+Scope:
+
+All Startup Package features fully implemented
+
+Essential and Premium features visible but locked
+
+User onboarding completed
+
+Platform analytics enabled
+
+This phase focuses on validating the core user experience and building trust with early users.
+
+Phase 2 – Growth Tools Rollout (Essential Package)
+
+Goal: Introduce monetisation and growth tools.
+
+Scope:
+
+Unlock Essential Package features
+
+Enable performance tracking and structured business data input
+
+Expand networking and mentorship functionality
+
+Phase 3 – Advanced & AI Features (Premium Package)
+
+Goal: Provide intelligent decision-support tools.
+
+Scope:
+
+Deploy advanced analytics
+
+Launch AI-powered business insights
+
+Enable expert-led guidance features
+
+🌍 Target Audience
+
+72X is built for:
+
+Small business owners in townships and rural communities
+
+Early-stage entrepreneurs and startups
+
+Freelancers and solo business operators
+
+Community-based businesses seeking digital transformation
+
+✨ Key Platform Features
+📊 Business Management Tools
 
 Overview Dashboard
 
 Business Schedule & Calendar
 
-Learning Modules
-
-Community Forum
-
-Selected Programs
-
-Profile Management
-
-🚫 Advanced tools such as Marketplace, Mentorship, Funding, AI Chatbot, etc., are locked but can be unlocked anytime by upgrading.
-
-### 🟠 Essential Package (Upgrade Tier 1)
-
-Includes everything in the Startup package plus:
-Marketplace – Promote and list products/services
-Mentorship Hub – Connect with peer and expert mentors
-Funding Finder – Access funding opportunities
-Data Input System – Track performance data and metrics
-AI Chatbot Assistance – Get real-time help and navigation
-
-✅ Perfect for entrepreneurs ready to grow with structured tools and community support.
-
-### 🔴 Premium Package (Upgrade Tier 2)
-
-Unlocks the entire platform, including everything in Startup and Essential packages, plus:
-Expert Q&A Sessions – Personalized responses from business experts
-AI Business Analyst – Deeper, AI-driven business performance insights
-App Store Access – Download third-party and SeventyTwoX business apps
-
-👑 Ideal for advanced users seeking AI-powered decision support, full integration, and expert guidance.
-
-## 🌍 Target Audience
-
-- Small business owners and entrepreneurs in South African townships and rural areas
-- Startups looking for structured guidance and local market insights
-- Freelancers and solopreneurs aiming to grow their operations
-- Community-based businesses seeking digital transformation
-
-#### ✨ Key Features (All Packages, Tiered by Access Level)
-##### 🚀 Core Business Tools
-
-Roadmap Generator (Startup+)
-
-Performance Dashboard (Startup+)
-
 Data Input System (Essential+)
+
+Business Roadmap (Premium)
 
 📚 Learning & Development
 
-Interactive Learning Modules (Startup+)
+Interactive Learning Modules
 
-Daily Business Tips (Startup+)
+Gamified business education
 
-Resource Library (Startup+)
+Resource Library
 
-🏪 Community & Marketplace
+Daily business tips
 
-Community Forum (Startup+)
+🤝 Community & Collaboration
 
-Community Marketplace (Essential+)
+Community Forum
+
+Entrepreneur Connections
 
 Mentorship Hub (Essential+)
 
-🤖 AI & Automation
+Marketplace (Essential+)
+
+🤖 AI & Smart Tools
 
 AI Chatbot Assistance (Essential+)
 
-AI Business Analyst (Premium only)
+AI Business Analyst (Premium)
 
 🧠 Expert Support
 
-Expert Q&A (Premium only)
+Expert Q&A Sessions (Premium)
 
 💼 Business Applications
 
-App Store / Software Marketplace (Premium only)
+Accessible through the 72X App Store:
 
-SeventyTwoX Solutions (POS, Inventory, Helpdesk) (Premium)
+TenderyAI
 
-##### 🛠 Technology Stack
+Inventory Management
 
-React 19.1.0 + TypeScript
+CRM tools
+
+Additional third-party business apps
+
+🛠 Technology Stack
+
+Frontend:
+
+React 19
+
+TypeScript
+
+Vite
+
+UI & Styling:
 
 Tailwind CSS
 
-Lucide React Icons
-
-Recharts (Data Visualizations)
-
 Headless UI
 
-Vite (Build Tool)
+Lucide Icons
+
+Data Visualization:
+
+Recharts
+
+Routing:
 
 React Router DOM
 
-#### 📱 Mobile-First Design
+📱 Mobile-First Design
 
-Optimized for low-bandwidth areas
+72X is designed with accessibility and connectivity challenges in mind.
 
-Mobile-friendly bottom nav
+Features include:
 
-Touch-first components
+Optimised for low-bandwidth environments
 
-Responsive grid (1–4 columns)
+Mobile-friendly navigation
 
-### 💰 Revenue Model
-Freemium Structure
+Touch-first interface
 
-Startup (Free): Dashboard, learning, basic community features
+Responsive layouts
 
-Essential: Adds marketplace, mentorship, AI assistant, and more
+💰 Revenue Model
 
-Premium: All-inclusive with expert tools and integrations
+72X follows a Freemium structure.
 
-Software Plans
+Platform Packages
+Package	Description
+Startup	Free access to core learning and community tools
+Essential	Adds marketplace, mentorship, AI assistant and business tools
+Premium	Full platform access with AI analytics and expert guidance
+Software Tools
 
-Helpdesk – R299/mo
+Additional optional tools available through the platform:
 
-Inventory Portal – R199/mo
+Tool	Price
+Helpdesk	R299/month
+Inventory Portal	R199/month
+POS System	R149/month
+🔧 Deployment & Branching Strategy
 
-POS System – R149/mo
+To ensure platform stability, development follows a phase-based Git branching structure.
 
-Additional Revenue Streams
+Branch Overview
+main-phase-1 → Production branch (Startup features)
 
-Sponsored content
+main-phase-2 → Development branch for Essential features
 
-Affiliate partnerships
+main-phase-3 → Future branch for Premium features
+Workflow
 
-Paid webinars and expert sessions
+Phase 1 features are built and deployed from main-phase-1
 
-### 🧪 Getting Started
+Essential features are developed in main-phase-2
 
-### Prerequisites
-- Node.js (version 18 or higher)
-- npm or yarn package manager
+Once stable, main-phase-2 merges into production
+
+Premium development continues in main-phase-3
+
+This approach:
+
+Protects the live platform
+
+Prevents unfinished features from reaching production
+
+Enables parallel development
+
+Allows easier rollback if issues occur
+
+🔐 Feature Locking & Access Control
+
+Locked features are restricted at multiple levels:
+
+UI level – disabled buttons or upgrade prompts
+
+Routing level – protected routes
+
+Backend level – package validation checks
+
+This ensures a secure and consistent upgrade experience.
+
+🧪 Getting Started
+Prerequisites
+
+Node.js 18+
+
+npm or yarn
+
+Installation
 git clone <repository-url>
+cd 72x
 npm install
+Run Development Server
+npm run dev
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint for code quality
+Visit:
 
-
-Visit: http://localhost:5173
-
-## 📁 Project Structure
-
-```
+http://localhost:5173
+Other Commands
+npm run build      # Production build
+npm run preview    # Preview production build
+npm run lint       # Run ESLint
+📁 Project Structure
 src/
-├── components/          # Reusable UI components
-│   ├── Layout.tsx      # Main layout wrapper
-│   ├── Navigation.tsx  # Desktop sidebar navigation
-│   ├── MobileNav.tsx   # Mobile bottom navigation
-│   ├── Header.tsx      # Top header component
-│   └── ...
-├── pages/              # Main application pages
-│   ├── Dashboard.tsx   # Main dashboard with metrics
-│   ├── LearningModules.tsx # Interactive learning system
-│   ├── Marketplace.tsx # Community marketplace
-│   ├── MentorshipHub.tsx # Mentorship and peer support
-│   ├── Applications.tsx # Software applications hub
-│   └── ...
-├── styles/             # Global styles and Tailwind config
-└── main.tsx           # Application entry point
-```
-
-### 🌟 Highlighted Pages & Modules
-
-| Feature             | Startup | Essential | Premium |
-|---------------------|:-------:|:---------:|:-------:|
-| Overview Dashboard  | ✅      | ✅        | ✅      |
-| Learning Modules    | ✅      | ✅        | ✅      |
-| Schedule            | ✅      | ✅        | ✅      |
-| Community Forum     | ✅      | ✅        | ✅      |
-| Marketplace         | ❌      | ✅        | ✅      |
-| Mentorship Hub      | ❌      | ✅        | ✅      |
-| Funding Finder      | ❌      | ✅        | ✅      |
-| AI Chatbot          | ❌      | ✅        | ✅      |
-| AI Business Analyst | ❌      | ❌        | ✅      |
-| Expert Q&A          | ❌      | ❌        | ✅      |
-| App Store           | ❌      | ❌        | ✅      |
-
-🎨 Design System
-
-Consistent colors, typography, and responsive elements
-
-Accessibility-first approach
-
-Micro-interactions and state feedback
-
-🌍 Localization
-
-Supports 6 South African languages:
-
-English
-
-Afrikaans
-
-isiZulu
-
-isiXhosa
-
-Sesotho
-
-Setswana
-
-📊 Analytics-Driven
-
-User engagement tracking
-
-Progress tracking per user
-
-Feature adoption by package
-
-Conversion metrics on upgrades
-
+├── components/
+│   ├── Layout.tsx
+│   ├── Navigation.tsx
+│   ├── MobileNav.tsx
+│   ├── Header.tsx
+│
+├── pages/
+│   ├── Dashboard.tsx
+│   ├── LearningModules.tsx
+│   ├── Marketplace.tsx
+│   ├── MentorshipHub.tsx
+│   ├── Applications.tsx
+│
+├── styles/
+└── main.tsx
 🔮 Future Enhancements
 
-Offline mode for rural areas
+Planned improvements for the platform include:
 
-WhatsApp-based learning support
+Offline mode for low connectivity areas
 
-Advanced payment integrations
+WhatsApp-based learning integration
 
 Voice command features
+
+Advanced payment integrations
 
 AI-generated business reports
 
 🤝 Contributing
 
-We welcome contributions from the community. Please read our contributing guidelines and code of conduct before submitting pull requests.
+We welcome contributions from the community. Please review the contributing guidelines before submitting pull requests.
 
 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 📞 Support
 
-📧 Email: support@72Xsupport.co.za
+Email: support@72Xsupport.co.za
 
-💬 Community:  Available within the application
+Community: Available within the application
+Help Docs: Accessible through the Resource Library
 
-📚 Help Docs: Comprehensive guides available in the Resource Library
-
-### 72X — Equipping South African entrepreneurs with scalable tools, community access, and localized business support through a powerful three-tier platform!
+72X — Empowering entrepreneurs through structured growth, smart technology, and accessible digital tools.
