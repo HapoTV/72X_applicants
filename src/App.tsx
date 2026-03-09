@@ -253,6 +253,14 @@ function App() {
                               </RequirePackage>
                             }
                           />
+                          <Route
+                            path="/business-analyst"
+                            element={
+                              <RequirePackage required="premium" upgradePath="/upgrade/business-analyst">
+                                <AIBusinessAnalyst />
+                              </RequirePackage>
+                            }
+                          />
 
                           {/* Upgrade Pages */}
                           <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
@@ -264,6 +272,7 @@ function App() {
                           <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
                           <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
                           <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
+                          <Route path="/upgrade/business-analyst" element={<AIAnalystUpgrade />} />
 
                           <Route
                             path="/connections"
