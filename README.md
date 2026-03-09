@@ -121,7 +121,7 @@ Launch AI-powered business insights
 
 Enable expert-led guidance features
 
-  ####Target Audience
+  #### Target Audience
 
 72X is built for:
 
