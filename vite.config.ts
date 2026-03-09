@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
         }
       }
     ],
-    base: "/72X_applicants/",
+    base: "/", // Changed from "/72X_applicants/"
     define: {
       'process.env.NODE_ENV': `"${mode}"`,
       'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'https://oxabqoodvqvqskrztrsq.supabase.co'),
