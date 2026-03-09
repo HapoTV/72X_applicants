@@ -1,6 +1,6 @@
-#72X – Empowering South African Entrepreneurs
+# 72X – Empowering South African Entrepreneurs
 
-##72X (SeventyTwoX) is a web-based platform designed to support and grow small businesses in South Africa, particularly those operating in townships and rural communities.
+## 72X (SeventyTwoX) is a web-based platform designed to support and grow small businesses in South Africa, particularly those operating in townships and rural communities.
 
 The platform provides entrepreneurs with:
 
@@ -186,7 +186,7 @@ CRM tools
 
 Additional third-party business apps
 
-🛠 Technology Stack
+### Technology Stack
 
 Frontend:
 
@@ -212,7 +212,7 @@ Routing:
 
 React Router DOM
 
- ####Mobile-First Design
+ #### Mobile-First Design
 
 72X is designed with accessibility and connectivity challenges in mind.
 
@@ -247,8 +247,8 @@ Deployment & Branching Strategy
 
 To ensure platform stability, development follows a phase-based Git branching structure.
 
-####Branch Overview
-main-phase-1 → Production branch (Startup features)
+#### Branch Overview
+master branch → Production branch (Startup features)
 
 main-phase-2 → Development branch for Essential features
 
@@ -353,4 +353,4 @@ Email: support@72Xsupport.co.za
 Community: Available within the application
 Help Docs: Accessible through the Resource Library
 
-72X — Empowering entrepreneurs through structured growth, smart technology, and accessible digital tools.
+## 72X — Empowering entrepreneurs through structured growth, smart technology, and accessible digital tools.
