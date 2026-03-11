@@ -215,8 +215,22 @@ useEffect(() => {
 
       switch (questionType) {
         case 'MULTIPLE_CHOICE':
+          baseQuestion.options = Array.isArray(q.options)
+            ? q.options.map((o: any) => String(o))
+            : ['Option A', 'Option B', 'Option C', 'Option D'];
+          break;
         case 'TRUE_FALSE':
-          baseQuestion.options = q.options || ['Option A', 'Option B', 'Option C', 'Option D'];
+          baseQuestion.options = ['True', 'False'];
+          if (q.correctAnswerIndex === 0 || q.correctAnswerIndex === 1) {
+            baseQuestion.correctAnswer = q.correctAnswerIndex;
+          } else if (typeof q.correctAnswerText === 'string') {
+            const t = q.correctAnswerText.trim().toLowerCase();
+            if (t === 'true') baseQuestion.correctAnswer = 0;
+            else if (t === 'false') baseQuestion.correctAnswer = 1;
+            else baseQuestion.correctAnswer = 0;
+          } else {
+            baseQuestion.correctAnswer = 0;
+          }
           break;
         case 'FILL_BLANK':
           baseQuestion.template = q.questionText || '______ is a key concept.';
