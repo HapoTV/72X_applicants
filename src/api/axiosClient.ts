@@ -2,7 +2,12 @@
 import axios from "axios";
 
 // Get API URL from environment variable with fallback
-const API_URL = import.meta.env.VITE_PRODUCTION_URL;
+const RAW_API_URL =
+	import.meta.env.VITE_BACKEND_URL ||
+	import.meta.env.VITE_API_URL ||
+	import.meta.env.VITE_PRODUCTION_URL;
+
+const API_URL = typeof RAW_API_URL === 'string' ? RAW_API_URL.replace(/\/+$/, '') : '';
 console.log('🔧 API Base URL:', API_URL);
 
 // For Production
