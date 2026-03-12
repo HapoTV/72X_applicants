@@ -197,34 +197,17 @@ useEffect(() => {
     return typeMap[type] || 'multiple_choice';
   }, []);
 
-  const parseStructuredPayloadFromOptions = useCallback((rawOptions: any): any | null => {
-    if (!Array.isArray(rawOptions) || rawOptions.length === 0) return null;
-    const first = rawOptions[0];
-    if (typeof first !== 'string') return null;
-
-    const trimmed = first.trim();
-    if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return null;
-
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      return null;
-    }
-  }, []);
-
   const transformBackendQuestionsToFlipCardFormat = useCallback((backendQuestions: any[]): any[] => {
     if (!Array.isArray(backendQuestions) || backendQuestions.length === 0) {
       return [];
     }
-
+    
     return backendQuestions.map((q, index) => {
       const questionType = q.questionType || 'MULTIPLE_CHOICE';
-      const structuredPayload = parseStructuredPayloadFromOptions(q.options);
       
       const baseQuestion: any = {
         id: q.id || `q${index + 1}`,
         type: mapQuestionType(questionType),
-
         question: q.questionText || 'Sample question',
         explanation: q.explanation || 'Review the material to understand this concept better.',
         correctAnswer: q.correctAnswerIndex || 0,
@@ -256,33 +239,17 @@ useEffect(() => {
           break;
         case 'MATCHING':
         case 'MATCH_WORDING':
-          baseQuestion.pairs = Array.isArray(q.pairs)
-            ? q.pairs
-            : Array.isArray(structuredPayload?.pairs)
-              ? structuredPayload.pairs
-              : [];
+          baseQuestion.pairs = Array.isArray(q.pairs) ? q.pairs : [];
           baseQuestion.options = [];
           break;
         case 'ORDERING':
-          baseQuestion.steps = Array.isArray(q.steps)
-            ? q.steps
-            : Array.isArray(structuredPayload?.steps)
-              ? structuredPayload.steps
-              : [];
+          baseQuestion.steps = Array.isArray(q.steps) ? q.steps : [];
           baseQuestion.options = [];
           break;
         case 'CATEGORIZE':
         case 'DRAG_AND_DROP':
-          baseQuestion.categories = Array.isArray(q.categories)
-            ? q.categories
-            : Array.isArray(structuredPayload?.categories)
-              ? structuredPayload.categories
-              : [];
-          baseQuestion.items = Array.isArray(q.items)
-            ? q.items
-            : Array.isArray(structuredPayload?.items)
-              ? structuredPayload.items
-              : [];
+          baseQuestion.categories = Array.isArray(q.categories) ? q.categories : [];
+          baseQuestion.items = Array.isArray(q.items) ? q.items : [];
           baseQuestion.options = [];
           break;
         default:
@@ -291,7 +258,7 @@ useEffect(() => {
 
       return baseQuestion;
     });
-  }, [mapQuestionType, parseStructuredPayloadFromOptions]);
+  }, [mapQuestionType]);
 
   const recordMaterialFinished = useCallback(async (material: UserLearningModule) => {
     try {
