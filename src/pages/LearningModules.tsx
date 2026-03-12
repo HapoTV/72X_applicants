@@ -223,16 +223,10 @@ useEffect(() => {
           baseQuestion.wordBank = [q.correctAnswerText || 'answer', 'concept', 'process', 'method', 'strategy'];
           baseQuestion.correctWord = q.correctAnswerText || 'answer';
           break;
-        case 'MATCHING':
         case 'MATCH_WORDING':
           baseQuestion.pairs = Array.isArray(q.pairs) ? q.pairs : [];
           baseQuestion.options = [];
           break;
-        case 'ORDERING':
-          baseQuestion.steps = Array.isArray(q.steps) ? q.steps : [];
-          baseQuestion.options = [];
-          break;
-        case 'CATEGORIZE':
         case 'DRAG_AND_DROP':
           baseQuestion.categories = Array.isArray(q.categories) ? q.categories : [];
           baseQuestion.items = Array.isArray(q.items) ? q.items : [];
