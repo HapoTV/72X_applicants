@@ -360,11 +360,25 @@ const Profile: React.FC = () => {
   };
 
   const calculateYearsInBusiness = (): string => {
-    if (!user?.founded) return '0';
-    
-    const createdYear = new Date(user.founded).getFullYear();
+    const foundedRaw = profileData.founded;
+    if (!foundedRaw || !foundedRaw.trim()) return '';
+
     const currentYear = new Date().getFullYear();
-    return (currentYear - createdYear).toString();
+
+    const asNumber = Number(foundedRaw);
+    if (Number.isFinite(asNumber) && asNumber >= 1800 && asNumber <= currentYear) {
+      const years = Math.max(0, currentYear - Math.floor(asNumber));
+      return String(years);
+    }
+
+    const parsed = new Date(foundedRaw);
+    if (Number.isNaN(parsed.getTime())) return '';
+
+    const createdYear = parsed.getFullYear();
+    if (createdYear < 1800 || createdYear > currentYear) return '';
+
+    const years = Math.max(0, currentYear - createdYear);
+    return String(years);
   };
 
   // Requirement Item Component (like CreatePassword)
@@ -654,7 +668,7 @@ const Profile: React.FC = () => {
                     </label>
                     <input
                       type="text"
-                      value={`${calculateYearsInBusiness()} years`}
+                      value={calculateYearsInBusiness() ? `${calculateYearsInBusiness()} years` : ''}
                       disabled
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
                     />

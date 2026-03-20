@@ -70,6 +70,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
 
   const [matchSelectedTerm, setMatchSelectedTerm] = useState<string | null>(null);
   const [matchMapping, setMatchMapping] = useState<Record<string, string>>({});
+  const [matchDefinitions, setMatchDefinitions] = useState<string[]>([]);
 
   const [orderedSteps, setOrderedSteps] = useState<string[]>([]);
   const [orderTouched, setOrderTouched] = useState(false);
@@ -191,6 +192,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
     setSelectedAnswer(null);
     setMatchSelectedTerm(null);
     setMatchMapping({});
+    setMatchDefinitions([]);
     setCategorizeAssignments({});
     setFillBlankSelected(null);
     setOrderTouched(false);
@@ -203,6 +205,18 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
       setOrderedSteps(shuffledSteps);
     } else {
       setOrderedSteps([]);
+    }
+
+    if (q.type === 'match_pairs') {
+      const pairs = q.pairs || [];
+      const defs = pairs
+        .map((p) => p.definition)
+        .filter((d): d is string => Boolean(d && d.trim()));
+      const shuffled = [...defs]
+        .map((d) => ({ d, sort: Math.random() }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ d }) => d);
+      setMatchDefinitions(shuffled);
     }
   }, [currentQuestionIndex, currentQ?.id]);
 
@@ -375,10 +389,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
     if (t === 'match_pairs') {
       const pairs = currentQ.pairs || [];
       const terms = pairs.map((p) => p.term);
-      const definitions = [...pairs.map((p) => p.definition)]
-        .map((d) => ({ d, sort: Math.random() }))
-        .sort((a, b) => a.sort - b.sort)
-        .map(({ d }) => d);
+      const definitions = matchDefinitions;
 
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -402,7 +413,6 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
                     <span className="text-xs text-gray-400">Select</span>
                   )}
                 </div>
-                {matchMapping[term] && <div className="mt-2 text-xs text-gray-600">→ {matchMapping[term]}</div>}
               </button>
             ))}
           </div>
@@ -496,18 +506,57 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
       const cats = currentQ.categories || [];
       const items = currentQ.items || [];
 
+      const setAssignment = (label: string, category: string | null) => {
+        setCategorizeAssignments((prev) => {
+          const next = { ...prev };
+          if (!category) {
+            delete next[label];
+            return next;
+          }
+          next[label] = category;
+          return next;
+        });
+      };
+
+      const handleDropToCategory = (cat: string, ev: React.DragEvent) => {
+        ev.preventDefault();
+        const label = ev.dataTransfer.getData('text/plain');
+        if (!label) return;
+        setAssignment(label, cat);
+      };
+
+      const handleDropToUnassigned = (ev: React.DragEvent) => {
+        ev.preventDefault();
+        const label = ev.dataTransfer.getData('text/plain');
+        if (!label) return;
+        setAssignment(label, null);
+      };
+
       return (
         <div className="space-y-3">
           <div className="text-xs font-semibold text-gray-600">Assign each item to a category</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {cats.map((cat) => (
-              <div key={cat} className="border border-gray-200 rounded-xl p-3">
+              <div
+                key={cat}
+                className="border border-gray-200 rounded-xl p-3"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDropToCategory(cat, e)}
+              >
                 <div className="text-sm font-semibold text-gray-900 mb-2">{cat}</div>
                 <div className="space-y-2">
                   {items
                     .filter((i) => categorizeAssignments[i.label] === cat)
                     .map((i) => (
-                      <div key={`${cat}-${i.label}`} className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                      <div
+                        key={`${cat}-${i.label}`}
+                        className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', i.label);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                      >
                         {i.label}
                       </div>
                     ))}
@@ -519,34 +568,33 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
             ))}
           </div>
 
-          <div className="border border-gray-200 rounded-xl p-3">
+          <div
+            className="border border-gray-200 rounded-xl p-3"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDropToUnassigned}
+          >
             <div className="text-sm font-semibold text-gray-900 mb-2">Items</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {items.map((i) => {
-                const assigned = categorizeAssignments[i.label];
-                return (
-                  <button
+              {items
+                .filter((i) => !categorizeAssignments[i.label])
+                .map((i) => (
+                  <div
                     key={i.label}
-                    onClick={() => {
-                      if (cats.length === 0) return;
-                      setCategorizeAssignments((prev) => {
-                        const current = prev[i.label];
-                        const idx = current ? cats.indexOf(current) : -1;
-                        const next = cats[(idx + 1) % cats.length];
-                        return { ...prev, [i.label]: next };
-                      });
+                    className="w-full text-left px-3 py-2 rounded-lg border border-gray-200 bg-white"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', i.label);
+                      e.dataTransfer.effectAllowed = 'move';
                     }}
-                    className="w-full text-left px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-sm text-gray-900">{i.label}</span>
                       <span className="text-xs text-gray-700 bg-white border border-gray-200 rounded-full px-2 py-1">
-                        {assigned || 'Unassigned'}
+                        Unassigned
                       </span>
                     </div>
-                  </button>
-                );
-              })}
+                  </div>
+                ))}
             </div>
             <button
               onClick={() => setCategorizeAssignments({})}

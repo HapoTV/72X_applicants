@@ -197,13 +197,24 @@ useEffect(() => {
     return typeMap[type] || 'multiple_choice';
   }, []);
 
+  const tryParseStructuredOptionPayload = useCallback((q: any): any | null => {
+    const raw = Array.isArray(q?.options) ? q.options[0] : undefined;
+    if (raw && typeof raw === 'object') return raw;
+    if (typeof raw !== 'string' || !raw.trim()) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }, []);
+
   const transformBackendQuestionsToFlipCardFormat = useCallback((backendQuestions: any[]): any[] => {
     if (!Array.isArray(backendQuestions) || backendQuestions.length === 0) {
       return [];
     }
     
     return backendQuestions.map((q, index) => {
-      const questionType = q.questionType || 'MULTIPLE_CHOICE';
+      const questionType = String(q?.questionType || 'MULTIPLE_CHOICE').toUpperCase();
       
       const baseQuestion: any = {
         id: q.id || `q${index + 1}`,
@@ -223,14 +234,47 @@ useEffect(() => {
           baseQuestion.wordBank = [q.correctAnswerText || 'answer', 'concept', 'process', 'method', 'strategy'];
           baseQuestion.correctWord = q.correctAnswerText || 'answer';
           break;
+        case 'MATCHING':
         case 'MATCH_WORDING':
-          baseQuestion.pairs = Array.isArray(q.pairs) ? q.pairs : [];
+          if (Array.isArray(q.pairs) && q.pairs.length > 0) {
+            baseQuestion.pairs = q.pairs;
+          } else {
+            const payload = tryParseStructuredOptionPayload(q);
+            const fromPairs = Array.isArray(payload?.pairs) ? payload.pairs : [];
+            const fromMatches = Array.isArray(payload?.matches) ? payload.matches : [];
+            baseQuestion.pairs = fromPairs.length > 0 ? fromPairs : fromMatches;
+          }
           baseQuestion.options = [];
           break;
+        case 'CATEGORIZE':
         case 'DRAG_AND_DROP':
-          baseQuestion.categories = Array.isArray(q.categories) ? q.categories : [];
-          baseQuestion.items = Array.isArray(q.items) ? q.items : [];
-          baseQuestion.options = [];
+          {
+            const payload = tryParseStructuredOptionPayload(q);
+            const pairsFromPayload = Array.isArray(payload?.pairs) ? payload.pairs : [];
+            const matchesFromPayload = Array.isArray(payload?.matches) ? payload.matches : [];
+            const pairsFromPayloadAny = pairsFromPayload.length > 0 ? pairsFromPayload : matchesFromPayload;
+
+            if (pairsFromPayloadAny.length > 0) {
+              baseQuestion.type = 'match_pairs';
+              baseQuestion.pairs = pairsFromPayloadAny;
+              baseQuestion.options = [];
+              break;
+            }
+
+            if (Array.isArray(q.categories) && q.categories.length > 0) {
+              baseQuestion.categories = q.categories;
+            } else {
+              baseQuestion.categories = Array.isArray(payload?.categories) ? payload.categories : [];
+            }
+
+            if (Array.isArray(q.items) && q.items.length > 0) {
+              baseQuestion.items = q.items;
+            } else {
+              baseQuestion.items = Array.isArray(payload?.items) ? payload.items : [];
+            }
+
+            baseQuestion.options = [];
+          }
           break;
         default:
           baseQuestion.options = q.options || ['Option A', 'Option B', 'Option C', 'Option D'];
@@ -238,7 +282,7 @@ useEffect(() => {
 
       return baseQuestion;
     });
-  }, [mapQuestionType]);
+  }, [mapQuestionType, tryParseStructuredOptionPayload]);
 
   const recordMaterialFinished = useCallback(async (material: UserLearningModule) => {
     try {
