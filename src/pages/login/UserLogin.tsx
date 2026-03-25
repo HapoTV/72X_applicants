@@ -1,18 +1,16 @@
 // src/pages/login/UserLogin.tsx
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Building2, Users } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useLogin';
 import Logo from '../../assets/Logo.svg';
 
 const UserLogin: React.FC = () => {
-    const navigate = useNavigate();
     const {
         isLoading,
         errorMessage,
         setErrorMessage,
         handleUserLogin,
-        fillUserCredentials,
     } = useLogin();
     
     const [formData, setFormData] = useState({

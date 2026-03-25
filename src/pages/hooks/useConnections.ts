@@ -62,8 +62,6 @@ export function useConnections(authUserId?: string) {
         for (const c of conversations) {
           // Determine which user is the other participant
           const otherUserId = c.user1Id === authUserId ? c.user2Id : c.user1Id;
-          const otherUserName = c.user1Id === authUserId ? c.user2Name : c.user1Name;
-          const otherUserEmail = c.user1Id === authUserId ? c.user2Email : c.user1Email;
           
           meta[otherUserId] = {
             unread: c.unreadCount || 0,

@@ -129,7 +129,7 @@ const AdminProfile: React.FC = () => {
                 const nextUser = { ...parsed, ...userData };
                 localStorage.setItem('user', JSON.stringify(nextUser));
                 window.dispatchEvent(new CustomEvent('user-updated'));
-            } catch (e) {
+            } catch {
             }
         } catch (error) {
             console.error('Error fetching admin profile:', error);
@@ -158,7 +158,7 @@ const AdminProfile: React.FC = () => {
                 const nextUser = { ...parsed, ...updatedUser };
                 localStorage.setItem('user', JSON.stringify(nextUser));
                 window.dispatchEvent(new CustomEvent('user-updated'));
-            } catch (e) {
+            } catch {
             }
         } catch (error) {
             console.error('Error saving profile:', error);
@@ -342,7 +342,7 @@ const AdminProfile: React.FC = () => {
                 try {
                     const response = await axiosClient.get(`/users/organisation/${userOrganisation}`);
                     users = response.data || [];
-                } catch (orgError: any) {
+                } catch {
                     const response = await axiosClient.get('/users/admin/all');
                     const allUsersData = response.data || [];
                     users = allUsersData.filter((u: any) => u.organisation === userOrganisation);

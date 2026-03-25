@@ -1,5 +1,5 @@
 // src/pages/adminDashboard/tabs/ApplicantsTab.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -17,6 +17,7 @@ export default function ApplicantsTab() {
   const [users, setUsers] = useState<UserWithSubscription[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserWithSubscription[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All');
@@ -51,7 +52,160 @@ export default function ApplicantsTab() {
   });
   const [addingAdmin, setAddingAdmin] = useState(false);
 
-  // Fetch current user's organisation if missing
+  const checkUserOnlineStatus = useCallback((userData: User): boolean => {
+    if (userData.availabilityStatus === 'ONLINE') return true;
+    
+    if (userData.lastSeenAt) {
+      const lastSeen = new Date(userData.lastSeenAt).getTime();
+      const now = new Date().getTime();
+      const fiveMinutes = 5 * 60 * 1000;
+      return (now - lastSeen) < fiveMinutes;
+    }
+    
+    return false;
+  }, []);
+
+  const calculateStats = useCallback((usersList: UserWithSubscription[]) => {
+    // No need to filter again since usersList is already filtered
+    const relevantUsers = usersList;
+
+    const activeUsers = relevantUsers.filter(u => 
+      u.status === 'ACTIVE' || u.status === 'active'
+    );
+    
+    const onlineUsers = relevantUsers.filter(u => u.isOnline);
+    
+    const freeTrialUsers = relevantUsers.filter(u => 
+      u.subscription?.subscriptionType === 'START_UP' && 
+      u.subscription?.trialEndsAt && 
+      new Date(u.subscription.trialEndsAt) > new Date()
+    );
+    
+    const uniqueOrgs = isSuperAdmin 
+      ? [...new Set(usersList.map(u => u.organisation).filter(Boolean))]
+      : [];
+
+    setStats({
+      totalUsers: relevantUsers.length,
+      activeUsers: activeUsers.length,
+      onlineUsers: onlineUsers.length,
+      offlineUsers: relevantUsers.length - onlineUsers.length,
+      inactiveUsers: relevantUsers.filter(u => u.status === 'INACTIVE' || u.status === 'inactive').length,
+      freeTrialUsers: freeTrialUsers.length,
+      totalOrganisations: uniqueOrgs.length,
+      adminsCount: relevantUsers.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length,
+      usersCount: relevantUsers.filter(u => u.role === 'USER').length
+    });
+  }, [isSuperAdmin]);
+
+  const fetchAllUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setFetchError(null);
+      
+      console.log("Current auth state:", {
+        isSuperAdmin,
+        userOrganisation,
+        userRole: user?.role,
+        userEmail: user?.email
+      });
+      
+      let response;
+      let allUsers: User[] = [];
+      
+      if (isSuperAdmin) {
+        // Super admin - fetch all users
+        console.log('👑 Super admin fetching all users...');
+        response = await axiosClient.get('/users/admin/all');
+        allUsers = response.data;
+        console.log(`✅ Super Admin fetched ${allUsers.length} users from backend`);
+      } else {
+        // Regular admin - fetch users from their organisation only
+        if (userOrganisation) {
+          console.log(`👤 Admin fetching users for organisation: ${userOrganisation}`);
+          
+          try {
+            // Try the organisation-specific endpoint first
+            response = await axiosClient.get(`/users/organisation/${userOrganisation}`);
+            allUsers = response.data;
+            console.log(`✅ Admin fetched ${allUsers.length} users for organisation: ${userOrganisation}`);
+          } catch {
+            console.warn('⚠️ Organisation endpoint failed, falling back to filtering:');
+            
+            // Fallback: fetch all and filter
+            response = await axiosClient.get('/users/admin/all');
+            const allUsersData = response.data;
+            allUsers = allUsersData.filter((u: User) => 
+              u.organisation === userOrganisation
+            );
+            console.log(`✅ Admin fetched and filtered ${allUsers.length} users for organisation: ${userOrganisation}`);
+          }
+        } else {
+          console.error('❌ No organisation found for admin');
+          setFetchError('Your account has no organisation assigned. Please contact support.');
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Filter out SUPER_ADMIN users for non-super admins
+      if (!isSuperAdmin) {
+        allUsers = allUsers.filter(u => u.role !== 'SUPER_ADMIN');
+        console.log(`🔍 Filtered out super admins, remaining: ${allUsers.length} users`);
+      }
+      
+      // Enhance users with subscription and online status
+      const enhancedUsers = await Promise.all(
+        allUsers.map(async (userData) => {
+          try {
+            let subscription = null;
+            try {
+              // You can implement bulk subscription fetch here
+              // subscription = await userSubscriptionService.getUserPackage(userData.userId);
+            } catch {
+              // Silently fail
+            }
+            
+            const isOnline = checkUserOnlineStatus(userData);
+            
+            return {
+              ...userData,
+              subscription,
+              isOnline,
+              lastActive: userData.lastSeenAt || userData.updatedAt || new Date().toISOString()
+            };
+          } catch {
+            return {
+              ...userData,
+              subscription: null,
+              isOnline: false,
+              lastActive: userData.lastSeenAt || userData.updatedAt || new Date().toISOString()
+            };
+          }
+        })
+      );
+
+      setUsers(enhancedUsers);
+      
+      // Extract unique organisations (for super admin only)
+      if (isSuperAdmin) {
+        const uniqueOrgs = [...new Set(enhancedUsers
+          .map(u => u.organisation)
+          .filter((org): org is string => org !== undefined && org !== null && org !== '')
+        )];
+        setOrganisations(uniqueOrgs);
+      }
+      
+      calculateStats(enhancedUsers);
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching users:', error);
+      setFetchError(`Failed to load users: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [calculateStats, checkUserOnlineStatus, isSuperAdmin, updateUserOrganisation, user?.email, user?.role, userOrganisation]);
+
   useEffect(() => {
     const fetchCurrentUserOrganisation = async () => {
       if (!isSuperAdmin && !userOrganisation && user) {
@@ -85,161 +239,7 @@ export default function ApplicantsTab() {
     }
     
     fetchAllUsers();
-  }, [isSuperAdmin, userOrganisation]);
-
-  const fetchAllUsers = async () => {
-    try {
-      setLoading(true);
-      setFetchError(null);
-      
-      console.log("Current auth state:", {
-        isSuperAdmin,
-        userOrganisation,
-        userRole: user?.role,
-        userEmail: user?.email
-      });
-      
-      let response;
-      let allUsers: User[] = [];
-      
-      if (isSuperAdmin) {
-        // Super admin - fetch all users
-        console.log('👑 Super admin fetching all users...');
-        response = await axiosClient.get('/users/admin/all');
-        allUsers = response.data;
-        console.log(`✅ Super Admin fetched ${allUsers.length} users from backend`);
-      } else {
-        // Regular admin - fetch users from their organisation only
-        if (userOrganisation) {
-          console.log(`👤 Admin fetching users for organisation: ${userOrganisation}`);
-          
-          try {
-            // Try the organisation-specific endpoint first
-            response = await axiosClient.get(`/users/organisation/${userOrganisation}`);
-            allUsers = response.data;
-            console.log(`✅ Admin fetched ${allUsers.length} users for organisation: ${userOrganisation}`);
-          } catch (orgError: any) {
-            console.warn('⚠️ Organisation endpoint failed, falling back to filtering:', orgError.message);
-            
-            // Fallback: fetch all and filter
-            response = await axiosClient.get('/users/admin/all');
-            const allUsersData = response.data;
-            allUsers = allUsersData.filter((u: User) => 
-              u.organisation === userOrganisation
-            );
-            console.log(`✅ Admin fetched and filtered ${allUsers.length} users for organisation: ${userOrganisation}`);
-          }
-        } else {
-          console.error('❌ No organisation found for admin');
-          setFetchError('Your account has no organisation assigned. Please contact support.');
-          setLoading(false);
-          return;
-        }
-      }
-      
-      // Filter out SUPER_ADMIN users for non-super admins
-      if (!isSuperAdmin) {
-        allUsers = allUsers.filter(u => u.role !== 'SUPER_ADMIN');
-        console.log(`🔍 Filtered out super admins, remaining: ${allUsers.length} users`);
-      }
-      
-      // Enhance users with subscription and online status
-      const enhancedUsers = await Promise.all(
-        allUsers.map(async (userData) => {
-          try {
-            let subscription = null;
-            try {
-              // You can implement bulk subscription fetch here
-              // subscription = await userSubscriptionService.getUserPackage(userData.userId);
-            } catch (error) {
-              // Silently fail
-            }
-            
-            const isOnline = checkUserOnlineStatus(userData);
-            
-            return {
-              ...userData,
-              subscription,
-              isOnline,
-              lastActive: userData.lastSeenAt || userData.updatedAt || new Date().toISOString()
-            };
-          } catch (error) {
-            return {
-              ...userData,
-              subscription: null,
-              isOnline: false,
-              lastActive: userData.lastSeenAt || userData.updatedAt || new Date().toISOString()
-            };
-          }
-        })
-      );
-
-      setUsers(enhancedUsers);
-      
-      // Extract unique organisations (for super admin only)
-      if (isSuperAdmin) {
-        const uniqueOrgs = [...new Set(enhancedUsers
-          .map(u => u.organisation)
-          .filter((org): org is string => org !== undefined && org !== null && org !== '')
-        )];
-        setOrganisations(uniqueOrgs);
-      }
-      
-      calculateStats(enhancedUsers);
-      
-    } catch (error: any) {
-      console.error('❌ Error fetching users:', error);
-      setFetchError(`Failed to load users: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const checkUserOnlineStatus = (userData: User): boolean => {
-    if (userData.availabilityStatus === 'ONLINE') return true;
-    
-    if (userData.lastSeenAt) {
-      const lastSeen = new Date(userData.lastSeenAt).getTime();
-      const now = new Date().getTime();
-      const fiveMinutes = 5 * 60 * 1000;
-      return (now - lastSeen) < fiveMinutes;
-    }
-    
-    return false;
-  };
-
-  const calculateStats = (usersList: UserWithSubscription[]) => {
-    // No need to filter again since usersList is already filtered
-    const relevantUsers = usersList;
-
-    const activeUsers = relevantUsers.filter(u => 
-      u.status === 'ACTIVE' || u.status === 'active'
-    );
-    
-    const onlineUsers = relevantUsers.filter(u => u.isOnline);
-    
-    const freeTrialUsers = relevantUsers.filter(u => 
-      u.subscription?.subscriptionType === 'START_UP' && 
-      u.subscription?.trialEndsAt && 
-      new Date(u.subscription.trialEndsAt) > new Date()
-    );
-    
-    const uniqueOrgs = isSuperAdmin 
-      ? [...new Set(usersList.map(u => u.organisation).filter(Boolean))]
-      : [];
-
-    setStats({
-      totalUsers: relevantUsers.length,
-      activeUsers: activeUsers.length,
-      onlineUsers: onlineUsers.length,
-      offlineUsers: relevantUsers.length - onlineUsers.length,
-      inactiveUsers: relevantUsers.filter(u => u.status === 'INACTIVE' || u.status === 'inactive').length,
-      freeTrialUsers: freeTrialUsers.length,
-      totalOrganisations: uniqueOrgs.length,
-      adminsCount: relevantUsers.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length,
-      usersCount: relevantUsers.filter(u => u.role === 'USER').length
-    });
-  };
+  }, [isSuperAdmin, userOrganisation, fetchAllUsers]);
 
   useEffect(() => {
     let filtered = [...users];

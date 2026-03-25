@@ -1,5 +1,5 @@
 // src/pages/mentorship/PeerSupportGroups.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Users, Search, Filter, X, MessageSquare, Calendar, MapPin, Globe } from 'lucide-react';
 import { mentorshipService } from '../../services/MentorshipService';
 import type { PeerSupportGroup, PeerSupportGroupFormData } from '../../interfaces/MentorshipData';
@@ -75,31 +75,7 @@ const PeerSupportGroups: React.FC<PeerSupportGroupsProps> = ({
     }
   };
 
-  useEffect(() => {
-    // Extract user ID on component mount
-    const extractedUserId = extractUserId();
-    if (extractedUserId) {
-      setUserId(extractedUserId);
-    } else {
-      setLoading(false);
-      setError('Please login to view groups');
-    }
-  }, []);
-
-  useEffect(() => {
-    // Fetch groups when userId is available
-    if (userId) {
-      console.log('User ID available, fetching groups:', userId);
-      fetchGroups();
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    // Filter groups whenever dependencies change
-    filterGroups();
-  }, [searchQuery, selectedCategory, groups]);
-
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     if (!userId) {
       console.log('No user ID available');
       setLoading(false);
@@ -130,9 +106,9 @@ const PeerSupportGroups: React.FC<PeerSupportGroupsProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
-  const filterGroups = () => {
+  const filterGroups = useCallback(() => {
     let filtered = groups;
 
     // Apply category filter
@@ -155,7 +131,31 @@ const PeerSupportGroups: React.FC<PeerSupportGroupsProps> = ({
 
     setFilteredGroups(filtered);
     console.log(`Filtered ${filtered.length} groups from ${groups.length} total`);
-  };
+  }, [groups, searchQuery, selectedCategory]);
+
+  useEffect(() => {
+    // Extract user ID on component mount
+    const extractedUserId = extractUserId();
+    if (extractedUserId) {
+      setUserId(extractedUserId);
+    } else {
+      setLoading(false);
+      setError('Please login to view groups');
+    }
+  }, []);
+
+  useEffect(() => {
+    // Fetch groups when userId is available
+    if (userId) {
+      console.log('User ID available, fetching groups:', userId);
+      fetchGroups();
+    }
+  }, [userId, fetchGroups]);
+
+  useEffect(() => {
+    // Filter groups whenever dependencies change
+    filterGroups();
+  }, [filterGroups]);
 
   const handleOpenGroupChat = (groupId: string, groupName: string) => {
   if (!window.confirm('Open group chat? You need to be a member to participate.')) {

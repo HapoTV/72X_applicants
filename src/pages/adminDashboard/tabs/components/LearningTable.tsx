@@ -54,7 +54,7 @@ const truncateUrl = (url: string, maxLength: number = 40): string => {
     return `${start}...${end}`;
 };
 
-const getVisibilityBadge = (item: LearningItem) => {
+const getVisibilityBadge = (item: LearningItem, opts: { userOrganisation?: string | null; isSuperAdmin: boolean }) => {
     if (item.isPublic) {
         return (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
@@ -68,6 +68,15 @@ const getVisibilityBadge = (item: LearningItem) => {
                 <Building2 className="w-3 h-3 mr-1 flex-shrink-0" />
                 <span className="truncate max-w-[120px]" title={item.targetOrganisation}>
                     {item.targetOrganisation}
+                </span>
+            </span>
+        );
+    } else if (!opts.isSuperAdmin && opts.userOrganisation) {
+        return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 whitespace-nowrap">
+                <Building2 className="w-3 h-3 mr-1 flex-shrink-0" />
+                <span className="truncate max-w-[120px]" title={opts.userOrganisation}>
+                    {opts.userOrganisation}
                 </span>
             </span>
         );
@@ -97,10 +106,12 @@ const getTypeBadgeClass = (type: string): string => {
     }
 };
 
-export const LearningTable: React.FC<LearningTableProps> = ({ 
-    items, 
-    loading, 
-    onDelete 
+export const LearningTable: React.FC<LearningTableProps> = ({
+    items,
+    loading,
+    userOrganisation,
+    isSuperAdmin,
+    onDelete,
 }) => {
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -157,7 +168,7 @@ export const LearningTable: React.FC<LearningTableProps> = ({
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        {getVisibilityBadge(item)}
+                                        {getVisibilityBadge(item, { userOrganisation, isSuperAdmin })}
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm text-gray-500 truncate max-w-[300px]" title={item.resourceUrl || item.fileName}>

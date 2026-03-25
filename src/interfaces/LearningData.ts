@@ -100,6 +100,11 @@ export interface UserLearningModule {
   isCompleted: boolean;
   isLocked: boolean;
   lastAccessed?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdByOrganisation?: string;
+  targetOrganisation?: string;
+  isPublic?: boolean;
   // Resource information for file/URL access
   resourceUrl?: string;
   fileName?: string;

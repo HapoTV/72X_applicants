@@ -5,12 +5,10 @@ import type {
   MentorshipFormData,
   PeerSupportGroup,
   PeerSupportGroupFormData,
-  Connection,
   Conversation,
   Message,
   GroupMember,
   GroupMessage,
-  GroupConversation,
   MentorMessage ,
   MentorConversation
 } from '../interfaces/MentorshipData';
@@ -23,8 +21,8 @@ class MentorshipService {
     try {
       const response = await axiosClient.get('/mentors');
       return response.data.map((mentor: any) => this.transformToMentor(mentor));
-    } catch (error) {
-      console.error('Error fetching all mentors:', error);
+    } catch {
+      console.error('Error fetching all mentors:');
       return [];
     }
   }
@@ -38,8 +36,8 @@ class MentorshipService {
       });
       
       return this.transformToMentor(response.data);
-    } catch (error) {
-      console.error('Error creating mentor:', error);
+    } catch {
+      console.error('Error creating mentor:');
       throw new Error('Failed to create mentor');
     }
   }
@@ -48,8 +46,8 @@ class MentorshipService {
     try {
       const response = await axiosClient.get(`/mentors/${mentorId}`);
       return this.transformToMentor(response.data);
-    } catch (error) {
-      console.error('Error fetching mentor by ID:', error);
+    } catch {
+      console.error('Error fetching mentor by ID:');
       return null;
     }
   }
@@ -58,8 +56,8 @@ class MentorshipService {
     try {
       const response = await axiosClient.get(`/mentors/expertise/${encodeURIComponent(expertise)}`);
       return response.data.map((mentor: any) => this.transformToMentor(mentor));
-    } catch (error) {
-      console.error('Error fetching mentors by expertise:', error);
+    } catch {
+      console.error('Error fetching mentors by expertise:');
       return [];
     }
   }
@@ -70,8 +68,8 @@ class MentorshipService {
         params: { query }
       });
       return response.data.map((mentor: any) => this.transformToMentor(mentor));
-    } catch (error) {
-      console.error('Error searching mentors:', error);
+    } catch {
+      console.error('Error searching mentors:');
       return [];
     }
   }
@@ -82,8 +80,8 @@ class MentorshipService {
         params: { userEmail }
       });
       return true;
-    } catch (error) {
-      console.error('Error deleting mentor:', error);
+    } catch {
+      console.error('Error deleting mentor:');
       throw new Error('Failed to delete mentor');
     }
   }
@@ -112,8 +110,8 @@ class MentorshipService {
       
       return response.data.map((group: any) => this.transformToPeerGroup(group));
       
-    } catch (error: any) {
-      console.error('Error fetching peer groups:', error);
+    } catch {
+      console.error('Error fetching peer groups:');
       return [];
     }
   }
@@ -124,8 +122,8 @@ class MentorshipService {
         params: { currentUserId: userId }
       });
       return response.data.map((group: any) => this.transformToPeerGroup(group));
-    } catch (error) {
-      console.error('Error fetching groups by category:', error);
+    } catch {
+      console.error('Error fetching groups by category:');
       return [];
     }
   }
@@ -136,8 +134,8 @@ class MentorshipService {
         params: { userId }
       });
       return response.data.map((group: any) => this.transformToPeerGroup(group));
-    } catch (error) {
-      console.error('Error fetching user groups:', error);
+    } catch {
+      console.error('Error fetching user groups:');
       return [];
     }
   }
@@ -154,8 +152,8 @@ class MentorshipService {
         params: { creatorId }
       });
       return this.transformToPeerGroup(response.data);
-    } catch (error) {
-      console.error('Error creating peer group:', error);
+    } catch {
+      console.error('Error creating peer group:');
       throw new Error('Failed to create peer group');
     }
   }
@@ -166,8 +164,8 @@ class MentorshipService {
         userId
       });
       return this.transformToGroupMember(response.data);
-    } catch (error) {
-      console.error('Error joining peer group:', error);
+    } catch {
+      console.error('Error joining peer group:');
       throw new Error('Failed to join peer group');
     }
   }
@@ -177,8 +175,8 @@ class MentorshipService {
       await axiosClient.post(`/peer-support/groups/${groupId}/leave`, {
         userId
       });
-    } catch (error) {
-      console.error('Error leaving peer group:', error);
+    } catch {
+      console.error('Error leaving peer group:');
       throw new Error('Failed to leave peer group');
     }
   }
@@ -187,10 +185,22 @@ class MentorshipService {
     try {
       const response = await axiosClient.get(`/peer-support/groups/${groupId}/members`);
       return response.data.map((member: any) => this.transformToGroupMember(member));
-    } catch (error) {
-      console.error('Error fetching group members:', error);
+    } catch {
+      console.error('Error fetching group members:');
       return [];
     }
+  }
+
+  async getGroupMessages(_groupId: string): Promise<GroupMessage[]> {
+    return [];
+  }
+
+  async sendGroupMessage(_groupId: string, messageData: GroupMessage): Promise<GroupMessage> {
+    return messageData;
+  }
+
+  async markGroupMessagesAsRead(_groupId: string, _userId: string): Promise<void> {
+    return;
   }
 
   async searchGroups(query: string, userId: string): Promise<PeerSupportGroup[]> {
@@ -199,8 +209,8 @@ class MentorshipService {
         params: { query, currentUserId: userId }
       });
       return response.data.map((group: any) => this.transformToPeerGroup(group));
-    } catch (error) {
-      console.error('Error searching groups:', error);
+    } catch {
+      console.error('Error searching groups:');
       return [];
     }
   }
@@ -211,8 +221,8 @@ class MentorshipService {
         params: { currentUserId: userId }
       });
       return response.data.map((group: any) => this.transformToPeerGroup(group));
-    } catch (error) {
-      console.error('Error fetching trending groups:', error);
+    } catch {
+      console.error('Error fetching trending groups:');
       return [];
     }
   }
@@ -234,8 +244,8 @@ class MentorshipService {
       
       const response = await axiosClient.post('/messaging/send', messageRequest);
       return this.transformToMessage(response.data);
-    } catch (error) {
-      console.error('Error sending message:', error);
+    } catch {
+      console.error('Error sending message:');
       throw new Error('Failed to send message');
     }
   }
@@ -244,8 +254,8 @@ class MentorshipService {
     try {
       const response = await axiosClient.get(`/messaging/conversations/${userId}`);
       return response.data.map((conv: any) => this.transformToConversation(conv));
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
+    } catch {
+      console.error('Error fetching conversations:');
       return [];
     }
   }
@@ -259,8 +269,8 @@ class MentorshipService {
       
       const response = await axiosClient.get(`/messaging/messages/${userId1}/${userId2}`);
       return response.data.map((msg: any) => this.transformToMessage(msg));
-    } catch (error) {
-      console.error('Error fetching messages:', error);
+    } catch {
+      console.error('Error fetching messages:');
       return [];
     }
   }
@@ -268,8 +278,8 @@ class MentorshipService {
   async markMessagesAsRead(senderId: string, receiverId: string): Promise<void> {
     try {
       await axiosClient.post(`/messaging/mark-read/${senderId}/${receiverId}`);
-    } catch (error) {
-      console.error('Error marking messages as read:', error);
+    } catch {
+      console.error('Error marking messages as read:');
       throw new Error('Failed to mark messages as read');
     }
   }
@@ -278,8 +288,8 @@ class MentorshipService {
     try {
       const response = await axiosClient.get(`/messaging/unread-count/${userId}`);
       return response.data.count || 0;
-    } catch (error) {
-      console.error('Error fetching unread count:', error);
+    } catch {
+      console.error('Error fetching unread count:');
       return 0;
     }
   }
@@ -290,8 +300,8 @@ class MentorshipService {
         params: { limit }
       });
       return response.data.map((msg: any) => this.transformToMessage(msg));
-    } catch (error) {
-      console.error('Error fetching recent messages:', error);
+    } catch {
+      console.error('Error fetching recent messages:');
       return [];
     }
   }
@@ -313,12 +323,8 @@ class MentorshipService {
       
       console.log('Found user ID:', userId, 'for email:', email);
       return userId;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        console.log('User not found with email:', email);
-      } else {
-        console.error('Error getting user ID from email:', error);
-      }
+    } catch {
+      console.error('Error getting user ID from email:');
       return null;
     }
   }
@@ -331,8 +337,8 @@ class MentorshipService {
       }
       
       return await this.getUserIdFromEmail(mentor.createdBy);
-    } catch (error) {
-      console.error('Error getting user ID from mentor:', error);
+    } catch {
+      console.error('Error getting user ID from mentor:');
       return null;
     }
   }
@@ -497,7 +503,7 @@ class MentorshipService {
         month: 'short',
         day: 'numeric'
       });
-    } catch (error) {
+    } catch {
       return 'Invalid date';
     }
   }
@@ -528,7 +534,7 @@ class MentorshipService {
       } else {
         return this.formatDate(dateString);
       }
-    } catch (error) {
+    } catch {
       return 'Invalid date';
     }
   }

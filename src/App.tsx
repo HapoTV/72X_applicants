@@ -15,7 +15,6 @@ import Analytics from './pages/Analytics';
 import RoadmapGenerator from './pages/RoadmapGenerator';
 import Profile from './pages/Profile';
 import LearningModules from './pages/LearningModules';
-import Community from './pages/Community';
 import CommunityDiscussions from './pages/community/Discussion';
 import CommunityNetworking from './pages/community/Networking';
 import CommunityMentorship from './pages/community/Mentorship';
@@ -149,7 +148,7 @@ function App() {
                           <Route path="/learning/technical" element={<Technical />} />
 
                           {/* Community Routes */}
-                          <Route path="/community" element={<Community />} />
+                          <Route path="/community" element={<Navigate to="/community/discussions" replace />} />
                           <Route path="/community/discussions" element={<CommunityDiscussions />} />
                           <Route path="/community/networking" element={<CommunityNetworking />} />
                           <Route

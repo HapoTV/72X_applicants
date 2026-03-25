@@ -1,18 +1,16 @@
 // src/pages/login/AdminLogin.tsx
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Shield } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useLogin';
 import Logo from '../../assets/Logo.svg';
 
 const AdminLogin: React.FC = () => {
-    const navigate = useNavigate();
     const {
         isLoading,
         errorMessage,
         setErrorMessage,
         handleAdminLogin,
-        fillAdminCredentials,
     } = useLogin();
     
     const [formData, setFormData] = useState({

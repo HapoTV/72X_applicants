@@ -1,5 +1,5 @@
 // src/pages/adminDashboard/tabs/AdminMonitor.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Users, CreditCard, AlertTriangle, Server, Activity, 
   Shield, BarChart,
@@ -28,27 +28,7 @@ const AdminMonitor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Check if user is super admin
-  if (!isSuperAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen space-y-4">
-        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
-          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-600 mb-4">
-            Only Super Admins can access the system monitoring dashboard.
-          </p>
-          <div className="bg-red-100 p-4 rounded-lg">
-            <p className="text-sm text-red-700">
-              If you need monitoring access, please contact your system administrator.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -75,15 +55,41 @@ const AdminMonitor: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    if (!isSuperAdmin) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     fetchAllData();
 
     // Refresh every 5 minutes
     const interval = setInterval(fetchAllData, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchAllData, isSuperAdmin]);
+
+  // Check if user is super admin
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen space-y-4">
+        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
+          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600 mb-4">
+            Only Super Admins can access the system monitoring dashboard.
+          </p>
+          <div className="bg-red-100 p-4 rounded-lg">
+            <p className="text-sm text-red-700">
+              If you need monitoring access, please contact your system administrator.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && !refreshing) {
     return (

@@ -1,5 +1,5 @@
 // pages/adminDashboard/tabs/LearningTab.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { learningService } from '../../../services/LearningService';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
@@ -25,8 +25,62 @@ interface LearningItem {
 
 type LearningSection = 'business-plan' | 'marketing' | 'finance' | 'operations' | 'leadership' | 'technical';
 
+const sectionTitles: Record<LearningSection, string> = {
+    'business-plan': 'Business Planning',
+    'marketing': 'Marketing & Sales',
+    'finance': 'Financial Management',
+    'operations': 'Operations',
+    'leadership': 'Leadership',
+    'technical': 'Technical'
+};
+
+const backendToFrontendCategory: Record<string, LearningSection> = {
+    'BUSINESS_PLANNING': 'business-plan',
+    'MARKETING_SALES': 'marketing',
+    'FINANCIAL_MANAGEMENT': 'finance',
+    'OPERATIONS': 'operations',
+    'LEADERSHIP': 'leadership',
+    'TECHNICAL': 'technical',
+    'business-planning': 'business-plan',
+    'marketing': 'marketing',
+    'finance': 'finance',
+    'operations': 'operations',
+    'leadership': 'leadership',
+    'technical': 'technical',
+    'BUSINESS_PLAN': 'business-plan',
+    'BUSINESSPLANNING': 'business-plan',
+    'MARKETING_AND_SALES': 'marketing',
+    'FINANCIAL': 'finance',
+    'TECH': 'technical',
+    'TECHNOLOGY': 'technical'
+};
+
+const frontendToBackendCategory: Record<LearningSection, string> = {
+    'business-plan': 'BUSINESS_PLANNING',
+    'marketing': 'MARKETING_SALES',
+    'finance': 'FINANCIAL_MANAGEMENT',
+    'operations': 'OPERATIONS',
+    'leadership': 'LEADERSHIP',
+    'technical': 'TECHNICAL'
+};
+
+const guessCategory = (category: string): LearningSection | undefined => {
+    if (!category) return undefined;
+    
+    const lower = category.toLowerCase();
+    
+    if (lower.includes('business') || lower.includes('plan')) return 'business-plan';
+    if (lower.includes('marketing') || lower.includes('sales')) return 'marketing';
+    if (lower.includes('finance') || lower.includes('financial')) return 'finance';
+    if (lower.includes('operation')) return 'operations';
+    if (lower.includes('leader') || lower.includes('manage')) return 'leadership';
+    if (lower.includes('tech') || lower.includes('technical') || lower.includes('technology')) return 'technical';
+    
+    return undefined;
+};
+
 export default function LearningTab() {
-    const { isSuperAdmin, userOrganisation } = useAuth();
+    const { user, isSuperAdmin, userOrganisation } = useAuth();
     const [learningSection, setLearningSection] = useState<LearningSection>('business-plan');
     const [learningData, setLearningData] = useState<Record<LearningSection, LearningItem[]>>({
         'business-plan': [],
@@ -39,9 +93,9 @@ export default function LearningTab() {
     const [showAddLearning, setShowAddLearning] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [newLearning, setNewLearning] = useState<{ 
-        title: string; 
-        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT'; 
+    const [newLearning, setNewLearning] = useState<{
+        title: string;
+        type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT';
         category: LearningSection;
         resourceUrl: string;
         description: string;
@@ -49,8 +103,8 @@ export default function LearningTab() {
         targetOrganisation?: string;
         isPublic?: boolean;
         showAllOrganisations?: boolean;
-    }>({ 
-        title: '', 
+    }>({
+        title: '',
         type: 'ARTICLE',
         category: 'business-plan',
         resourceUrl: '',
@@ -63,53 +117,7 @@ export default function LearningTab() {
     const [organisations, setOrganisations] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const sectionTitles: Record<LearningSection, string> = {
-        'business-plan': 'Business Planning',
-        'marketing': 'Marketing & Sales',
-        'finance': 'Financial Management',
-        'operations': 'Operations',
-        'leadership': 'Leadership',
-        'technical': 'Technical'
-    };
-
-    const backendToFrontendCategory: Record<string, LearningSection> = {
-        'BUSINESS_PLANNING': 'business-plan',
-        'MARKETING_SALES': 'marketing',
-        'FINANCIAL_MANAGEMENT': 'finance',
-        'OPERATIONS': 'operations',
-        'LEADERSHIP': 'leadership',
-        'TECHNICAL': 'technical',
-        'business-planning': 'business-plan',
-        'marketing': 'marketing',
-        'finance': 'finance',
-        'operations': 'operations',
-        'leadership': 'leadership',
-        'technical': 'technical',
-        'BUSINESS_PLAN': 'business-plan',
-        'BUSINESSPLANNING': 'business-plan',
-        'MARKETING_AND_SALES': 'marketing',
-        'FINANCIAL': 'finance',
-        'TECH': 'technical',
-        'TECHNOLOGY': 'technical'
-    };
-
-    const frontendToBackendCategory: Record<LearningSection, string> = {
-        'business-plan': 'BUSINESS_PLANNING',
-        'marketing': 'MARKETING_SALES',
-        'finance': 'FINANCIAL_MANAGEMENT',
-        'operations': 'OPERATIONS',
-        'leadership': 'LEADERSHIP',
-        'technical': 'TECHNICAL'
-    };
-
-    useEffect(() => {
-        fetchLearningMaterials();
-        if (isSuperAdmin) {
-            fetchOrganisations();
-        }
-    }, [isSuperAdmin]);
-
-    const fetchLearningMaterials = async () => {
+    const fetchLearningMaterials = useCallback(async () => {
         try {
             setLoading(true);
             console.log('Fetching learning materials...');
@@ -139,7 +147,11 @@ export default function LearningTab() {
                     fileName: material.fileName || '',
                     fileSize: material.fileSize || '',
                     description: material.description || '',
-                    updated: material.updatedAt ? new Date(material.updatedAt).toLocaleDateString() : new Date().toLocaleDateString(),
+                    updated: material.createdAt
+                        ? new Date(material.createdAt).toLocaleDateString()
+                        : material.updatedAt
+                            ? new Date(material.updatedAt).toLocaleDateString()
+                            : '',
                     createdBy: material.createdBy || 'admin@72x.co.za',
                     createdByOrganisation: material.createdByOrganisation,
                     targetOrganisation: material.targetOrganisation,
@@ -165,31 +177,14 @@ export default function LearningTab() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const guessCategory = (category: string): LearningSection | undefined => {
-        if (!category) return undefined;
-        
-        const lower = category.toLowerCase();
-        
-        if (lower.includes('business') || lower.includes('plan')) return 'business-plan';
-        if (lower.includes('marketing') || lower.includes('sales')) return 'marketing';
-        if (lower.includes('finance') || lower.includes('financial')) return 'finance';
-        if (lower.includes('operation')) return 'operations';
-        if (lower.includes('leader') || lower.includes('manage')) return 'leadership';
-        if (lower.includes('tech') || lower.includes('technical') || lower.includes('technology')) return 'technical';
-        
-        return undefined;
-    };
-
-    const fetchOrganisations = async () => {
-        try {
-            const response = await axiosClient.get('/admin/organisations');
-            setOrganisations(response.data.map((org: any) => org.name));
-        } catch (error) {
-            console.error('Error fetching organisations:', error);
+    useEffect(() => {
+        fetchLearningMaterials();
+        if (isSuperAdmin) {
+            setOrganisations(['Hapo', 'Standard Bank']);
         }
-    };
+    }, [fetchLearningMaterials, isSuperAdmin]);
 
     const getFileSize = (bytes: number): string => {
         if (bytes === 0) return '0 Bytes';
@@ -199,7 +194,7 @@ export default function LearningTab() {
         return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
     };
 
-    const validateFile = (file: File, type: 'DOCUMENT' | 'VIDEO'): boolean => {
+    const validateFile = (file: File, type: 'ARTICLE' | 'DOCUMENT' | 'VIDEO'): boolean => {
         const maxSizeVideo = 500 * 1024 * 1024;
         const maxSizeDocument = 50 * 1024 * 1024;
         const maxSize = type === 'VIDEO' ? maxSizeVideo : maxSizeDocument;
@@ -211,11 +206,12 @@ export default function LearningTab() {
 
         const videoFormats = ['video/mp4', 'video/x-msvideo', 'video/quicktime', 'video/x-ms-wmv', 'video/x-flv', 'video/webm', 'video/x-matroska'];
         const documentFormats = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-        
-        const allowedFormats = type === 'VIDEO' ? videoFormats : documentFormats;
+        const articleFormats = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+
+        const allowedFormats = type === 'VIDEO' ? videoFormats : type === 'ARTICLE' ? articleFormats : documentFormats;
 
         if (!allowedFormats.includes(file.type)) {
-            alert(`Invalid file format. Allowed formats: ${type === 'VIDEO' ? 'MP4, AVI, MOV, WMV, FLV, WebM, MKV' : 'PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX'}`);
+            alert(`Invalid file format. Allowed formats: ${type === 'VIDEO' ? 'MP4, AVI, MOV, WMV, FLV, WebM, MKV' : type === 'ARTICLE' ? 'PDF, DOC, DOCX, TXT' : 'PDF, DOC, DOCX, TXT, PPT, PPTX, XLS, XLSX'}`);
             return false;
         }
 
@@ -227,74 +223,58 @@ export default function LearningTab() {
             alert('Please enter a title');
             return;
         }
-        
-        if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && !newLearning.file) {
+
+        if (!newLearning.file) {
             alert('Please select a file to upload');
             return;
         }
 
-        if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && newLearning.file) {
-            if (!validateFile(newLearning.file, newLearning.type)) {
-                return;
-            }
+        if (!validateFile(newLearning.file, newLearning.type)) {
+            return;
         }
-        
+
         try {
             setUploading(true);
             setUploadProgress(0);
 
             const backendCategory = frontendToBackendCategory[learningSection];
-            
+
             console.log('Creating learning material with category:', backendCategory);
-            
-            if ((newLearning.type === 'DOCUMENT' || newLearning.type === 'VIDEO') && newLearning.file) {
-                const formData = new FormData();
-                formData.append('title', newLearning.title);
-                formData.append('description', newLearning.description);
-                formData.append('category', backendCategory);
-                formData.append('type', newLearning.type);
-                formData.append('createdBy', 'admin@72x.co.za');
-                formData.append('file', newLearning.file);
-                
-                if (isSuperAdmin) {
-                    if (newLearning.showAllOrganisations) {
-                        formData.append('isPublic', 'true');
-                    } else if (newLearning.targetOrganisation) {
-                        formData.append('targetOrganisation', newLearning.targetOrganisation);
-                        formData.append('isPublic', 'false');
-                    }
+
+            const formData = new FormData();
+            formData.append('title', newLearning.title);
+            formData.append('description', newLearning.description);
+            formData.append('category', backendCategory);
+            formData.append('type', newLearning.type);
+            formData.append('createdBy', user?.email || 'admin@72x.co.za');
+            formData.append('file', newLearning.file);
+
+            if (isSuperAdmin) {
+                if (newLearning.showAllOrganisations) {
+                    formData.append('isPublic', 'true');
+                } else if (newLearning.targetOrganisation) {
+                    formData.append('targetOrganisation', newLearning.targetOrganisation);
+                    formData.append('isPublic', 'false');
                 }
-
-
-                alert(`File "${newLearning.file.name}" uploaded successfully!`);
-            } else {
-                const requestData: any = {
-                    title: newLearning.title,
-                    type: newLearning.type,
-                    category: backendCategory,
-                    resourceUrl: newLearning.resourceUrl,
-                    description: newLearning.description,
-                    createdBy: 'admin@72x.co.za'
-                };
-                
-                if (isSuperAdmin) {
-                    if (newLearning.showAllOrganisations) {
-                        requestData.isPublic = true;
-                    } else if (newLearning.targetOrganisation) {
-                        requestData.targetOrganisation = newLearning.targetOrganisation;
-                        requestData.isPublic = false;
-                    }
-                }
-
-                await axiosClient.post('/learning-materials', requestData);
-                alert('Learning material added successfully!');
             }
-            
+
+            await axiosClient.post('/learning-materials', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (event) => {
+                    const total = event.total ?? 0;
+                    if (!total) return;
+                    const percent = Math.round((event.loaded * 100) / total);
+                    setUploadProgress(percent);
+                },
+            });
+
+            alert(`File "${newLearning.file.name}" uploaded successfully!`);
+
             await fetchLearningMaterials();
-            
+
             setShowAddLearning(false);
-            setNewLearning({ 
-                title: '', 
+            setNewLearning({
+                title: '',
                 type: 'ARTICLE',
                 category: 'business-plan',
                 resourceUrl: '',
@@ -302,7 +282,7 @@ export default function LearningTab() {
                 file: undefined,
                 targetOrganisation: '',
                 isPublic: false,
-                showAllOrganisations: false
+                showAllOrganisations: false,
             });
             setUploadProgress(0);
         } catch (error: any) {

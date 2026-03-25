@@ -1,5 +1,5 @@
 // src/pages/adminDashboard/tabs/AdminPaymentsTab.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { paymentService } from '../../../services/PaymentService';
 import { PaymentStatus } from '../../../interfaces/PaymentData';
 import type { PaymentResponse, PaymentFilters, RevenueAnalytics } from '../../../interfaces/PaymentData';
@@ -75,33 +75,11 @@ const AdminPaymentsTab: React.FC = () => {
   const [revenueAnalytics, setRevenueAnalytics] = useState<RevenueAnalytics | null>(null);
   const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days' | '1year'>('30days');
 
-  // Check if user is super admin
-  if (!isSuperAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
-          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
-          <p className="text-gray-600 mb-4">
-            Only Super Admins can access the Payment Administration page.
-          </p>
-          <div className="bg-red-100 p-4 rounded-lg">
-            <p className="text-sm text-red-700">
-              If you need payment administration access, please contact your system administrator.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    fetchPayments();
-    fetchStats();
-    fetchRevenueAnalytics();
-  }, [filters, timeRange, organisationFilter]);
-
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
+    if (!isSuperAdmin) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -125,9 +103,9 @@ const AdminPaymentsTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, isSuperAdmin, organisationFilter]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const statsData = await paymentService.getAdminPaymentStats();
       console.log('Fetched stats:', statsData);
@@ -145,9 +123,9 @@ const AdminPaymentsTab: React.FC = () => {
         topCustomers: []
       });
     }
-  };
+  }, []);
 
-  const fetchRevenueAnalytics = async () => {
+  const fetchRevenueAnalytics = useCallback(async () => {
     try {
       // Calculate date range
       const endDate = new Date().toISOString();
@@ -178,7 +156,17 @@ const AdminPaymentsTab: React.FC = () => {
       console.error('Error fetching revenue analytics:', err);
       setRevenueAnalytics(null);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      setLoading(false);
+      return;
+    }
+    fetchPayments();
+    fetchStats();
+    fetchRevenueAnalytics();
+  }, [fetchPayments, fetchRevenueAnalytics, fetchStats, isSuperAdmin]);
 
   const filteredPayments = payments.filter(payment => {
     // Search filter
@@ -307,7 +295,7 @@ const AdminPaymentsTab: React.FC = () => {
         hour: '2-digit',
         minute: '2-digit'
       });
-    } catch (e) {
+    } catch {
       return dateString;
     }
   };

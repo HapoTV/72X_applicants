@@ -1,18 +1,16 @@
 // src/pages/login/SuperAdminLogin.tsx
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Crown } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useLogin';
 import Logo from '../../assets/Logo.svg';
 
 const SuperAdminLogin: React.FC = () => {
-    const navigate = useNavigate();
     const {
         isLoading,
         errorMessage,
         setErrorMessage,
         handleSuperAdminLogin,
-        fillSuperAdminCredentials,
     } = useLogin();
     
     const [formData, setFormData] = useState({

@@ -1,5 +1,5 @@
 // src/pages/mentorship/FindMentor.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, X, Star, MessageSquare, Users, Clock, Globe } from 'lucide-react';
 import { mentorshipService } from '../../services/MentorshipService';
 import type { Mentor } from '../../interfaces/MentorshipData';
@@ -7,7 +7,7 @@ import type { Mentor } from '../../interfaces/MentorshipData';
 interface FindMentorProps {
     onStartChat: (mentorId: string, mentorName: string, mentorEmail: string) => void;
     onConnect: (mentorId: string) => void;
-  }
+}
 
 const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -29,15 +29,7 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     { id: 'Food', name: 'Food & Hospitality' }
   ];
 
-  useEffect(() => {
-    fetchMentors();
-  }, []);
-
-  useEffect(() => {
-    filterMentors();
-  }, [selectedCategory, searchQuery, mentors]);
-
-  const fetchMentors = async () => {
+  const fetchMentors = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -49,9 +41,9 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterMentors = () => {
+  const filterMentors = useCallback(() => {
     let filtered = mentors;
 
     if (selectedCategory !== 'all') {
@@ -75,7 +67,15 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     }
 
     setFilteredMentors(filtered);
-  };
+  }, [mentors, searchQuery, selectedCategory]);
+
+  useEffect(() => {
+    fetchMentors();
+  }, [fetchMentors]);
+
+  useEffect(() => {
+    filterMentors();
+  }, [filterMentors]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -109,7 +109,7 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     }
   };
 
-  const handleChatWithMentor = (mentor: Mentor) => {
+  const handleChatWithMentor = async (mentor: Mentor) => {
     if (!mentor.contactInfo) {
       alert('This mentor has no contact information available.');
       return;
@@ -119,9 +119,13 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     
     // We'll use mentorId for mentor-specific chat
     // Pass the mentor's own contact info, not the creator's
-    onStartChat(mentor.mentorId, mentor.name, mentor.contactInfo);
+    setChatLoading(mentor.mentorId);
+    try {
+      await Promise.resolve(onStartChat(mentor.mentorId, mentor.name, mentor.contactInfo));
+    } finally {
+      setChatLoading(null);
+    }
   };
-
 
   return (
     <div className="space-y-6">

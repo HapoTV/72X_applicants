@@ -15,7 +15,73 @@ import Messages from './components/Messages';
 
 const AdTab: React.FC = () => {
   const { isSuperAdmin } = useAuth();
-  
+
+  // State management
+  const [ads, setAds] = useState<AdDTO[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState<boolean>(false);
+  const [editingAd, setEditingAd] = useState<AdDTO | null>(null);
+
+  // Filter and pagination
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<AdStatus | 'ALL'>('ALL');
+  const [targetingFilter, setTargetingFilter] = useState<AdTargetingType | 'ALL'>('ALL');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalAds, setTotalAds] = useState<number>(0);
+
+  // Fetch ads
+  const fetchAds = useCallback(async () => {
+    if (!isSuperAdmin) {
+      setAds([]);
+      setTotalAds(0);
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await adService.getUserAds(currentPage - 1, itemsPerPage);
+
+      // Ensure all ads have required fields with default values
+      const safeAds = (response.content || []).map((ad: any) => ({
+        ...ad,
+        totalClicks: ad.totalClicks || 0,
+        totalImpressions: ad.totalImpressions || 0,
+        totalInteractions: ad.totalInteractions || 0,
+        budget: ad.budget || 0,
+        priority: ad.priority || 1,
+        isActive: ad.isActive !== undefined ? ad.isActive : true,
+        status: ad.status || AdStatus.DRAFT,
+        targetingType: ad.targetingType || AdTargetingType.ALL_USERS,
+        mediaType: ad.mediaType || MediaType.IMAGE,
+        bannerUrl: ad.bannerUrl || '',
+        clickUrl: ad.clickUrl || '',
+        title: ad.title || 'Untitled Ad',
+        description: ad.description || '',
+        createdById: ad.createdById || '',
+        createdAt: ad.createdAt || new Date().toISOString()
+      }));
+
+      setAds(safeAds);
+      setTotalAds(response.totalElements || 0);
+    } catch (error: any) {
+      console.error('Error fetching ads:', error);
+      setError(error.message || 'Failed to load ads. Please try again.');
+      setAds([]);
+      setTotalAds(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    fetchAds();
+  }, [fetchAds]);
+
   // Check if user is super admin
   if (!isSuperAdmin) {
     return (
@@ -36,70 +102,11 @@ const AdTab: React.FC = () => {
     );
   }
 
-  // State management
-  const [ads, setAds] = useState<AdDTO[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState<boolean>(false);
-  const [editingAd, setEditingAd] = useState<AdDTO | null>(null);
-  
-  // Filter and pagination
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<AdStatus | 'ALL'>('ALL');
-  const [targetingFilter, setTargetingFilter] = useState<AdTargetingType | 'ALL'>('ALL');
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-  const [totalAds, setTotalAds] = useState<number>(0);
-
-  // Fetch ads
-  const fetchAds = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await adService.getUserAds(currentPage - 1, itemsPerPage);
-      
-      // Ensure all ads have required fields with default values
-      const safeAds = (response.content || []).map((ad: any) => ({
-        ...ad,
-        totalClicks: ad.totalClicks || 0,
-        totalImpressions: ad.totalImpressions || 0,
-        totalInteractions: ad.totalInteractions || 0,
-        budget: ad.budget || 0,
-        priority: ad.priority || 1,
-        isActive: ad.isActive !== undefined ? ad.isActive : true,
-        status: ad.status || AdStatus.DRAFT,
-        targetingType: ad.targetingType || AdTargetingType.ALL_USERS,
-        mediaType: ad.mediaType || MediaType.IMAGE,
-        bannerUrl: ad.bannerUrl || '',
-        clickUrl: ad.clickUrl || '',
-        title: ad.title || 'Untitled Ad',
-        description: ad.description || '',
-        createdById: ad.createdById || '',
-        createdAt: ad.createdAt || new Date().toISOString()
-      }));
-      
-      setAds(safeAds);
-      setTotalAds(response.totalElements || 0);
-    } catch (error: any) {
-      console.error('Error fetching ads:', error);
-      setError(error.message || 'Failed to load ads. Please try again.');
-      setAds([]);
-      setTotalAds(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, itemsPerPage]);
-
-  useEffect(() => {
-    fetchAds();
-  }, [fetchAds]);
-
   // Handle edit ad
   const handleEdit = (ad: AdDTO) => {
     setEditingAd(ad);
     setShowForm(true);
+
     setError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

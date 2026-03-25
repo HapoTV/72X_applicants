@@ -52,7 +52,7 @@ const QuickActions: React.FC = () => {
 
       icon: Users,
 
-      action: () => navigate('/community'),
+      action: () => navigate('/community/discussions'),
 
       color: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
 
