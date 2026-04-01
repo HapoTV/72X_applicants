@@ -25,6 +25,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const skipUntilRaw = localStorage.getItem('skipPackageSelectionUntil');
     const skipUntil = skipUntilRaw ? Number(skipUntilRaw) : 0;
     const hasActiveSkip = !!(skipUntil && !Number.isNaN(skipUntil) && Date.now() < skipUntil);
+    const isAdminLikeRole = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN';
 
     console.log('🛡️ ProtectedRoute check:', {
         path: location.pathname,
@@ -44,7 +45,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
 
     // 🔴 FIXED: If admin access is required but user is not admin or super admin
-    if (requireAuth && requireAdmin && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+    if (requireAuth && requireAdmin && !isAdminLikeRole) {
         console.log('🚫 Not admin or super admin, redirecting to login');
         const redirectTo = unauthorizedRedirectTo || '/login/asadmin';
         return <Navigate to={redirectTo} replace />;
@@ -54,7 +55,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const currentPath = location.pathname;
 
     // 🔴 FIX: Allow navigation BETWEEN payments/new and select-package
-    if (requireAuth && userStatus === 'PENDING_PAYMENT' && selectedPackage) {
+    if (requireAuth && userRole === 'USER' && userStatus === 'PENDING_PAYMENT' && selectedPackage) {
         // Allow navigation to select-package from payments/new
         if (currentPath === '/select-package') {
             console.log('✅ Allowing navigation to select-package from payments page');
@@ -75,7 +76,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
 
     // 🔴 CRITICAL: Don't redirect if already on select-package
-    if (requireAuth && userStatus === 'PENDING_PACKAGE') {
+    if (requireAuth && userRole === 'USER' && userStatus === 'PENDING_PACKAGE') {
         if (hasActiveSkip) {
             return <>{children}</>;
         }

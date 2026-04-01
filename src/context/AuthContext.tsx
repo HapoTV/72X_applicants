@@ -13,6 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isCocAdmin: boolean;
   token: string | null;
   tempSessionToken: string | null;
   setTempSessionToken: (token: string | null) => void;
@@ -200,6 +201,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = !!token && !!user;
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isCocAdmin = user?.role === 'COC_ADMIN';
 
   return (
     <AuthContext.Provider
@@ -212,6 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated,
         isAdmin,
         isSuperAdmin,
+        isCocAdmin,
         token,
         tempSessionToken,
         setTempSessionToken,
