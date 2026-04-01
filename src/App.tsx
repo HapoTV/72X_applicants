@@ -27,6 +27,7 @@ import Notifications from './pages/Notifications';
 import UserLogin from './pages/login/UserLogin';
 import AdminLogin from './pages/login/AdminLogin';
 import SuperAdminLogin from './pages/login/SuperAdminLogin';
+import CocAdminLogin from './pages/login/CocAdminLogin';
 import VerifyOtp from './pages/VerifyOtp';
 import BizBoostChatbot from './components/Chatbot';
 import LandingPage from './pages/LandingPage';
@@ -44,6 +45,7 @@ import ResetPasswordRequest from './pages/ResetPasswordRequest';
 import ResetPasswordVerify from './pages/ResetPasswordVerify';
 import CRM from './pages/applications/CRM';
 import FinanceManager from './pages/applications/FinanceManager';
+import SetupAccount from './pages/SetupAccount';
 
 import BusinessPlanning from './pages/learning/BusinessPlanning';
 import MarketingSales from './pages/learning/MarketingSales';
@@ -65,6 +67,7 @@ import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
 
 // Admin Routes
 import AdminRoutes from './routes/AdminRoutes';
+import CocAdminRoutes from './routes/CocAdminRoutes';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 
@@ -73,12 +76,21 @@ import PaymentRoutes from './routes/paymentRoutes';
 import MyConnections from './pages/MyConnections';
 
 function App() {
+  const isGitHubPagesHost = window.location.hostname.endsWith('github.io');
+
+  if (!isGitHubPagesHost && window.location.pathname.startsWith('/72X_applicants/')) {
+    const nextPath = window.location.pathname.replace(/^\/72X_applicants/, '') || '/';
+    window.history.replaceState(null, '', `${nextPath}${window.location.search}${window.location.hash}`);
+  }
+
+  const runtimeBasename = isGitHubPagesHost ? '/72X_applicants' : '/';
+
   return (
     <AuthProvider>
       <NotificationProvider>
         {/* Add future flags to suppress warnings */}
         <Router
-          basename={import.meta.env.BASE_URL}
+          basename={runtimeBasename}
           future={{
             v7_startTransition: true,
             v7_relativeSplatPath: true,
@@ -92,6 +104,7 @@ function App() {
             <Route path="/login" element={<UserLogin />} />
             <Route path="/login/asadmin" element={<AdminLogin />} />
             <Route path="/login/haposuperadmin" element={<SuperAdminLogin />} />
+            <Route path="/login/cocadmin" element={<CocAdminLogin />} />
             
             <Route path="/verify-otp" element={<VerifyOtp />} />
             <Route path="/request-demo" element={<RequestDemo />} />
@@ -102,6 +115,7 @@ function App() {
             <Route path="/signup/success/generated" element={<SignupSuccessGenerated />} />
             <Route path="/reset-password" element={<ResetPasswordRequest />} />
             <Route path="/reset-password/verify" element={<ResetPasswordVerify />} />
+            <Route path="/setup-account" element={<SetupAccount />} />
             <Route path="/create-password" element={<CreatePassword />} />
             <Route path="/select-package" element={<SelectPackage />} />
 
@@ -111,6 +125,20 @@ function App() {
               element={
                 <ProtectedRoute requireAdmin={true}>
                   <AdminRoutes />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* COC Admin routes - OUTSIDE main layout to avoid user sidebar */}
+            <Route
+              path="/cocadmin/*"
+              element={
+                <ProtectedRoute
+                  requireAdmin={true}
+                  unauthenticatedRedirectTo="/login/cocadmin"
+                  unauthorizedRedirectTo="/login/cocadmin"
+                >
+                  <CocAdminRoutes />
                 </ProtectedRoute>
               }
             />

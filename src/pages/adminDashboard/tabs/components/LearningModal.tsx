@@ -22,6 +22,7 @@ interface LearningModalProps {
     onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     sectionTitle: string;
     isSuperAdmin: boolean;
+    isCocAdmin?: boolean;
     organisations: string[];
     getFileSize: (bytes: number) => string;
 }
@@ -37,6 +38,7 @@ export const LearningModal: React.FC<LearningModalProps> = ({
     onFileChange,
     sectionTitle,
     isSuperAdmin,
+    isCocAdmin = false,
     organisations,
     getFileSize
 }) => {
@@ -74,8 +76,8 @@ export const LearningModal: React.FC<LearningModalProps> = ({
                         </select>
                     </div>
                     
-                    {/* Organisation targeting for super admin */}
-                    {isSuperAdmin && (
+                    {/* Organisation targeting for super admin / COC admin */}
+                    {(isSuperAdmin || isCocAdmin) && (
                         <div className="space-y-3 border-t border-gray-200 pt-3">
                             <label className="block text-sm font-medium text-gray-700">Target Audience</label>
                             
@@ -93,14 +95,16 @@ export const LearningModal: React.FC<LearningModalProps> = ({
                                     disabled={uploading}
                                 />
                                 <label htmlFor="showAllOrganisations" className="text-sm text-gray-700">
-                                    Make this material public (visible to all organisations)
+                                    {isCocAdmin
+                                        ? 'Make this material visible to all organisations under COC'
+                                        : 'Make this material public (visible to all organisations)'}
                                 </label>
                             </div>
 
                             {!newLearning.showAllOrganisations && (
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Target Specific Organisation
+                                        {isCocAdmin ? 'Target a specific organisation under COC' : 'Target Specific Organisation'}
                                     </label>
                                     <select
                                         value={newLearning.targetOrganisation || ''}
@@ -117,7 +121,9 @@ export const LearningModal: React.FC<LearningModalProps> = ({
                                         ))}
                                     </select>
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Leave empty to make it visible only to your organisation
+                                        {isCocAdmin
+                                            ? 'Leave empty to make it visible only to your organisation'
+                                            : 'Leave empty to make it visible only to your organisation'}
                                     </p>
                                 </div>
                             )}

@@ -73,6 +73,7 @@ export const UserFilters: React.FC<UserFiltersProps> = ({
           <option value="All">All Roles</option>
           <option value="USER">Users</option>
           <option value="ADMIN">Admins</option>
+          {isSuperAdmin && <option value="COC_ADMIN">COC Admins</option>}
           {isSuperAdmin && <option value="SUPER_ADMIN">Super Admins</option>}
         </select>
 

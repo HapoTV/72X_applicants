@@ -61,6 +61,8 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
             .toUpperCase();
     }, [userOrganisation]);
 
+    const isCocDashboard = location.pathname.startsWith('/cocadmin/');
+
     useEffect(() => {
         const refreshProfileImage = () => {
             try {
@@ -122,6 +124,10 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
 		{ id: 'funding' as const, label: 'Funding', icon: DollarSign, path: '/admin/dashboard/funding' },
     ];
 
+    const cocAdminMenuItems = [
+		{ id: 'organisation' as const, label: 'Organisations', icon: Building2, path: '/cocadmin/dashboard/organisation' },
+    ];
+
     // Items visible to super admins only
     const superAdminOnlyItems = [
 		{ id: 'ad' as const, label: 'Ads', icon: Megaphone, path: '/admin/dashboard/ad' },
@@ -130,10 +136,12 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
 		{ id: 'organisation' as const, label: 'Organisations', icon: Building2, path: '/admin/dashboard/organisation' },
     ];
 
-    // Filter menu items based on role
-    const menuItems = isSuperAdmin 
-        ? [...baseMenuItems, ...superAdminOnlyItems] // Super admins see base + super admin items
-        : baseMenuItems; // Regular admins only see base items
+    // Filter menu items based on role and dashboard type
+    const menuItems = isCocDashboard
+		? cocAdminMenuItems
+		: isSuperAdmin
+            ? [...baseMenuItems, ...superAdminOnlyItems] // Super admins see base + super admin items
+            : baseMenuItems; // Regular admins only see base items
 
     const handleTabClick = (item: typeof menuItems[0]) => {
         onTabChange(item.id);

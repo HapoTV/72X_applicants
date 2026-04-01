@@ -48,7 +48,7 @@ export default function ApplicantsTab() {
     industry: '',
     location: '',
     role: 'ADMIN',
-    status: 'ACTIVE'
+    status: 'PENDING_PASSWORD'
   });
   const [addingAdmin, setAddingAdmin] = useState(false);
 
@@ -93,7 +93,7 @@ export default function ApplicantsTab() {
       inactiveUsers: relevantUsers.filter(u => u.status === 'INACTIVE' || u.status === 'inactive').length,
       freeTrialUsers: freeTrialUsers.length,
       totalOrganisations: uniqueOrgs.length,
-      adminsCount: relevantUsers.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN').length,
+      adminsCount: relevantUsers.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' || u.role === 'COC_ADMIN').length,
       usersCount: relevantUsers.filter(u => u.role === 'USER').length
     });
   }, [isSuperAdmin]);
@@ -296,10 +296,10 @@ export default function ApplicantsTab() {
         ...newAdminData,
         organisation: newAdminData.organisation || userOrganisation || '',
         role: newAdminData.role,
-        status: 'ACTIVE'
+        status: 'PENDING_PASSWORD'
       });
       
-      alert(`${newAdminData.role} created successfully.`);
+      alert(`${newAdminData.role} created successfully. An account setup email has been sent to ${newAdminData.email}.`);
       setShowAddAdminModal(false);
       setNewAdminData({
         fullName: '',
@@ -312,7 +312,7 @@ export default function ApplicantsTab() {
         industry: '',
         location: '',
         role: 'ADMIN',
-        status: 'ACTIVE'
+        status: 'PENDING_PASSWORD'
       });
       
       fetchAllUsers();
@@ -463,7 +463,7 @@ export default function ApplicantsTab() {
             industry: '',
             location: '',
             role: 'ADMIN',
-            status: 'ACTIVE'
+            status: 'PENDING_PASSWORD'
           });
         }}
         onAdd={handleAddAdmin}

@@ -7,6 +7,27 @@ import { useAuth } from '../context/AuthContext';
 
 const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
 
+const PERMISSION_DENIED_MESSAGE = 'You do not have permission to login to this dashboard.';
+
+function expectedLoginTypeForRole(roleRaw: string | undefined | null): 'user' | 'admin' | 'superadmin' | 'cocadmin' | undefined {
+    const role = (roleRaw || '').toUpperCase();
+    if (!role) return undefined;
+
+    if (role === 'COC_ADMIN') return 'cocadmin';
+    if (role === 'SUPER_ADMIN') return 'superadmin';
+    if (role === 'ADMIN') return 'admin';
+    if (role === 'USER') return 'user';
+
+    return undefined;
+}
+
+function loginPathForType(loginType: 'user' | 'admin' | 'superadmin' | 'cocadmin'): string {
+    if (loginType === 'cocadmin') return '/login/cocadmin';
+    if (loginType === 'superadmin') return '/login/haposuperadmin';
+    if (loginType === 'admin') return '/login/asadmin';
+    return '/login';
+}
+
 const VerifyOtp: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -21,6 +42,7 @@ const VerifyOtp: React.FC = () => {
     const { 
         email, 
         loginType, 
+        apiLoginType,
         businessReference, 
         userId,
         requiresOtpVerification,
@@ -29,7 +51,7 @@ const VerifyOtp: React.FC = () => {
     
     useEffect(() => {
         if (!email || requiresOtpVerification === false) {
-            navigate('/login');
+            navigate(loginType === 'cocadmin' ? '/login/cocadmin' : '/login');
         }
     }, [email, requiresOtpVerification, navigate, generatedOtp, loginType]);
     
@@ -59,11 +81,21 @@ const VerifyOtp: React.FC = () => {
                 email,
                 otpCode: otp,
                 businessReference,
-                loginType
+                loginType: apiLoginType || loginType
             });
             
             console.log('✅ OTP verification response:', response);
             console.log('👤 User role from response:', response.role);
+
+            const expectedLoginType = expectedLoginTypeForRole((response as any).role);
+            if (expectedLoginType && loginType && expectedLoginType !== loginType) {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('userRole');
+                sessionStorage.removeItem('pendingLogin');
+                setError(PERMISSION_DENIED_MESSAGE);
+                navigate(loginPathForType(expectedLoginType), { replace: true });
+                return;
+            }
             
             if (response.token) {
                 localStorage.setItem('authToken', response.token);
@@ -116,6 +148,12 @@ const VerifyOtp: React.FC = () => {
                     // Determine redirect based on role from response
                     const role = userRole.toUpperCase();
                     console.log('🔍 Determining redirect based on role:', role);
+
+                    if (loginType === 'cocadmin') {
+                        console.log('🛡️ Redirecting to COC admin dashboard');
+                        window.location.href = `${baseUrl}cocadmin/dashboard/applicants`;
+                        return;
+                    }
                     
                     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
                         console.log('👑 Redirecting to admin dashboard for role:', role);
@@ -186,7 +224,7 @@ const VerifyOtp: React.FC = () => {
             const response = await authService.resendOtp({
                 email,
                 businessReference,
-                loginType
+                loginType: apiLoginType || loginType
             });
 
             if (response?.otpCode) {
@@ -201,7 +239,7 @@ const VerifyOtp: React.FC = () => {
     
     const handleBackToLogin = () => {
         sessionStorage.removeItem('pendingLogin');
-        navigate('/login');
+        navigate(loginType === 'cocadmin' ? '/login/cocadmin' : '/login');
     };
     
     const handleChangeOtp = (value: string) => {
@@ -237,6 +275,11 @@ const VerifyOtp: React.FC = () => {
                                 <>
                                     <Crown className="w-4 h-4" />
                                     Super Admin Login
+                                </>
+                            ) : loginType === 'cocadmin' ? (
+                                <>
+                                    <Shield className="w-4 h-4" />
+                                    COC Admin Login
                                 </>
                             ) : (
                                 <>

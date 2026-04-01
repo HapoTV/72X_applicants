@@ -6,12 +6,16 @@ interface ProtectedRouteProps {
     children: React.ReactNode;
     requireAuth?: boolean;
     requireAdmin?: boolean;
+    unauthenticatedRedirectTo?: string;
+    unauthorizedRedirectTo?: string;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     children,
     requireAuth = true,
-    requireAdmin = false
+    requireAdmin = false,
+    unauthenticatedRedirectTo,
+    unauthorizedRedirectTo
 }) => {
     const location = useLocation();
     const authToken = localStorage.getItem('authToken');
@@ -35,13 +39,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // If authentication is required but no token exists
     if (requireAuth && !authToken) {
         console.log('🔒 No auth token, redirecting to login');
-        return <Navigate to={requireAdmin ? '/login/asadmin' : '/login'} replace state={{ from: location.pathname }} />;
+        const redirectTo = unauthenticatedRedirectTo || (requireAdmin ? '/login/asadmin' : '/login');
+        return <Navigate to={redirectTo} replace state={{ from: location.pathname }} />;
     }
 
     // 🔴 FIXED: If admin access is required but user is not admin or super admin
     if (requireAuth && requireAdmin && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
         console.log('🚫 Not admin or super admin, redirecting to login');
-        return <Navigate to="/login/asadmin" replace />;
+        const redirectTo = unauthorizedRedirectTo || '/login/asadmin';
+        return <Navigate to={redirectTo} replace />;
     }
 
     // Get the current path

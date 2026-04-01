@@ -1,9 +1,10 @@
 // src/pages/Signup.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 import { useSignup } from './hooks/useSignup';
 import { ORGANISATIONS } from '../interfaces/OrganisationLists';
+import { publicAxios } from '../api/axiosClient';
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -20,22 +21,65 @@ const Signup: React.FC = () => {
     hasBankReference: false,
     businessReference: '',
     organisation: 'Hapo', // Default to Hapo
+    organisationType: 'STANDARD_BANK' as 'COC' | 'STANDARD_BANK',
+    subOrganisation: '',
     acceptTerms: false,
   });
   const { isLoading, error, setError, submit } = useSignup();
   
   const update = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
 
+  const standardBankName = useMemo(() => ORGANISATIONS[0] || 'Standard Bank', []);
+
+  const [cocOrganisations, setCocOrganisations] = useState<string[]>([]);
+  const [loadingCocOrganisations, setLoadingCocOrganisations] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      if (!form.hasBankReference || form.organisationType !== 'COC') return;
+
+      setLoadingCocOrganisations(true);
+      try {
+        // Signup is public. Avoid axiosClient here, because its 401 interceptor hard-redirects to /login.
+        const response = await publicAxios.get('/admin/organisations');
+        if (cancelled) return;
+        const payload = response?.data;
+        const list = Array.isArray(payload) ? payload : [];
+        const names = list.map((o: any) => (typeof o?.name === 'string' ? o.name : '')).filter(Boolean);
+        setCocOrganisations(names);
+      } catch (_error) {
+        if (!cancelled) setCocOrganisations([]);
+      } finally {
+        if (!cancelled) setLoadingCocOrganisations(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [form.hasBankReference, form.organisationType]);
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     
     // Validate organisation if hasBankReference is true
-    if (form.hasBankReference && !form.organisation) {
-      setError('Please select an organisation');
+    if (form.hasBankReference) {
+      if (form.organisationType === 'COC') {
+        if (!form.subOrganisation) {
+          setError('Please select a sub organisation');
+          return;
+        }
+      }
+
+      const organisation = form.organisationType === 'COC' ? form.subOrganisation : standardBankName;
+      await submit({ ...(form as any), organisation } as any);
       return;
     }
-    
+
     await submit(form as any);
   };
 
@@ -304,6 +348,8 @@ const Signup: React.FC = () => {
                     update('hasBankReference', false); 
                     update('businessReference', ''); 
                     update('organisation', 'Hapo'); // Reset to Hapo when No is selected
+                    update('organisationType', 'STANDARD_BANK');
+                    update('subOrganisation', '');
                   }}
                   className="w-4 h-4 text-primary-600 border-gray-300 cursor-pointer"
                 />
@@ -317,19 +363,66 @@ const Signup: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Organisation *
                   </label>
-                  <select
-                    value={form.organisation}
-                    onChange={e => update('organisation', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors bg-white"
-                    required
-                  >
-                    <option value="">Select an organisation</option>
-                    {ORGANISATIONS.map((org) => (
-                      <option key={org} value={org}>
-                        {org}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-6 mt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="organisationType"
+                        checked={form.organisationType === 'COC'}
+                        onChange={() => {
+                          update('organisationType', 'COC');
+                          update('organisation', '');
+                        }}
+                        className="w-4 h-4 text-primary-600 border-gray-300 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-700">COC</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="organisationType"
+                        checked={form.organisationType === 'STANDARD_BANK'}
+                        onChange={() => {
+                          update('organisationType', 'STANDARD_BANK');
+                          update('subOrganisation', '');
+                          update('organisation', standardBankName);
+                        }}
+                        className="w-4 h-4 text-primary-600 border-gray-300 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-700">{standardBankName}</span>
+                    </label>
+                  </div>
+
+                  {form.organisationType === 'COC' && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Sub Organisation *
+                      </label>
+                      <select
+                        value={form.subOrganisation}
+                        onChange={e => {
+                          update('subOrganisation', e.target.value);
+                          update('organisation', e.target.value);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors bg-white"
+                        required
+                        disabled={loadingCocOrganisations}
+                      >
+                        <option value="">Select a sub organisation</option>
+                        {cocOrganisations.map((org) => (
+                          <option key={org} value={org}>
+                            {org}
+                          </option>
+                        ))}
+                      </select>
+                      {loadingCocOrganisations ? (
+                        <p className="text-xs text-gray-500 mt-1">Loading sub organisations...</p>
+                      ) : cocOrganisations.length === 0 ? (
+                        <p className="text-xs text-gray-500 mt-1">No sub organisations available yet.</p>
+                      ) : null}
+                    </div>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">
                     Select the organisation that provided your business reference
                   </p>

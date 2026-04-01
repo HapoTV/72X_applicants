@@ -105,7 +105,27 @@ axiosClient.interceptors.response.use(
       localStorage.removeItem("user");
       localStorage.removeItem("userRole");
       localStorage.removeItem("userOrganisation");
-      window.location.href = "/login";
+
+      const currentPath = window.location.pathname || '';
+      const publicAuthPaths = [
+        '/login',
+        '/login/asadmin',
+        '/login/cocadmin',
+        '/login/haposuperadmin',
+        '/signup',
+        '/verify-otp',
+        '/reset-password',
+        '/setup-account',
+        '/create-password',
+      ];
+
+      const isOnPublicAuthPage = publicAuthPaths.some(
+        (p) => currentPath === p || currentPath.startsWith(`${p}/`)
+      );
+
+      if (!isOnPublicAuthPage) {
+        window.location.href = "/login";
+      }
     }
 
     if (error.response?.status === 403) {

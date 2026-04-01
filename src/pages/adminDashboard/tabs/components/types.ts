@@ -37,6 +37,6 @@ export interface NewUserData {
   founded: string;
   industry: string;
   location: string;
-  role: 'ADMIN' | 'SUPER_ADMIN' | 'USER';
+  role: 'ADMIN' | 'SUPER_ADMIN' | 'COC_ADMIN' | 'USER';
   status: string;
 }

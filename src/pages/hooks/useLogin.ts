@@ -5,7 +5,37 @@ import { authService } from '../../services/AuthService';
 import { useAuth } from '../../context/AuthContext';
 import type { LoginRequest, LoginResponse, User } from '../../interfaces/UserData';
 
-export type LoginType = 'user' | 'admin' | 'superadmin';
+export type LoginType = 'user' | 'admin' | 'superadmin' | 'cocadmin';
+
+const PERMISSION_DENIED_MESSAGE = 'You do not have permission to login to this dashboard.';
+
+function expectedLoginTypeForRole(roleRaw: string | undefined | null): LoginType | undefined {
+  const role = (roleRaw || '').toUpperCase();
+  if (!role) return undefined;
+
+  if (role === 'COC_ADMIN') return 'cocadmin';
+  if (role === 'SUPER_ADMIN') return 'superadmin';
+  if (role === 'ADMIN') return 'admin';
+  if (role === 'USER') return 'user';
+
+  return undefined;
+}
+
+function loginPathForType(loginType: LoginType): string {
+  if (loginType === 'cocadmin') return '/login/cocadmin';
+  if (loginType === 'superadmin') return '/login/haposuperadmin';
+  if (loginType === 'admin') return '/login/asadmin';
+  return '/login';
+}
+
+function isLoginTypeAllowedForRole(roleRaw: string | undefined | null, loginType: LoginType | undefined): boolean {
+  const expected = expectedLoginTypeForRole(roleRaw);
+  if (!expected || !loginType) return true;
+
+  // Frontend currently uses 'cocadmin' for the dedicated COC flow.
+  // Backend role is the source of truth.
+  return expected === loginType;
+}
 
 interface UserFormData {
   email: string;
@@ -93,6 +123,36 @@ export function useLogin() {
     }
   };
 
+  // COC Admin login handler (frontend-only routing).
+  // Backend currently does not have a dedicated loginType for COC admins,
+  // so we reuse the admin loginType on the API request but keep 'cocadmin'
+  // in the UI flow to route to the COC dashboard.
+  const handleCocAdminLogin = async (formData: AdminFormData) => {
+    setIsLoading(true);
+    setErrorMessage('');
+
+    try {
+      console.log('🚀 Starting COC admin login process...');
+      console.log('📧 Email:', formData.email);
+
+      const loginRequest: LoginRequest = {
+        email: formData.email,
+        password: formData.password,
+        loginType: 'admin',
+      };
+
+      console.log('🔑 Calling login endpoint...');
+      const loginResponse = await authService.login(loginRequest);
+      console.log('✅ Login response received:', loginResponse);
+
+      await handleLoginResponse(loginResponse, formData.email, undefined, 'cocadmin');
+    } catch (error: any) {
+      handleLoginError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Super Admin login handler
   const handleSuperAdminLogin = async (formData: AdminFormData) => {
     setIsLoading(true);
@@ -127,6 +187,13 @@ export function useLogin() {
     businessReference?: string,
     loginType?: LoginType
   ) => {
+    if (loginType && !isLoginTypeAllowedForRole((loginResponse as any).role, loginType)) {
+      setErrorMessage(PERMISSION_DENIED_MESSAGE);
+      const redirectTo = loginPathForType(expectedLoginTypeForRole((loginResponse as any).role) || 'user');
+      navigate(redirectTo, { replace: true });
+      return;
+    }
+
     const requiresOtp =
       isTruthyFlag((loginResponse as any).requiresOtpVerification) ||
       isTruthyFlag((loginResponse as any).requiresTwoFactor);
@@ -139,6 +206,7 @@ export function useLogin() {
         state: {
           email: email,
           loginType: loginType || 'user',
+          apiLoginType: loginType === 'cocadmin' ? 'admin' : (loginType || 'user'),
           businessReference: businessReference,
           userId: loginResponse.userId,
           requiresOtpVerification: true,
@@ -149,7 +217,7 @@ export function useLogin() {
     }
 
     console.log('✅ No OTP required, completing login...');
-    await completeLogin(loginResponse, login);
+    await completeLogin(loginResponse, login, loginType);
   };
 
   // Error handler
@@ -208,6 +276,7 @@ export function useLogin() {
     setErrorMessage,
     handleUserLogin,
     handleAdminLogin,
+    handleCocAdminLogin,
     handleSuperAdminLogin,
     fillUserCredentials,
     fillAdminCredentials,
@@ -217,11 +286,22 @@ export function useLogin() {
 
 async function completeLogin(
   loginResponse: LoginResponse,
-  login: (user: User, authToken?: string) => void
+  login: (user: User, authToken?: string) => void,
+  loginType?: LoginType
 ) {
   try {
     console.log('🎯 Starting completeLogin with role from backend:', loginResponse.role);
-    
+
+    if (loginType && !isLoginTypeAllowedForRole((loginResponse as any).role, loginType)) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      alert(PERMISSION_DENIED_MESSAGE);
+      const baseUrl = import.meta.env.BASE_URL;
+      const expected = expectedLoginTypeForRole((loginResponse as any).role) || 'user';
+      window.location.href = `${baseUrl}${loginPathForType(expected).replace(/^\//, '')}`;
+      return;
+    }
+
     if (loginResponse.token) {
       localStorage.setItem('authToken', loginResponse.token);
       authService.setAxiosAuthHeader(loginResponse.token);
@@ -271,6 +351,12 @@ async function completeLogin(
       // Check role from response - this is the ONLY place we determine where to redirect
       const role = userRole.toUpperCase();
       console.log('🔍 Determining redirect based on role:', role);
+      
+      if (loginType === 'cocadmin') {
+        console.log('🛡️ Redirecting to COC admin dashboard');
+        window.location.href = `${baseUrl}cocadmin/dashboard/applicants`;
+        return;
+      }
       
       if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
         console.log('👑 Redirecting to admin dashboard for role:', role);

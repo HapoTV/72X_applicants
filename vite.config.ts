@@ -14,10 +14,10 @@ export default defineConfig(({ mode }) => {
       {
         name: 'copy-404',
         closeBundle: () => {
-          // Copy index.html to 404.html for GitHub Pages SPA support
+          // Copy public/404.html to dist/404.html for GitHub Pages SPA support
           try {
-            copyFileSync(resolve(__dirname, 'dist/index.html'), resolve(__dirname, 'dist/404.html'));
-            console.log('✅ Successfully copied index.html to 404.html for SPA routing');
+            copyFileSync(resolve(__dirname, 'public/404.html'), resolve(__dirname, 'dist/404.html'));
+            console.log('✅ Successfully copied public/404.html to dist/404.html for SPA routing');
           } catch (err) {
             console.error('❌ Failed to copy 404.html:', err);
           }

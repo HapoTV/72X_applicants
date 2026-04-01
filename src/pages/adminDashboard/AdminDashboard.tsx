@@ -17,11 +17,16 @@ import AdminPaymentsTab from './tabs/AdminPaymentsTab';
 import AdminOrganisationManagement from './tabs/AdminOrganisationManagement';
 import AdminManagement from './tabs/AdminManagement';
 
-export default function AdminDashboard() {
+interface AdminDashboardProps {
+    dashboardBasePath?: string;
+}
+
+export default function AdminDashboard({ dashboardBasePath = '/admin/dashboard/' }: AdminDashboardProps) {
     const navigate = useNavigate();
     const location = useLocation();
     const { isSuperAdmin, userOrganisation } = useAuth();
     const [activeTab, setActiveTab] = useState<AdminTab>('applicants');
+    const isCocAdminDashboard = dashboardBasePath.startsWith('/cocadmin/');
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
@@ -37,7 +42,7 @@ export default function AdminDashboard() {
         const path = location.pathname;
         
         // Handle dashboard routes
-        const base = '/admin/dashboard/';
+        const base = dashboardBasePath;
         if (path.startsWith(base)) {
             const segment = path.slice(base.length).split('/')[0];
             
@@ -55,10 +60,10 @@ export default function AdminDashboard() {
         }
         
         // Default to applicants if no valid segment
-        if (!path.includes('/admin/')) {
-            navigate('/admin/dashboard/applicants', { replace: true });
+        if (!path.startsWith(base)) {
+            navigate(`${dashboardBasePath}applicants`, { replace: true });
         }
-    }, [location.pathname, navigate]);
+    }, [location.pathname, navigate, dashboardBasePath]);
 
     const renderActiveTab = () => {
         switch (activeTab) {
@@ -67,7 +72,7 @@ export default function AdminDashboard() {
             case 'events':
                 return <EventsTab />;
             case 'learning':
-                return <LearningTab />;
+                return <LearningTab isCocAdmin={isCocAdminDashboard} />;
             case 'mentorship':
                 return <MentorshipTab />;
             case 'funding':
@@ -81,7 +86,7 @@ export default function AdminDashboard() {
             case 'payments':
                 return <AdminPaymentsTab />;
             case 'organisation':
-                return isSuperAdmin ? <AdminOrganisationManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
+                return (isSuperAdmin || isCocAdminDashboard) ? <AdminOrganisationManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
             case 'admins':
                 return isSuperAdmin ? <AdminManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
             default:
@@ -96,7 +101,7 @@ export default function AdminDashboard() {
                 <AdminSidebar activeTab={activeTab} onTabChange={(tab) => {
                     setActiveTab(tab);
                     // Navigate to the correct route
-                    navigate(`/admin/dashboard/${tab}`);
+                    navigate(`${dashboardBasePath}${tab}`);
                 }} />
                 <main className="flex-1 p-6">
                     {renderActiveTab()}

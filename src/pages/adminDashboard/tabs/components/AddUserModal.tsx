@@ -165,9 +165,10 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
               <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newUserData.role}
-                onChange={(e) => setNewUserData({...newUserData, role: e.target.value as 'ADMIN' | 'SUPER_ADMIN' | 'USER'})}
+                onChange={(e) => setNewUserData({...newUserData, role: e.target.value as 'ADMIN' | 'COC_ADMIN' | 'SUPER_ADMIN' | 'USER'})}
               >
                 <option value="ADMIN">Admin</option>
+                <option value="COC_ADMIN">COC Admin</option>
                 <option value="SUPER_ADMIN">Super Admin</option>
                 <option value="USER">Regular User</option>
               </select>

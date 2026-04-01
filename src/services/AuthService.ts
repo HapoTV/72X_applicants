@@ -288,44 +288,75 @@ class AuthService {
    */
   async resetPasswordVerify(token: string, newPassword: string): Promise<void> {
     try {
-    console.log("🔐 Verifying password reset...");
+      console.log("🔐 Verifying password reset...");
 
-    await publicAxios.put('/authentication/reset-password', {
-    token,
-    newPassword
-    });
+      await publicAxios.put('/authentication/reset-password', {
+        token,
+        newPassword
+      });
 
-    console.log("✅ Password reset successful");
+      console.log("✅ Password reset successful");
 
     } catch (error: any) {
 
-    let errorMessage = 'Failed to reset password.';
+      let errorMessage = 'Failed to reset password.';
 
-    if (error.response?.data) {
-    errorMessage = typeof error.response.data === 'string'
-    ? error.response.data
-    : error.response.data.message || errorMessage;
-    } else if (error.message) {
-    errorMessage = error.message;
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      if (error.response?.status === 400) {
+        errorMessage = 'Invalid or expired reset link.';
+      }
+
+      if (error.response?.status === 404) {
+        errorMessage = 'Reset request not found.';
+      }
+
+      throw new Error(errorMessage);
     }
+  }
 
-    if (error.response?.status === 400) {
-    errorMessage = 'Invalid or expired reset link.';
+  /**
+   * Set up account using setup token (initial password)
+   */
+  async setupAccountWithToken(token: string, newPassword: string): Promise<{ role?: string | null } | undefined> {
+    try {
+      console.log("🔐 Setting up account with token...");
+
+      const res = await publicAxios.post('/authentication/setup-account', {
+        token,
+        newPassword,
+      });
+
+      console.log("✅ Account setup successful");
+      return res?.data;
+    } catch (error: any) {
+      let errorMessage = 'Failed to set up account.';
+
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      if (error.response?.status === 400) {
+        errorMessage = errorMessage || 'Invalid or expired setup link.';
+      }
+
+      throw new Error(errorMessage);
     }
+  }
 
-    if (error.response?.status === 404) {
-    errorMessage = 'Reset request not found.';
-    }
-
-    throw new Error(errorMessage);
-    }
-    }
-
-  // src/services/AuthService.ts
-
-/**
- * Change password - Matches backend API: PUT /authentication/change-password
- */
+  /**
+   * Change password - Matches backend API: PUT /authentication/change-password
+   */
   async changePassword(passwords: ChangePasswordRequest): Promise<void> {
     try {
       console.log("🔐 Changing password...");

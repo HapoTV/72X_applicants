@@ -7,6 +7,10 @@ import { LearningTabs } from './components/LearningTabs';
 import { LearningTable } from './components/LearningTable';
 import { LearningModal } from './components/LearningModal';
 
+interface LearningTabProps {
+    isCocAdmin?: boolean;
+}
+
 interface LearningItem {
     id: string;
     title: string;
@@ -79,7 +83,7 @@ const guessCategory = (category: string): LearningSection | undefined => {
     return undefined;
 };
 
-export default function LearningTab() {
+export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
     const { user, isSuperAdmin, userOrganisation } = useAuth();
     const [learningSection, setLearningSection] = useState<LearningSection>('business-plan');
     const [learningData, setLearningData] = useState<Record<LearningSection, LearningItem[]>>({
@@ -181,10 +185,10 @@ export default function LearningTab() {
 
     useEffect(() => {
         fetchLearningMaterials();
-        if (isSuperAdmin) {
+        if (isSuperAdmin || isCocAdmin) {
             setOrganisations(['Hapo', 'Standard Bank']);
         }
-    }, [fetchLearningMaterials, isSuperAdmin]);
+    }, [fetchLearningMaterials, isSuperAdmin, isCocAdmin]);
 
     const getFileSize = (bytes: number): string => {
         if (bytes === 0) return '0 Bytes';
@@ -249,7 +253,7 @@ export default function LearningTab() {
             formData.append('createdBy', user?.email || 'admin@72x.co.za');
             formData.append('file', newLearning.file);
 
-            if (isSuperAdmin) {
+            if (isSuperAdmin || isCocAdmin) {
                 if (newLearning.showAllOrganisations) {
                     formData.append('isPublic', 'true');
                 } else if (newLearning.targetOrganisation) {
@@ -338,7 +342,7 @@ export default function LearningTab() {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Learning Materials</h1>
                     <p className="text-gray-600">
-                        {isSuperAdmin 
+                        {isSuperAdmin || isCocAdmin 
                             ? 'Manage learning resources across all organisations' 
                             : `Manage learning resources for ${userOrganisation || 'your organisation'}`}
                     </p>
@@ -358,7 +362,7 @@ export default function LearningTab() {
                 <div className="p-4 flex items-center justify-between border-b border-gray-200">
                     <div className="text-sm text-gray-700 font-medium">
                         {sectionTitles[learningSection]} • <span className="font-bold">{learningData[learningSection].length}</span> items
-                        {!isSuperAdmin && userOrganisation && (
+                        {!isSuperAdmin && !isCocAdmin && userOrganisation && (
                             <span className="ml-2 text-xs text-gray-500">(only showing {userOrganisation} materials)</span>
                         )}
                     </div>
@@ -391,6 +395,7 @@ export default function LearningTab() {
                 onFileChange={handleFileChange}
                 sectionTitle={sectionTitles[learningSection]}
                 isSuperAdmin={isSuperAdmin}
+                isCocAdmin={isCocAdmin}
                 organisations={organisations}
                 getFileSize={getFileSize}
             />
