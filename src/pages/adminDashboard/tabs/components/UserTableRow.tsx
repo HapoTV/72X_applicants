@@ -32,6 +32,7 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
   formatLastSeen
 }) => {
   const isAdminRole = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'COC_ADMIN';
+  const isAdminDisplayableStatus = user.status === 'ACTIVE' || user.status === 'INACTIVE';
 
   const canDelete = () => {
     if (isSuperAdmin) return true;
@@ -126,7 +127,7 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
         </td>
       )}
       <td className="px-6 py-4 whitespace-nowrap">
-        {isAdminRole ? (
+        {isAdminRole && !isAdminDisplayableStatus ? (
           <span className="text-sm text-gray-400">-</span>
         ) : (
           <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
