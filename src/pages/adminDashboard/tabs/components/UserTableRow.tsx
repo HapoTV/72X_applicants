@@ -31,6 +31,8 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
   onDelete,
   formatLastSeen
 }) => {
+  const isAdminRole = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'COC_ADMIN';
+
   const canDelete = () => {
     if (isSuperAdmin) return true;
     if (user.role === 'SUPER_ADMIN') return false;
@@ -124,13 +126,17 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
         </td>
       )}
       <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          user.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-          user.status === 'INACTIVE' ? 'bg-red-100 text-red-800' :
-          'bg-yellow-100 text-yellow-800'
-        }`}>
-          {user.status || 'PENDING'}
-        </span>
+        {isAdminRole ? (
+          <span className="text-sm text-gray-400">-</span>
+        ) : (
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            user.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+            user.status === 'INACTIVE' ? 'bg-red-100 text-red-800' :
+            'bg-yellow-100 text-yellow-800'
+          }`}>
+            {user.status || 'PENDING'}
+          </span>
+        )}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
@@ -145,7 +151,11 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center gap-2">
           <CreditCard className="w-4 h-4 text-gray-400" />
-          {user.subscription ? getSubscriptionBadge() : (
+          {isAdminRole ? (
+            <span className="text-sm text-gray-400">-</span>
+          ) : user.subscription ? (
+            getSubscriptionBadge()
+          ) : (
             <span className="text-sm text-gray-400">No subscription</span>
           )}
         </div>
