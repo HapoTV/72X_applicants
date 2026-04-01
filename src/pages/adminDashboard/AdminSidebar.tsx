@@ -117,14 +117,15 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
 
     // Base menu items for all admins (including super admins)
     const baseMenuItems = [
-		{ id: 'applicants' as const, label: 'Applicants', icon: Users, path: '/admin/dashboard/applicants' },
-		{ id: 'events' as const, label: 'Events', icon: Calendar, path: '/admin/dashboard/events' },
-		{ id: 'learning' as const, label: 'Learning Material', icon: BookOpen, path: '/admin/dashboard/learning' },
-		{ id: 'mentorship' as const, label: 'Mentorship', icon: Handshake, path: '/admin/dashboard/mentorship' },
-		{ id: 'funding' as const, label: 'Funding', icon: DollarSign, path: '/admin/dashboard/funding' },
+		{ id: 'applicants' as const, label: 'Applicants', icon: Users, path: `${isCocDashboard ? '/cocadmin' : '/admin'}/dashboard/applicants` },
+		{ id: 'events' as const, label: 'Events', icon: Calendar, path: `${isCocDashboard ? '/cocadmin' : '/admin'}/dashboard/events` },
+		{ id: 'learning' as const, label: 'Learning Material', icon: BookOpen, path: `${isCocDashboard ? '/cocadmin' : '/admin'}/dashboard/learning` },
+		{ id: 'mentorship' as const, label: 'Mentorship', icon: Handshake, path: `${isCocDashboard ? '/cocadmin' : '/admin'}/dashboard/mentorship` },
+		{ id: 'funding' as const, label: 'Funding', icon: DollarSign, path: `${isCocDashboard ? '/cocadmin' : '/admin'}/dashboard/funding` },
     ];
 
     const cocAdminMenuItems = [
+		...baseMenuItems,
 		{ id: 'organisation' as const, label: 'Organisations', icon: Building2, path: '/cocadmin/dashboard/organisation' },
     ];
 
