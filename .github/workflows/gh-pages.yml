@@ -48,6 +48,23 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_PRODUCTION_URL: ${{ secrets.VITE_PRODUCTION_URL }}
       
+      - name: Verify dist output
+        run: |
+          test -f dist/index.html
+          test -f dist/404.html
+          if grep -q "%BASE_URL%" dist/index.html; then
+            echo "ERROR: dist/index.html still contains %BASE_URL% placeholders (not built output)"
+            exit 1
+          fi
+          if grep -q "/src/" dist/index.html; then
+            echo "ERROR: dist/index.html references /src/* (not built output)"
+            exit 1
+          fi
+          if ! grep -q "/assets/" dist/index.html; then
+            echo "ERROR: dist/index.html does not reference /assets/* (unexpected build output)"
+            exit 1
+          fi
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
       

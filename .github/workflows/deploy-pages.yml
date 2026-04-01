@@ -29,6 +29,23 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify dist output
+        run: |
+          test -f dist/index.html
+          test -f dist/404.html
+          if grep -q "%BASE_URL%" dist/index.html; then
+            echo "ERROR: dist/index.html still contains %BASE_URL% placeholders (not built output)"
+            exit 1
+          fi
+          if grep -q "/src/" dist/index.html; then
+            echo "ERROR: dist/index.html references /src/* (not built output)"
+            exit 1
+          fi
+          if ! grep -q "/assets/" dist/index.html; then
+            echo "ERROR: dist/index.html does not reference /assets/* (unexpected build output)"
+            exit 1
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
