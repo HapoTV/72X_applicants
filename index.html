@@ -19,7 +19,9 @@
               return s.replace(/~and~/g, '&');
             })
             .join('?');
-          window.history.replaceState(null, null, l.pathname + decoded + l.hash);
+          var basePath = (l.pathname || '/').replace(/\/+$/, '');
+          var nextPath = String(decoded || '').replace(/^\/+/, '');
+          window.history.replaceState(null, null, (basePath ? basePath : '') + '/' + nextPath + l.hash);
         }
       })(window.location);
     </script>
