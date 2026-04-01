@@ -18,6 +18,8 @@ export default function ApplicantsTab() {
   const [filteredUsers, setFilteredUsers] = useState<UserWithSubscription[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [selectedUser, setSelectedUser] = useState<UserWithSubscription | null>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All');
@@ -370,8 +372,7 @@ export default function ApplicantsTab() {
   };
 
   const handleViewDetails = (user: UserWithSubscription) => {
-    // Implement view details logic
-    console.log('View details for user:', user);
+    setSelectedUser(user);
   };
 
   const handleClearFilters = () => {
@@ -409,6 +410,87 @@ export default function ApplicantsTab() {
 
   return (
     <div className="w-full">
+      {selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">User Details</h2>
+                <p className="text-sm text-gray-500">{selectedUser.fullName || selectedUser.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedUser(null)}
+                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs font-medium text-gray-500">Full Name</div>
+                <div className="text-sm text-gray-900">{selectedUser.fullName || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Email</div>
+                <div className="text-sm text-gray-900 break-all">{selectedUser.email || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Mobile</div>
+                <div className="text-sm text-gray-900">{selectedUser.mobileNumber || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Company</div>
+                <div className="text-sm text-gray-900">{selectedUser.companyName || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Organisation</div>
+                <div className="text-sm text-gray-900">{selectedUser.organisation || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Role</div>
+                <div className="text-sm text-gray-900">{selectedUser.role || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Status</div>
+                <div className="text-sm text-gray-900">{selectedUser.status || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Business Reference</div>
+                <div className="text-sm text-gray-900 break-all">{selectedUser.businessReference || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Industry</div>
+                <div className="text-sm text-gray-900">{selectedUser.industry || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Location</div>
+                <div className="text-sm text-gray-900">{selectedUser.location || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Employees</div>
+                <div className="text-sm text-gray-900">{selectedUser.employees || '-'}</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500">Founded</div>
+                <div className="text-sm text-gray-900">{selectedUser.founded || '-'}</div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedUser(null)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <UserManagementHeader
         isSuperAdmin={isSuperAdmin}
         userOrganisation={userOrganisation}
