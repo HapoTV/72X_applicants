@@ -59,7 +59,7 @@ export const UserStats: React.FC<UserStatsProps> = ({ stats, isSuperAdmin }) => 
     {
       title: 'Admins',
       value: stats.adminsCount,
-      subtext: 'including super admins',
+      subtext: isSuperAdmin ? 'including super admins' : 'admins managing this organisation',
       icon: UserCog,
       bgColor: 'bg-amber-50',
       iconColor: 'text-amber-600'

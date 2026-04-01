@@ -2,6 +2,7 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { User } from "../interfaces/UserData";
+import axiosClient from "../api/axiosClient";
 import userSubscriptionService from "../services/UserSubscriptionService";
 
 interface AuthContextType {
@@ -197,6 +198,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       cancelled = true;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !user) return;
+
+    let cancelled = false;
+
+    const sendHeartbeat = async () => {
+      try {
+        await axiosClient.post('/availability/me/heartbeat');
+      } catch {
+        // ignore heartbeat errors
+      }
+    };
+
+    void sendHeartbeat();
+    const intervalId = window.setInterval(() => {
+      if (cancelled) return;
+      void sendHeartbeat();
+    }, 60000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [token, user]);
 
   const isAuthenticated = !!token && !!user;
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
