@@ -55,16 +55,7 @@ export default function ApplicantsTab() {
   const [addingAdmin, setAddingAdmin] = useState(false);
 
   const checkUserOnlineStatus = useCallback((userData: User): boolean => {
-    if (userData.availabilityStatus === 'ONLINE') return true;
-    
-    if (userData.lastSeenAt) {
-      const lastSeen = new Date(userData.lastSeenAt).getTime();
-      const now = new Date().getTime();
-      const fiveMinutes = 5 * 60 * 1000;
-      return (now - lastSeen) < fiveMinutes;
-    }
-    
-    return false;
+    return userData.availabilityStatus === 'ONLINE';
   }, []);
 
   const calculateStats = useCallback((usersList: UserWithSubscription[]) => {
@@ -169,19 +160,21 @@ export default function ApplicantsTab() {
             }
             
             const isOnline = checkUserOnlineStatus(userData);
+            const lastActive = userData.lastSeenAt || userData.updatedAt || '';
             
             return {
               ...userData,
               subscription,
               isOnline,
-              lastActive: userData.lastSeenAt || userData.updatedAt || new Date().toISOString()
+              lastActive
             };
           } catch {
+            const lastActive = userData.lastSeenAt || userData.updatedAt || '';
             return {
               ...userData,
               subscription: null,
               isOnline: false,
-              lastActive: userData.lastSeenAt || userData.updatedAt || new Date().toISOString()
+              lastActive
             };
           }
         })
@@ -358,7 +351,11 @@ export default function ApplicantsTab() {
   };
 
   const formatLastSeen = (lastSeenAt: string): string => {
+    if (!lastSeenAt) return '-';
+
     const lastSeen = new Date(lastSeenAt);
+    if (Number.isNaN(lastSeen.getTime())) return '-';
+
     const now = new Date();
     const diffMs = now.getTime() - lastSeen.getTime();
     const diffMins = Math.floor(diffMs / 60000);
