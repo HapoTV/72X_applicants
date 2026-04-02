@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { learningService } from '../../../services/LearningService';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
+import { cocOrganisationService } from '../../../services/CocOrganisationService';
 import { LearningTabs } from './components/LearningTabs';
 import { LearningTable } from './components/LearningTable';
 import { LearningModal } from './components/LearningModal';
@@ -184,11 +185,19 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
     }, []);
 
     useEffect(() => {
-        fetchLearningMaterials();
-        if (isSuperAdmin || isCocAdmin) {
-            setOrganisations(['Hapo', 'Standard Bank']);
-        }
-    }, [fetchLearningMaterials, isSuperAdmin, isCocAdmin]);
+        const load = async () => {
+            await fetchLearningMaterials();
+            if (isCocAdmin) {
+                try {
+                    const subs = await cocOrganisationService.listMine();
+                    setOrganisations(subs.map((s) => s.name).filter(Boolean));
+                } catch (_e) {
+                    setOrganisations([]);
+                }
+            }
+        };
+        void load();
+    }, [fetchLearningMaterials, isCocAdmin]);
 
     const getFileSize = (bytes: number): string => {
         if (bytes === 0) return '0 Bytes';

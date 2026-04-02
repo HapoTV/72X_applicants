@@ -1,8 +1,12 @@
 // src/api/axiosClient.ts
-import axios from "axios";
+import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 
 // Get API URL from environment variable with fallback
-const API_URL = import.meta.env.VITE_PRODUCTION_URL;
+const API_URL =
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.VITE_PRODUCTION_URL ||
+  'http://localhost:8080';
+
 console.log('🔧 API Base URL:', API_URL);
 
 // For Production
@@ -23,7 +27,8 @@ const axiosClient = axios.create({
 });
 
 axiosClient.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
+    config.headers = config.headers ?? {};
     const token = localStorage.getItem("authToken");
     const organisation = localStorage.getItem("userOrganisation");
     const userRole = localStorage.getItem("userRole");
@@ -60,21 +65,21 @@ axiosClient.interceptors.request.use(
 
     return config;
   },
-  (error) => {
+  (error: unknown) => {
     console.error("❌ Request interceptor error:", error);
     return Promise.reject(error);
   }
 );
 
 axiosClient.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse) => {
     console.log("✅ Axios Response Success:", {
       url: response.config.url,
       status: response.status
     });
     return response;
   },
-  (error) => {
+  (error: AxiosError) => {
     const url = error.config?.url as string | undefined;
     const method = (error.config?.method as string | undefined)?.toLowerCase();
     const status = error.response?.status as number | undefined;

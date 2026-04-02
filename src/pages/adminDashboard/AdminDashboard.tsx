@@ -16,6 +16,7 @@ import AdminMonitor from './tabs/AdminMonitor';
 import AdminPaymentsTab from './tabs/AdminPaymentsTab';
 import AdminOrganisationManagement from './tabs/AdminOrganisationManagement';
 import AdminManagement from './tabs/AdminManagement';
+import CocOrganisationManagement from './tabs/CocOrganisationManagement';
 
 interface AdminDashboardProps {
     dashboardBasePath?: string;
@@ -86,7 +87,10 @@ export default function AdminDashboard({ dashboardBasePath = '/admin/dashboard/'
             case 'payments':
                 return <AdminPaymentsTab />;
             case 'organisation':
-                return (isSuperAdmin || isCocAdminDashboard) ? <AdminOrganisationManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
+                if (isCocAdminDashboard) {
+                    return <CocOrganisationManagement />;
+                }
+                return isSuperAdmin ? <AdminOrganisationManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
             case 'admins':
                 return isSuperAdmin ? <AdminManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
             default:

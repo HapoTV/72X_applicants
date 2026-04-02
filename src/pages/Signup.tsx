@@ -25,6 +25,7 @@ const Signup: React.FC = () => {
     subOrganisation: '',
     acceptTerms: false,
   });
+
   const { isLoading, error, setError, submit } = useSignup();
   
   const update = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
@@ -43,10 +44,20 @@ const Signup: React.FC = () => {
       setLoadingCocOrganisations(true);
       try {
         // Signup is public. Avoid axiosClient here, because its 401 interceptor hard-redirects to /login.
-        const response = await publicAxios.get('/admin/organisations');
+        const response = await publicAxios.get('/coc-organisations/public', {
+          params: { parentOrganisation: 'COC' },
+        });
         if (cancelled) return;
+
         const payload = response?.data;
-        const list = Array.isArray(payload) ? payload : [];
+        let list = Array.isArray(payload) ? payload : [];
+
+        if (list.length === 0) {
+          const fallbackResponse = await publicAxios.get('/coc-organisations/public');
+          const fallbackPayload = fallbackResponse?.data;
+          list = Array.isArray(fallbackPayload) ? fallbackPayload : [];
+        }
+
         const names = list.map((o: any) => (typeof o?.name === 'string' ? o.name : '')).filter(Boolean);
         setCocOrganisations(names);
       } catch (_error) {
@@ -325,13 +336,13 @@ const Signup: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Do you have a business reference from your bank?
+              Do you have a business reference from your organisation?
             </label>
             <div className="flex items-center gap-6 mt-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
-                  name="bankRef"
+                  name="organisationRef"
                   checked={form.hasBankReference === true}
                   onChange={() => update('hasBankReference', true)}
                   className="w-4 h-4 text-primary-600 border-gray-300 cursor-pointer"
@@ -342,7 +353,7 @@ const Signup: React.FC = () => {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
-                  name="bankRef"
+                  name="organisationRef"
                   checked={form.hasBankReference === false}
                   onChange={() => { 
                     update('hasBankReference', false); 
@@ -441,7 +452,7 @@ const Signup: React.FC = () => {
                     maxLength={50}
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    If you have a reference from your bank, enter it here
+                    If you have a reference from your organisation, enter it here
                   </p>
                 </div>
               </div>
