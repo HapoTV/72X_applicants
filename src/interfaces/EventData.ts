@@ -91,6 +91,7 @@ export interface UserEventItem {
   type: string;
   organisation?: string; // NEW
   hasReminder?: boolean;
+  rawDateTime?: string;
 }
 
 /**
