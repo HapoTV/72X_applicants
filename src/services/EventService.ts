@@ -34,6 +34,68 @@ class EventService {
     return '';
   }
 
+  // Helper method to parse CAT datetime correctly
+  private parseCATDateTime(dateTimeString: string): Date {
+    // The backend returns datetime in format "2026-04-07 13:00:00" (CAT)
+    // Replace space with T to make it ISO-like
+    const isoString = dateTimeString.replace(' ', 'T');
+    // Create date assuming it's already in CAT (UTC+2)
+    const date = new Date(isoString);
+    
+    // Log for debugging
+    console.log(`Parsing CAT datetime: ${dateTimeString} -> ${date.toLocaleString()}`);
+    
+    return date;
+  }
+
+  // Format date for display in CAT
+  private formatDateForDisplay(date: Date): string {
+    return date.toLocaleDateString('en-ZA', {
+      timeZone: 'Africa/Maputo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  }
+
+  // Format time for display in CAT
+  private formatTimeForDisplay(date: Date): string {
+    return date.toLocaleTimeString('en-ZA', {
+      timeZone: 'Africa/Maputo',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  }
+
+  // Check if event is today in CAT
+  private isEventTodayInCAT(dateTimeString: string): boolean {
+    const eventDate = this.parseCATDateTime(dateTimeString);
+    const now = new Date();
+    
+    const eventYear = eventDate.getFullYear();
+    const eventMonth = eventDate.getMonth();
+    const eventDay = eventDate.getDate();
+    
+    const todayYear = now.getFullYear();
+    const todayMonth = now.getMonth();
+    const todayDay = now.getDate();
+    
+    return eventYear === todayYear && eventMonth === todayMonth && eventDay === todayDay;
+  }
+
+  // Check if event is upcoming (future date) in CAT
+  private isEventUpcomingInCAT(dateTimeString: string): boolean {
+    const eventDate = this.parseCATDateTime(dateTimeString);
+    const now = new Date();
+    
+    // Reset time to midnight for date comparison
+    const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+    const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    return eventDateOnly > nowOnly;
+  }
+
   // ==================== ADMIN OPERATIONS ====================
 
   async getAllEvents(): Promise<AdminEventItem[]> {
@@ -94,9 +156,11 @@ class EventService {
       const response = await axiosClient.get('/events/my-events', {
         headers: this.getAuthHeader()
       });
-      return response.data.map((event: any) => 
+      const events = response.data.map((event: any) => 
         this.transformToUserEventItem(event)
       );
+      console.log('All user events:', events);
+      return events;
     } catch (error) {
       console.error('Error fetching user events:', error);
       throw new Error('Failed to fetch user events');
@@ -108,9 +172,16 @@ class EventService {
       const response = await axiosClient.get('/events/today', {
         headers: this.getAuthHeader()
       });
-      return response.data.map((event: any) => 
-        this.transformToUserEventItem(event)
-      );
+      
+      console.log('Raw today events response:', response.data);
+      
+      // Filter events that are actually today in CAT
+      const events = response.data
+        .map((event: any) => this.transformToUserEventItem(event))
+        .filter(event => this.isEventTodayInCAT(event.rawDateTime));
+      
+      console.log('Filtered today events (CAT):', events);
+      return events;
     } catch (error) {
       console.error('Error fetching today\'s events:', error);
       throw new Error('Failed to fetch today\'s events');
@@ -122,9 +193,16 @@ class EventService {
       const response = await axiosClient.get('/events/upcoming', {
         headers: this.getAuthHeader()
       });
-      return response.data.map((event: any) => 
-        this.transformToUserEventItem(event)
-      );
+      
+      console.log('Raw upcoming events response:', response.data);
+      
+      // Filter events that are upcoming (future dates) in CAT
+      const events = response.data
+        .map((event: any) => this.transformToUserEventItem(event))
+        .filter(event => this.isEventUpcomingInCAT(event.rawDateTime));
+      
+      console.log('Filtered upcoming events (CAT):', events);
+      return events;
     } catch (error) {
       console.error('Error fetching upcoming events:', error);
       throw new Error('Failed to fetch upcoming events');
@@ -137,7 +215,7 @@ class EventService {
       return userEvents.map(event => ({
         id: event.id,
         title: event.title,
-        date: this.formatDateForCalendar(event.date),
+        date: this.formatDateForCalendar(event.rawDateTime),
         hasReminder: event.hasReminder
       }));
     } catch (error) {
@@ -178,42 +256,55 @@ class EventService {
   // ==================== DATA TRANSFORMATION METHODS ====================
 
   private transformToAdminEventItem(apiEvent: any): AdminEventItem {
-    const date = new Date(apiEvent.dateTime);
+    const date = this.parseCATDateTime(apiEvent.dateTime);
     
     return {
       id: apiEvent.eventId,
       title: apiEvent.title,
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: this.formatDateForDisplay(date),
+      time: this.formatTimeForDisplay(date),
       location: apiEvent.location,
       description: apiEvent.description,
-      eventType: apiEvent.eventType,
-      organisation: apiEvent.organisation, // NEW
+      eventType: apiEvent.type || apiEvent.eventType,
+      organisation: apiEvent.organisation,
       createdBy: apiEvent.createdBy
     };
   }
 
   private transformToUserEventItem(apiEvent: any): UserEventItem {
-    const date = new Date(apiEvent.dateTime);
+    const date = this.parseCATDateTime(apiEvent.dateTime);
     
     return {
       id: apiEvent.eventId,
       title: apiEvent.title,
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: this.formatDateForDisplay(date),
+      time: this.formatTimeForDisplay(date),
       location: apiEvent.location,
-      type: this.getEventTypeDisplay(apiEvent.eventType as EventType),
-      organisation: apiEvent.organisation, // NEW
-      hasReminder: false
+      type: this.getEventTypeDisplay(apiEvent.type || apiEvent.eventType as EventType),
+      organisation: apiEvent.organisation,
+      hasReminder: false,
+      rawDateTime: apiEvent.dateTime // Store raw for filtering
     };
   }
 
   private transformToEventRequest(formData: EventFormData, createdBy: string): EventRequest {
-    const dateTime = new Date(`${formData.date}T${formData.time}`);
+    // Create datetime in CAT timezone
+    const dateTimeStr = `${formData.date}T${formData.time}:00`;
+    const dateTime = new Date(dateTimeStr);
+    
+    // Format as expected by backend (YYYY-MM-DD HH:MM:SS)
+    const year = dateTime.getFullYear();
+    const month = String(dateTime.getMonth() + 1).padStart(2, '0');
+    const day = String(dateTime.getDate()).padStart(2, '0');
+    const hours = String(dateTime.getHours()).padStart(2, '0');
+    const minutes = String(dateTime.getMinutes()).padStart(2, '0');
+    const seconds = String(dateTime.getSeconds()).padStart(2, '0');
+    
+    const formattedDateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     
     return {
       title: formData.title,
-      dateTime: dateTime.toISOString(),
+      dateTime: formattedDateTime,
       location: formData.location,
       description: formData.description,
       eventType: formData.eventType,
@@ -223,12 +314,13 @@ class EventService {
   }
 
   transformToFormData(event: AdminEventItem): EventFormData {
-    const [month, day, year] = event.date.split('/');
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    // Parse the date from the event
+    const [day, month, year] = event.date.split('/');
+    const formattedDate = `${year}-${month}-${day}`;
     
     return {
       title: event.title,
-      date: date.toISOString().split('T')[0],
+      date: formattedDate,
       time: event.time,
       location: event.location || '',
       description: event.description || '',
@@ -243,32 +335,26 @@ class EventService {
   }
 
   formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString();
+    const date = this.parseCATDateTime(dateString);
+    return this.formatDateForDisplay(date);
   }
 
   formatTime(dateString: string): string {
-    return new Date(dateString).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    const date = this.parseCATDateTime(dateString);
+    return this.formatTimeForDisplay(date);
   }
 
-  formatDateForCalendar(dateString: string): string {
-    const date = new Date(dateString);
+  formatDateForCalendar(dateTimeString: string): string {
+    const date = this.parseCATDateTime(dateTimeString);
     return date.toISOString().split('T')[0];
   }
 
-  isEventToday(dateString: string): boolean {
-    const eventDate = new Date(dateString).toDateString();
-    const today = new Date().toDateString();
-    return eventDate === today;
+  isEventToday(dateTimeString: string): boolean {
+    return this.isEventTodayInCAT(dateTimeString);
   }
 
-  isEventUpcoming(dateString: string): boolean {
-    const eventDate = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return eventDate > today;
+  isEventUpcoming(dateTimeString: string): boolean {
+    return this.isEventUpcomingInCAT(dateTimeString);
   }
 
   validateEventForm(formData: EventFormData): string | null {
@@ -283,7 +369,9 @@ class EventService {
     }
     
     const eventDateTime = new Date(`${formData.date}T${formData.time}`);
-    if (eventDateTime <= new Date()) {
+    const now = new Date();
+    
+    if (eventDateTime <= now) {
       return 'Event must be in the future';
     }
     
