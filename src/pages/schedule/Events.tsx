@@ -20,6 +20,8 @@ const Events: React.FC = () => {
       setError(null);
       
       console.log('Fetching events...');
+      
+      // Use the correct API methods that call /events/today and /events/upcoming
       const [today, upcoming] = await Promise.all([
         eventService.getTodayEvents(),
         eventService.getUpcomingEvents()
@@ -89,12 +91,17 @@ const Events: React.FC = () => {
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Today's Events</h3>
-          <button 
-            onClick={refreshEvents}
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              {todayEvents.length} event{todayEvents.length !== 1 ? 's' : ''}
+            </span>
+            <button 
+              onClick={refreshEvents}
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
         
         {todayEvents.length > 0 ? (
@@ -105,7 +112,7 @@ const Events: React.FC = () => {
                 className="p-3 bg-blue-50 border border-blue-100 rounded-lg hover:shadow-md transition-shadow"
               >
                 <h4 className="font-medium text-gray-900 mb-2">{event.title}</h4>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                   <div className="flex items-center space-x-1">
                     <Clock className="w-4 h-4" />
                     <span>{event.time}</span>
@@ -129,6 +136,7 @@ const Events: React.FC = () => {
           <div className="text-center py-8">
             <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 text-sm">No events scheduled for today</p>
+            <p className="text-xs text-gray-400 mt-1">Check back later for updates</p>
           </div>
         )}
       </div>
@@ -138,8 +146,8 @@ const Events: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500">
-              {upcomingEvents.length} events
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              {upcomingEvents.length} event{upcomingEvents.length !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
@@ -180,6 +188,7 @@ const Events: React.FC = () => {
           <div className="text-center py-8">
             <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 text-sm">No upcoming events</p>
+            <p className="text-xs text-gray-400 mt-1">Events will appear here when scheduled</p>
           </div>
         )}
       </div>
