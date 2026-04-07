@@ -2,37 +2,31 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, MapPin, Calendar as CalendarIcon } from 'lucide-react';
 import { eventService } from '../../services/EventService';
-import { useAuth } from '../../context/AuthContext';
 import type { UserEventItem } from '../../interfaces/EventData';
 
 const Events: React.FC = () => {
-  const { user } = useAuth();
   const [todayEvents, setTodayEvents] = useState<UserEventItem[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<UserEventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.email) {
-      fetchEvents();
-    }
-  }, [user?.email]);
+    fetchEvents();
+  }, []);
 
   const fetchEvents = async () => {
-    if (!user?.email) {
-      setError('User email not found');
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       setError(null);
       
+      console.log('Fetching events...');
       const [today, upcoming] = await Promise.all([
-        eventService.getTodayEvents(user.email),
-        eventService.getUpcomingEvents(user.email)
+        eventService.getTodayEvents(),
+        eventService.getUpcomingEvents()
       ]);
+      
+      console.log('Today events received:', today);
+      console.log('Upcoming events received:', upcoming);
       
       setTodayEvents(today);
       setUpcomingEvents(upcoming);
@@ -47,18 +41,6 @@ const Events: React.FC = () => {
   const refreshEvents = () => {
     fetchEvents();
   };
-
-  if (!user?.email) {
-    return (
-      <div className="space-y-6 animate-fade-in px-2 sm:px-0">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-          <CalendarIcon className="w-12 h-12 text-yellow-400 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Authentication Required</h3>
-          <p className="text-yellow-700">Please log in to view your events.</p>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -107,17 +89,12 @@ const Events: React.FC = () => {
       <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Today's Events</h3>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500 text-right">
-              for {user.email}
-            </span>
-            <button 
-              onClick={refreshEvents}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Refresh
-            </button>
-          </div>
+          <button 
+            onClick={refreshEvents}
+            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+          >
+            Refresh
+          </button>
         </div>
         
         {todayEvents.length > 0 ? (
