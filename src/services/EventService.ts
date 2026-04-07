@@ -81,7 +81,9 @@ class EventService {
     const todayMonth = now.getMonth();
     const todayDay = now.getDate();
     
-    return eventYear === todayYear && eventMonth === todayMonth && eventDay === todayDay;
+    const isToday = eventYear === todayYear && eventMonth === todayMonth && eventDay === todayDay;
+    console.log(`Event ${dateTimeString} is today: ${isToday}`);
+    return isToday;
   }
 
   // Check if event is upcoming (future date) in CAT
@@ -93,7 +95,9 @@ class EventService {
     const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
     const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    return eventDateOnly > nowOnly;
+    const isUpcoming = eventDateOnly > nowOnly;
+    console.log(`Event ${dateTimeString} is upcoming: ${isUpcoming}`);
+    return isUpcoming;
   }
 
   // ==================== ADMIN OPERATIONS ====================
@@ -156,6 +160,8 @@ class EventService {
       const response = await axiosClient.get('/events/my-events', {
         headers: this.getAuthHeader()
       });
+      console.log('Raw my-events response:', response.data);
+      
       const events = response.data.map((event: any) => 
         this.transformToUserEventItem(event)
       );
@@ -169,16 +175,29 @@ class EventService {
 
   async getTodayEvents(): Promise<UserEventItem[]> {
     try {
+      console.log('Fetching today\'s events...');
       const response = await axiosClient.get('/events/today', {
         headers: this.getAuthHeader()
       });
       
       console.log('Raw today events response:', response.data);
       
-      // Filter events that are actually today in CAT
+      if (!response.data || response.data.length === 0) {
+        console.log('No events returned from API');
+        return [];
+      }
+      
+      // Transform and filter events that are actually today in CAT
       const events = response.data
-        .map((event: any) => this.transformToUserEventItem(event))
-        .filter(event => this.isEventTodayInCAT(event.rawDateTime));
+        .map((event: any) => {
+          console.log('Processing event:', event);
+          return this.transformToUserEventItem(event);
+        })
+        .filter(event => {
+          const isToday = this.isEventTodayInCAT(event.rawDateTime);
+          console.log(`Event ${event.title} - rawDateTime: ${event.rawDateTime} - isToday: ${isToday}`);
+          return isToday;
+        });
       
       console.log('Filtered today events (CAT):', events);
       return events;
@@ -190,16 +209,29 @@ class EventService {
 
   async getUpcomingEvents(): Promise<UserEventItem[]> {
     try {
+      console.log('Fetching upcoming events...');
       const response = await axiosClient.get('/events/upcoming', {
         headers: this.getAuthHeader()
       });
       
       console.log('Raw upcoming events response:', response.data);
       
-      // Filter events that are upcoming (future dates) in CAT
+      if (!response.data || response.data.length === 0) {
+        console.log('No events returned from API');
+        return [];
+      }
+      
+      // Transform and filter events that are upcoming (future dates) in CAT
       const events = response.data
-        .map((event: any) => this.transformToUserEventItem(event))
-        .filter(event => this.isEventUpcomingInCAT(event.rawDateTime));
+        .map((event: any) => {
+          console.log('Processing event:', event);
+          return this.transformToUserEventItem(event);
+        })
+        .filter(event => {
+          const isUpcoming = this.isEventUpcomingInCAT(event.rawDateTime);
+          console.log(`Event ${event.title} - rawDateTime: ${event.rawDateTime} - isUpcoming: ${isUpcoming}`);
+          return isUpcoming;
+        });
       
       console.log('Filtered upcoming events (CAT):', events);
       return events;
@@ -215,7 +247,7 @@ class EventService {
       return userEvents.map(event => ({
         id: event.id,
         title: event.title,
-        date: this.formatDateForCalendar(event.rawDateTime),
+        date: this.formatDateForCalendar(event.rawDateTime || ''),
         hasReminder: event.hasReminder
       }));
     } catch (error) {
@@ -272,7 +304,11 @@ class EventService {
   }
 
   private transformToUserEventItem(apiEvent: any): UserEventItem {
-    const date = this.parseCATDateTime(apiEvent.dateTime);
+    // Handle both 'dateTime' and 'date_time' field names
+    const dateTimeStr = apiEvent.dateTime || apiEvent.date_time;
+    console.log('Transforming event with dateTimeStr:', dateTimeStr);
+    
+    const date = this.parseCATDateTime(dateTimeStr);
     
     return {
       id: apiEvent.eventId,
@@ -283,7 +319,7 @@ class EventService {
       type: this.getEventTypeDisplay(apiEvent.type || apiEvent.eventType as EventType),
       organisation: apiEvent.organisation,
       hasReminder: false,
-      rawDateTime: apiEvent.dateTime // Store raw for filtering
+      rawDateTime: dateTimeStr // Store raw for filtering
     };
   }
 
@@ -334,13 +370,13 @@ class EventService {
     return EventTypeDisplay[eventType] || eventType;
   }
 
-  formatDate(dateString: string): string {
-    const date = this.parseCATDateTime(dateString);
+  formatDate(dateTimeString: string): string {
+    const date = this.parseCATDateTime(dateTimeString);
     return this.formatDateForDisplay(date);
   }
 
-  formatTime(dateString: string): string {
-    const date = this.parseCATDateTime(dateString);
+  formatTime(dateTimeString: string): string {
+    const date = this.parseCATDateTime(dateTimeString);
     return this.formatTimeForDisplay(date);
   }
 
