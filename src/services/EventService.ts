@@ -34,6 +34,40 @@ class EventService {
     return '';
   }
 
+  // Parse CAT datetime correctly - backend sends "2026-04-07 13:00:00" as CAT
+  private parseCATDateTime(dateTimeString: string): Date {
+    // Replace space with T to make ISO format
+    const isoString = dateTimeString.replace(' ', 'T') + '+02:00'; // Add CAT timezone offset
+    console.log(`Parsing CAT datetime: ${dateTimeString} -> ${isoString}`);
+    return new Date(isoString);
+  }
+
+  // Format date for display in CAT without conversion
+  private formatDateForDisplay(dateTimeString: string): string {
+    // Extract date part directly from the string to avoid timezone conversion
+    const datePart = dateTimeString.split(' ')[0];
+    const parts = datePart.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY format
+    }
+    return datePart;
+  }
+
+  // Format time for display - extract directly from string
+  private formatTimeForDisplay(dateTimeString: string): string {
+    // Extract time part directly from the string
+    const timePart = dateTimeString.split(' ')[1];
+    if (timePart) {
+      // Convert 24-hour to 12-hour format if needed
+      const [hours, minutes] = timePart.split(':');
+      const hour = parseInt(hours, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${minutes} ${ampm}`;
+    }
+    return timePart || '';
+  }
+
   // ==================== ADMIN OPERATIONS ====================
 
   async getAllEvents(): Promise<AdminEventItem[]> {
@@ -137,7 +171,7 @@ class EventService {
       return userEvents.map(event => ({
         id: event.id,
         title: event.title,
-        date: this.formatDateForCalendar(event.date),
+        date: this.formatDateForCalendar(event.rawDateTime || event.date),
         hasReminder: event.hasReminder
       }));
     } catch (error) {
@@ -178,42 +212,45 @@ class EventService {
   // ==================== DATA TRANSFORMATION METHODS ====================
 
   private transformToAdminEventItem(apiEvent: any): AdminEventItem {
-    const date = new Date(apiEvent.dateTime);
+    const dateTimeStr = apiEvent.dateTime || apiEvent.date_time;
     
     return {
       id: apiEvent.eventId,
       title: apiEvent.title,
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: this.formatDateForDisplay(dateTimeStr),
+      time: this.formatTimeForDisplay(dateTimeStr),
       location: apiEvent.location,
       description: apiEvent.description,
-      eventType: apiEvent.eventType,
-      organisation: apiEvent.organisation, // NEW
+      eventType: apiEvent.eventType || apiEvent.type,
+      organisation: apiEvent.organisation,
       createdBy: apiEvent.createdBy
     };
   }
 
   private transformToUserEventItem(apiEvent: any): UserEventItem {
-    const date = new Date(apiEvent.dateTime);
+    const dateTimeStr = apiEvent.dateTime || apiEvent.date_time;
+    console.log('Transforming event with dateTimeStr:', dateTimeStr);
     
     return {
       id: apiEvent.eventId,
       title: apiEvent.title,
-      date: date.toLocaleDateString(),
-      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      date: this.formatDateForDisplay(dateTimeStr),
+      time: this.formatTimeForDisplay(dateTimeStr),
       location: apiEvent.location,
-      type: this.getEventTypeDisplay(apiEvent.eventType as EventType),
-      organisation: apiEvent.organisation, // NEW
-      hasReminder: false
+      type: this.getEventTypeDisplay(apiEvent.eventType || apiEvent.type as EventType),
+      organisation: apiEvent.organisation,
+      hasReminder: false,
+      rawDateTime: dateTimeStr
     };
   }
 
   private transformToEventRequest(formData: EventFormData, createdBy: string): EventRequest {
-    const dateTime = new Date(`${formData.date}T${formData.time}`);
+    // Format datetime as expected by backend (YYYY-MM-DD HH:MM:SS) in CAT
+    const formattedDateTime = `${formData.date} ${formData.time}:00`;
     
     return {
       title: formData.title,
-      dateTime: dateTime.toISOString(),
+      dateTime: formattedDateTime,
       location: formData.location,
       description: formData.description,
       eventType: formData.eventType,
@@ -223,13 +260,25 @@ class EventService {
   }
 
   transformToFormData(event: AdminEventItem): EventFormData {
-    const [month, day, year] = event.date.split('/');
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    // Parse date from DD/MM/YYYY to YYYY-MM-DD
+    const [day, month, year] = event.date.split('/');
+    const formattedDate = `${year}-${month}-${day}`;
+    
+    // Extract time from format like "2:30 PM" to "14:30"
+    let time24 = event.time;
+    if (event.time.includes('PM') || event.time.includes('AM')) {
+      const [time, period] = event.time.split(' ');
+      let [hours, minutes] = time.split(':');
+      let hour = parseInt(hours, 10);
+      if (period === 'PM' && hour !== 12) hour += 12;
+      if (period === 'AM' && hour === 12) hour = 0;
+      time24 = `${String(hour).padStart(2, '0')}:${minutes}`;
+    }
     
     return {
       title: event.title,
-      date: date.toISOString().split('T')[0],
-      time: event.time,
+      date: formattedDate,
+      time: time24,
       location: event.location || '',
       description: event.description || '',
       eventType: (event.eventType as EventType) || DEFAULT_EVENT_TYPE
@@ -242,32 +291,28 @@ class EventService {
     return EventTypeDisplay[eventType] || eventType;
   }
 
-  formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString();
+  formatDate(dateTimeString: string): string {
+    return this.formatDateForDisplay(dateTimeString);
   }
 
-  formatTime(dateString: string): string {
-    return new Date(dateString).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+  formatTime(dateTimeString: string): string {
+    return this.formatTimeForDisplay(dateTimeString);
   }
 
-  formatDateForCalendar(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
+  formatDateForCalendar(dateTimeString: string): string {
+    // Extract just the date part YYYY-MM-DD
+    return dateTimeString.split(' ')[0];
   }
 
-  isEventToday(dateString: string): boolean {
-    const eventDate = new Date(dateString).toDateString();
-    const today = new Date().toDateString();
+  isEventToday(dateTimeString: string): boolean {
+    const today = new Date().toISOString().split('T')[0];
+    const eventDate = dateTimeString.split(' ')[0];
     return eventDate === today;
   }
 
-  isEventUpcoming(dateString: string): boolean {
-    const eventDate = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  isEventUpcoming(dateTimeString: string): boolean {
+    const today = new Date().toISOString().split('T')[0];
+    const eventDate = dateTimeString.split(' ')[0];
     return eventDate > today;
   }
 
