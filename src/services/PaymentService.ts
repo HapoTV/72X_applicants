@@ -733,12 +733,12 @@ class PaymentService {
         hour: '2-digit',
         minute: '2-digit'
       });
-    } catch (e) {
+    } catch (_e) {
       return dateString;
     }
   }
 
-  getStatusColor(status: string): string {
+  getStatusColorClass(status: string): string {
     switch (status) {
       case 'SUCCEEDED':
         return 'bg-green-100 text-green-800 border-green-200';

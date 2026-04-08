@@ -15,6 +15,7 @@ import Analytics from './pages/Analytics';
 import RoadmapGenerator from './pages/RoadmapGenerator';
 import Profile from './pages/Profile';
 import LearningModules from './pages/LearningModules';
+import Community from './pages/Community';
 import CommunityDiscussions from './pages/community/Discussion';
 import CommunityNetworking from './pages/community/Networking';
 import CommunityMentorship from './pages/community/Mentorship';
@@ -23,7 +24,6 @@ import Marketplace from './pages/Marketplace';
 import MentorshipHub from './pages/MentorshipHub';
 import AIBusinessAnalyst from './pages/AIBusinessAnalyst';
 import Notifications from './pages/Notifications';
-// Login pages
 import UserLogin from './pages/login/UserLogin';
 import AdminLogin from './pages/login/AdminLogin';
 import SuperAdminLogin from './pages/login/SuperAdminLogin';
@@ -45,16 +45,12 @@ import ResetPasswordRequest from './pages/ResetPasswordRequest';
 import ResetPasswordVerify from './pages/ResetPasswordVerify';
 import CRM from './pages/applications/CRM';
 import FinanceManager from './pages/applications/FinanceManager';
-import SetupAccount from './pages/SetupAccount';
-
 import BusinessPlanning from './pages/learning/BusinessPlanning';
 import MarketingSales from './pages/learning/MarketingSales';
 import FinancialManagement from './pages/learning/FinancialManagement';
 import Operations from './pages/learning/Operations';
 import Leadership from './pages/learning/Leadership';
 import Technical from './pages/learning/Technical';
-
-// Upgrade pages
 import MarketplaceUpgrade from './pages/upgrades/MarketplaceUpgrade';
 import MentorshipUpgrade from './pages/upgrades/MentorshipUpgrade';
 import FundingUpgrade from './pages/upgrades/FundingUpgrade';
@@ -64,14 +60,11 @@ import ConnectionsUpgrade from './pages/upgrades/ConnectionsUpgrade';
 import RoadmapUpgrade from './pages/upgrades/RoadmapUpgrade';
 import AnalyticsUpgrade from './pages/upgrades/AnalyticsUpgrade';
 import AIAnalystUpgrade from './pages/upgrades/AIAnalystUpgrade';
-
-// Admin Routes
+import SetupAccount from './pages/SetupAccount';
 import AdminRoutes from './routes/AdminRoutes';
 import CocAdminRoutes from './routes/CocAdminRoutes';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
-
-// Routes
 import PaymentRoutes from './routes/paymentRoutes';
 import MyConnections from './pages/MyConnections';
 
@@ -88,7 +81,6 @@ function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        {/* Add future flags to suppress warnings */}
         <Router
           basename={runtimeBasename}
           future={{
@@ -97,15 +89,12 @@ function App() {
           }}
         >
           <Routes>
-            {/* Public landing page */}
             <Route path="/" element={<LandingPage />} />
-
-            {/* Public routes - Split Login Pages */}
             <Route path="/login" element={<UserLogin />} />
             <Route path="/login/asadmin" element={<AdminLogin />} />
             <Route path="/login/haposuperadmin" element={<SuperAdminLogin />} />
             <Route path="/login/cocadmin" element={<CocAdminLogin />} />
-            
+            <Route path="/setup-account" element={<SetupAccount />} />
             <Route path="/verify-otp" element={<VerifyOtp />} />
             <Route path="/request-demo" element={<RequestDemo />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -115,21 +104,11 @@ function App() {
             <Route path="/signup/success/generated" element={<SignupSuccessGenerated />} />
             <Route path="/reset-password" element={<ResetPasswordRequest />} />
             <Route path="/reset-password/verify" element={<ResetPasswordVerify />} />
-            <Route path="/setup-account" element={<SetupAccount />} />
             <Route path="/create-password" element={<CreatePassword />} />
             <Route path="/select-package" element={<SelectPackage />} />
 
-            {/* Admin routes - OUTSIDE main layout to avoid user sidebar */}
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute requireAdmin={true}>
-                  <AdminRoutes />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/admin/*" element={<ProtectedRoute requireAdmin={true}><AdminRoutes /></ProtectedRoute>} />
 
-            {/* COC Admin routes - OUTSIDE main layout to avoid user sidebar */}
             <Route
               path="/cocadmin/*"
               element={
@@ -143,153 +122,47 @@ function App() {
               }
             />
 
-            {/* All other routes with Layout - protected */}
             <Route
               path="/*"
               element={
                 <ProtectedRoute>
-                  {/* Add PaymentRedirect wrapper before PackageSelectionRedirect */}
                   <PaymentRedirect>
                     <PackageSelectionRedirect>
                       <Layout>
                         <BizBoostChatbot />
                         <Routes>
-                          {/* Dashboard Routes */}
                           <Route path="/dashboard" element={<DashboardOverview />} />
                           <Route path="/dashboard/overview" element={<DashboardOverview />} />
                           <Route path="/dashboard/metrics" element={<DashboardMetrics />} />
                           <Route path="/dashboard/community-feed" element={<DashboardCommunityFeed />} />
-
-                          {/* Schedule Routes */}
                           <Route path="/schedule" element={<Schedule />} />
                           <Route path="/schedule/events" element={<ScheduleEvents />} />
                           <Route path="/schedule/calendar" element={<ScheduleCalendar />} />
-
-                          {/* Learning Routes */}
                           <Route path="/learning" element={<LearningModules />} />
-                          
                           <Route path="/learning/business-planning" element={<BusinessPlanning />} />
                           <Route path="/learning/marketing-sales" element={<MarketingSales />} />
                           <Route path="/learning/financial-management" element={<FinancialManagement />} />
                           <Route path="/learning/operations" element={<Operations />} />
                           <Route path="/learning/leadership" element={<Leadership />} />
                           <Route path="/learning/technical" element={<Technical />} />
-
-                          {/* Community Routes */}
-                          <Route path="/community" element={<Navigate to="/community/discussions" replace />} />
+                          <Route path="/community" element={<Community />} />
                           <Route path="/community/discussions" element={<CommunityDiscussions />} />
                           <Route path="/community/networking" element={<CommunityNetworking />} />
-                          <Route
-                            path="/community/mentorship"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/mentorship">
-                                <CommunityMentorship />
-                              </RequirePackage>
-                            }
-                          />
-
-                          {/* Other Protected Routes */}
-                          <Route
-                            path="/applications"
-                            element={<Navigate to="/applications/crm" replace />}
-                          />
-                          <Route
-                            path="/applications/crm/*"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
-                                <CRM />
-                              </RequirePackage>
-                            }
-                          />
-                          <Route
-                            path="/applications/finance-manager"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
-                                <FinanceManager />
-                              </RequirePackage>
-                            }
-                          />
-                          <Route
-                            path="/applications/tenderlyai"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
-                                <TenderlyAI />
-                              </RequirePackage>
-                            }
-                          />
+                          <Route path="/community/mentorship" element={<RequirePackage required="essential" upgradePath="/upgrade/mentorship"><CommunityMentorship /></RequirePackage>} />
+                          <Route path="/applications" element={<Navigate to="/applications/crm" replace />} />
+                          <Route path="/applications/crm/*" element={<RequirePackage required="essential" upgradePath="/upgrade/app-store"><CRM /></RequirePackage>} />
+                          <Route path="/applications/finance-manager" element={<RequirePackage required="essential" upgradePath="/upgrade/app-store"><FinanceManager /></RequirePackage>} />
+                          <Route path="/applications/tenderlyai" element={<RequirePackage required="essential" upgradePath="/upgrade/app-store"><TenderlyAI /></RequirePackage>} />
                           <Route path="/profile" element={<Profile />} />
-
                           <Route path="/notifications" element={<Notifications />} />
-
-                          {/* Essential Package Features */}
-                          <Route
-                            path="/marketplace"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/marketplace">
-                                <Marketplace />
-                              </RequirePackage>
-                            }
-                          />
-                          <Route
-                            path="/mentorship"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/mentorship">
-                                <MentorshipHub />
-                              </RequirePackage>
-                            }
-                          />
-                          <Route
-                            path="/funding"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/funding">
-                                <FundingFinder />
-                              </RequirePackage>
-                            }
-                          />
-                          <Route
-                            path="/data-input"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/data-input">
-                                <DataInput />
-                              </RequirePackage>
-                            }
-                          />
-
-                          {/* Premium Package Features */}
-                          <Route
-                            path="/roadmap"
-                            element={
-                              <RequirePackage required="premium" upgradePath="/upgrade/roadmap">
-                                <RoadmapGenerator />
-                              </RequirePackage>
-                            }
-                          />
-                          <Route
-                            path="/analytics"
-                            element={
-                              <RequirePackage required="premium" upgradePath="/upgrade/analytics">
-                                <Analytics />
-                              </RequirePackage>
-                            }
-                          />
-                          <Route
-                            path="/ai-analyst"
-                            element={
-                              <RequirePackage required="premium" upgradePath="/upgrade/ai-analyst">
-                                <AIBusinessAnalyst />
-                              </RequirePackage>
-                            }
-                          />
-                          <Route
-                            path="/business-analyst"
-                            element={
-                              <RequirePackage required="premium" upgradePath="/upgrade/business-analyst">
-                                <AIBusinessAnalyst />
-                              </RequirePackage>
-                            }
-                          />
-
-                          {/* Upgrade Pages */}
+                          <Route path="/marketplace" element={<RequirePackage required="essential" upgradePath="/upgrade/marketplace"><Marketplace /></RequirePackage>} />
+                          <Route path="/mentorship" element={<RequirePackage required="essential" upgradePath="/upgrade/mentorship"><MentorshipHub /></RequirePackage>} />
+                          <Route path="/funding" element={<RequirePackage required="essential" upgradePath="/upgrade/funding"><FundingFinder /></RequirePackage>} />
+                          <Route path="/data-input" element={<RequirePackage required="essential" upgradePath="/upgrade/data-input"><DataInput /></RequirePackage>} />
+                          <Route path="/roadmap" element={<RequirePackage required="premium" upgradePath="/upgrade/roadmap"><RoadmapGenerator /></RequirePackage>} />
+                          <Route path="/analytics" element={<RequirePackage required="premium" upgradePath="/upgrade/analytics"><Analytics /></RequirePackage>} />
+                          <Route path="/ai-analyst" element={<RequirePackage required="premium" upgradePath="/upgrade/ai-analyst"><AIBusinessAnalyst /></RequirePackage>} />
+                          <Route path="/business-analyst" element={<RequirePackage required="premium" upgradePath="/upgrade/business-analyst"><AIBusinessAnalyst /></RequirePackage>} />
                           <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
                           <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
                           <Route path="/upgrade/funding" element={<FundingUpgrade />} />
@@ -300,25 +173,8 @@ function App() {
                           <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
                           <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
                           <Route path="/upgrade/business-analyst" element={<AIAnalystUpgrade />} />
-
-                          <Route
-                            path="/connections"
-                            element={
-                              <RequirePackage required="essential" upgradePath="/upgrade/connections">
-                                <MyConnections />
-                              </RequirePackage>
-                            }
-                          />
-
-                          {/* Payment Pages - Use PaymentRoutes component */}
-                          <Route
-                            path="/payments/*"
-                            element={
-                              <ProtectedRoute>
-                                <PaymentRoutes />
-                              </ProtectedRoute>
-                            }
-                          />
+                          <Route path="/connections" element={<RequirePackage required="essential" upgradePath="/upgrade/connections"><MyConnections /></RequirePackage>} />
+                          <Route path="/payments/*" element={<ProtectedRoute><PaymentRoutes /></ProtectedRoute>} />
                         </Routes>
                       </Layout>
                     </PackageSelectionRedirect>

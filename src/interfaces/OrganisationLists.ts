@@ -1,10 +1,5 @@
 // src/interfaces/OrganisationLists.ts
-export const ORGANISATIONS = [
-
-  'Standard Bank',
-//  'TymeBank',
-//  'First National Bank',
-//  'xxxxx'
-] as const;
-
-export type Organisation = typeof ORGANISATIONS[number];
+// Organisation names are fetched dynamically from the backend via OrganisationService.
+// This file is kept only for backwards compatibility with any existing imports.
+export const ORGANISATIONS: readonly string[] = [];
+export type Organisation = string;

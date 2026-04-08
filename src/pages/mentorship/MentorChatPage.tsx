@@ -1,5 +1,5 @@
 // src/pages/mentorship/MentorChatPage.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, X, Paperclip, Image, MessageSquare, Mail } from 'lucide-react';
 import { mentorshipService } from '../../services/MentorshipService';
 
@@ -25,7 +25,22 @@ const MentorChatPage: React.FC<MentorChatPageProps> = ({
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchMessages = useCallback(async () => {
+  useEffect(() => {
+    if (!mentorId || !currentUserId) {
+      setError('Mentor information or user information is missing');
+      return;
+    }
+    
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
+  }, [mentorId, currentUserId]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const fetchMessages = async () => {
     if (!mentorId || !currentUserId) {
       console.error('Cannot fetch messages: missing mentorId or userId');
       return;
@@ -35,7 +50,7 @@ const MentorChatPage: React.FC<MentorChatPageProps> = ({
     setError(null);
     try {
       console.log('Fetching messages with mentor:', mentorId, 'user:', currentUserId);
-
+      
       // For now, we'll use mock messages since mentor messaging API might not exist
       // In production, you would call: mentorshipService.getMentorMessages(mentorId, currentUserId)
       const mockMessages = [
@@ -60,30 +75,16 @@ const MentorChatPage: React.FC<MentorChatPageProps> = ({
           isRead: true
         }
       ];
-
+      
       setMessages(mockMessages);
+      
     } catch (error: any) {
       console.error('Error fetching mentor messages:', error);
       setError('Failed to load messages. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [currentUserId, mentorId, mentorName]);
-
-  useEffect(() => {
-    if (!mentorId || !currentUserId) {
-      setError('Mentor information or user information is missing');
-      return;
-    }
-    
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
-  }, [mentorId, currentUserId, fetchMessages]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -165,13 +166,13 @@ const MentorChatPage: React.FC<MentorChatPageProps> = ({
     try {
       const date = new Date(timestamp);
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
+    } catch (_error) {
       return 'Invalid time';
     }
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="flex flex-col h-full">
       {/* Chat Header */}
       <div className="bg-primary-500 text-white p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
