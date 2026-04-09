@@ -1,6 +1,6 @@
 // src/pages/adminDashboard/tabs/AdminOrganisationManagement.tsx
 import React, { useState, useEffect } from 'react';
-import { Building2, Users, Search, Plus, Trash2, Shield, RefreshCw, Edit, Edit2, Check, X } from 'lucide-react';
+import { Building2, Users, Search, Plus, Trash2, Shield, RefreshCw, Edit2, Check, X } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import OrganisationService, { type OrganisationDTO } from '../../../services/OrganisationService';
 import CreateOrganisationModal from './components/CreateOrganisationModal';

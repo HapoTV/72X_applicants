@@ -18,10 +18,7 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
     const { isSuperAdmin, isCocAdmin, userOrganisation } = useAuth();
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
     const [uploadingPicture, setUploadingPicture] = useState(false);
-    const [profileImageUrl, setProfileImageUrl] = useState<string>(() => {
-        try { const raw = localStorage.getItem('user'); return raw ? JSON.parse(raw)?.profileImageUrl || '' : ''; } catch { return ''; }
-    });
-    const [isHydratingProfileImage, setIsHydratingProfileImage] = useState(false);
+    const [organisationLogoUrl, setOrganisationLogoUrl] = useState<string>('');
 
     const userInitials = useMemo(() => {
         const base = (userOrganisation || 'Admin').toString();
@@ -29,27 +26,18 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
     }, [userOrganisation]);
 
     useEffect(() => {
-        const refreshProfileImage = () => {
-            try { const raw = localStorage.getItem('user'); setProfileImageUrl(raw ? JSON.parse(raw)?.profileImageUrl || '' : ''); } catch { setProfileImageUrl(''); }
-        };
-        const hydrateFromBackendIfMissing = async () => {
-            if (isHydratingProfileImage || !localStorage.getItem('authToken') || profileImageUrl) return;
-            setIsHydratingProfileImage(true);
+        const fetchLogo = async () => {
+            if (!localStorage.getItem('authToken')) return;
             try {
-                const userData = await authService.getCurrentUser();
-                const url = userData.profileImageUrl || '';
-                if (url) {
-                    setProfileImageUrl(url);
-                    try { const raw = localStorage.getItem('user'); localStorage.setItem('user', JSON.stringify({ ...(raw ? JSON.parse(raw) : {}), profileImageUrl: url })); } catch {}
-                }
-            } catch {} finally { setIsHydratingProfileImage(false); }
+                const res = await organisationBrandingService.getMine();
+                setOrganisationLogoUrl(res?.logoUrl || '');
+            } catch {
+                setOrganisationLogoUrl('');
+            }
         };
-        window.addEventListener('storage', refreshProfileImage);
-        window.addEventListener('user-updated', refreshProfileImage as EventListener);
-        refreshProfileImage();
-        void hydrateFromBackendIfMissing();
-        return () => { window.removeEventListener('storage', refreshProfileImage); window.removeEventListener('user-updated', refreshProfileImage as EventListener); };
-    }, [isHydratingProfileImage, profileImageUrl]);
+
+        void fetchLogo();
+    }, []);
 
     const basePath = location.pathname.startsWith('/cocadmin') ? '/cocadmin' : '/admin';
 
@@ -77,9 +65,8 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
         if (!file) return;
         try {
             setUploadingPicture(true);
-            const updatedUser = await authService.updateProfileImage(file);
-            setProfileImageUrl(updatedUser.profileImageUrl || '');
-            window.dispatchEvent(new CustomEvent('user-updated'));
+            const res = await organisationBrandingService.uploadMyLogo(file);
+            setOrganisationLogoUrl(res?.logoUrl || '');
             alert('Organisation picture updated successfully!');
         } catch { alert('Failed to upload organisation picture'); }
         finally { setUploadingPicture(false); if (uploadInputRef.current) uploadInputRef.current.value = ''; }
@@ -108,9 +95,19 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
                 <input ref={uploadInputRef} type="file" accept="image/*" className="hidden" onChange={handleUploadPictureChange} />
                 <button type="button" onClick={() => uploadInputRef.current?.click()} disabled={uploadingPicture}
                     className="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center shadow-md overflow-hidden disabled:opacity-50">
-                    {profileImageUrl ? <img src={profileImageUrl} alt="Organisation" className="w-full h-full object-cover" onError={() => setProfileImageUrl('')} /> : <span className="text-white text-xl font-bold">{userInitials}</span>}
+                    {organisationLogoUrl ? <img src={organisationLogoUrl} alt="Organisation" className="w-full h-full object-cover" onError={() => setOrganisationLogoUrl('')} /> : <span className="text-white text-xl font-bold">{userInitials}</span>}
                 </button>
                 <p className="text-xs text-gray-500 mt-2">{uploadingPicture ? 'Uploading...' : 'Click to upload logo'}</p>
+                {organisationLogoUrl && (
+                    <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        disabled={uploadingPicture}
+                        className="mt-2 text-xs text-red-600 hover:text-red-700 disabled:opacity-50"
+                    >
+                        Remove logo
+                    </button>
+                )}
             </div>
             <nav className="space-y-1">
                 {menuItems.map(item => {
