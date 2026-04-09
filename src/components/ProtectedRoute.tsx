@@ -27,6 +27,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     const hasActiveSkip = !!(skipUntil && !Number.isNaN(skipUntil) && Date.now() < skipUntil);
 
     const currentPath = location.pathname;
+    const isAdminRole = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN';
 
     if (requireAuth && !authToken) {
         const redirectTo = unauthenticatedRedirectTo || (requireAdmin ? '/login/asadmin' : '/login');
@@ -37,6 +38,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         const redirectTo = unauthorizedRedirectTo || '/login/asadmin';
         return <Navigate to={redirectTo} replace />;
     }
+
+    // Admins never go through subscription/payment flow
+    if (requireAuth && authToken && isAdminRole) return <>{children}</>;
 
     if (requireAuth && userStatus === 'PENDING_PAYMENT' && selectedPackage) {
         if (currentPath === '/select-package') return <>{children}</>;

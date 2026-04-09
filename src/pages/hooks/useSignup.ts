@@ -28,35 +28,71 @@ export function useSignup() {
 
   const validate = (form: SignupFormState): boolean => {
     setError(null);
+
     if (!form.firstName.trim()) { setError('First name is required'); return false; }
     if (!form.lastName.trim()) { setError('Last name is required'); return false; }
     if (!form.email.trim()) { setError('Email is required'); return false; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError('Please enter a valid email address'); return false; }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+
     if (!form.phone.trim()) { setError('Contact number is required'); return false; }
-    if (form.phone.replace(/[^0-9]/g, '').length < 10) { setError('Please enter a valid contact number'); return false; }
+    if (form.phone.replace(/[^0-9]/g, '').length < 10) {
+      setError('Please enter a valid contact number');
+      return false;
+    }
+
     if (!form.companyName.trim()) { setError('Company name is required'); return false; }
     if (!form.industry.trim()) { setError('Industry is required'); return false; }
     if (!form.location.trim()) { setError('Location is required'); return false; }
     if (!form.founded.trim()) { setError('Year founded is required'); return false; }
+
     const currentYear = new Date().getFullYear();
     const foundedYear = parseInt(form.founded);
-    if (isNaN(foundedYear) || foundedYear < 1800 || foundedYear > currentYear) { setError(`Please enter a valid year between 1800 and ${currentYear}`); return false; }
+    if (isNaN(foundedYear) || foundedYear < 1800 || foundedYear > currentYear) {
+      setError(`Please enter a valid year between 1800 and ${currentYear}`);
+      return false;
+    }
+
     if (!form.employees.trim()) { setError('Number of employees is required'); return false; }
-    if (form.hasBankReference && !form.organisation) { setError('Please select an organisation'); return false; }
+
+    if (form.hasBankReference && !form.organisation) {
+      setError('Please select an organisation');
+      return false;
+    }
+
+    // Business reference required check is deferred to submit — COC sub-orgs don't need one
+
     if (!form.acceptTerms) { setError('Please accept the terms and conditions'); return false; }
+
     return true;
   };
 
   const submit = async (form: SignupFormState) => {
     if (!validate(form)) return;
+
     setIsLoading(true);
     try {
+      // Validate org reference against the organisations table
       if (form.hasBankReference && form.organisation && form.businessReference) {
-        const result = await OrganisationService.validateOrgReference(form.businessReference, form.organisation);
-        if (!result.valid) { setError('Invalid business reference for the selected organisation. Please check your details.'); return; }
+        const result = await OrganisationService.validateOrgReference(
+          form.businessReference, form.organisation
+        );
+        // COC sub-orgs don't require a business reference — existence check is enough
+        if (!result.valid) {
+          setError('Invalid business reference for the selected organisation. Please check your details.');
+          return;
+        }
       } else if (form.hasBankReference && form.organisation && !form.businessReference.trim()) {
+        // No business reference entered — check if it's a COC sub-org (which doesn't need one)
         const result = await OrganisationService.validateOrgReference('', form.organisation);
-        if (!result.isCocSubOrg) { setError('Business reference is required for the selected organisation.'); return; }
+        if (!result.isCocSubOrg) {
+          setError('Business reference is required for the selected organisation.');
+          return;
+        }
       }
 
       const userData: CreateUserRequest = {
@@ -84,5 +120,10 @@ export function useSignup() {
     }
   };
 
-  return { isLoading, error, setError, submit };
+  return {
+    isLoading,
+    error,
+    setError,
+    submit,
+  };
 }

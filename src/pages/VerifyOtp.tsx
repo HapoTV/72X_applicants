@@ -7,27 +7,6 @@ import { useAuth } from '../context/AuthContext';
 
 const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
 
-const PERMISSION_DENIED_MESSAGE = 'You do not have permission to login to this dashboard.';
-
-function expectedLoginTypeForRole(roleRaw: string | undefined | null): 'user' | 'admin' | 'superadmin' | 'cocadmin' | undefined {
-    const role = (roleRaw || '').toUpperCase();
-    if (!role) return undefined;
-
-    if (role === 'COC_ADMIN') return 'cocadmin';
-    if (role === 'SUPER_ADMIN') return 'superadmin';
-    if (role === 'ADMIN') return 'admin';
-    if (role === 'USER') return 'user';
-
-    return undefined;
-}
-
-function loginPathForType(loginType: 'user' | 'admin' | 'superadmin' | 'cocadmin'): string {
-    if (loginType === 'cocadmin') return '/login/cocadmin';
-    if (loginType === 'superadmin') return '/login/haposuperadmin';
-    if (loginType === 'admin') return '/login/asadmin';
-    return '/login';
-}
-
 const VerifyOtp: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -41,17 +20,20 @@ const VerifyOtp: React.FC = () => {
     
     const { 
         email, 
-        loginType, 
+        loginType,
         apiLoginType,
         businessReference, 
         userId,
         requiresOtpVerification,
         otpCode: generatedOtp
     } = location.state || {};
+
+    // Use apiLoginType for backend calls (cocadmin -> admin), loginType for UI display
+    const backendLoginType = apiLoginType || loginType;
     
     useEffect(() => {
         if (!email || requiresOtpVerification === false) {
-            navigate(loginType === 'cocadmin' ? '/login/cocadmin' : '/login');
+            navigate('/login');
         }
     }, [email, requiresOtpVerification, navigate, generatedOtp, loginType]);
     
@@ -81,27 +63,16 @@ const VerifyOtp: React.FC = () => {
                 email,
                 otpCode: otp,
                 businessReference,
-                loginType: apiLoginType || loginType
+                loginType: backendLoginType
             });
             
             console.log('✅ OTP verification response:', response);
             console.log('👤 User role from response:', response.role);
-
-            const expectedLoginType = expectedLoginTypeForRole((response as any).role);
-            if (expectedLoginType && loginType && expectedLoginType !== loginType) {
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userRole');
-                sessionStorage.removeItem('pendingLogin');
-                setError(PERMISSION_DENIED_MESSAGE);
-                navigate(loginPathForType(expectedLoginType), { replace: true });
-                return;
-            }
             
             if (response.token) {
                 localStorage.setItem('authToken', response.token);
                 authService.setAxiosAuthHeader(response.token);
                 
-                // Store user role from response - this is the source of truth
                 const userRole = response.role || '';
                 console.log('📝 Storing user role:', userRole);
                 
@@ -109,12 +80,15 @@ const VerifyOtp: React.FC = () => {
                 localStorage.setItem('userEmail', email);
                 localStorage.setItem('userId', response.userId || userId || '');
                 localStorage.setItem('fullName', response.fullName || '');
-
                 localStorage.setItem('emailVerified', 'true');
 
                 if (response.status) {
                     localStorage.setItem('userStatus', response.status);
                     console.log('📋 Backend user status:', response.status);
+                }
+
+                if (response.organisation) {
+                    localStorage.setItem('userOrganisation', response.organisation);
                 }
 
                 if (response.businessReference) {
@@ -132,9 +106,10 @@ const VerifyOtp: React.FC = () => {
                 const userData = {
                     userId: response.userId || userId || '',
                     email: response.email || email,
-                    role: userRole, // Use role from response
+                    role: userRole,
                     fullName: response.fullName,
                     businessReference: response.businessReference,
+                    organisation: response.organisation,
                     status: response.status,
                     token: response.token,
                     requiresTwoFactor: response.requiresTwoFactor
@@ -142,54 +117,34 @@ const VerifyOtp: React.FC = () => {
                 
                 login(userData, response.token);
                 
-                // Use setTimeout to ensure state updates are complete
                 setTimeout(() => {
                     const baseUrl = import.meta.env.BASE_URL;
-                    // Determine redirect based on role from response
                     const role = userRole.toUpperCase();
-                    console.log('🔍 Determining redirect based on role:', role);
 
-                    if (loginType === 'cocadmin') {
-                        console.log('🛡️ Redirecting to COC admin dashboard');
+                    if (role === 'COC_ADMIN') {
                         window.location.href = `${baseUrl}cocadmin/dashboard/applicants`;
                         return;
                     }
-                    
+
                     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-                        console.log('👑 Redirecting to admin dashboard for role:', role);
                         window.location.href = `${baseUrl}admin/dashboard/overview`;
-                        return; // Important: return to prevent further execution
+                        return;
                     }
-                    
-                    // If we get here, it's a regular user
-                    console.log('👤 Processing regular user redirect with role:', role);
-                    
-                    if (response.requiresPackageSelection === true) {
-                        console.log('📦 User needs package selection, redirecting to /select-package');
+
+                    // Backend is authoritative: requiresPackageSelection=false + ACTIVE = real org employee or paid user
+                    const userStatus = response.status || localStorage.getItem('userStatus');
+                    const selectedPackage = localStorage.getItem('selectedPackage');
+
+                    if (response.requiresPackageSelection === false && userStatus === 'ACTIVE') {
+                        window.location.href = `${baseUrl}dashboard/overview`;
+                    } else if (response.requiresPackageSelection === true || userStatus === 'PENDING_PACKAGE') {
+                        window.location.href = `${baseUrl}select-package`;
+                    } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
+                        window.location.href = `${baseUrl}payments/new`;
+                    } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
                         window.location.href = `${baseUrl}select-package`;
                     } else {
-                        const userStatus = response.status || localStorage.getItem('userStatus');
-                        const selectedPackage = localStorage.getItem('selectedPackage');
-                        
-                        console.log('🔍 User dashboard redirection check:', {
-                            userStatus,
-                            selectedPackage,
-                            role,
-                        });
-
-                        if (userStatus === 'PENDING_PACKAGE') {
-                            console.log('📦 User needs package selection, redirecting to /select-package');
-                            window.location.href = `${baseUrl}select-package`;
-                        } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
-                            console.log('💳 User needs payment for selected package, redirecting to /payments/new');
-                            window.location.href = `${baseUrl}payments/new`;
-                        } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
-                            console.log('⚠️ User PENDING_PAYMENT but no package selected, redirecting to package selection');
-                            window.location.href = `${baseUrl}select-package`;
-                        } else {
-                            console.log('🏠 User is active, going to dashboard');
-                            window.location.href = `${baseUrl}dashboard/overview`;
-                        }
+                        window.location.href = `${baseUrl}dashboard/overview`;
                     }
                 }, 300);
             } else {
@@ -224,7 +179,7 @@ const VerifyOtp: React.FC = () => {
             const response = await authService.resendOtp({
                 email,
                 businessReference,
-                loginType: apiLoginType || loginType
+                loginType: backendLoginType
             });
 
             if (response?.otpCode) {
@@ -239,7 +194,7 @@ const VerifyOtp: React.FC = () => {
     
     const handleBackToLogin = () => {
         sessionStorage.removeItem('pendingLogin');
-        navigate(loginType === 'cocadmin' ? '/login/cocadmin' : '/login');
+        navigate('/login');
     };
     
     const handleChangeOtp = (value: string) => {
@@ -275,11 +230,6 @@ const VerifyOtp: React.FC = () => {
                                 <>
                                     <Crown className="w-4 h-4" />
                                     Super Admin Login
-                                </>
-                            ) : loginType === 'cocadmin' ? (
-                                <>
-                                    <Shield className="w-4 h-4" />
-                                    COC Admin Login
                                 </>
                             ) : (
                                 <>

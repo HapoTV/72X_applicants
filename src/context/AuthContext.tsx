@@ -136,7 +136,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let cancelled = false;
 
     const handleNoSubscription = async () => {
-      const userRole = localStorage.getItem('userRole')?.toUpperCase();
+      const storedUser = localStorage.getItem('user');
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const userRole = (parsedUser?.role || localStorage.getItem('userRole') || '').toUpperCase();
       if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN') return;
       const userOrg = localStorage.getItem('userOrganisation');
       if (userOrg && userOrg.trim()) return;
@@ -174,7 +176,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const hydrateUserPackage = async () => {
       if (!token) return;
       try {
-        const userRole = localStorage.getItem('userRole')?.toUpperCase();
+        const storedUser = localStorage.getItem('user');
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+        const userRole = (parsedUser?.role || localStorage.getItem('userRole') || '').toUpperCase();
         if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN') return;
 
         const subscription = await userSubscriptionService.getCurrentUserPackage();
