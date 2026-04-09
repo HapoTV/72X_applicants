@@ -28,7 +28,7 @@ export type PackageConfig = {
 
 export function useSelectPackage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userOrganisation } = useAuth();
 
   const [selectedPackage, setSelectedPackage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -106,14 +106,10 @@ export function useSelectPackage() {
 
   const getIconComponent = useCallback((iconType: string) => {
     switch (iconType) {
-      case 'zap':
-        return React.createElement(Zap, { className: 'w-6 h-6' });
-      case 'sparkles':
-        return React.createElement(Sparkles, { className: 'w-6 h-6' });
-      case 'crown':
-        return React.createElement(Crown, { className: 'w-6 h-6' });
-      default:
-        return React.createElement(Zap, { className: 'w-6 h-6' });
+      case 'zap': return React.createElement(Zap, { className: 'w-6 h-6' });
+      case 'sparkles': return React.createElement(Sparkles, { className: 'w-6 h-6' });
+      case 'crown': return React.createElement(Crown, { className: 'w-6 h-6' });
+      default: return React.createElement(Zap, { className: 'w-6 h-6' });
     }
   }, []);
 
@@ -121,16 +117,11 @@ export function useSelectPackage() {
     try {
       const subscription = await userSubscriptionService.getCurrentUserPackage();
       if (subscription) {
-        console.log('📊 Current subscription:', subscription);
         setCurrentSubscription(subscription);
         const currentPackageId = packageConfigs.find(
           (pkg) => pkg.backendType === subscription.subscriptionType,
         )?.id;
-        if (currentPackageId) {
-          setSelectedPackage(currentPackageId);
-        }
-      } else {
-        console.log('📊 No current subscription found');
+        if (currentPackageId) setSelectedPackage(currentPackageId);
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
@@ -140,7 +131,6 @@ export function useSelectPackage() {
   const fetchFreeTrialStatus = useCallback(async () => {
     try {
       const status = await userSubscriptionService.getFreeTrialStatus();
-      console.log('🎁 Free trial status:', status);
       setFreeTrialStatus(status);
     } catch (error) {
       console.error('Error fetching free trial status:', error);
@@ -150,8 +140,6 @@ export function useSelectPackage() {
   const checkFreeTrialEligibility = useCallback(async () => {
     try {
       const response = await userSubscriptionService.checkFreeTrialEligibility();
-      console.log('✅ Eligibility check:', response);
-
       if (response && typeof response === 'object') {
         setEligibilityCheck({
           isEligible: response.eligible === true,
@@ -160,10 +148,7 @@ export function useSelectPackage() {
       }
     } catch (error) {
       console.error('Error checking eligibility:', error);
-      setEligibilityCheck({
-        isEligible: false,
-        reason: 'Error checking eligibility',
-      });
+      setEligibilityCheck({ isEligible: false, reason: 'Error checking eligibility' });
     }
   }, []);
 
@@ -173,71 +158,48 @@ export function useSelectPackage() {
     const ensureVerified = async () => {
       const emailVerified = localStorage.getItem('emailVerified') === 'true';
       if (emailVerified) return true;
-
       try {
         if (!supabase) return false;
         const { data, error } = await supabase.auth.getUser();
         if (error) return false;
-
         const confirmed = !!data.user?.email_confirmed_at;
-        if (confirmed) {
-          localStorage.setItem('emailVerified', 'true');
-          return true;
-        }
-      } catch {
-        return false;
-      }
-
+        if (confirmed) { localStorage.setItem('emailVerified', 'true'); return true; }
+      } catch { return false; }
       return false;
     };
 
     const run = async () => {
-      const ok = await ensureVerified();
-      if (isCancelled) return;
-      if (!ok) {
-        navigate('/signup/success/provided');
-        return;
+      // Authenticated backend users (JWT) skip Supabase email verification
+      if (!isAuthenticated) {
+        const ok = await ensureVerified();
+        if (isCancelled) return;
+        if (!ok) { navigate('/signup/success/provided'); return; }
       }
+      if (isCancelled) return;
 
       const email = localStorage.getItem('userEmail');
       const status = localStorage.getItem('userStatus');
       const requiresPackage = localStorage.getItem('requiresPackageSelection');
-      const savedPackage = localStorage.getItem('selectedPackage');
 
-      if (!email) {
-        navigate('/create-password');
-        return;
-      }
+      if (!email) { navigate('/create-password'); return; }
 
       setUserEmail(email);
       setUserStatus(status || '');
       setRequiresPackageSelection(requiresPackage === 'true');
 
-      console.log('📦 Package page user state:', {
-        email,
-        status,
-        requiresPackage,
-        savedPackage: savedPackage ? JSON.parse(savedPackage) : null,
-        isAuthenticated,
-      });
-
-      if (status === 'PENDING_PACKAGE') {
-        console.log('⚠️ User has PENDING_PACKAGE status - mandatory package selection');
-      }
-
       if (isAuthenticated) {
         fetchCurrentSubscription();
-        fetchFreeTrialStatus();
-        checkFreeTrialEligibility();
+        // Org employees don't need free trial checks
+        if (!userOrganisation) {
+          fetchFreeTrialStatus();
+          checkFreeTrialEligibility();
+        }
       }
     };
 
     run();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [navigate, isAuthenticated, fetchCurrentSubscription, fetchFreeTrialStatus, checkFreeTrialEligibility]);
+    return () => { isCancelled = true; };
+  }, [navigate, isAuthenticated, userOrganisation, fetchCurrentSubscription, fetchFreeTrialStatus, checkFreeTrialEligibility]);
 
   const handlePackageSelect = useCallback((pkgId: string) => {
     setSelectedPackage(pkgId);
@@ -245,10 +207,7 @@ export function useSelectPackage() {
   }, []);
 
   const formatPrice = useCallback((price: number, currency: string) => {
-    if (currency === 'ZAR') {
-      return `R${price}`;
-    }
-    return `${currency} ${price}`;
+    return currency === 'ZAR' ? `R${price}` : `${currency} ${price}`;
   }, []);
 
   const isCurrentPackage = useCallback(
@@ -260,156 +219,94 @@ export function useSelectPackage() {
     [currentSubscription, packageConfigs],
   );
 
-  const handleLoginRedirect = useCallback(() => {
-    navigate('/login');
-  }, [navigate]);
+  const handleLoginRedirect = useCallback(() => { navigate('/login'); }, [navigate]);
 
   const isMandatorySelection = userStatus === 'PENDING_PACKAGE' || requiresPackageSelection;
 
+  // User is on an active free trial
+  const isOnFreeTrial = userStatus === 'FREE_TRIAL';
+
   const isEligibleForFreeTrial = useCallback(() => {
-    console.log('🔍 Checking eligibility:', {
-      currentSubscription: !!currentSubscription,
-      userStatus,
-      freeTrialStatus,
-      eligibilityCheck,
-    });
+    // Org employees never get free trial — they're on the org plan
+    if (userOrganisation && userOrganisation.trim()) return false;
 
-    if (eligibilityCheck) {
-      console.log('✅ Using backend eligibility check:', eligibilityCheck);
-      return eligibilityCheck.isEligible;
-    }
+    // Backend eligibility check is the source of truth
+    if (eligibilityCheck) return eligibilityCheck.isEligible;
 
-    if (currentSubscription) {
-      console.log('❌ User has current subscription');
-      return false;
-    }
+    // Already has a paid subscription
+    if (currentSubscription) return false;
 
-    if (userStatus === 'FREE_TRIAL') {
-      console.log('❌ User is already on free trial');
-      return false;
-    }
+    // Already on or completed free trial
+    if (userStatus === 'FREE_TRIAL') return false;
 
-    if (freeTrialStatus && freeTrialStatus.success === false) {
-      console.log('❌ Free trial status indicates not eligible:', freeTrialStatus.message);
-      return false;
-    }
+    // Backend explicitly said not eligible
+    if (freeTrialStatus && freeTrialStatus.success === false) return false;
 
-    const eligibleStatuses = ['PENDING_PACKAGE', 'PENDING_PAYMENT'];
-    const isEligible = eligibleStatuses.includes(userStatus);
-
-    console.log(`📊 Eligibility based on status (${userStatus}):`, isEligible);
-    return isEligible;
-  }, [eligibilityCheck, currentSubscription, userStatus, freeTrialStatus]);
+    // Only PENDING_PACKAGE qualifies
+    return userStatus === 'PENDING_PACKAGE';
+  }, [eligibilityCheck, currentSubscription, userStatus, freeTrialStatus, userOrganisation]);
 
   const shouldShowFreeTrial = isEligibleForFreeTrial();
 
   const handleActivateFreeTrial = useCallback(async () => {
-    if (!selectedPackage) {
-      alert('Please select a package to start free trial');
-      return;
-    }
+    if (!selectedPackage) { alert('Please select a package to start free trial'); return; }
 
     setIsActivatingTrial(true);
-
     try {
       const selectedPkg = packageConfigs.find((p) => p.id === selectedPackage);
       if (selectedPkg) {
-        console.log('🎁 Activating free trial for package:', selectedPkg.name);
-        console.log('📦 Package backend type:', selectedPkg.backendType);
-        console.log('📦 Request payload:', { new_package: selectedPkg.backendType });
-
         const response = await userSubscriptionService.activateFreeTrial(selectedPkg.backendType);
-
-        console.log('🎁 Free trial activation response:', response);
-
         if (response && response.success) {
           const serializablePackageData = {
-            id: selectedPkg.id,
-            name: selectedPkg.name,
-            description: selectedPkg.description,
-            price: selectedPkg.price,
-            currency: selectedPkg.currency,
-            interval: selectedPkg.interval,
-            backendType: selectedPkg.backendType,
-            features: selectedPkg.features,
-            popular: selectedPkg.popular,
-            color: selectedPkg.color,
-            bgColor: selectedPkg.bgColor,
+            id: selectedPkg.id, name: selectedPkg.name, description: selectedPkg.description,
+            price: selectedPkg.price, currency: selectedPkg.currency, interval: selectedPkg.interval,
+            backendType: selectedPkg.backendType, features: selectedPkg.features,
+            popular: selectedPkg.popular, color: selectedPkg.color, bgColor: selectedPkg.bgColor,
             iconType: selectedPkg.iconType,
           };
-
           localStorage.setItem('selectedPackage', JSON.stringify(serializablePackageData));
-
-          const mappedUserPackage = selectedPkg.id as 'startup' | 'essential' | 'premium';
-          localStorage.setItem('userPackage', mappedUserPackage);
+          localStorage.setItem('userPackage', selectedPkg.id);
           window.dispatchEvent(new CustomEvent('user-package-updated'));
-
           localStorage.setItem('userStatus', 'FREE_TRIAL');
           localStorage.setItem('requiresPackageSelection', 'false');
           if (!localStorage.getItem('freeTrialStartDate')) {
             localStorage.setItem('freeTrialStartDate', new Date().toISOString());
           }
           setUserStatus('FREE_TRIAL');
-
-          alert(
-            `✅ Free trial activated successfully! You have 14 days of free access to ${selectedPkg.name} features.`,
-          );
-
+          alert(`✅ Free trial activated! You have 14 days of free access to ${selectedPkg.name} features.`);
           navigate('/dashboard');
         } else {
-          const errorMessage = response?.error || response?.message || 'Unknown error';
-          alert(`Failed to activate free trial: ${errorMessage}`);
+          alert(`Failed to activate free trial: ${response?.error || response?.message || 'Unknown error'}`);
         }
       }
     } catch (error: any) {
-      console.error('Error activating free trial:', error);
-      console.error('Error response:', error.response?.data);
-      alert(
-        `Error activating free trial: ${error.response?.data?.error || error.response?.data?.message || error.message}`,
-      );
+      alert(`Error activating free trial: ${error.response?.data?.error || error.response?.data?.message || error.message}`);
     } finally {
       setIsActivatingTrial(false);
     }
   }, [selectedPackage, packageConfigs, navigate]);
 
   const handleProceedToPayment = useCallback(async () => {
-    if (!selectedPackage) {
-      alert('Please select a package to continue');
-      return;
-    }
+    if (!selectedPackage) { alert('Please select a package to continue'); return; }
 
     setIsLoading(true);
-
     try {
       const selectedPkg = packageConfigs.find((p) => p.id === selectedPackage);
       if (selectedPkg) {
         const serializablePackageData = {
-          id: selectedPkg.id,
-          name: selectedPkg.name,
-          description: selectedPkg.description,
-          price: selectedPkg.price,
-          currency: selectedPkg.currency,
-          interval: selectedPkg.interval,
-          backendType: selectedPkg.backendType,
-          features: selectedPkg.features,
-          popular: selectedPkg.popular,
-          color: selectedPkg.color,
-          bgColor: selectedPkg.bgColor,
+          id: selectedPkg.id, name: selectedPkg.name, description: selectedPkg.description,
+          price: selectedPkg.price, currency: selectedPkg.currency, interval: selectedPkg.interval,
+          backendType: selectedPkg.backendType, features: selectedPkg.features,
+          popular: selectedPkg.popular, color: selectedPkg.color, bgColor: selectedPkg.bgColor,
           iconType: selectedPkg.iconType,
         };
-
         localStorage.setItem('selectedPackage', JSON.stringify(serializablePackageData));
-
-        const mappedUserPackage = selectedPkg.id as 'startup' | 'essential' | 'premium';
-        localStorage.setItem('userPackage', mappedUserPackage);
+        localStorage.setItem('userPackage', selectedPkg.id);
         window.dispatchEvent(new CustomEvent('user-package-updated'));
-
         await userSubscriptionService.selectPackage(selectedPkg.backendType);
-
         localStorage.setItem('userStatus', 'PENDING_PAYMENT');
         localStorage.setItem('requiresPackageSelection', 'false');
         setUserStatus('PENDING_PAYMENT');
-
         navigate('/payments/new');
       }
     } catch (error) {
@@ -445,5 +342,6 @@ export function useSelectPackage() {
     handleLoginRedirect,
     isMandatorySelection,
     shouldShowFreeTrial,
+    isOnFreeTrial,
   };
 }

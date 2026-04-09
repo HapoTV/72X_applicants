@@ -35,18 +35,8 @@ class CocOrganisationService {
     return Array.isArray(response.data) ? response.data : [];
   }
 
-  async createMine(name: string): Promise<CocSubOrganisation> {
-    const response = await axiosClient.post(this.baseUrl, { name });
-    return response.data;
-  }
-
   async createMineWithDetails(payload: CocSubOrganisationUpsert): Promise<CocSubOrganisation> {
     const response = await axiosClient.post(this.baseUrl, payload);
-    return response.data;
-  }
-
-  async updateMine(id: string, name: string): Promise<CocSubOrganisation> {
-    const response = await axiosClient.put(`${this.baseUrl}/${id}`, { name });
     return response.data;
   }
 

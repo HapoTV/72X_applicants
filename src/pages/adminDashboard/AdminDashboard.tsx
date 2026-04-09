@@ -16,18 +16,18 @@ import AdminMonitor from './tabs/AdminMonitor';
 import AdminPaymentsTab from './tabs/AdminPaymentsTab';
 import AdminOrganisationManagement from './tabs/AdminOrganisationManagement';
 import AdminManagement from './tabs/AdminManagement';
+import OrgAdminBusinessRefPanel from './tabs/OrgAdminBusinessRefPanel';
 import CocOrganisationManagement from './tabs/CocOrganisationManagement';
 
 interface AdminDashboardProps {
-    dashboardBasePath?: string;
+  dashboardBasePath?: string;
 }
 
-export default function AdminDashboard({ dashboardBasePath = '/admin/dashboard/' }: AdminDashboardProps) {
+export default function AdminDashboard({ dashboardBasePath }: AdminDashboardProps) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { isSuperAdmin, userOrganisation } = useAuth();
+    const { isSuperAdmin, isCocAdmin } = useAuth();
     const [activeTab, setActiveTab] = useState<AdminTab>('applicants');
-    const isCocAdminDashboard = dashboardBasePath.startsWith('/cocadmin/');
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
@@ -38,63 +38,46 @@ export default function AdminDashboard({ dashboardBasePath = '/admin/dashboard/'
         navigate('/');
     };
 
-    // Initialize active tab from URL on mount
     useEffect(() => {
         const path = location.pathname;
-        
-        // Handle dashboard routes
-        const base = dashboardBasePath;
+        const adminBase = '/admin/dashboard/';
+        const cocBase = '/cocadmin/dashboard/';
+        const base = path.startsWith(cocBase) ? cocBase : adminBase;
         if (path.startsWith(base)) {
             const segment = path.slice(base.length).split('/')[0];
-            
-            // List of all valid tabs
             const validTabs = [
-                'applicants', 'events', 'learning', 'mentorship', 
+                'applicants', 'events', 'learning', 'mentorship',
                 'funding', 'ad', 'profile', 'monitoring', 'payments',
-                'organisation', 'admins'
+                'organisation', 'admins', 'business-ref'
             ] as const;
-            
             if (segment && (validTabs as readonly string[]).includes(segment)) {
                 setActiveTab(segment as AdminTab);
                 return;
             }
         }
-        
-        // Default to applicants if no valid segment
-        if (!path.startsWith(base)) {
-            navigate(`${dashboardBasePath}applicants`, { replace: true });
+        if (!path.includes('/admin/') && !path.includes('/cocadmin/')) {
+            navigate('/admin/dashboard/applicants', { replace: true });
         }
-    }, [location.pathname, navigate, dashboardBasePath]);
+    }, [location.pathname, navigate]);
 
     const renderActiveTab = () => {
         switch (activeTab) {
-            case 'applicants':
-                return <ApplicantsTab />;
-            case 'events':
-                return <EventsTab />;
-            case 'learning':
-                return <LearningTab isCocAdmin={isCocAdminDashboard} />;
-            case 'mentorship':
-                return <MentorshipTab />;
-            case 'funding':
-                return <FundingTab />;
-            case 'ad':
-                return isSuperAdmin ? <AdTab /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
-            case 'profile':
-                return <AdminProfile />;
-            case 'monitoring':
-                return isSuperAdmin ? <AdminMonitor /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
-            case 'payments':
-                return <AdminPaymentsTab />;
+            case 'applicants': return <ApplicantsTab />;
+            case 'events': return <EventsTab />;
+            case 'learning': return <LearningTab />;
+            case 'mentorship': return <MentorshipTab />;
+            case 'funding': return <FundingTab />;
+            case 'ad': return isSuperAdmin ? <AdTab /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
+            case 'profile': return <AdminProfile />;
+            case 'monitoring': return isSuperAdmin ? <AdminMonitor /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
+            case 'payments': return <AdminPaymentsTab />;
             case 'organisation':
-                if (isCocAdminDashboard) {
-                    return <CocOrganisationManagement />;
-                }
-                return isSuperAdmin ? <AdminOrganisationManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
-            case 'admins':
-                return isSuperAdmin ? <AdminManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
-            default:
-                return <ApplicantsTab />;
+                if (isSuperAdmin) return <AdminOrganisationManagement />;
+                if (isCocAdmin) return <CocOrganisationManagement />;
+                return <div className="p-8 text-center text-red-600">Access Denied</div>;
+            case 'admins': return isSuperAdmin ? <AdminManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
+            case 'business-ref': return !isSuperAdmin && !isCocAdmin ? <OrgAdminBusinessRefPanel /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
+            default: return <ApplicantsTab />;
         }
     };
 
@@ -104,12 +87,10 @@ export default function AdminDashboard({ dashboardBasePath = '/admin/dashboard/'
             <div className="flex">
                 <AdminSidebar activeTab={activeTab} onTabChange={(tab) => {
                     setActiveTab(tab);
-                    // Navigate to the correct route
-                    navigate(`${dashboardBasePath}${tab}`);
+                    const base = dashboardBasePath || (location.pathname.startsWith('/cocadmin') ? '/cocadmin' : '/admin');
+                    navigate(`${base.replace(/\/$/, '')}/dashboard/${tab}`);
                 }} />
-                <main className="flex-1 p-6">
-                    {renderActiveTab()}
-                </main>
+                <main className="flex-1 p-6">{renderActiveTab()}</main>
             </div>
         </div>
     );

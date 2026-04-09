@@ -58,6 +58,11 @@ const SignupSuccessGenerated: React.FC = () => {
         if (!supabase) return;
         const { data, error } = await supabase.auth.getUser();
         if (error) return;
+
+        const currentUserEmail = data.user?.email?.trim().toLowerCase() || '';
+        const expectedEmail = email.trim().toLowerCase();
+        if (expectedEmail && currentUserEmail !== expectedEmail) return;
+
         const confirmed = !!data.user?.email_confirmed_at;
 
         if (confirmed) {
@@ -91,12 +96,18 @@ const SignupSuccessGenerated: React.FC = () => {
     setSending(true);
     setMessage(null);
     try {
-      let effectiveEmail = email;
+      let effectiveEmail = email.trim();
       if (!effectiveEmail) {
         const { data, error } = await supabase.auth.getUser();
         if (!error) {
-          effectiveEmail = data.user?.email || '';
+          effectiveEmail = data.user?.email?.trim() || '';
         }
+      }
+
+      const expectedEmail = email.trim().toLowerCase();
+      if (expectedEmail && effectiveEmail && effectiveEmail.toLowerCase() !== expectedEmail) {
+        setMessage('Unable to resend verification email because the current authenticated session does not match the signup email.');
+        return;
       }
 
       if (!effectiveEmail) {
@@ -178,18 +189,15 @@ const SignupSuccessGenerated: React.FC = () => {
         <div className="mt-2 flex justify-center">
           <div className="relative inline-block group">
             <button
-              onClick={() => {
-                if (!isVerified) return;
-                navigate('/login');
-              }}
-              disabled={!isVerified}
+              onClick={() => navigate('/login')}
+              disabled={!isVerified || sending}
               className={`px-5 py-2.5 rounded-lg transition-colors ${
                 isVerified
-                  ? 'bg-primary-500 text-white hover:bg-primary-600'
+                  ? 'bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50'
                   : 'bg-gray-200 text-gray-500 cursor-not-allowed'
               }`}
             >
-              Continue to login
+              {sending ? 'Processing...' : 'Continue to login'}
             </button>
 
             {!isVerified && (

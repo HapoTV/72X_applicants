@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/AuthService';
+import OrganisationService from '../../services/OrganisationService';
 import type { CreateUserRequest } from '../../interfaces/UserData';
 
 export interface SignupFormState {
@@ -16,7 +17,7 @@ export interface SignupFormState {
   employees: string;
   hasBankReference: boolean;
   businessReference: string;
-  organisation: string; // Added organisation
+  organisation: string;
   acceptTerms: boolean;
 }
 
@@ -28,69 +29,44 @@ export function useSignup() {
   const validate = (form: SignupFormState): boolean => {
     setError(null);
 
-    if (!form.firstName.trim()) {
-      setError('First name is required');
-      return false;
-    }
-    if (!form.lastName.trim()) {
-      setError('Last name is required');
-      return false;
-    }
-    if (!form.email.trim()) {
-      setError('Email is required');
-      return false;
-    }
+    if (!form.firstName.trim()) { setError('First name is required'); return false; }
+    if (!form.lastName.trim()) { setError('Last name is required'); return false; }
+    if (!form.email.trim()) { setError('Email is required'); return false; }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email)) {
       setError('Please enter a valid email address');
       return false;
     }
-    if (!form.phone.trim()) {
-      setError('Contact number is required');
-      return false;
-    }
-    const phoneRegex = /^[\d\s\-\(\)\+]{10,15}$/;
-    if (!phoneRegex.test(form.phone.replace(/[^0-9]/g, ''))) {
+
+    if (!form.phone.trim()) { setError('Contact number is required'); return false; }
+    if (form.phone.replace(/[^0-9]/g, '').length < 10) {
       setError('Please enter a valid contact number');
       return false;
     }
-    if (!form.companyName.trim()) {
-      setError('Company name is required');
-      return false;
-    }
-    if (!form.industry.trim()) {
-      setError('Industry is required');
-      return false;
-    }
-    if (!form.location.trim()) {
-      setError('Location is required');
-      return false;
-    }
-    if (!form.founded.trim()) {
-      setError('Year founded is required');
-      return false;
-    }
+
+    if (!form.companyName.trim()) { setError('Company name is required'); return false; }
+    if (!form.industry.trim()) { setError('Industry is required'); return false; }
+    if (!form.location.trim()) { setError('Location is required'); return false; }
+    if (!form.founded.trim()) { setError('Year founded is required'); return false; }
+
     const currentYear = new Date().getFullYear();
     const foundedYear = parseInt(form.founded);
     if (isNaN(foundedYear) || foundedYear < 1800 || foundedYear > currentYear) {
       setError(`Please enter a valid year between 1800 and ${currentYear}`);
       return false;
     }
-    if (!form.employees.trim()) {
-      setError('Number of employees is required');
-      return false;
-    }
-    
-    // Validate organisation if hasBankReference is true
+
+    if (!form.employees.trim()) { setError('Number of employees is required'); return false; }
+
     if (form.hasBankReference && !form.organisation) {
       setError('Please select an organisation');
       return false;
     }
-    
-    if (!form.acceptTerms) {
-      setError('Please accept the terms and conditions');
-      return false;
-    }
+
+    // Business reference required check is deferred to submit — COC sub-orgs don't need one
+
+    if (!form.acceptTerms) { setError('Please accept the terms and conditions'); return false; }
 
     return true;
   };
@@ -100,6 +76,25 @@ export function useSignup() {
 
     setIsLoading(true);
     try {
+      // Validate org reference against the organisations table
+      if (form.hasBankReference && form.organisation && form.businessReference) {
+        const result = await OrganisationService.validateOrgReference(
+          form.businessReference, form.organisation
+        );
+        // COC sub-orgs don't require a business reference — existence check is enough
+        if (!result.valid) {
+          setError('Invalid business reference for the selected organisation. Please check your details.');
+          return;
+        }
+      } else if (form.hasBankReference && form.organisation && !form.businessReference.trim()) {
+        // No business reference entered — check if it's a COC sub-org (which doesn't need one)
+        const result = await OrganisationService.validateOrgReference('', form.organisation);
+        if (!result.isCocSubOrg) {
+          setError('Business reference is required for the selected organisation.');
+          return;
+        }
+      }
+
       const userData: CreateUserRequest = {
         fullName: `${form.firstName} ${form.lastName}`,
         email: form.email,
@@ -110,20 +105,15 @@ export function useSignup() {
         founded: form.founded,
         employees: form.employees,
         hasReference: form.hasBankReference,
-        businessReference: form.businessReference || undefined,
-        organisation: form.organisation, // Pass organisation
+        businessReference: form.hasBankReference ? form.businessReference : undefined,
+        organisation: form.hasBankReference ? form.organisation : undefined,
         role: 'USER',
         status: 'PENDING_PASSWORD',
       };
 
-      console.log('📝 Creating user with data:', userData);
-
       await authService.createUser(userData);
-
-      console.log('✅ User created, navigating to password page');
       navigate('/create-password');
     } catch (err: any) {
-      console.error('❌ Signup error:', err);
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);

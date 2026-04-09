@@ -11,13 +11,10 @@ const PERMISSION_DENIED_MESSAGE = 'You do not have permission to login to this d
 
 function expectedLoginTypeForRole(roleRaw: string | undefined | null): LoginType | undefined {
   const role = (roleRaw || '').toUpperCase();
-  if (!role) return undefined;
-
   if (role === 'COC_ADMIN') return 'cocadmin';
   if (role === 'SUPER_ADMIN') return 'superadmin';
   if (role === 'ADMIN') return 'admin';
   if (role === 'USER') return 'user';
-
   return undefined;
 }
 
@@ -31,15 +28,11 @@ function loginPathForType(loginType: LoginType): string {
 function isLoginTypeAllowedForRole(roleRaw: string | undefined | null, loginType: LoginType | undefined): boolean {
   const expected = expectedLoginTypeForRole(roleRaw);
   if (!expected || !loginType) return true;
-
-  // Frontend currently uses 'cocadmin' for the dedicated COC flow.
-  // Backend role is the source of truth.
   return expected === loginType;
 }
 
 interface UserFormData {
   email: string;
-  businessReference: string;
   password: string;
   rememberMe: boolean;
 }
@@ -64,241 +57,95 @@ const isTruthyFlag = (value: unknown): boolean => {
 export function useLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
-
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // User login handler
   const handleUserLogin = async (formData: UserFormData) => {
     setIsLoading(true);
     setErrorMessage('');
-
     try {
-      console.log('🚀 Starting user login process...');
-      console.log('📧 Email:', formData.email);
-
-      const loginRequest: LoginRequest = {
-        email: formData.email,
-        password: formData.password,
-        businessReference: formData.businessReference,
-        loginType: 'user',
-      };
-
-      console.log('🔑 Calling login endpoint...');
-      const loginResponse = await authService.login(loginRequest);
-      console.log('✅ Login response received:', loginResponse);
-
-      await handleLoginResponse(loginResponse, formData.email, formData.businessReference, 'user');
-    } catch (error: any) {
-      handleLoginError(error);
-    } finally {
-      setIsLoading(false);
-    }
+      const loginResponse = await authService.login({ email: formData.email, password: formData.password, loginType: 'user' } as LoginRequest);
+      await handleLoginResponse(loginResponse, formData.email, undefined, 'user');
+    } catch (error: any) { handleLoginError(error); }
+    finally { setIsLoading(false); }
   };
 
-  // Admin login handler
   const handleAdminLogin = async (formData: AdminFormData) => {
     setIsLoading(true);
     setErrorMessage('');
-
     try {
-      console.log('🚀 Starting admin login process...');
-      console.log('📧 Email:', formData.email);
-
-      const loginRequest: LoginRequest = {
-        email: formData.email,
-        password: formData.password,
-        loginType: 'admin',
-      };
-
-      console.log('🔑 Calling login endpoint...');
-      const loginResponse = await authService.login(loginRequest);
-      console.log('✅ Login response received:', loginResponse);
-
+      const loginResponse = await authService.login({ email: formData.email, password: formData.password, loginType: 'admin' } as LoginRequest);
       await handleLoginResponse(loginResponse, formData.email, undefined, 'admin');
-    } catch (error: any) {
-      handleLoginError(error);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error: any) { handleLoginError(error); }
+    finally { setIsLoading(false); }
   };
 
-  // COC Admin login handler (frontend-only routing).
-  // Backend currently does not have a dedicated loginType for COC admins,
-  // so we reuse the admin loginType on the API request but keep 'cocadmin'
-  // in the UI flow to route to the COC dashboard.
-  const handleCocAdminLogin = async (formData: AdminFormData) => {
-    setIsLoading(true);
-    setErrorMessage('');
-
-    try {
-      console.log('🚀 Starting COC admin login process...');
-      console.log('📧 Email:', formData.email);
-
-      const loginRequest: LoginRequest = {
-        email: formData.email,
-        password: formData.password,
-        loginType: 'admin',
-      };
-
-      console.log('🔑 Calling login endpoint...');
-      const loginResponse = await authService.login(loginRequest);
-      console.log('✅ Login response received:', loginResponse);
-
-      await handleLoginResponse(loginResponse, formData.email, undefined, 'cocadmin');
-    } catch (error: any) {
-      handleLoginError(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Super Admin login handler
   const handleSuperAdminLogin = async (formData: AdminFormData) => {
     setIsLoading(true);
     setErrorMessage('');
-
     try {
-      console.log('🚀 Starting super admin login process...');
-      console.log('📧 Email:', formData.email);
-
-      const loginRequest: LoginRequest = {
-        email: formData.email,
-        password: formData.password,
-        loginType: 'superadmin',
-      };
-
-      console.log('🔑 Calling login endpoint...');
-      const loginResponse = await authService.login(loginRequest);
-      console.log('✅ Login response received:', loginResponse);
-
+      const loginResponse = await authService.login({ email: formData.email, password: formData.password, loginType: 'superadmin' } as LoginRequest);
       await handleLoginResponse(loginResponse, formData.email, undefined, 'superadmin');
-    } catch (error: any) {
-      handleLoginError(error);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error: any) { handleLoginError(error); }
+    finally { setIsLoading(false); }
   };
 
-  // Common response handler
-  const handleLoginResponse = async (
-    loginResponse: LoginResponse,
-    email: string,
-    businessReference?: string,
-    loginType?: LoginType
-  ) => {
+  const handleCocAdminLogin = async (formData: AdminFormData) => {
+    setIsLoading(true);
+    setErrorMessage('');
+    try {
+      const loginResponse = await authService.login({ email: formData.email, password: formData.password, loginType: 'admin' } as LoginRequest);
+      await handleLoginResponse(loginResponse, formData.email, undefined, 'cocadmin');
+    } catch (error: any) { handleLoginError(error); }
+    finally { setIsLoading(false); }
+  };
+
+  const handleLoginResponse = async (loginResponse: LoginResponse, email: string, businessReference?: string, loginType?: LoginType) => {
     if (loginType && !isLoginTypeAllowedForRole((loginResponse as any).role, loginType)) {
       setErrorMessage(PERMISSION_DENIED_MESSAGE);
-      const redirectTo = loginPathForType(expectedLoginTypeForRole((loginResponse as any).role) || 'user');
-      navigate(redirectTo, { replace: true });
+      navigate(loginPathForType(expectedLoginTypeForRole((loginResponse as any).role) || 'user'), { replace: true });
       return;
     }
-
-    const requiresOtp =
-      isTruthyFlag((loginResponse as any).requiresOtpVerification) ||
-      isTruthyFlag((loginResponse as any).requiresTwoFactor);
-
-    console.log('🔍 requiresOtp check result:', requiresOtp);
-
+    const requiresOtp = isTruthyFlag((loginResponse as any).requiresOtpVerification) || isTruthyFlag((loginResponse as any).requiresTwoFactor);
     if (requiresOtp) {
-      console.log('📱 OTP verification required, redirecting...');
-      navigate('/verify-otp', {
-        state: {
-          email: email,
-          loginType: loginType || 'user',
-          apiLoginType: loginType === 'cocadmin' ? 'admin' : (loginType || 'user'),
-          businessReference: businessReference,
-          userId: loginResponse.userId,
-          requiresOtpVerification: true,
-          otpCode: loginResponse.otpCode,
-        },
-      });
+      navigate('/verify-otp', { state: { email, loginType: loginType || 'user', apiLoginType: loginType === 'cocadmin' ? 'admin' : (loginType || 'user'), businessReference, userId: loginResponse.userId, requiresOtpVerification: true, otpCode: loginResponse.otpCode } });
       return;
     }
-
-    console.log('✅ No OTP required, completing login...');
     await completeLogin(loginResponse, login, loginType);
   };
 
-  // Error handler
   const handleLoginError = (error: any) => {
-    console.error('❌ Login error:', error);
-    console.error('❌ Error response:', (error as any).response?.data);
-    console.error('❌ Error status:', (error as any).response?.status);
-
     let message = error.message || 'An error occurred during login. Please try again.';
-
-    if (message.includes('Network Error') || message.includes('Cannot connect')) {
-      message = 'Cannot connect to server. Please check if the backend is running.';
-    } else if (message.includes('Invalid credentials')) {
-      message = 'Invalid email or password. Please try again.';
-    } else if (message.includes('Business reference is required')) {
-      message = 'Business reference is required for user login.';
-    }
-
+    if (message.includes('Network Error') || message.includes('Cannot connect')) message = 'Cannot connect to server. Please check if the backend is running.';
+    else if (message.includes('Invalid credentials')) message = 'Invalid email or password. Please try again.';
     setErrorMessage(message);
   };
 
-  // Fill demo credentials for user
   const fillUserCredentials = (setFormData: (updater: (prev: UserFormData) => UserFormData) => void) => {
-    setFormData((prev) => ({
-      ...prev,
-      email: 'asandile.nkala@example.com',
-      businessReference: '7272002',
-      password: '@TesterAsandile123',
-    }));
+    setFormData(prev => ({ ...prev, email: 'asandile.nkala@example.com', password: '@TesterAsandile123' }));
     setErrorMessage('');
   };
 
-  // Fill demo credentials for admin
   const fillAdminCredentials = (setFormData: (updater: (prev: AdminFormData) => AdminFormData) => void) => {
-    setFormData((prev) => ({
-      ...prev,
-      email: 'asavela.mbengashe@example.com',
-      password: '@TesterAsavela123',
-    }));
+    setFormData(prev => ({ ...prev, email: 'asavela.mbengashe@example.com', password: '@TesterAsavela123' }));
     setErrorMessage('');
   };
 
-  // Fill demo credentials for super admin
   const fillSuperAdminCredentials = (setFormData: (updater: (prev: AdminFormData) => AdminFormData) => void) => {
-    setFormData((prev) => ({
-      ...prev,
-      email: 'misa@gmail.com',
-      password: 'Misa@123',
-    }));
+    setFormData(prev => ({ ...prev, email: 'misa@gmail.com', password: 'Misa@123' }));
     setErrorMessage('');
   };
 
-  return {
-    isLoading,
-    errorMessage,
-    setErrorMessage,
-    handleUserLogin,
-    handleAdminLogin,
-    handleCocAdminLogin,
-    handleSuperAdminLogin,
-    fillUserCredentials,
-    fillAdminCredentials,
-    fillSuperAdminCredentials,
-  };
+  return { isLoading, errorMessage, setErrorMessage, handleUserLogin, handleAdminLogin, handleSuperAdminLogin, handleCocAdminLogin, fillUserCredentials, fillAdminCredentials, fillSuperAdminCredentials };
 }
 
-async function completeLogin(
-  loginResponse: LoginResponse,
-  login: (user: User, authToken?: string) => void,
-  loginType?: LoginType
-) {
+async function completeLogin(loginResponse: LoginResponse, login: (user: User, authToken?: string) => void, loginType?: LoginType) {
   try {
-    console.log('🎯 Starting completeLogin with role from backend:', loginResponse.role);
-
     if (loginType && !isLoginTypeAllowedForRole((loginResponse as any).role, loginType)) {
       localStorage.removeItem('authToken');
-      localStorage.removeItem('userRole');
       alert(PERMISSION_DENIED_MESSAGE);
-      const baseUrl = import.meta.env.BASE_URL;
       const expected = expectedLoginTypeForRole((loginResponse as any).role) || 'user';
-      window.location.href = `${baseUrl}${loginPathForType(expected).replace(/^\//, '')}`;
+      window.location.href = `${import.meta.env.BASE_URL}${loginPathForType(expected).replace(/^\//, '')}`;
       return;
     }
 
@@ -307,101 +154,39 @@ async function completeLogin(
       authService.setAxiosAuthHeader(loginResponse.token);
     }
 
-    // Store user role from response - this is the source of truth
     const userRole = loginResponse.role || '';
-    console.log('📝 Storing user role:', userRole);
-    
     localStorage.setItem('userRole', userRole);
     localStorage.setItem('userEmail', loginResponse.email);
     localStorage.setItem('userId', loginResponse.userId);
     localStorage.setItem('fullName', loginResponse.fullName || '');
+    if (loginResponse.status) localStorage.setItem('userStatus', loginResponse.status);
+    if (loginResponse.organisation) localStorage.setItem('userOrganisation', loginResponse.organisation);
 
-    if (loginResponse.status) {
-      localStorage.setItem('userStatus', loginResponse.status);
-      console.log('📋 Backend user status:', loginResponse.status);
-    }
+    login({ userId: loginResponse.userId, fullName: loginResponse.fullName, email: loginResponse.email, role: userRole, status: loginResponse.status || 'ACTIVE', companyName: loginResponse.companyName, profileImageUrl: loginResponse.profileImageUrl, organisation: loginResponse.organisation } as User, loginResponse.token);
 
-    if (loginResponse.businessReference) {
-      localStorage.setItem('businessReference', loginResponse.businessReference);
-    }
-
-    const userData: User = {
-      userId: loginResponse.userId,
-      fullName: loginResponse.fullName,
-      email: loginResponse.email,
-      role: userRole,
-      status: loginResponse.status || 'ACTIVE',
-      businessReference: loginResponse.businessReference,
-      companyName: loginResponse.companyName,
-      profileImageUrl: loginResponse.profileImageUrl,
-    };
-
-    login(userData, loginResponse.token);
-
-    console.log('🎉 Login complete! Token:', loginResponse.token ? loginResponse.token.substring(0, 30) + '...' : 'none');
-    console.log('📊 Post-login status check:', {
-      status: loginResponse.status,
-      role: userRole,
-      isAuthenticated: true,
-    });
-
-    // Use setTimeout to ensure state updates are complete
     setTimeout(() => {
       const baseUrl = import.meta.env.BASE_URL;
-      // Check role from response - this is the ONLY place we determine where to redirect
       const role = userRole.toUpperCase();
-      console.log('🔍 Determining redirect based on role:', role);
-      
-      if (loginType === 'cocadmin') {
-        console.log('🛡️ Redirecting to COC admin dashboard');
-        window.location.href = `${baseUrl}cocadmin/dashboard/applicants`;
-        return;
-      }
-      
-      if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-        console.log('👑 Redirecting to admin dashboard for role:', role);
-        window.location.href = `${baseUrl}admin/dashboard/overview`;
-        return; // Important: return to prevent further execution
-      }
-      
-      // If we get here, it's a regular user
-      console.log('👤 Processing regular user redirect with role:', role);
+
+      if (loginType === 'cocadmin' || role === 'COC_ADMIN') { window.location.href = `${baseUrl}cocadmin/dashboard/applicants`; return; }
+      if (role === 'SUPER_ADMIN' || role === 'ADMIN') { window.location.href = `${baseUrl}admin/dashboard/overview`; return; }
+
       const userStatus = loginResponse.status || localStorage.getItem('userStatus');
       const selectedPackage = localStorage.getItem('selectedPackage');
 
-      console.log('🔍 User dashboard redirection check:', {
-        userStatus,
-        selectedPackage,
-        role,
-      });
-
-      if (userStatus === 'PENDING_PACKAGE') {
-        console.log('📦 User needs package selection, redirecting to /select-package');
+      if ((loginResponse as any).requiresPackageSelection === false && userStatus === 'ACTIVE') {
+        window.location.href = `${baseUrl}dashboard/overview`;
+      } else if (userStatus === 'PENDING_PACKAGE') {
         window.location.href = `${baseUrl}select-package`;
       } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
-        console.log('💳 User needs payment for selected package, redirecting to /payments/new');
         window.location.href = `${baseUrl}payments/new`;
       } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
-        console.log('⚠️ User PENDING_PAYMENT but no package selected, redirecting to package selection');
         window.location.href = `${baseUrl}select-package`;
       } else {
-        console.log('🏠 User is active, going to dashboard');
         window.location.href = `${baseUrl}dashboard/overview`;
       }
     }, 100);
   } catch (error: any) {
-    console.error('❌ Login error in completeLogin:', error);
-
-    let message = error.message || 'An error occurred during login. Please try again.';
-
-    if (message.includes('Network Error') || message.includes('Cannot connect')) {
-      message = 'Cannot connect to server. Please check if the backend is running.';
-    } else if (message.includes('Invalid credentials')) {
-      message = 'Invalid email or password. Please try again.';
-    } else if (message.includes('Business reference is required')) {
-      message = 'Business reference is required for user login.';
-    }
-
-    console.error('❌ Complete login error message:', message);
+    console.error('❌ Complete login error:', error.message);
   }
 }
