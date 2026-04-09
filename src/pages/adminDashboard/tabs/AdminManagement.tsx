@@ -1,6 +1,6 @@
 // src/pages/adminDashboard/tabs/AdminManagement.tsx
 import React, { useState, useEffect } from 'react';
-import { Shield, User, Mail, Calendar, ChevronDown, Search, Plus, Edit, Trash2, Crown } from 'lucide-react';
+import { Shield, User, Search, Plus, Edit, Trash2, Crown } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import AdminUserService from '../../../services/AdminUserService';
 

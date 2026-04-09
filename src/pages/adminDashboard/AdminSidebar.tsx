@@ -14,7 +14,7 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { authService } from '../../services/AuthService';
+import { organisationBrandingService } from '../../services/OrganisationBrandingService';
 
 export type AdminTab =
 	| 'applicants'
@@ -39,16 +39,7 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
     const { isSuperAdmin, userOrganisation } = useAuth();
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
     const [uploadingPicture, setUploadingPicture] = useState(false);
-    const [profileImageUrl, setProfileImageUrl] = useState<string>(() => {
-        try {
-            const raw = localStorage.getItem('user');
-            const parsed = raw ? JSON.parse(raw) : null;
-            return parsed?.profileImageUrl || '';
-        } catch {
-            return '';
-        }
-    });
-    const [isHydratingProfileImage, setIsHydratingProfileImage] = useState(false);
+    const [organisationLogoUrl, setOrganisationLogoUrl] = useState<string>('');
 
     const userInitials = useMemo(() => {
         const base = (userOrganisation || 'Admin').toString();
@@ -64,56 +55,21 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
     const isCocDashboard = location.pathname.startsWith('/cocadmin/');
 
     useEffect(() => {
-        const refreshProfileImage = () => {
-            try {
-                const raw = localStorage.getItem('user');
-                const parsed = raw ? JSON.parse(raw) : null;
-                setProfileImageUrl(parsed?.profileImageUrl || '');
-            } catch {
-                setProfileImageUrl('');
-            }
-        };
-
-        const hydrateFromBackendIfMissing = async () => {
-            if (isHydratingProfileImage) return;
+        const hydrateOrganisationLogo = async () => {
             const token = localStorage.getItem('authToken');
             if (!token) return;
-            if (profileImageUrl) return;
 
-            setIsHydratingProfileImage(true);
             try {
-                const userData = await authService.getCurrentUser();
-                const url = userData.profileImageUrl || '';
-                if (url) {
-                    setProfileImageUrl(url);
-                    try {
-                        const raw = localStorage.getItem('user');
-                        const parsed = raw ? JSON.parse(raw) : {};
-                        const nextUser = { ...parsed, profileImageUrl: url };
-                        localStorage.setItem('user', JSON.stringify(nextUser));
-                    } catch (e) {}
-                }
+                const branding = await organisationBrandingService.getMine();
+                setOrganisationLogoUrl(branding.logoUrl || '');
             } catch (error) {
-                console.error('Error hydrating profile image:', error);
-            } finally {
-                setIsHydratingProfileImage(false);
+                console.error('Error hydrating organisation logo:', error);
+                setOrganisationLogoUrl('');
             }
         };
 
-        const handleUserUpdated = () => {
-            refreshProfileImage();
-        };
-
-        window.addEventListener('storage', refreshProfileImage);
-        window.addEventListener('user-updated', handleUserUpdated as EventListener);
-        refreshProfileImage();
-        void hydrateFromBackendIfMissing();
-
-        return () => {
-            window.removeEventListener('storage', refreshProfileImage);
-            window.removeEventListener('user-updated', handleUserUpdated as EventListener);
-        };
-    }, [isHydratingProfileImage, profileImageUrl]);
+        void hydrateOrganisationLogo();
+    }, []);
 
     // Base menu items for all admins (including super admins)
     const baseMenuItems = [
@@ -163,18 +119,31 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
 
         try {
             setUploadingPicture(true);
-            const updatedUser = await authService.updateProfileImage(file);
-            setProfileImageUrl(updatedUser.profileImageUrl || '');
-            window.dispatchEvent(new CustomEvent('user-updated'));
-            alert('Organisation picture updated successfully!');
+            const branding = await organisationBrandingService.uploadMyLogo(file);
+            setOrganisationLogoUrl(branding.logoUrl || '');
+            alert('Organisation logo updated successfully!');
         } catch (error) {
             console.error('Error uploading organisation picture:', error);
-            alert('Failed to upload organisation picture');
+            alert('Failed to upload organisation logo');
         } finally {
             setUploadingPicture(false);
             if (uploadInputRef.current) {
                 uploadInputRef.current.value = '';
             }
+        }
+    };
+
+    const handleRemoveLogo = async () => {
+        try {
+            setUploadingPicture(true);
+            await organisationBrandingService.removeMyLogo();
+            setOrganisationLogoUrl('');
+            alert('Organisation logo removed successfully!');
+        } catch (error) {
+            console.error('Error removing organisation logo:', error);
+            alert('Failed to remove organisation logo');
+        } finally {
+            setUploadingPicture(false);
         }
     };
 
@@ -202,12 +171,12 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
                     aria-label="Upload organisation picture"
                     title="Upload organisation picture"
                 >
-                    {profileImageUrl ? (
+                    {organisationLogoUrl ? (
                         <img
-                            src={profileImageUrl}
+                            src={organisationLogoUrl}
                             alt="Organisation"
                             className="w-full h-full object-cover"
-                            onError={() => setProfileImageUrl('')}
+                            onError={() => setOrganisationLogoUrl('')}
                         />
                     ) : (
                         <span className="text-white text-xl font-bold">{userInitials}</span>
@@ -216,6 +185,16 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
                 <p className="text-xs text-gray-500 mt-2">
                     {uploadingPicture ? 'Uploading...' : 'Click to upload logo'}
                 </p>
+                {organisationLogoUrl && (
+                    <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        disabled={uploadingPicture}
+                        className="text-xs text-red-600 hover:text-red-700 mt-1 disabled:opacity-50"
+                    >
+                        Remove logo
+                    </button>
+                )}
             </div>
             
             <nav className="space-y-1">

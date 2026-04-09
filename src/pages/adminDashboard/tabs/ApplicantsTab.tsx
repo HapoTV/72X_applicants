@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
+import { cocOrganisationService } from '../../../services/CocOrganisationService';
 
 import { UserManagementHeader } from './components/UserManagementHeader';
 import { UserStats } from './components/UserStats';
@@ -14,9 +15,27 @@ import type { UserWithSubscription, StatsData, NewUserData } from './components/
 
 export default function ApplicantsTab() {
   const { isSuperAdmin, userOrganisation, user, updateUserOrganisation } = useAuth();
+  const effectiveRole = (user?.role || localStorage.getItem('userRole') || '').toUpperCase();
+  const isCocAdmin = effectiveRole === 'COC_ADMIN';
   const [users, setUsers] = useState<UserWithSubscription[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserWithSubscription[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [newAdminData, setNewAdminData] = useState<NewUserData>({
+    fullName: '',
+    email: '',
+    mobileNumber: '',
+    companyName: '',
+    organisation: userOrganisation || '',
+    employees: '',
+    founded: '',
+    industry: '',
+    location: '',
+    role: 'ADMIN',
+    status: 'PENDING_PASSWORD'
+  });
 
   const [selectedUser, setSelectedUser] = useState<UserWithSubscription | null>(null);
 
@@ -26,6 +45,7 @@ export default function ApplicantsTab() {
   const [organisationFilter, setOrganisationFilter] = useState<string>('all');
 
   const [organisations, setOrganisations] = useState<string[]>([]);
+  const [cocAllowedOrganisations, setCocAllowedOrganisations] = useState<string[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData>({
     totalUsers: 0,
@@ -38,28 +58,12 @@ export default function ApplicantsTab() {
     adminsCount: 0,
     usersCount: 0
   });
-  const [showAddAdminModal, setShowAddAdminModal] = useState(false);
-  const [newAdminData, setNewAdminData] = useState<NewUserData>({
-    fullName: '',
-    email: '',
-    mobileNumber: '',
-    companyName: '',
-    organisation: '',
-    employees: '',
-    founded: '',
-    industry: '',
-    location: '',
-    role: 'ADMIN',
-    status: 'PENDING_PASSWORD'
-  });
-  const [addingAdmin, setAddingAdmin] = useState(false);
 
   const checkUserOnlineStatus = useCallback((userData: User): boolean => {
     return userData.availabilityStatus === 'ONLINE';
   }, []);
 
   const calculateStats = useCallback((usersList: UserWithSubscription[]) => {
-    // No need to filter again since usersList is already filtered
     const relevantUsers = usersList;
 
     const activeUsers = relevantUsers.filter(u => 
@@ -114,7 +118,22 @@ export default function ApplicantsTab() {
         console.log(`✅ Super Admin fetched ${allUsers.length} users from backend`);
       } else {
         // Regular admin - fetch users from their organisation only
-        if (userOrganisation) {
+        if (isCocAdmin) {
+          if (!cocAllowedOrganisations) {
+            console.log('⏳ Waiting for COC sub-organisations to be fetched...');
+            setLoading(false);
+            return;
+          }
+
+          console.log('👤 COC Admin fetching users for allowed organisations:', cocAllowedOrganisations);
+
+          response = await axiosClient.get('/users/admin/all');
+          const allUsersData = response.data;
+          allUsers = allUsersData.filter((u: User) =>
+            !!u.organisation && cocAllowedOrganisations.includes(u.organisation)
+          );
+          console.log(`✅ COC Admin fetched and filtered ${allUsers.length} users in allowed organisations`);
+        } else if (userOrganisation) {
           console.log(`👤 Admin fetching users for organisation: ${userOrganisation}`);
           
           try {
@@ -199,7 +218,36 @@ export default function ApplicantsTab() {
     } finally {
       setLoading(false);
     }
-  }, [calculateStats, checkUserOnlineStatus, isSuperAdmin, updateUserOrganisation, user?.email, user?.role, userOrganisation]);
+  }, [calculateStats, checkUserOnlineStatus, cocAllowedOrganisations, isCocAdmin, isSuperAdmin, updateUserOrganisation, user?.email, user?.role, userOrganisation]);
+
+  useEffect(() => {
+    const fetchCocAllowedOrganisations = async () => {
+      if (!isCocAdmin) {
+        setCocAllowedOrganisations(null);
+        return;
+      }
+
+      try {
+        const items = await cocOrganisationService.listMine();
+        const names = items
+          .map(i => i.name)
+          .filter((n): n is string => !!n && n.trim() !== '')
+          .map(n => n.trim());
+
+        const allowed = [...new Set([
+          ...(userOrganisation ? [userOrganisation] : []),
+          ...names
+        ])];
+
+        setCocAllowedOrganisations(allowed);
+      } catch (error) {
+        console.error('❌ Failed to fetch COC sub-organisations:', error);
+        setFetchError('Failed to load COC organisations. Please try refreshing.');
+      }
+    };
+
+    fetchCocAllowedOrganisations();
+  }, [isCocAdmin, userOrganisation]);
 
   useEffect(() => {
     const fetchCurrentUserOrganisation = async () => {
@@ -232,16 +280,25 @@ export default function ApplicantsTab() {
       console.log('⏳ Waiting for organisation to be fetched...');
       return;
     }
+
+    if (isCocAdmin && !cocAllowedOrganisations) {
+      console.log('⏳ Waiting for COC allowed organisations to be fetched...');
+      return;
+    }
     
     fetchAllUsers();
-  }, [isSuperAdmin, userOrganisation, fetchAllUsers]);
+  }, [isSuperAdmin, userOrganisation, fetchAllUsers, isCocAdmin, cocAllowedOrganisations]);
 
   useEffect(() => {
     let filtered = [...users];
 
     // For non-super admins, ensure filtering is applied correctly
-    if (!isSuperAdmin && userOrganisation) {
-      filtered = filtered.filter(u => u.organisation === userOrganisation);
+    if (!isSuperAdmin) {
+      if (isCocAdmin && cocAllowedOrganisations) {
+        filtered = filtered.filter(u => !!u.organisation && cocAllowedOrganisations.includes(u.organisation));
+      } else if (userOrganisation) {
+        filtered = filtered.filter(u => u.organisation === userOrganisation);
+      }
     }
 
     if (searchTerm) {
@@ -277,7 +334,7 @@ export default function ApplicantsTab() {
     }
 
     setFilteredUsers(filtered);
-  }, [users, searchTerm, statusFilter, roleFilter, organisationFilter, isSuperAdmin, userOrganisation]);
+  }, [users, searchTerm, statusFilter, roleFilter, organisationFilter, isSuperAdmin, userOrganisation, isCocAdmin, cocAllowedOrganisations]);
 
   const handleAddAdmin = async () => {
     if (!newAdminData.email || !newAdminData.fullName) {

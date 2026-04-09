@@ -255,6 +255,21 @@ class AuthService {
     }
   }
 
+  async removeProfileImage(): Promise<User> {
+    try {
+      const response = await axiosClient.delete('/users/me/profile-image');
+
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = { ...currentUser, ...response.data };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+
+      return response.data;
+    } catch (error) {
+      console.error('Remove profile image error:', error);
+      throw new Error('Failed to remove profile image.');
+    }
+  }
+
   /**
    * Request password reset
    */

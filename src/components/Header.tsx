@@ -60,7 +60,16 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   useEffect(() => {
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
+    const handleNotificationsUpdated = () => {
+      void fetchUnreadCount();
+    };
+
+    window.addEventListener('notifications-updated', handleNotificationsUpdated as EventListener);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notifications-updated', handleNotificationsUpdated as EventListener);
+    };
   }, []);
 
   useEffect(() => {

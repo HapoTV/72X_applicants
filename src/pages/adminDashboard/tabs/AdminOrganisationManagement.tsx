@@ -1,6 +1,6 @@
 // src/pages/adminDashboard/tabs/AdminOrganisationManagement.tsx
 import React, { useState, useEffect } from 'react';
-import { Building2, Users, Search, Plus, Edit, Trash2, Mail, Calendar, Shield } from 'lucide-react';
+import { Building2, Users, Search, Plus, Edit, Trash2, Shield } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import AdminUserService from '../../../services/AdminUserService';
 
@@ -16,7 +16,6 @@ const AdminOrganisationManagement: React.FC = () => {
   const [organisations, setOrganisations] = useState<Organisation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
 
   useEffect(() => {
     if (isSuperAdmin) {
