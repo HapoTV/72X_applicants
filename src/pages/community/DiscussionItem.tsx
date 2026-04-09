@@ -7,13 +7,27 @@ interface DiscussionItemProps {
   categoryName?: string;
 }
 
+import { useNavigate } from 'react-router-dom';
+
 const DiscussionItem: React.FC<DiscussionItemProps> = ({
   discussion,
   categoryColor,
   categoryName
 }) => {
+  const navigate = useNavigate();
+
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+    <div
+      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+      onClick={() => navigate(`/community/${discussion.id}`)}
+      role="button"
+      tabIndex={0}
+      onKeyPress={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          navigate(`/community/${discussion.id}`);
+        }
+      }}
+    >
       <div className="flex items-start space-x-4">
         <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
           <span className="text-white text-sm font-medium">{discussion.author?.charAt(0) || 'U'}</span>
@@ -22,7 +36,7 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
         <div className="flex-1">
           <div className="flex items-start justify-between mb-2">
             <div>
-              <h3 className="font-semibold text-gray-900 hover:text-primary-600 cursor-pointer">
+              <h3 className="font-semibold text-gray-900 hover:text-primary-600">
                 {discussion.title}
                 {discussion.isHot && (
                   <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">

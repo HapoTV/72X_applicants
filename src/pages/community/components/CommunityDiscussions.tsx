@@ -1,5 +1,6 @@
 import React from 'react';
 import { MessageCircle, Heart, Share, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 type Category = { id: string; name: string };
 
@@ -31,8 +32,11 @@ const CommunityDiscussions: React.FC<CommunityDiscussionsProps> = ({
   filteredDiscussions,
   getCategoryColor,
 }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
+      {/* Categories + Button */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
         <div className="flex flex-wrap gap-2">
           {categories.map((category) => (
@@ -56,21 +60,27 @@ const CommunityDiscussions: React.FC<CommunityDiscussionsProps> = ({
         </button>
       </div>
 
+      {/* Discussions List */}
       <div className="space-y-4">
         {filteredDiscussions.map((discussion) => (
           <div
             key={discussion.id}
-            className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+            onClick={() => navigate(`/community/${discussion.id}`)}
+            className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <div className="flex items-start space-x-4">
+              {/* Avatar */}
               <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">{discussion.avatar}</span>
+                <span className="text-white text-sm font-medium">
+                  {discussion.avatar}
+                </span>
               </div>
 
+              {/* Content */}
               <div className="flex-1">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-semibold text-gray-900 hover:text-primary-600 cursor-pointer">
+                    <h3 className="font-semibold text-gray-900 hover:text-primary-600">
                       {discussion.title}
                       {discussion.isHot && (
                         <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
@@ -78,32 +88,57 @@ const CommunityDiscussions: React.FC<CommunityDiscussionsProps> = ({
                         </span>
                       )}
                     </h3>
+
                     <div className="flex items-center space-x-2 mt-1">
-                      <span className="text-sm text-gray-600">by {discussion.author}</span>
+                      <span className="text-sm text-gray-600">
+                        by {discussion.author}
+                      </span>
+
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(
-                          discussion.category,
+                          discussion.category
                         )}`}
                       >
-                        {categories.find((c) => c.id === discussion.category)?.name}
+                        {
+                          categories.find(
+                            (c) => c.id === discussion.category
+                          )?.name
+                        }
                       </span>
                     </div>
                   </div>
-                  <span className="text-sm text-gray-500">{discussion.timeAgo}</span>
+
+                  <span className="text-sm text-gray-500">
+                    {discussion.timeAgo}
+                  </span>
                 </div>
 
-                <p className="text-gray-600 text-sm mb-3">{discussion.preview}</p>
+                <p className="text-gray-600 text-sm mb-3">
+                  {discussion.preview}
+                </p>
 
+                {/* Actions */}
                 <div className="flex items-center space-x-4 text-sm text-gray-500">
                   <div className="flex items-center space-x-1">
                     <MessageCircle className="w-4 h-4" />
                     <span>{discussion.replies} replies</span>
                   </div>
-                  <div className="flex items-center space-x-1">
+
+                  <div
+                    className="flex items-center space-x-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Heart className="w-4 h-4" />
                     <span>{discussion.likes} likes</span>
                   </div>
-                  <button className="flex items-center space-x-1 hover:text-primary-600">
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Add share logic here
+                    }}
+                    className="flex items-center space-x-1 hover:text-primary-600"
+                  >
                     <Share className="w-4 h-4" />
                     <span>Share</span>
                   </button>

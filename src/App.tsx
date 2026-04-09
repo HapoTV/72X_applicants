@@ -16,6 +16,7 @@ import RoadmapGenerator from './pages/RoadmapGenerator';
 import Profile from './pages/Profile';
 import LearningModules from './pages/LearningModules';
 import CommunityDiscussions from './pages/community/Discussion';
+import DiscussionDetails from './pages/community/DiscussionDetails';
 import CommunityNetworking from './pages/community/Networking';
 import CommunityMentorship from './pages/community/Mentorship';
 import FundingFinder from './pages/FundingFinder';
@@ -178,6 +179,7 @@ function App() {
                           {/* Community Routes */}
                           <Route path="/community" element={<Navigate to="/community/discussions" replace />} />
                           <Route path="/community/discussions" element={<CommunityDiscussions />} />
+                          <Route path="/community/:id" element={<DiscussionDetails />} />
                           <Route path="/community/networking" element={<CommunityNetworking />} />
                           <Route
                             path="/community/mentorship"
