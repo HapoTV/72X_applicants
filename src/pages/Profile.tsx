@@ -421,6 +421,28 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleRemovePicture = async () => {
+    if (!profileImageUrl) return;
+
+    if (!window.confirm('Remove your profile picture?')) {
+      return;
+    }
+
+    try {
+      setUploadingPicture(true);
+      const updatedUser = await authService.removeProfileImage();
+      login(updatedUser);
+      setProfileImageUrl(updatedUser.profileImageUrl || '');
+      window.dispatchEvent(new CustomEvent('user-updated'));
+      alert('Profile picture removed successfully!');
+    } catch (error) {
+      console.error('Error removing profile picture:', error);
+      alert('Failed to remove profile picture');
+    } finally {
+      setUploadingPicture(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -547,6 +569,16 @@ const Profile: React.FC = () => {
                     >
                       {uploadingPicture ? 'Uploading...' : 'Upload picture'}
                     </button>
+                    {profileImageUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemovePicture}
+                        disabled={uploadingPicture}
+                        className="text-red-600 text-sm hover:text-red-700 mt-1 ml-3 disabled:opacity-50"
+                      >
+                        Remove picture
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -616,8 +648,7 @@ const Profile: React.FC = () => {
                     <input
                       type="text"
                       value={profileData.organisation}
-                      onChange={(e) => handleInputChange('organisation', e.target.value)}
-                      disabled={!isEditing}
+                      disabled
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
                       placeholder="Your organisation"
                     />

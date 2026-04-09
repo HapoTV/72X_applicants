@@ -45,8 +45,36 @@ class NotificationService {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
+  private normalizeNotification(raw: any): Notification {
+    const id = String(raw?.id ?? raw?.notificationId ?? raw?.notificationID ?? '');
+
+    return {
+      id,
+      title: raw?.title ?? '',
+      message: raw?.message ?? '',
+      type: raw?.type ?? 'INFO',
+      status: raw?.status ?? 'SENT',
+      read: Boolean(raw?.read ?? raw?.isRead ?? false),
+      actionUrl: raw?.actionUrl ?? undefined,
+      targetOrganisation: raw?.targetOrganisation ?? raw?.organisation ?? undefined,
+      timestamp: raw?.timestamp ?? raw?.createdAt ?? raw?.sentAt ?? '',
+      createdAt: raw?.createdAt ?? raw?.timestamp ?? raw?.sentAt ?? '',
+      userId: raw?.userId ?? undefined,
+      userEmail: raw?.userEmail ?? undefined,
+      userFullName: raw?.userFullName ?? undefined,
+      organisation: raw?.organisation ?? undefined,
+      createdByUserId: raw?.createdByUserId ?? undefined,
+      createdByUserEmail: raw?.createdByUserEmail ?? undefined,
+      createdByUserName: raw?.createdByUserName ?? undefined,
+      isBroadcast: raw?.isBroadcast ?? undefined,
+      sentAt: raw?.sentAt ?? undefined,
+      scheduledFor: raw?.scheduledFor ?? undefined,
+      readAt: raw?.readAt ?? undefined,
+    };
+  }
+
   // ==================== USER METHODS ====================
-  
+
   async getUserNotifications(unreadOnly: boolean = false): Promise<Notification[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}`, {
@@ -54,7 +82,11 @@ class NotificationService {
         headers: this.getAuthHeader()
       });
       // The backend returns a list directly
-      return response.data || [];
+      const rawList = Array.isArray(response.data)
+        ? response.data
+        : (Array.isArray(response.data?.data) ? response.data.data : []);
+
+      return rawList.map((n: any) => this.normalizeNotification(n));
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return []; // Return empty array on error to prevent crashes
@@ -63,6 +95,11 @@ class NotificationService {
 
   async markAsRead(ids: string[], read: boolean = true): Promise<void> {
     try {
+      if (!read) {
+        console.warn('markAsRead called with read=false; backend may not support marking unread.');
+        return;
+      }
+
       // Use the correct endpoint for marking individual notifications as read
       // Since the backend expects a single notification ID per request
       for (const id of ids) {
@@ -70,6 +107,8 @@ class NotificationService {
           headers: this.getAuthHeader()
         });
       }
+
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (error) {
       console.error('Error marking notifications as read:', error);
       throw error;
@@ -81,6 +120,8 @@ class NotificationService {
       await axiosClient.put(`${this.baseURL}/read-all`, {}, {
         headers: this.getAuthHeader()
       });
+
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       throw error;
@@ -92,6 +133,8 @@ class NotificationService {
       await axiosClient.delete(`${this.baseURL}/${id}`, {
         headers: this.getAuthHeader()
       });
+
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (error) {
       console.error('Error deleting notification:', error);
       throw error;

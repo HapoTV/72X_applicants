@@ -3,7 +3,7 @@ import { Users, Calendar, BookOpen, Handshake, DollarSign, Megaphone, ShieldAler
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { authService } from '../../services/AuthService';
+import { organisationBrandingService } from '../../services/OrganisationBrandingService';
 
 export type AdminTab = 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile' | 'payments' | 'monitoring' | 'organisation' | 'admins' | 'business-ref';
 
@@ -83,6 +83,20 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
             alert('Organisation picture updated successfully!');
         } catch { alert('Failed to upload organisation picture'); }
         finally { setUploadingPicture(false); if (uploadInputRef.current) uploadInputRef.current.value = ''; }
+    };
+
+    const handleRemoveLogo = async () => {
+        try {
+            setUploadingPicture(true);
+            await organisationBrandingService.removeMyLogo();
+            setOrganisationLogoUrl('');
+            alert('Organisation logo removed successfully!');
+        } catch (error) {
+            console.error('Error removing organisation logo:', error);
+            alert('Failed to remove organisation logo');
+        } finally {
+            setUploadingPicture(false);
+        }
     };
 
     return (

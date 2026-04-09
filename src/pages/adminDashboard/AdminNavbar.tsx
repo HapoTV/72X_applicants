@@ -1,7 +1,7 @@
 // src/pages/adminDashboard/AdminNavbar.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, BellRing, LogOut, User, ChevronDown, Shield, Building2, Crown } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import NotificationService from '../../services/NotificationService';
 import NotificationPopup from '../../components/NotificationPopup';
@@ -15,16 +15,27 @@ interface AdminNavbarProps {
 const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
     const { user, isSuperAdmin, userOrganisation } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [unreadCount, setUnreadCount] = useState(0);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [notificationPopupOpen, setNotificationPopupOpen] = useState(false);
+
     const notificationButtonRef = useRef<HTMLButtonElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         fetchUnreadCount();
         const interval = setInterval(fetchUnreadCount, 30000);
-        return () => clearInterval(interval);
+        const handleNotificationsUpdated = () => {
+            void fetchUnreadCount();
+        };
+
+        window.addEventListener('notifications-updated', handleNotificationsUpdated as EventListener);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('notifications-updated', handleNotificationsUpdated as EventListener);
+        };
     }, []);
 
     useEffect(() => {
@@ -65,10 +76,16 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
         const role = user?.role?.toUpperCase() || '';
         if (role === 'SUPER_ADMIN') {
             navigate('/login/haposuperadmin');
+        } else if (role === 'COC_ADMIN') {
+            navigate('/login/cocadmin');
         } else {
             navigate('/login/asadmin');
         }
     };
+
+    const isCocAdminDashboard = location.pathname.startsWith('/cocadmin/');
+    const profilePath = isCocAdminDashboard ? '/cocadmin/dashboard/profile' : '/admin/dashboard/profile';
+    const notificationsPath = isCocAdminDashboard ? '/cocadmin/notifications' : '/admin/notifications';
 
     return (
         <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-40">
@@ -192,14 +209,14 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
                                         </div>
                                         <div className="py-1">
                                             <Link
-                                                to="/admin/dashboard/profile"
+                                                to={profilePath}
                                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                                 onClick={() => setShowUserMenu(false)}
                                             >
                                                 Profile Settings
                                             </Link>
                                             <Link
-                                                to="/admin/notifications"
+                                                to={notificationsPath}
                                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                                 onClick={() => setShowUserMenu(false)}
                                             >

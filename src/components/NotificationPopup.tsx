@@ -14,7 +14,7 @@ import {
   ChevronRight,
   CheckCheck
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import NotificationService from '../services/NotificationService';
 import type { Notification } from '../services/NotificationService';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,7 @@ interface NotificationPopupProps {
 
 const NotificationPopup: React.FC<NotificationPopupProps> = ({ isOpen, onClose, anchorEl }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isSuperAdmin, userOrganisation } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -97,6 +98,7 @@ const NotificationPopup: React.FC<NotificationPopupProps> = ({ isOpen, onClose, 
         await NotificationService.markAsRead([notification.id], true);
         // Update local state
         setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        window.dispatchEvent(new CustomEvent('notifications-updated'));
       } catch (error) {
         console.error('Error marking notification as read:', error);
       }
@@ -113,14 +115,19 @@ const NotificationPopup: React.FC<NotificationPopupProps> = ({ isOpen, onClose, 
     try {
       await NotificationService.markAllAsRead();
       setNotifications([]);
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
   };
 
   const handleViewAll = () => {
-    // Navigate based on user role
-    if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || isSuperAdmin) {
+    const role = (user?.role || '').toUpperCase();
+    const isCocDashboard = location.pathname.startsWith('/cocadmin/');
+
+    if (role === 'COC_ADMIN' || isCocDashboard) {
+      navigate('/cocadmin/notifications');
+    } else if (role === 'ADMIN' || role === 'SUPER_ADMIN' || isSuperAdmin) {
       navigate('/admin/notifications');
     } else {
       navigate('/notifications');

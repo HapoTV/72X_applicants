@@ -13,7 +13,7 @@ import {
   Crown,
   X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import NotificationService from '../../services/NotificationService';
 import type { 
   Notification, 
@@ -24,6 +24,7 @@ import { useAuth } from '../../context/AuthContext';
 const AdminNotifications: React.FC = () => {
   const { user, isSuperAdmin, userOrganisation } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -167,7 +168,8 @@ const AdminNotifications: React.FC = () => {
   };
 
   // Check if user has admin access
-  if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
+  const effectiveRole = (user?.role || localStorage.getItem('userRole') || '').toUpperCase();
+  if (!effectiveRole || (effectiveRole !== 'ADMIN' && effectiveRole !== 'SUPER_ADMIN' && effectiveRole !== 'COC_ADMIN')) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -179,6 +181,9 @@ const AdminNotifications: React.FC = () => {
     );
   }
 
+  const isCocAdminPath = location.pathname.startsWith('/cocadmin/');
+  const backToDashboardPath = isCocAdminPath ? '/cocadmin/dashboard/applicants' : '/admin/dashboard/applicants';
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -187,7 +192,7 @@ const AdminNotifications: React.FC = () => {
           <div className="flex items-center space-x-3">
             <button
               type="button"
-              onClick={() => navigate('/admin/dashboard/applicants')}
+              onClick={() => navigate(backToDashboardPath)}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
               aria-label="Back to Admin Dashboard"
               title="Back to Admin Dashboard"

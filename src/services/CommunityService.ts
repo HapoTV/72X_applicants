@@ -74,6 +74,16 @@ class CommunityService {
     }
   }
 
+  async getDiscussionById(discussionId: string): Promise<AdminDiscussionItem> {
+    try {
+      const response = await axiosClient.get(`/community/discussions/${discussionId}`);
+      return this.transformToAdminDiscussionItem(response.data);
+    } catch (error) {
+      console.error('Error fetching discussion by ID:', error);
+      throw new Error('Failed to fetch discussion details');
+    }
+  }
+
   /**
    * Get hot discussions
    */
