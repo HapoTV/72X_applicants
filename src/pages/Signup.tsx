@@ -245,14 +245,14 @@ const Signup: React.FC = () => {
                     >
                       <option value="">Select an organisation</option>
                       {orgGroups.organisations.length > 0 && (
-                        <optgroup label="── Organisations ──">
+                        <optgroup label="-- Organisations --">
                           {orgGroups.organisations.map(org => (
                             <option key={org} value={org}>{org}</option>
                           ))}
                         </optgroup>
                       )}
                       {orgGroups.cocSubOrganisations.length > 0 && (
-                        <optgroup label="── COC Organisations ──">
+                        <optgroup label="-- COC Organisations --">
                           {orgGroups.cocSubOrganisations.map(org => (
                             <option key={org} value={org}>{org}</option>
                           ))}
@@ -285,7 +285,7 @@ const Signup: React.FC = () => {
             {!form.hasBankReference && (
               <div className="mt-3 p-3 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-700">
-                  A unique business reference will be generated for your account.
+                  A unique business reference will be generated for your account under Hapo Organisation.
                 </p>
               </div>
             )}
