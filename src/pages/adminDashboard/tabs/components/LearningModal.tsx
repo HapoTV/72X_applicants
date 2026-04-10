@@ -1,4 +1,5 @@
 import React from 'react';
+import type { SignupOrganisationGroups } from '../../../../services/OrganisationService';
 
 interface NewLearningData {
     title: string;
@@ -23,6 +24,7 @@ interface LearningModalProps {
     sectionTitle: string;
     isSuperAdmin: boolean;
     isCocAdmin?: boolean;
+    organisationGroups?: SignupOrganisationGroups;
     organisations: string[];
     getFileSize: (bytes: number) => string;
 }
@@ -39,6 +41,7 @@ export const LearningModal: React.FC<LearningModalProps> = ({
     sectionTitle,
     isSuperAdmin,
     isCocAdmin = false,
+    organisationGroups,
     organisations,
     getFileSize
 }) => {
@@ -116,7 +119,21 @@ export const LearningModal: React.FC<LearningModalProps> = ({
                                         disabled={uploading}
                                     >
                                         <option value="">Select an organisation (optional)</option>
-                                        {organisations.map(org => (
+                                        {organisationGroups && organisationGroups.organisations.length > 0 && (
+                                            <optgroup label="-- Organisations --">
+                                                {organisationGroups.organisations.map((org) => (
+                                                    <option key={org} value={org}>{org}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+                                        {organisationGroups && organisationGroups.cocSubOrganisations.length > 0 && (
+                                            <optgroup label="-- COC Organisations --">
+                                                {organisationGroups.cocSubOrganisations.map((org) => (
+                                                    <option key={org} value={org}>{org}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+                                        {!organisationGroups && organisations.map((org) => (
                                             <option key={org} value={org}>{org}</option>
                                         ))}
                                     </select>

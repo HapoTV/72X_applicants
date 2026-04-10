@@ -64,7 +64,7 @@ export default function AdminDashboard({ dashboardBasePath }: AdminDashboardProp
         switch (activeTab) {
             case 'applicants': return <ApplicantsTab />;
             case 'events': return <EventsTab />;
-            case 'learning': return <LearningTab />;
+            case 'learning': return <LearningTab isCocAdmin={isCocAdmin} />;
             case 'mentorship': return <MentorshipTab />;
             case 'funding': return <FundingTab />;
             case 'ad': return isSuperAdmin ? <AdTab /> : <div className="p-8 text-center text-red-600">Access Denied</div>;

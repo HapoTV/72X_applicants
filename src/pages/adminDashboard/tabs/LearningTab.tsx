@@ -4,6 +4,7 @@ import { learningService } from '../../../services/LearningService';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
 import { cocOrganisationService } from '../../../services/CocOrganisationService';
+import OrganisationService, { type SignupOrganisationGroups } from '../../../services/OrganisationService';
 import { LearningTabs } from './components/LearningTabs';
 import { LearningTable } from './components/LearningTable';
 import { LearningModal } from './components/LearningModal';
@@ -119,6 +120,7 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
         isPublic: false,
         showAllOrganisations: false
     });
+    const [organisationGroups, setOrganisationGroups] = useState<SignupOrganisationGroups>({ organisations: [], cocSubOrganisations: [] });
     const [organisations, setOrganisations] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -187,6 +189,14 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
     useEffect(() => {
         const load = async () => {
             await fetchLearningMaterials();
+            if (isSuperAdmin) {
+                try {
+                    const groups = await OrganisationService.getSignupOrganisationGroups();
+                    setOrganisationGroups(groups);
+                } catch (_e) {
+                    setOrganisationGroups({ organisations: [], cocSubOrganisations: [] });
+                }
+            }
             if (isCocAdmin) {
                 try {
                     const subs = await cocOrganisationService.listMine();
@@ -197,7 +207,7 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
             }
         };
         void load();
-    }, [fetchLearningMaterials, isCocAdmin]);
+    }, [fetchLearningMaterials, isCocAdmin, isSuperAdmin]);
 
     const getFileSize = (bytes: number): string => {
         if (bytes === 0) return '0 Bytes';
@@ -405,6 +415,7 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
                 sectionTitle={sectionTitles[learningSection]}
                 isSuperAdmin={isSuperAdmin}
                 isCocAdmin={isCocAdmin}
+                organisationGroups={isSuperAdmin ? organisationGroups : undefined}
                 organisations={organisations}
                 getFileSize={getFileSize}
             />
