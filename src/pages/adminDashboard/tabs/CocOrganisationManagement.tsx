@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, Plus, Edit, Trash2, Shield } from 'lucide-react';
+import { Building2, Plus, Edit, Trash2, Shield, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { cocOrganisationService, type CocSubOrganisation, type CocSubOrganisationUpsert } from '../../../services/CocOrganisationService';
 
@@ -12,6 +12,8 @@ const EMPTY_FORM: CocSubOrganisationUpsert = {
   location: '',
   employees: '',
   yearEstablished: new Date().getFullYear(),
+  businessReference: '',
+  subscriptionType: '',
 };
 
 const CocOrganisationManagement: React.FC = () => {
@@ -23,6 +25,29 @@ const CocOrganisationManagement: React.FC = () => {
   const [editing, setEditing] = useState<CocSubOrganisation | null>(null);
   const [createForm, setCreateForm] = useState<CocSubOrganisationUpsert>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<CocSubOrganisationUpsert>(EMPTY_FORM);
+  const [revealedRefs, setRevealedRefs] = useState<Set<string>>(new Set());
+
+  const toggleReveal = (id: string) => {
+    setRevealedRefs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const subscriptionBadge = (type: string | undefined) => {
+    switch (type) {
+      case 'PREMIUM':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">PREMIUM</span>;
+      case 'ESSENTIAL':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">ESSENTIAL</span>;
+      case 'START_UP':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">START_UP</span>;
+      default:
+        return null;
+    }
+  };
 
   const load = async () => {
     try {
@@ -46,7 +71,9 @@ const CocOrganisationManagement: React.FC = () => {
     form.industry.trim().length > 0 &&
     form.location.trim().length > 0 &&
     form.employees.trim().length > 0 &&
-    Number.isFinite(Number(form.yearEstablished));
+    Number.isFinite(Number(form.yearEstablished)) &&
+    form.businessReference.trim().length > 0 &&
+    form.subscriptionType.trim().length > 0;
 
   const canCreate = useMemo(() => isFormValid(createForm), [createForm]);
   const canEdit = useMemo(() => isFormValid(editForm), [editForm]);
@@ -88,6 +115,8 @@ const CocOrganisationManagement: React.FC = () => {
       location: item.location || '',
       employees: item.employees || '',
       yearEstablished: item.yearEstablished || new Date().getFullYear(),
+      businessReference: item.businessReference || '',
+      subscriptionType: item.subscriptionType || '',
     });
     setIsEditOpen(true);
   };
@@ -141,6 +170,23 @@ const CocOrganisationManagement: React.FC = () => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
         </div>
       ))}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Business Reference</label>
+        <input type="text" value={form.businessReference}
+          onChange={(e) => setForm((p) => ({ ...p, businessReference: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Subscription Type</label>
+        <select value={form.subscriptionType}
+          onChange={(e) => setForm((p) => ({ ...p, subscriptionType: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+          <option value="">Select subscription type</option>
+          <option value="START_UP">START_UP</option>
+          <option value="ESSENTIAL">ESSENTIAL</option>
+          <option value="PREMIUM">PREMIUM</option>
+        </select>
+      </div>
     </div>
   );
 
@@ -217,6 +263,7 @@ const CocOrganisationManagement: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organisation</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription / Reference</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -230,6 +277,26 @@ const CocOrganisationManagement: React.FC = () => {
                         <div className="font-medium text-gray-900">{item.name}</div>
                         {item.contactEmail && <div className="text-xs text-gray-500 mt-0.5">{item.contactEmail}</div>}
                       </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1.5">
+                      {subscriptionBadge(item.subscriptionType)}
+                      {item.businessReference && (
+                        <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                          <span className="font-mono">
+                            {revealedRefs.has(item.id) ? item.businessReference : '••••••••'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleReveal(item.id)}
+                            className="text-gray-400 hover:text-gray-600"
+                            aria-label={revealedRefs.has(item.id) ? 'Hide reference' : 'Show reference'}
+                          >
+                            {revealedRefs.has(item.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">

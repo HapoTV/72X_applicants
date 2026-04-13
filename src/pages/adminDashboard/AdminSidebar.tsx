@@ -57,7 +57,10 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
             { id: 'organisation' as const, label: 'Organisations', icon: Building2, path: `${basePath}/dashboard/organisation` },
           ]
         : isCocAdmin
-            ? [...baseMenuItems, { id: 'organisation' as const, label: 'My Organisations', icon: Building2, path: `${basePath}/dashboard/organisation` }]
+            ? [...baseMenuItems,
+                { id: 'organisation' as const, label: 'My Organisations', icon: Building2, path: `${basePath}/dashboard/organisation` },
+                { id: 'business-ref' as const, label: 'Business Reference', icon: KeyRound, path: `${basePath}/dashboard/business-ref` },
+              ]
             : [...baseMenuItems, { id: 'business-ref' as const, label: 'Business Reference', icon: KeyRound, path: `${basePath}/dashboard/business-ref` }];
 
     const handleUploadPictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

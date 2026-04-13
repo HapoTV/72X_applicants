@@ -18,6 +18,7 @@ import AdminOrganisationManagement from './tabs/AdminOrganisationManagement';
 import AdminManagement from './tabs/AdminManagement';
 import OrgAdminBusinessRefPanel from './tabs/OrgAdminBusinessRefPanel';
 import CocOrganisationManagement from './tabs/CocOrganisationManagement';
+import CocBusinessRefPanel from './tabs/CocBusinessRefPanel';
 
 interface AdminDashboardProps {
   dashboardBasePath?: string;
@@ -76,7 +77,10 @@ export default function AdminDashboard({ dashboardBasePath }: AdminDashboardProp
                 if (isCocAdmin) return <CocOrganisationManagement />;
                 return <div className="p-8 text-center text-red-600">Access Denied</div>;
             case 'admins': return isSuperAdmin ? <AdminManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
-            case 'business-ref': return !isSuperAdmin && !isCocAdmin ? <OrgAdminBusinessRefPanel /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
+            case 'business-ref':
+                if (isCocAdmin) return <CocBusinessRefPanel />;
+                if (!isSuperAdmin) return <OrgAdminBusinessRefPanel />;
+                return <div className="p-8 text-center text-red-600">Access Denied</div>;
             default: return <ApplicantsTab />;
         }
     };

@@ -14,6 +14,8 @@ export interface CocSubOrganisation {
   createdBy: string;
   createdAt: string;
   updatedAt?: string;
+  businessReference?: string;
+  subscriptionType?: string;
 }
 
 export interface CocSubOrganisationUpsert {
@@ -25,6 +27,8 @@ export interface CocSubOrganisationUpsert {
   location: string;
   employees: string;
   yearEstablished: number;
+  businessReference: string;
+  subscriptionType: string;
 }
 
 class CocOrganisationService {
@@ -47,6 +51,11 @@ class CocOrganisationService {
 
   async deleteMine(id: string): Promise<void> {
     await axiosClient.delete(`${this.baseUrl}/${id}`);
+  }
+
+  async updateBusinessReference(id: string, newRef: string): Promise<CocSubOrganisation> {
+    const response = await axiosClient.put(`${this.baseUrl}/${id}/reference`, { businessReference: newRef });
+    return response.data;
   }
 }
 
