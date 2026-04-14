@@ -10,6 +10,7 @@ interface AddUserModalProps {
   setNewUserData: (data: NewUserData) => void;
   isSuperAdmin: boolean;
   userOrganisation: string | null;
+  organisationOptions?: string[];
   adding: boolean;
 }
 
@@ -21,6 +22,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
   setNewUserData,
   isSuperAdmin,
   userOrganisation,
+  organisationOptions,
   adding
 }) => {
   if (!isOpen) return null;
@@ -73,18 +75,6 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
                 placeholder="Enter mobile number"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Company Name
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={newUserData.companyName}
-                onChange={(e) => setNewUserData({...newUserData, companyName: e.target.value})}
-                placeholder="Enter company name"
-              />
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -92,68 +82,32 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Organisation
               </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={newUserData.organisation}
-                onChange={(e) => setNewUserData({...newUserData, organisation: e.target.value})}
-                placeholder={userOrganisation || "Enter organisation"}
-                readOnly={!isSuperAdmin && !!userOrganisation}
-              />
-              {!isSuperAdmin && userOrganisation && (
-                <p className="text-xs text-gray-500 mt-1">Organisation is fixed to your organisation</p>
+              {isSuperAdmin ? (
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  value={newUserData.organisation}
+                  onChange={(e) => setNewUserData({ ...newUserData, organisation: e.target.value })}
+                >
+                  <option value="" disabled>Select organisation</option>
+                  {(organisationOptions || []).map((org) => (
+                    <option key={org} value={org}>{org}</option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={newUserData.organisation}
+                    onChange={(e) => setNewUserData({ ...newUserData, organisation: e.target.value })}
+                    placeholder={userOrganisation || "Enter organisation"}
+                    readOnly={!isSuperAdmin && !!userOrganisation}
+                  />
+                  {!isSuperAdmin && userOrganisation && (
+                    <p className="text-xs text-gray-500 mt-1">Organisation is fixed to your organisation</p>
+                  )}
+                </>
               )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Industry
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={newUserData.industry}
-                onChange={(e) => setNewUserData({...newUserData, industry: e.target.value})}
-                placeholder="Enter industry"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={newUserData.location}
-                onChange={(e) => setNewUserData({...newUserData, location: e.target.value})}
-                placeholder="Enter location"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Employees
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={newUserData.employees}
-                onChange={(e) => setNewUserData({...newUserData, employees: e.target.value})}
-                placeholder="e.g., 10-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Founded
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={newUserData.founded}
-                onChange={(e) => setNewUserData({...newUserData, founded: e.target.value})}
-                placeholder="e.g., 2020"
-              />
             </div>
           </div>
 

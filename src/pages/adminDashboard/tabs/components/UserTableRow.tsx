@@ -34,6 +34,26 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
   const isAdminRole = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'COC_ADMIN';
   const isAdminDisplayableStatus = user.status === 'ACTIVE' || user.status === 'INACTIVE';
 
+  const shortenEmail = (email?: string) => {
+    if (!email) return '';
+    if (email.length <= 14) return email;
+    return `${email.slice(0, 14)}…`;
+  };
+
+  const shortenPhone = (phone?: string) => {
+    if (!phone) return '';
+    if (phone.length <= 5) return phone;
+    return `${phone.slice(0, 5)}…`;
+  };
+
+  const getReadablePlanName = (subscriptionType?: string, planName?: string) => {
+    const value = (planName || subscriptionType || '').toUpperCase();
+    if (value === 'START_UP' || value === 'START-UP' || value === 'STARTUP') return 'Start-Up';
+    if (value === 'ESSENTIAL') return 'Essential';
+    if (value === 'PREMIUM') return 'Premium';
+    return planName || subscriptionType || '';
+  };
+
   const canDelete = () => {
     if (isSuperAdmin) return true;
     if (user.role === 'SUPER_ADMIN') return false;
@@ -48,6 +68,9 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
     
     const { subscriptionType, planName, trialEndsAt } = user.subscription;
     const isOnTrial = trialEndsAt && new Date(trialEndsAt) > new Date();
+
+    // Per requirement: blank if still on free trial
+    if (isOnTrial) return null;
     
     let bgColor = 'bg-gray-100 text-gray-800';
     if (subscriptionType === 'PREMIUM') bgColor = 'bg-purple-100 text-purple-800';
@@ -57,11 +80,8 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
     return (
       <div className="flex items-center gap-1">
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${bgColor}`}>
-          {planName || subscriptionType}
+          {getReadablePlanName(subscriptionType, planName)}
         </span>
-        {isOnTrial && (
-          <span className="text-xs text-orange-600 font-medium">(Trial)</span>
-        )}
       </div>
     );
   };
@@ -98,12 +118,12 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Mail className="w-4 h-4 flex-shrink-0" />
-          <span className="truncate max-w-[150px]">{user.email}</span>
+          <span title={user.email} className="max-w-[120px]">{shortenEmail(user.email)}</span>
         </div>
         {user.mobileNumber && (
           <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
             <Phone className="w-4 h-4 flex-shrink-0" />
-            <span>{user.mobileNumber}</span>
+            <span title={user.mobileNumber}>{shortenPhone(user.mobileNumber)}</span>
           </div>
         )}
       </td>

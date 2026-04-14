@@ -3,11 +3,9 @@ import React from 'react';
 import { 
   Users, 
   CheckCircle, 
-  Activity, 
   Award, 
   UserCog, 
-  Building2,
-  Circle 
+  Building2
 } from 'lucide-react';
 import type { StatsData } from './types';
 
@@ -33,20 +31,6 @@ export const UserStats: React.FC<UserStatsProps> = ({ stats, isSuperAdmin }) => 
       icon: CheckCircle,
       bgColor: 'bg-green-50',
       iconColor: 'text-green-600'
-    },
-    {
-      title: 'Online Now',
-      value: stats.onlineUsers,
-      subtext: `${stats.offlineUsers} offline`,
-      icon: Activity,
-      bgColor: 'bg-emerald-50',
-      iconColor: 'text-emerald-600',
-      customDisplay: (
-        <div className="flex items-center gap-2">
-          <Circle className="w-3 h-3 fill-green-500 text-green-500" />
-          <p className="text-2xl font-bold text-gray-900">{stats.onlineUsers}</p>
-        </div>
-      )
     },
     {
       title: 'Free Trial',
@@ -78,9 +62,7 @@ export const UserStats: React.FC<UserStatsProps> = ({ stats, isSuperAdmin }) => 
               </div>
             </div>
             <div className="mt-4">
-              {stat.customDisplay || (
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              )}
+              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
               <p className="text-xs text-gray-500 mt-1">{stat.subtext}</p>
             </div>
           </div>

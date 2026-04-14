@@ -17,6 +17,11 @@ export interface CreateOrganisationRequest {
   subscriptionType: string;
   adminFullName: string;
   adminEmail: string;
+  location: string;
+  employees: string;
+  yearFounded: string;
+  companyName: string;
+  industry: string;
 }
 
 export interface SignupOrganisationGroups {

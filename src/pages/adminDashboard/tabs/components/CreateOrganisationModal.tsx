@@ -14,6 +14,13 @@ const SUBSCRIPTION_OPTIONS = [
   { value: 'PREMIUM', label: 'Premium — R999/month' },
 ];
 
+const INDUSTRY_OPTIONS = [
+  'Technology', 'Finance & Banking', 'Healthcare', 'Retail & E-commerce',
+  'Manufacturing', 'Construction', 'Education', 'Hospitality & Tourism',
+  'Transportation & Logistics', 'Media & Entertainment', 'Agriculture',
+  'Real Estate', 'Energy & Utilities', 'Professional Services', 'Non-profit', 'Other',
+];
+
 const CreateOrganisationModal: React.FC<Props> = ({ onClose, onCreated }) => {
   const [form, setForm] = useState<CreateOrganisationRequest>({
     name: '',
@@ -21,6 +28,11 @@ const CreateOrganisationModal: React.FC<Props> = ({ onClose, onCreated }) => {
     subscriptionType: 'START_UP',
     adminFullName: '',
     adminEmail: '',
+    location: '',
+    employees: '',
+    yearFounded: '',
+    companyName: '',
+    industry: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -66,43 +78,109 @@ const CreateOrganisationModal: React.FC<Props> = ({ onClose, onCreated }) => {
           <div className="space-y-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Organisation Details</p>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Organisation Name *</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={e => update('name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="e.g. Standard Bank"
-                required
-              />
-            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Organisation Name *</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={e => update('name', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="e.g. Standard Bank"
+                    required
+                  />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Business Reference *</label>
-              <input
-                type="text"
-                value={form.businessReference}
-                onChange={e => update('businessReference', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="e.g. SB-2024-REF"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">Employees will use this to sign up. Keep it confidential.</p>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Business Reference *</label>
+                  <input
+                    type="text"
+                    value={form.businessReference}
+                    onChange={e => update('businessReference', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="e.g. SB-2024-REF"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Employees will use this to sign up. Keep it confidential.</p>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Subscription *</label>
-              <select
-                value={form.subscriptionType}
-                onChange={e => update('subscriptionType', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-                required
-              >
-                {SUBSCRIPTION_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                  <input
+                    type="text"
+                    value={form.companyName}
+                    onChange={e => update('companyName', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="e.g. Standard Bank Ltd"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                  <select
+                    value={form.industry}
+                    onChange={e => update('industry', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                  >
+                    <option value="">Select industry</option>
+                    {INDUSTRY_OPTIONS.map(i => (
+                      <option key={i} value={i}>{i}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={e => update('location', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="e.g. Johannesburg"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Employees</label>
+                  <input
+                    type="text"
+                    value={form.employees}
+                    onChange={e => update('employees', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="e.g. 10-50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Year Founded</label>
+                  <input
+                    type="text"
+                    value={form.yearFounded}
+                    onChange={e => update('yearFounded', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="e.g. 2020"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subscription *</label>
+                <select
+                  value={form.subscriptionType}
+                  onChange={e => update('subscriptionType', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                  required
+                >
+                  {SUBSCRIPTION_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
