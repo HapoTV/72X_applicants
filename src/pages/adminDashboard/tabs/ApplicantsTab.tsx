@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
 import { cocOrganisationService } from '../../../services/CocOrganisationService';
+import OrganisationService from '../../../services/OrganisationService';
+import userSubscriptionService from '../../../services/UserSubscriptionService';
 
 import { UserManagementHeader } from './components/UserManagementHeader';
 import { UserStats } from './components/UserStats';
@@ -27,12 +29,7 @@ export default function ApplicantsTab() {
     fullName: '',
     email: '',
     mobileNumber: '',
-    companyName: '',
     organisation: userOrganisation || '',
-    employees: '',
-    founded: '',
-    industry: '',
-    location: '',
     role: 'ADMIN',
     status: 'PENDING_PASSWORD'
   });
@@ -45,6 +42,7 @@ export default function ApplicantsTab() {
   const [organisationFilter, setOrganisationFilter] = useState<string>('all');
 
   const [organisations, setOrganisations] = useState<string[]>([]);
+  const [organisationOptions, setOrganisationOptions] = useState<string[]>([]);
   const [cocAllowedOrganisations, setCocAllowedOrganisations] = useState<string[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData>({
@@ -172,8 +170,7 @@ export default function ApplicantsTab() {
           try {
             let subscription = null;
             try {
-              // You can implement bulk subscription fetch here
-              // subscription = await userSubscriptionService.getUserPackage(userData.userId);
+              subscription = await userSubscriptionService.getUserPackageByUserId(userData.userId);
             } catch {
               // Silently fail
             }
@@ -250,6 +247,26 @@ export default function ApplicantsTab() {
   }, [isCocAdmin, userOrganisation]);
 
   useEffect(() => {
+    const fetchOrganisationOptions = async () => {
+      if (!isSuperAdmin) {
+        setOrganisationOptions([]);
+        return;
+      }
+
+      try {
+        const names = await OrganisationService.getAllOrganisationNames();
+        const cleaned = (names || []).map(n => (n || '').trim()).filter(n => n !== '');
+        setOrganisationOptions(cleaned);
+      } catch (error) {
+        console.error('❌ Failed to fetch organisation names:', error);
+        setOrganisationOptions([]);
+      }
+    };
+
+    fetchOrganisationOptions();
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
     const fetchCurrentUserOrganisation = async () => {
       if (!isSuperAdmin && !userOrganisation && user) {
         try {
@@ -307,7 +324,6 @@ export default function ApplicantsTab() {
         u.fullName?.toLowerCase().includes(searchLower) ||
         u.email?.toLowerCase().includes(searchLower) ||
         u.mobileNumber?.toLowerCase().includes(searchLower) ||
-        u.companyName?.toLowerCase().includes(searchLower) ||
         u.organisation?.toLowerCase().includes(searchLower) ||
         u.userId?.toLowerCase().includes(searchLower) ||
         u.businessReference?.toLowerCase().includes(searchLower)
@@ -357,12 +373,7 @@ export default function ApplicantsTab() {
         fullName: '',
         email: '',
         mobileNumber: '',
-        companyName: '',
         organisation: '',
-        employees: '',
-        founded: '',
-        industry: '',
-        location: '',
         role: 'ADMIN',
         status: 'PENDING_PASSWORD'
       });
@@ -592,12 +603,7 @@ export default function ApplicantsTab() {
             fullName: '',
             email: '',
             mobileNumber: '',
-            companyName: '',
             organisation: '',
-            employees: '',
-            founded: '',
-            industry: '',
-            location: '',
             role: 'ADMIN',
             status: 'PENDING_PASSWORD'
           });
@@ -607,6 +613,7 @@ export default function ApplicantsTab() {
         setNewUserData={setNewAdminData}
         isSuperAdmin={isSuperAdmin}
         userOrganisation={userOrganisation}
+        organisationOptions={organisationOptions}
         adding={addingAdmin}
       />
     </div>

@@ -18,6 +18,21 @@ class UserSubscriptionService {
     }
   }
 
+  async getUserPackageByUserId(userId: string): Promise<UserSubscriptionData | null> {
+    try {
+      const response = await axiosClient.get(`/user-packages/user/${userId}`);
+
+      if (typeof response.data === 'string') {
+        return null;
+      }
+
+      return response.data as UserSubscriptionData;
+    } catch (error) {
+      console.error('Error getting user package:', error);
+      return null;
+    }
+  }
+
   async activateFreeTrial(packageType: UserSubscriptionType): Promise<any> {
     try {
       const response = await axiosClient.post('/free-trial/activate', {

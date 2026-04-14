@@ -31,12 +31,7 @@ export interface NewUserData {
   fullName: string;
   email: string;
   mobileNumber: string;
-  companyName: string;
   organisation: string;
-  employees: string;
-  founded: string;
-  industry: string;
-  location: string;
   role: 'ADMIN' | 'SUPER_ADMIN' | 'COC_ADMIN' | 'USER';
   status: string;
 }
