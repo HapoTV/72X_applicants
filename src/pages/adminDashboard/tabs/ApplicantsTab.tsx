@@ -42,7 +42,7 @@ export default function ApplicantsTab() {
   const [organisationFilter, setOrganisationFilter] = useState<string>('all');
 
   const [organisations, setOrganisations] = useState<string[]>([]);
-  const [organisationOptions, setOrganisationOptions] = useState<string[]>([]);
+  const [organisationGroups, setOrganisationGroups] = useState<{ organisations: string[]; cocSubOrganisations: string[] }>({ organisations: [], cocSubOrganisations: [] });
   const [cocAllowedOrganisations, setCocAllowedOrganisations] = useState<string[] | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [stats, setStats] = useState<StatsData>({
@@ -249,17 +249,21 @@ export default function ApplicantsTab() {
   useEffect(() => {
     const fetchOrganisationOptions = async () => {
       if (!isSuperAdmin) {
-        setOrganisationOptions([]);
+        setOrganisationGroups({ organisations: [], cocSubOrganisations: [] });
         return;
       }
 
       try {
-        const names = await OrganisationService.getAllOrganisationNames();
-        const cleaned = (names || []).map(n => (n || '').trim()).filter(n => n !== '');
-        setOrganisationOptions(cleaned);
+        const groups = await OrganisationService.getSignupOrganisationGroups();
+        const cleanedOrgs = (groups?.organisations || []).map(n => (n || '').trim()).filter(n => n !== '');
+        const cleanedCoc = (groups?.cocSubOrganisations || []).map(n => (n || '').trim()).filter(n => n !== '');
+        setOrganisationGroups({
+          organisations: cleanedOrgs,
+          cocSubOrganisations: cleanedCoc
+        });
       } catch (error) {
         console.error('❌ Failed to fetch organisation names:', error);
-        setOrganisationOptions([]);
+        setOrganisationGroups({ organisations: [], cocSubOrganisations: [] });
       }
     };
 
@@ -414,6 +418,23 @@ export default function ApplicantsTab() {
       } catch (error: any) {
         console.error('Error deleting user:', error);
         alert(`Error deleting user: ${error.response?.data || error.message}`);
+      }
+    }
+  };
+
+  const handleResendInvite = async (userId: string) => {
+    if (!isSuperAdmin) {
+      alert('Only Super Admins can resend invites.');
+      return;
+    }
+
+    if (window.confirm('Resend account setup invite to this user?')) {
+      try {
+        await axiosClient.post(`/users/admin/${userId}/resend-invite`);
+        alert('Invite resent successfully');
+      } catch (error: any) {
+        console.error('Error resending invite:', error);
+        alert(`Error resending invite: ${error.response?.data?.message || error.response?.data || error.message}`);
       }
     }
   };
@@ -589,6 +610,7 @@ export default function ApplicantsTab() {
         currentUser={user}
         userOrganisation={userOrganisation}
         onViewDetails={handleViewDetails}
+        onResendInvite={handleResendInvite}
         onDelete={handleDeleteUser}
         formatLastSeen={formatLastSeen}
         onClearFilters={handleClearFilters}
@@ -613,7 +635,7 @@ export default function ApplicantsTab() {
         setNewUserData={setNewAdminData}
         isSuperAdmin={isSuperAdmin}
         userOrganisation={userOrganisation}
-        organisationOptions={organisationOptions}
+        organisationGroups={organisationGroups}
         adding={addingAdmin}
       />
     </div>

@@ -12,6 +12,7 @@ interface UserTableProps {
   currentUser: any;
   userOrganisation: string | null;
   onViewDetails: (user: UserWithSubscription) => void;
+  onResendInvite: (userId: string) => void;
   onDelete: (userId: string, userRole: string, userOrg?: string) => void;
   formatLastSeen: (lastSeen: string) => string;
   onClearFilters: () => void;
@@ -26,11 +27,13 @@ export const UserTable: React.FC<UserTableProps> = ({
   currentUser,
   userOrganisation,
   onViewDetails,
+  onResendInvite,
   onDelete,
   formatLastSeen,
   onClearFilters,
   hasActiveFilters
 }) => {
+
   const columnCount = isSuperAdmin ? 9 : 8; // Added subscription column
 
   if (loading) {
@@ -75,6 +78,7 @@ export const UserTable: React.FC<UserTableProps> = ({
                   currentUser={currentUser}
                   userOrganisation={userOrganisation}
                   onViewDetails={onViewDetails}
+                  onResendInvite={onResendInvite}
                   onDelete={onDelete}
                   formatLastSeen={formatLastSeen}
                 />

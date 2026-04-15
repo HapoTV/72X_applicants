@@ -10,7 +10,7 @@ interface AddUserModalProps {
   setNewUserData: (data: NewUserData) => void;
   isSuperAdmin: boolean;
   userOrganisation: string | null;
-  organisationOptions?: string[];
+  organisationGroups?: { organisations: string[]; cocSubOrganisations: string[] };
   adding: boolean;
 }
 
@@ -22,10 +22,12 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
   setNewUserData,
   isSuperAdmin,
   userOrganisation,
-  organisationOptions,
+  organisationGroups,
   adding
 }) => {
   if (!isOpen) return null;
+
+  const isCocAdminRole = isSuperAdmin && newUserData.role === 'COC_ADMIN';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -83,16 +85,36 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
                 Organisation
               </label>
               {isSuperAdmin ? (
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  value={newUserData.organisation}
-                  onChange={(e) => setNewUserData({ ...newUserData, organisation: e.target.value })}
-                >
-                  <option value="" disabled>Select organisation</option>
-                  {(organisationOptions || []).map((org) => (
-                    <option key={org} value={org}>{org}</option>
-                  ))}
-                </select>
+                isCocAdminRole ? (
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value="COC"
+                    readOnly
+                  />
+                ) : (
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    value={newUserData.organisation}
+                    onChange={(e) => setNewUserData({ ...newUserData, organisation: e.target.value })}
+                  >
+                    <option value="" disabled>Select organisation</option>
+                    {(organisationGroups?.organisations || []).length > 0 && (
+                      <optgroup label="-- Organisations --">
+                        {(organisationGroups?.organisations || []).map((org) => (
+                          <option key={org} value={org}>{org}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {(organisationGroups?.cocSubOrganisations || []).length > 0 && (
+                      <optgroup label="-- COC Organisations --">
+                        {(organisationGroups?.cocSubOrganisations || []).map((org) => (
+                          <option key={org} value={org}>{org}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                )
               ) : (
                 <>
                   <input
@@ -119,7 +141,19 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({
               <select
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={newUserData.role}
-                onChange={(e) => setNewUserData({...newUserData, role: e.target.value as 'ADMIN' | 'COC_ADMIN' | 'SUPER_ADMIN' | 'USER'})}
+                onChange={(e) => {
+                  const role = e.target.value as 'ADMIN' | 'COC_ADMIN' | 'SUPER_ADMIN' | 'USER';
+                  setNewUserData({
+                    ...newUserData,
+                    role,
+                    organisation:
+                      role === 'COC_ADMIN'
+                        ? 'COC'
+                        : newUserData.organisation === 'COC'
+                          ? ''
+                          : newUserData.organisation,
+                  });
+                }}
               >
                 <option value="ADMIN">Admin</option>
                 <option value="COC_ADMIN">COC Admin</option>

@@ -3,6 +3,68 @@ import { Building2, Plus, Edit, Trash2, Shield, Eye, EyeOff } from 'lucide-react
 import { useAuth } from '../../../context/AuthContext';
 import { cocOrganisationService, type CocSubOrganisation, type CocSubOrganisationUpsert } from '../../../services/CocOrganisationService';
 
+const FormFields: React.FC<{
+  form: CocSubOrganisationUpsert;
+  setForm: React.Dispatch<React.SetStateAction<CocSubOrganisationUpsert>>;
+}> = ({ form, setForm }) => (
+  <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="sm:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1">Organisation</label>
+      <input
+        value={form.name}
+        onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+      />
+    </div>
+    {[
+      { key: 'contactFullName', label: 'Full Name', type: 'text' },
+      { key: 'contactEmail', label: 'Email Address', type: 'email' },
+      { key: 'contactMobile', label: 'Mobile Number', type: 'text' },
+      { key: 'industry', label: 'Industry', type: 'text' },
+      { key: 'location', label: 'Location', type: 'text' },
+      { key: 'employees', label: 'Employees', type: 'text' },
+      { key: 'yearEstablished', label: 'Year Established', type: 'number' },
+    ].map(({ key, label, type }) => (
+      <div key={key}>
+        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <input
+          type={type}
+          value={String((form as any)[key])}
+          onChange={(e) =>
+            setForm((p) => ({
+              ...p,
+              [key]: type === 'number' ? Number(e.target.value) : e.target.value,
+            }))
+          }
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+        />
+      </div>
+    ))}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Business Reference</label>
+      <input
+        type="text"
+        value={form.businessReference}
+        onChange={(e) => setForm((p) => ({ ...p, businessReference: e.target.value }))}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Subscription Type</label>
+      <select
+        value={form.subscriptionType}
+        onChange={(e) => setForm((p) => ({ ...p, subscriptionType: e.target.value }))}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+      >
+        <option value="">Select subscription type</option>
+        <option value="START_UP">START_UP</option>
+        <option value="ESSENTIAL">ESSENTIAL</option>
+        <option value="PREMIUM">PREMIUM</option>
+      </select>
+    </div>
+  </div>
+);
+
 const EMPTY_FORM: CocSubOrganisationUpsert = {
   name: '',
   contactFullName: '',
@@ -146,49 +208,6 @@ const CocOrganisationManagement: React.FC = () => {
       alert(e?.response?.data?.message || e?.response?.data || 'Failed to delete organisation');
     }
   };
-
-  const FormFields = ({ form, setForm }: { form: CocSubOrganisationUpsert; setForm: React.Dispatch<React.SetStateAction<CocSubOrganisationUpsert>> }) => (
-    <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div className="sm:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Organisation</label>
-        <input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
-      </div>
-      {[
-        { key: 'contactFullName', label: 'Full Name', type: 'text' },
-        { key: 'contactEmail', label: 'Email Address', type: 'email' },
-        { key: 'contactMobile', label: 'Mobile Number', type: 'text' },
-        { key: 'industry', label: 'Industry', type: 'text' },
-        { key: 'location', label: 'Location', type: 'text' },
-        { key: 'employees', label: 'Employees', type: 'text' },
-        { key: 'yearEstablished', label: 'Year Established', type: 'number' },
-      ].map(({ key, label, type }) => (
-        <div key={key}>
-          <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-          <input type={type} value={String((form as any)[key])}
-            onChange={(e) => setForm((p) => ({ ...p, [key]: type === 'number' ? Number(e.target.value) : e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
-        </div>
-      ))}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Business Reference</label>
-        <input type="text" value={form.businessReference}
-          onChange={(e) => setForm((p) => ({ ...p, businessReference: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Subscription Type</label>
-        <select value={form.subscriptionType}
-          onChange={(e) => setForm((p) => ({ ...p, subscriptionType: e.target.value }))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-          <option value="">Select subscription type</option>
-          <option value="START_UP">START_UP</option>
-          <option value="ESSENTIAL">ESSENTIAL</option>
-          <option value="PREMIUM">PREMIUM</option>
-        </select>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-6">

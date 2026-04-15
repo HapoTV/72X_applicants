@@ -1,14 +1,16 @@
 // src/pages/adminDashboard/tabs/components/UserTableRow.tsx
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Mail, 
   Phone, 
   Building2, 
   Eye, 
-  Trash2, 
   Clock, 
   Circle,
-  CreditCard
+  CreditCard,
+  MoreVertical,
+  Send,
+  Trash2
 } from 'lucide-react';
 import type { UserWithSubscription } from './types';
 
@@ -18,6 +20,7 @@ interface UserTableRowProps {
   currentUser: any;
   userOrganisation: string | null;
   onViewDetails: (user: UserWithSubscription) => void;
+  onResendInvite: (userId: string) => void;
   onDelete: (userId: string, userRole: string, userOrg?: string) => void;
   formatLastSeen: (lastSeen: string) => string;
 }
@@ -28,11 +31,31 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
   currentUser,
   userOrganisation,
   onViewDetails,
+  onResendInvite,
   onDelete,
   formatLastSeen
 }) => {
   const isAdminRole = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'COC_ADMIN';
   const isAdminDisplayableStatus = user.status === 'ACTIVE' || user.status === 'INACTIVE';
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const isExpiredInvite = useMemo(() => {
+    if (!isAdminRole) return false;
+    if ((user.status || '').toUpperCase() !== 'PENDING_PASSWORD') return false;
+    if (!user.createdAt) return false;
+    const created = new Date(user.createdAt);
+    if (Number.isNaN(created.getTime())) return false;
+    const now = new Date();
+    const diffMs = now.getTime() - created.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays >= 7;
+  }, [isAdminRole, user.createdAt, user.status]);
+
+  const getDisplayStatus = () => {
+    if (isExpiredInvite) return 'EXPIRED';
+    return user.status || 'PENDING';
+  };
 
   const shortenEmail = (email?: string) => {
     if (!email) return '';
@@ -148,14 +171,21 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
       )}
       <td className="px-6 py-4 whitespace-nowrap">
         {isAdminRole && !isAdminDisplayableStatus ? (
-          <span className="text-sm text-gray-400">-</span>
+          isExpiredInvite ? (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              EXPIRED
+            </span>
+          ) : (
+            <span className="text-sm text-gray-400">-</span>
+          )
         ) : (
           <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            user.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-            user.status === 'INACTIVE' ? 'bg-red-100 text-red-800' :
+            getDisplayStatus() === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+            getDisplayStatus() === 'INACTIVE' ? 'bg-red-100 text-red-800' :
+            getDisplayStatus() === 'EXPIRED' ? 'bg-red-100 text-red-800' :
             'bg-yellow-100 text-yellow-800'
           }`}>
-            {user.status || 'PENDING'}
+            {getDisplayStatus()}
           </span>
         )}
       </td>
@@ -188,7 +218,7 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end">
           <button 
             className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
             onClick={() => onViewDetails(user)}
@@ -196,15 +226,53 @@ export const UserTableRow: React.FC<UserTableRowProps> = ({
           >
             <Eye className="w-4 h-4" />
           </button>
-          
-          {canDelete() && (
-            <button 
-              className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-              onClick={() => onDelete(user.userId, user.role, user.organisation)}
-              title="Delete user"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+
+          {isSuperAdmin && (
+            <div className="relative">
+              <button
+                className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100"
+                onClick={() => setIsMenuOpen(v => !v)}
+                title="Actions"
+                type="button"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {isMenuOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                  onMouseLeave={() => setIsMenuOpen(false)}
+                >
+                  {isExpiredInvite && (
+                    <button
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        onResendInvite(user.userId);
+                      }}
+                      type="button"
+                    >
+                      <Send className="w-4 h-4" />
+                      Resend invite
+                    </button>
+                  )}
+
+                  {canDelete() && (
+                    <button
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        onDelete(user.userId, user.role, user.organisation);
+                      }}
+                      type="button"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete user
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </td>
