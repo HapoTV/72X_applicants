@@ -18,7 +18,7 @@ const INDUSTRY_OPTIONS = [
   'Technology', 'Finance & Banking', 'Healthcare', 'Retail & E-commerce',
   'Manufacturing', 'Construction', 'Education', 'Hospitality & Tourism',
   'Transportation & Logistics', 'Media & Entertainment', 'Agriculture',
-  'Real Estate', 'Energy & Utilities', 'Professional Services', 'Non-profit', 'Other',
+  'Real Estate', 'Energy & Utilities', 'Professional Services', 'Consultancy', 'Non-profit', 'Other',
 ];
 
 const CreateOrganisationModal: React.FC<Props> = ({ onClose, onCreated }) => {

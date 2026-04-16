@@ -25,6 +25,33 @@ const AdminProfile: React.FC = () => {
             eventReminders: false,
         },
     });
+
+    const tabs = [
+        { id: 'profile', name: 'Profile', icon: User },
+        { id: 'notifications', name: 'Notifications', icon: Bell },
+        { id: 'security', name: 'Security', icon: Shield },
+    ];
+
+    const INDUSTRY_OPTIONS = [
+        'Technology',
+        'Finance & Banking',
+        'Healthcare',
+        'Retail & E-commerce',
+        'Manufacturing',
+        'Construction',
+        'Education',
+        'Hospitality & Tourism',
+        'Transportation & Logistics',
+        'Media & Entertainment',
+        'Agriculture',
+        'Real Estate',
+        'Energy & Utilities',
+        'Professional Services',
+        'Consultancy',
+        'Non-profit',
+        'Other',
+    ];
+
     const [profileData, setProfileData] = useState<UserFormData>({
         fullName: '',
         email: '',
@@ -71,12 +98,6 @@ const AdminProfile: React.FC = () => {
         hasLowercase: false,
         hasSpecialChar: false,
     });
-
-    const tabs = [
-        { id: 'profile', name: 'Profile', icon: User },
-        { id: 'notifications', name: 'Notifications', icon: Bell },
-        { id: 'security', name: 'Security', icon: Shield },
-    ];
 
     useEffect(() => {
         fetchUserProfile();
@@ -441,6 +462,28 @@ const AdminProfile: React.FC = () => {
         }
     };
 
+    const calculateYearsInBusiness = (): string => {
+        const foundedRaw = profileData.founded;
+        if (!foundedRaw || !foundedRaw.trim()) return '';
+
+        const currentYear = new Date().getFullYear();
+
+        const asNumber = Number(foundedRaw);
+        if (Number.isFinite(asNumber) && asNumber >= 1800 && asNumber <= currentYear) {
+            const years = Math.max(0, currentYear - Math.floor(asNumber));
+            return String(years);
+        }
+
+        const parsed = new Date(foundedRaw);
+        if (Number.isNaN(parsed.getTime())) return '';
+
+        const createdYear = parsed.getFullYear();
+        if (createdYear < 1800 || createdYear > currentYear) return '';
+
+        const years = Math.max(0, currentYear - createdYear);
+        return String(years);
+    };
+
     if (loading) {
         return (
             <div className="space-y-6 animate-fade-in">
@@ -675,14 +718,10 @@ const AdminProfile: React.FC = () => {
                                             disabled={!isEditing}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
                                         >
-                                            <option value="">Select Industry</option>
-                                            <option value="Technology">Technology</option>
-                                            <option value="Education">Education</option>
-                                            <option value="Finance">Finance</option>
-                                            <option value="Healthcare">Healthcare</option>
-                                            <option value="Non-Profit">Non-Profit</option>
-                                            <option value="Government">Government</option>
-                                            <option value="Other">Other</option>
+                                            <option value="">Select industry</option>
+                                            {INDUSTRY_OPTIONS.map((i) => (
+                                                <option key={i} value={i}>{i}</option>
+                                            ))}
                                         </select>
                                     </div>
 
@@ -696,6 +735,67 @@ const AdminProfile: React.FC = () => {
                                             disabled
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
                                         />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 className="text-md font-medium text-gray-900 mb-4">Business Information</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Company Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={profileData.companyName}
+                                            onChange={(e) => handleInputChange('companyName', e.target.value)}
+                                            disabled={!isEditing}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Year Established
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={profileData.founded}
+                                            onChange={(e) => handleInputChange('founded', e.target.value)}
+                                            disabled={!isEditing}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Years in Business
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={calculateYearsInBusiness() ? `${calculateYearsInBusiness()} years` : ''}
+                                            disabled
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Number of Employees
+                                        </label>
+                                        <select
+                                            value={profileData.employees}
+                                            onChange={(e) => handleInputChange('employees', e.target.value)}
+                                            disabled={!isEditing}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-50"
+                                        >
+                                            <option value="">Select Size</option>
+                                            <option value="1-10">1-10 employees</option>
+                                            <option value="10-50">10-50 employees</option>
+                                            <option value="50-100">50-100 employees</option>
+                                            <option value="100+">100+ employees</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
