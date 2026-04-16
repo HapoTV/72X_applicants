@@ -189,8 +189,10 @@ export function useSelectPackage() {
 
       if (isAuthenticated) {
         fetchCurrentSubscription();
-        // Org employees don't need free trial checks
-        if (!userOrganisation) {
+        // Org employees don't need free trial checks — "Hapo" is the default standalone org
+        const isRealOrgEmployee = userOrganisation && userOrganisation.trim() &&
+          userOrganisation.trim().toLowerCase() !== 'hapo';
+        if (!isRealOrgEmployee) {
           fetchFreeTrialStatus();
           checkFreeTrialEligibility();
         }
@@ -228,7 +230,10 @@ export function useSelectPackage() {
 
   const isEligibleForFreeTrial = useCallback(() => {
     // Org employees never get free trial — they're on the org plan
-    if (userOrganisation && userOrganisation.trim()) return false;
+    // "Hapo" is the default standalone org, not a real employer org
+    const isRealOrgEmployee = userOrganisation && userOrganisation.trim() &&
+      userOrganisation.trim().toLowerCase() !== 'hapo';
+    if (isRealOrgEmployee) return false;
 
     // Backend eligibility check is the source of truth
     if (eligibilityCheck) return eligibilityCheck.isEligible;
