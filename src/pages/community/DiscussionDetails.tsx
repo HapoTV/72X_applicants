@@ -65,23 +65,20 @@ const DiscussionDetails: React.FC = () => {
     saveDeletedReplies(discussionId, next);
   };
 
-  const cleanDeletedReplies = (discussionId: string, fetchedReplies: DiscussionReply[]) => {
-    const existing = readDeletedReplies(discussionId);
-    const stillDeleted = existing.filter((replyId) => fetchedReplies.some((reply) => reply.replyId === replyId));
-    if (stillDeleted.length !== existing.length) {
-      saveDeletedReplies(discussionId, stillDeleted);
-    }
-    return stillDeleted;
-  };
-
-  const readLocalLike = (discussionId: string, userEmail: string) => {
-    if (typeof window === 'undefined') return false;
-    return window.localStorage.getItem(getLocalLikeKey(discussionId, userEmail)) === 'true';
-  };
-
   const saveLocalLike = (discussionId: string, userEmail: string, liked: boolean) => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(getLocalLikeKey(discussionId, userEmail), liked ? 'true' : 'false');
+  };
+
+  const clearDiscussionEngagement = (discussionId: string, userEmail?: string) => {
+    if (typeof window === 'undefined') return;
+
+    window.localStorage.removeItem(getLocalReplyKey(discussionId));
+    window.localStorage.removeItem(getDeletedReplyKey(discussionId));
+
+    if (userEmail) {
+      window.localStorage.removeItem(getLocalLikeKey(discussionId, userEmail));
+    }
   };
 
   useEffect(() => {
@@ -96,8 +93,12 @@ const DiscussionDetails: React.FC = () => {
 
       try {
         const details = await communityService.getDiscussionById(id);
-        setDiscussion(details);
-        setLikesCount(Math.max(0, details.likes ?? 0));
+        setDiscussion({
+          ...details,
+          likes: 0,
+          replies: 0
+        });
+        setLikesCount(0);
       } catch (detailsError) {
         console.error('Error loading discussion details by ID:', detailsError);
 
@@ -113,8 +114,8 @@ const DiscussionDetails: React.FC = () => {
               author: foundDiscussion.author,
               authorAvatar: foundDiscussion.authorAvatar,
               category: foundDiscussion.category,
-              replies: foundDiscussion.replies,
-              likes: foundDiscussion.likes,
+              replies: 0,
+              likes: 0,
               isHot: foundDiscussion.isHot,
               isPinned: foundDiscussion.isPinned,
               isLocked: foundDiscussion.isLocked,
@@ -122,7 +123,7 @@ const DiscussionDetails: React.FC = () => {
               createdBy: foundDiscussion.author,
             };
             setDiscussion(fallbackDiscussion);
-            setLikesCount(Math.max(0, foundDiscussion.likes ?? 0));
+            setLikesCount(0);
           } else {
             throw new Error('Discussion not found from active discussions.');
           }
@@ -138,25 +139,23 @@ const DiscussionDetails: React.FC = () => {
     const fetchReplies = async () => {
       if (!id) return;
       try {
-        const fetchedReplies = await communityService.getDiscussionReplies(id);
-        const deletedReplyIds = readDeletedReplies(id);
-        const filteredReplies = fetchedReplies.filter((reply) => !deletedReplyIds.includes(reply.replyId));
-        cleanDeletedReplies(id, fetchedReplies);
-
-        setReplies(filteredReplies);
-        saveLocalReplies(id, filteredReplies);
-        setDiscussion((prev) => (prev ? { ...prev, replies: filteredReplies.length } : prev));
+        await communityService.getDiscussionReplies(id);
+        clearDiscussionEngagement(id, user?.email);
+        setReplies([]);
+        saveLocalReplies(id, []);
+        setDiscussion((prev) => (prev ? { ...prev, replies: 0 } : prev));
       } catch (repliesError) {
         console.error('Error loading replies:', repliesError);
-        const localReplies = readLocalReplies(id);
-        setReplies(localReplies);
-        setDiscussion((prev) => (prev ? { ...prev, replies: localReplies.length } : prev));
+        clearDiscussionEngagement(id, user?.email);
+        setReplies([]);
+        saveLocalReplies(id, []);
+        setDiscussion((prev) => (prev ? { ...prev, replies: 0 } : prev));
       }
     };
 
     fetchDiscussion();
     fetchReplies();
-  }, [id]);
+  }, [id, user?.email]);
 
   useEffect(() => {
     if (!id || !user?.email) {
@@ -164,7 +163,8 @@ const DiscussionDetails: React.FC = () => {
       return;
     }
 
-    setIsLiked(readLocalLike(id, user.email));
+    clearDiscussionEngagement(id, user.email);
+    setIsLiked(false);
   }, [id, user?.email]);
 
   const handleToggleLike = async (event: React.MouseEvent<HTMLButtonElement>) => {
