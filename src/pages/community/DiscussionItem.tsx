@@ -19,13 +19,13 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(discussion.likes);
+  const [likeCount, setLikeCount] = useState(Math.max(0, discussion.likes ?? 0));
   const [isLiking, setIsLiking] = useState(false);
 
   const localStorageLikeKey = `discussion_like_${discussion.id}_${user?.email ?? 'guest'}`;
 
   useEffect(() => {
-    setLikeCount(discussion.likes);
+    setLikeCount(Math.max(0, discussion.likes ?? 0));
     if (user?.email) {
       setLiked(localStorage.getItem(localStorageLikeKey) === 'true');
     } else {
@@ -41,8 +41,10 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
     }
 
     const nextLiked = !liked;
+    const nextLikeCount = Math.max(0, likeCount + (nextLiked ? 1 : -1));
+
     setLiked(nextLiked);
-    setLikeCount((current) => current + (nextLiked ? 1 : -1));
+    setLikeCount(nextLikeCount);
     setIsLiking(true);
 
     try {
@@ -109,11 +111,15 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
               <button
                 type="button"
                 onClick={handleLikeClick}
-                className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-gray-100 transition-colors"
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 transition-colors ${
+                  liked
+                    ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                    : 'hover:bg-gray-100'
+                }`}
                 disabled={isLiking}
               >
-                <Heart className={`w-4 h-4 ${liked ? 'text-red-500' : 'text-gray-400'}`} />
-                <span>{likeCount} likes</span>
+                <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : 'text-gray-400'}`} />
+                <span>{likeCount} {likeCount === 1 ? 'Like' : 'Likes'}</span>
               </button>
               <div className="inline-flex items-center gap-1">
                 <MessageCircle className="w-4 h-4" />

@@ -9,6 +9,8 @@ import DiscussionsList from './DiscussionsList';
 import NewDiscussionModal from './NewDiscussionModal';
 import { useLocalDiscussions } from './useLocalDiscussions';
 
+const COMMUNITY_STATS_CACHE_KEY = 'communityStatsCache';
+
 const Discussions: React.FC = () => {
   const { user } = useAuth();
   const { readLocalDiscussions, writeLocalDiscussions, mergeDiscussions } = useLocalDiscussions();
@@ -16,12 +18,35 @@ const Discussions: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewDiscussion, setShowNewDiscussion] = useState(false);
   const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() => readLocalDiscussions());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => readLocalDiscussions().length === 0);
   const [error, setError] = useState<string | null>(null);
-  const [communityStats, setCommunityStats] = useState<CommunityStatsType>({
-    totalMembers: 0,
-    activeDiscussions: 0,
-    totalMentors: 0
+  const [communityStats, setCommunityStats] = useState<CommunityStatsType>(() => {
+    try {
+      const raw = localStorage.getItem(COMMUNITY_STATS_CACHE_KEY);
+      if (!raw) {
+        return {
+          totalMembers: 0,
+          activeDiscussions: 0,
+          totalMentors: 0
+        };
+      }
+      const parsed = JSON.parse(raw) as CommunityStatsType;
+      return {
+        totalMembers: parsed.totalMembers || 0,
+        activeDiscussions: parsed.activeDiscussions || 0,
+        totalMentors: parsed.totalMentors || 0,
+        monthlyActiveUsers: parsed.monthlyActiveUsers,
+        newMembersThisMonth: parsed.newMembersThisMonth,
+        totalEvents: parsed.totalEvents,
+        upcomingEvents: parsed.upcomingEvents,
+      };
+    } catch {
+      return {
+        totalMembers: 0,
+        activeDiscussions: 0,
+        totalMentors: 0
+      };
+    }
   });
 
   const categories = [
@@ -53,47 +78,40 @@ const Discussions: React.FC = () => {
     };
   }, [getDeletedReplyCount]);
 
-  useEffect(() => {
-    const fetchCommunityData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchCommunityData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-        try {
-          const discussionsData = await communityService.getActiveDiscussions(selectedCategory);
-          const local = readLocalDiscussions();
+    const [discussionsResult, statsResult] = await Promise.allSettled([
+      communityService.getActiveDiscussions(selectedCategory),
+      communityService.getCommunityStats()
+    ]);
 
-          const merged = mergeDiscussions(discussionsData, local)
-            .map(adjustDiscussionReplyCount);
+    if (discussionsResult.status === 'fulfilled') {
+      const local = readLocalDiscussions();
+      const merged = mergeDiscussions(discussionsResult.value, local)
+        .map(adjustDiscussionReplyCount);
 
-          setDiscussions(merged);
-          writeLocalDiscussions(merged);
-        } catch (discussionsError: any) {
-          if (discussionsError.response?.status === 500) {
-            const local = readLocalDiscussions().map(adjustDiscussionReplyCount);
-            setDiscussions(local);
-            setError(null);
-          } else {
-            setError('Failed to load community discussions');
-          }
-          return;
-        }
+      setDiscussions(merged);
+      writeLocalDiscussions(merged);
+    } else {
+      const local = readLocalDiscussions().map(adjustDiscussionReplyCount);
 
-        try {
-          const statsData = await communityService.getCommunityStats();
-          setCommunityStats(statsData);
-        } catch (statsError) {
-          console.error('Error fetching stats:', statsError);
-        }
-
-      } catch (error) {
+      if (local.length > 0) {
+        setDiscussions(local);
+      } else {
         setError('Failed to load community discussions');
-      } finally {
-        setLoading(false);
       }
-    };
+    }
 
-    fetchCommunityData();
+    if (statsResult.status === 'fulfilled') {
+      setCommunityStats(statsResult.value);
+      localStorage.setItem(COMMUNITY_STATS_CACHE_KEY, JSON.stringify(statsResult.value));
+    } else {
+      console.error('Error fetching stats:', statsResult.reason);
+    }
+
+    setLoading(false);
   }, [
     selectedCategory,
     readLocalDiscussions,
@@ -101,6 +119,10 @@ const Discussions: React.FC = () => {
     mergeDiscussions,
     adjustDiscussionReplyCount
   ]);
+
+  useEffect(() => {
+    fetchCommunityData();
+  }, [fetchCommunityData]);
 
   const handleNewDiscussion = async (formData: { title: string; category: string; content: string }) => {
     if (!user?.email) {
@@ -210,7 +232,7 @@ const Discussions: React.FC = () => {
             error={error}
             onRetry={() => {
               setError(null);
-              window.location.reload();
+              fetchCommunityData();
             }}
           />
         </div>
