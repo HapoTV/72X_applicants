@@ -13,6 +13,7 @@ const QuestionOrderStep: React.FC<QuestionOrderStepProps> = ({
   onOrderedStepsChange,
   onOrderTouched,
 }) => {
+  // ✅ Reusable swap function
   const swap = (from: number, to: number) => {
     const updated = [...orderedSteps];
     [updated[from], updated[to]] = [updated[to], updated[from]];
@@ -32,17 +33,20 @@ const QuestionOrderStep: React.FC<QuestionOrderStepProps> = ({
 
         return (
           <div
-            key={idx}
+            key={idx} // ✅ safer than step text
             className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl"
           >
+            {/* Step number */}
             <div className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border text-sm font-bold">
               {idx + 1}
             </div>
 
+            {/* Step text */}
             <div className="flex-1 text-sm font-medium text-gray-800">
               {step}
             </div>
 
+            {/* Controls */}
             <div className="flex gap-2">
               <button
                 onClick={() => !isFirst && swap(idx, idx - 1)}
@@ -53,7 +57,7 @@ const QuestionOrderStep: React.FC<QuestionOrderStepProps> = ({
                     : 'bg-blue-600 hover:bg-blue-700 text-white'
                 }`}
               >
-                Up
+                ↑
               </button>
 
               <button
@@ -65,13 +69,14 @@ const QuestionOrderStep: React.FC<QuestionOrderStepProps> = ({
                     : 'bg-orange-600 hover:bg-orange-700 text-white'
                 }`}
               >
-                Down
+                ↓
               </button>
             </div>
           </div>
         );
       })}
 
+      {/* ✅ Reset button (important UX fix) */}
       <button
         onClick={() => {
           onOrderedStepsChange([...steps]);

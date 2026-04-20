@@ -41,10 +41,10 @@ const QuestionCategorize: React.FC<QuestionCategorizeProps> = ({
   };
 
   const assignedItems = (cat: string) =>
-    items.filter((item) => categorizeAssignments[item.label] === cat);
+    items.filter((i) => categorizeAssignments[i.label] === cat);
 
   const unassignedItems = items.filter(
-    (item) => !categorizeAssignments[item.label]
+    (i) => !categorizeAssignments[i.label]
   );
 
   return (
@@ -53,6 +53,7 @@ const QuestionCategorize: React.FC<QuestionCategorizeProps> = ({
         Drag items into the correct category
       </div>
 
+      {/* CATEGORIES */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {categories.map((cat, idx) => (
           <div
@@ -60,8 +61,8 @@ const QuestionCategorize: React.FC<QuestionCategorizeProps> = ({
             className={`border rounded-xl p-3 transition ${
               draggingItem ? 'border-blue-300 bg-blue-50/30' : 'border-gray-200'
             }`}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => handleDropToCategory(cat, event)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDropToCategory(cat, e)}
           >
             <div className="text-sm font-semibold text-gray-900 mb-2">
               {cat}
@@ -74,18 +75,18 @@ const QuestionCategorize: React.FC<QuestionCategorizeProps> = ({
                 </div>
               )}
 
-              {assignedItems(cat).map((item, itemIndex) => (
+              {assignedItems(cat).map((i, iIdx) => (
                 <div
-                  key={`${idx}-${itemIndex}`}
+                  key={`${idx}-${iIdx}`}
                   draggable
-                  onDragStart={(event) => {
-                    event.dataTransfer.setData('text/plain', item.label);
-                    setDraggingItem(item.label);
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', i.label);
+                    setDraggingItem(i.label);
                   }}
                   onDragEnd={() => setDraggingItem(null)}
                   className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm cursor-move hover:bg-gray-50"
                 >
-                  {item.label}
+                  {i.label}
                 </div>
               ))}
             </div>
@@ -93,11 +94,12 @@ const QuestionCategorize: React.FC<QuestionCategorizeProps> = ({
         ))}
       </div>
 
+      {/* UNASSIGNED */}
       <div
         className={`border rounded-xl p-3 transition ${
           draggingItem ? 'border-orange-300 bg-orange-50/30' : 'border-gray-200'
         }`}
-        onDragOver={(event) => event.preventDefault()}
+        onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropToUnassigned}
       >
         <div className="text-sm font-semibold text-gray-900 mb-2">
@@ -105,25 +107,26 @@ const QuestionCategorize: React.FC<QuestionCategorizeProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {unassignedItems.map((item, idx) => (
+          {unassignedItems.map((i, idx) => (
             <div
               key={idx}
               draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData('text/plain', item.label);
-                setDraggingItem(item.label);
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', i.label);
+                setDraggingItem(i.label);
               }}
               onDragEnd={() => setDraggingItem(null)}
               className="px-3 py-2 rounded-lg border border-gray-200 bg-white cursor-move hover:bg-gray-50"
             >
               <div className="flex justify-between items-center">
-                <span className="text-sm">{item.label}</span>
+                <span className="text-sm">{i.label}</span>
                 <span className="text-xs text-gray-500">Drag</span>
               </div>
             </div>
           ))}
         </div>
 
+        {/* RESET */}
         <button
           onClick={() => onCategorizeAssignmentChange({})}
           className="mt-3 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"

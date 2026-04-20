@@ -35,7 +35,7 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h4 className={`text-lg font-bold ${feedback === 'correct' ? 'text-green-800' : 'text-orange-900'}`}>
-            {feedback === 'correct' ? 'Correct! Keep going.' : 'Almost there - review and try again!'}
+            {feedback === 'correct' ? 'Correct! Keep going.' : 'Almost there — review and try again!'}
           </h4>
           <p className={`mt-1 text-sm ${feedback === 'correct' ? 'text-green-800' : 'text-orange-900'}`}>
             {feedback === 'correct'

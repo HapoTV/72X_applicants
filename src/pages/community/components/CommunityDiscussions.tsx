@@ -65,7 +65,7 @@ const CommunityDiscussions: React.FC<CommunityDiscussionsProps> = ({
         {filteredDiscussions.map((discussion) => (
           <div
             key={discussion.id}
-            onClick={() => navigate(`/community/${discussion.id}`)}
+            onClick={() => navigate(`/community/discussions/${discussion.id}`)}
             className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <div className="flex items-start space-x-4">
