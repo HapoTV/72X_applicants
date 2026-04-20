@@ -48,6 +48,7 @@ const Discussions: React.FC = () => {
     },
   });
 
+<<<<<<< HEAD
   // Sync remote discussions into local state, merging with locally-created ones
   useEffect(() => {
     if (remoteDiscussions) {
@@ -56,10 +57,83 @@ const Discussions: React.FC = () => {
       setDiscussions(merged);
       writeLocalDiscussions(merged);
       setError(null);
+=======
+  const adjustDiscussionReplyCount = useCallback((discussion: UserDiscussionItem) => {
+    const deletedCount = getDeletedReplyCount(discussion.id);
+    return {
+      ...discussion,
+      replies: Math.max(0, discussion.replies - deletedCount)
+    };
+  }, [getDeletedReplyCount]);
+
+  const resetDiscussionEngagement = useCallback((discussion: UserDiscussionItem): UserDiscussionItem => {
+    try {
+      localStorage.removeItem(`discussion_replies_${discussion.id}`);
+      localStorage.removeItem(`discussion_deleted_replies_${discussion.id}`);
+    } catch {
+      // ignore local reset issues
+    }
+
+    return {
+      ...discussion,
+      likes: 0,
+      replies: 0
+    };
+  }, []);
+
+  const fetchCommunityData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const [discussionsResult, statsResult] = await Promise.allSettled([
+      communityService.getActiveDiscussions(selectedCategory),
+      communityService.getCommunityStats()
+    ]);
+
+    if (discussionsResult.status === 'fulfilled') {
+      const local = readLocalDiscussions();
+      const merged = mergeDiscussions(discussionsResult.value, local)
+        .map(adjustDiscussionReplyCount)
+        .map(resetDiscussionEngagement);
+
+      setDiscussions(merged);
+      writeLocalDiscussions(merged);
+    } else {
+      const local = readLocalDiscussions()
+        .map(adjustDiscussionReplyCount)
+        .map(resetDiscussionEngagement);
+
+      if (local.length > 0) {
+        setDiscussions(local);
+        writeLocalDiscussions(local);
+      } else {
+        setError('Failed to load community discussions');
+      }
+>>>>>>> de53e04 (Reset community likes and comments)
     }
   }, [remoteDiscussions]);
 
+<<<<<<< HEAD
   // Fetch community stats separately (not cached — lightweight)
+=======
+    if (statsResult.status === 'fulfilled') {
+      setCommunityStats(statsResult.value);
+      localStorage.setItem(COMMUNITY_STATS_CACHE_KEY, JSON.stringify(statsResult.value));
+    } else {
+      console.error('Error fetching stats:', statsResult.reason);
+    }
+
+    setLoading(false);
+  }, [
+    selectedCategory,
+    readLocalDiscussions,
+    writeLocalDiscussions,
+    mergeDiscussions,
+    adjustDiscussionReplyCount,
+    resetDiscussionEngagement
+  ]);
+
+>>>>>>> de53e04 (Reset community likes and comments)
   useEffect(() => {
     communityService.getCommunityStats()
       .then(setCommunityStats)
