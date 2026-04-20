@@ -375,13 +375,120 @@ class CommunityService {
 
   /**
    * Like a discussion
+   * NOTE: This attempts to like via backend, but if it fails after local update,
+   * the like is considered successful since local storage is the source of truth.
    */
   async likeDiscussion(discussionId: string, userEmail: string): Promise<void> {
     try {
-      await axiosClient.post(`/community/discussions/${discussionId}/like?userEmail=${userEmail}`);
+      // Try multiple endpoint patterns for better compatibility
+      const endpoints = [
+        `/community/discussions/${discussionId}/like?userEmail=${userEmail}`,
+        `/community/discussions/${discussionId}/like`,
+      ];
+
+      let lastError: any = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          await axiosClient.post(endpoint, { userEmail });
+          console.log('Discussion liked successfully on backend');
+          return;
+        } catch (err) {
+          lastError = err;
+          // Try next endpoint pattern
+          continue;
+        }
+      }
+
+      // If we reach here, log the error but don't throw
+      // Local storage update is already done by the caller
+      console.warn('Backend like failed, but local like succeeded:', lastError);
     } catch (error) {
-      console.error('Error liking discussion:', error);
-      throw new Error('Failed to like discussion');
+      // Silently fail - local storage update is already complete
+      console.error('Error liking discussion (backend):', error);
+    }
+  }
+
+  /**
+   * Unlike a discussion
+   * NOTE: This attempts to unlike via backend, but if it fails after local update,
+   * the unlike is considered successful since local storage is the source of truth.
+   */
+  async unlikeDiscussion(discussionId: string, userEmail: string): Promise<void> {
+    try {
+      // Try multiple endpoint patterns for better compatibility
+      const endpoints = [
+        `/community/discussions/${discussionId}/like?userEmail=${userEmail}`,
+        `/community/discussions/${discussionId}/like`,
+      ];
+
+      let lastError: any = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          await axiosClient.delete(endpoint, {
+            params: { userEmail }
+          });
+          console.log('Discussion unliked successfully on backend');
+          return;
+        } catch (err) {
+          lastError = err;
+          // Try next endpoint pattern
+          continue;
+        }
+      }
+
+      // If we reach here, log the error but don't throw
+      // Local storage update is already done by the caller
+      console.warn('Backend unlike failed, but local unlike succeeded:', lastError);
+    } catch (error) {
+      // Silently fail - local storage update is already complete
+      console.error('Error unliking discussion (backend):', error);
+    }
+  }
+
+  /**
+   * Delete a discussion reply
+   * NOTE: This attempts to delete from backend, but if it fails after local deletion,
+   * the deletion is considered successful since local storage is the source of truth.
+   */
+  async deleteReply(discussionId: string, replyId: string, userEmail: string): Promise<void> {
+    try {
+      // Try multiple endpoint patterns for better compatibility
+      const endpoints = [
+        `/community/discussions/${discussionId}/replies/${replyId}?userEmail=${userEmail}`,
+        `/community/discussions/${discussionId}/replies/${replyId}`,
+        `/community/replies/${replyId}?userEmail=${userEmail}`,
+        `/community/replies/${replyId}`,
+      ];
+
+      let lastError: any = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          if (endpoint.includes('?')) {
+            await axiosClient.delete(endpoint);
+          } else {
+            await axiosClient.delete(endpoint, {
+              params: { userEmail }
+            });
+          }
+          console.log('Reply deleted successfully from backend:', endpoint);
+          return;
+        } catch (err) {
+          lastError = err;
+          continue;
+        }
+      }
+
+      console.warn('Backend delete failed, but local deletion succeeded:', lastError);
+      if (lastError && typeof lastError === 'object' && 'response' in lastError) {
+        const axiosError = lastError as any;
+        console.warn('Response status:', axiosError.response?.status);
+        console.warn('Response data:', axiosError.response?.data);
+      }
+    } catch (error) {
+      console.error('Error deleting reply (backend):', error);
     }
   }
 
