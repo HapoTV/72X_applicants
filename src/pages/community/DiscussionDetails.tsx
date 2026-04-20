@@ -93,6 +93,7 @@ const DiscussionDetails: React.FC = () => {
         const details = await communityService.getDiscussionById(id);
 <<<<<<< HEAD
         setDiscussion(details);
+<<<<<<< HEAD
 =======
         setDiscussion({
           ...details,
@@ -101,6 +102,9 @@ const DiscussionDetails: React.FC = () => {
         });
         setLikesCount(0);
 >>>>>>> de53e04 (Reset community likes and comments)
+=======
+        setLikesCount(Math.max(0, details.likes ?? 0));
+>>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
       } catch (detailsError) {
         console.error('Error loading discussion details by ID:', detailsError);
 
@@ -128,8 +132,12 @@ const DiscussionDetails: React.FC = () => {
 =======
             };
             setDiscussion(fallbackDiscussion);
+<<<<<<< HEAD
             setLikesCount(0);
 >>>>>>> de53e04 (Reset community likes and comments)
+=======
+            setLikesCount(Math.max(0, foundDiscussion.likes ?? 0));
+>>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
           } else {
             throw new Error('Discussion not found from active discussions.');
           }

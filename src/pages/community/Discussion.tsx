@@ -10,6 +10,8 @@ import DiscussionsList from './DiscussionsList';
 import NewDiscussionModal from './NewDiscussionModal';
 import { useLocalDiscussions } from './useLocalDiscussions';
 
+const COMMUNITY_STATS_CACHE_KEY = 'communityStatsCache';
+
 const Discussions: React.FC = () => {
   const { user } = useAuth();
   const { readLocalDiscussions, writeLocalDiscussions, mergeDiscussions } = useLocalDiscussions();
@@ -17,12 +19,39 @@ const Discussions: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewDiscussion, setShowNewDiscussion] = useState(false);
   const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() => readLocalDiscussions());
+<<<<<<< HEAD
   const [isSubmitting, setIsSubmitting] = useState(false);
+=======
+  const [loading, setLoading] = useState(() => readLocalDiscussions().length === 0);
+>>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
   const [error, setError] = useState<string | null>(null);
-  const [communityStats, setCommunityStats] = useState<CommunityStatsType>({
-    totalMembers: 0,
-    activeDiscussions: 0,
-    totalMentors: 0
+  const [communityStats, setCommunityStats] = useState<CommunityStatsType>(() => {
+    try {
+      const raw = localStorage.getItem(COMMUNITY_STATS_CACHE_KEY);
+      if (!raw) {
+        return {
+          totalMembers: 0,
+          activeDiscussions: 0,
+          totalMentors: 0
+        };
+      }
+      const parsed = JSON.parse(raw) as CommunityStatsType;
+      return {
+        totalMembers: parsed.totalMembers || 0,
+        activeDiscussions: parsed.activeDiscussions || 0,
+        totalMentors: parsed.totalMentors || 0,
+        monthlyActiveUsers: parsed.monthlyActiveUsers,
+        newMembersThisMonth: parsed.newMembersThisMonth,
+        totalEvents: parsed.totalEvents,
+        upcomingEvents: parsed.upcomingEvents,
+      };
+    } catch {
+      return {
+        totalMembers: 0,
+        activeDiscussions: 0,
+        totalMentors: 0
+      };
+    }
   });
 
   const categories = [
@@ -66,6 +95,7 @@ const Discussions: React.FC = () => {
     };
   }, [getDeletedReplyCount]);
 
+<<<<<<< HEAD
   const resetDiscussionEngagement = useCallback((discussion: UserDiscussionItem): UserDiscussionItem => {
     try {
       localStorage.removeItem(`discussion_replies_${discussion.id}`);
@@ -116,6 +146,34 @@ const Discussions: React.FC = () => {
 <<<<<<< HEAD
   // Fetch community stats separately (not cached — lightweight)
 =======
+=======
+  const fetchCommunityData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const [discussionsResult, statsResult] = await Promise.allSettled([
+      communityService.getActiveDiscussions(selectedCategory),
+      communityService.getCommunityStats()
+    ]);
+
+    if (discussionsResult.status === 'fulfilled') {
+      const local = readLocalDiscussions();
+      const merged = mergeDiscussions(discussionsResult.value, local)
+        .map(adjustDiscussionReplyCount);
+
+      setDiscussions(merged);
+      writeLocalDiscussions(merged);
+    } else {
+      const local = readLocalDiscussions().map(adjustDiscussionReplyCount);
+
+      if (local.length > 0) {
+        setDiscussions(local);
+      } else {
+        setError('Failed to load community discussions');
+      }
+    }
+
+>>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
     if (statsResult.status === 'fulfilled') {
       setCommunityStats(statsResult.value);
       localStorage.setItem(COMMUNITY_STATS_CACHE_KEY, JSON.stringify(statsResult.value));
@@ -133,12 +191,18 @@ const Discussions: React.FC = () => {
     resetDiscussionEngagement
   ]);
 
+<<<<<<< HEAD
 >>>>>>> de53e04 (Reset community likes and comments)
   useEffect(() => {
     communityService.getCommunityStats()
       .then(setCommunityStats)
       .catch((err) => console.error('Error fetching stats:', err));
   }, [selectedCategory]);
+=======
+  useEffect(() => {
+    fetchCommunityData();
+  }, [fetchCommunityData]);
+>>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
 
   const handleNewDiscussion = async (formData: { title: string; category: string; content: string }) => {
     if (!user?.email) {
@@ -246,7 +310,7 @@ const Discussions: React.FC = () => {
             error={error}
             onRetry={() => {
               setError(null);
-              window.location.reload();
+              fetchCommunityData();
             }}
           />
         </div>
