@@ -24,6 +24,22 @@ const SignupSuccessGenerated: React.FC = () => {
   const [isVerified, setIsVerified] = React.useState<boolean>(false);
 
   React.useEffect(() => {
+    const rateLimited = localStorage.getItem('supabaseEmailRateLimited') === 'true';
+    if (rateLimited) {
+      setMessage('We could not send the verification email right now due to email rate limits. Please wait a few minutes, then click “Resend verification email”.');
+      localStorage.removeItem('supabaseEmailRateLimited');
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const failed = localStorage.getItem('supabaseVerificationEmailFailed') === 'true';
+    if (failed) {
+      setMessage('We could not confirm that the verification email was sent. Please click “Resend verification email”.');
+      localStorage.removeItem('supabaseVerificationEmailFailed');
+    }
+  }, []);
+
+  React.useEffect(() => {
     const exchangeSessionIfPresent = async () => {
       try {
         if (!supabase) return;
@@ -122,7 +138,7 @@ const SignupSuccessGenerated: React.FC = () => {
         options: { emailRedirectTo }
       });
       if (error) throw error;
-      setMessage('Verification email sent. Please check your inbox (and spam).');
+      setMessage('Verification email request submitted. Please check your inbox (and spam).');
     } catch (err: any) {
       setMessage(err?.message || 'Failed to send verification email. Please try again.');
     } finally {

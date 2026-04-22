@@ -141,7 +141,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userRole = (parsedUser?.role || localStorage.getItem('userRole') || '').toUpperCase();
       if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN') return;
       const userOrg = localStorage.getItem('userOrganisation');
-      if (userOrg && userOrg.trim()) return;
+      const isStandaloneOrg = !userOrg || userOrg.trim().toLowerCase() === 'hapo';
+      if (!isStandaloneOrg) return;
 
       try {
         const trialStatus = await userSubscriptionService.getFreeTrialStatus();
@@ -196,7 +197,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           window.dispatchEvent(new CustomEvent('user-package-updated'));
         } else {
           const userOrg = localStorage.getItem('userOrganisation');
-          if (!userOrg || !userOrg.trim()) {
+          const isStandaloneOrg = !userOrg || userOrg.trim().toLowerCase() === 'hapo';
+          if (isStandaloneOrg) {
             if (!cancelled) await handleNoSubscription();
           }
         }

@@ -30,6 +30,8 @@ export function useSelectPackage() {
   const navigate = useNavigate();
   const { isAuthenticated, userOrganisation } = useAuth();
 
+  const isStandaloneOrg = !userOrganisation || userOrganisation.trim().toLowerCase() === 'hapo';
+
   const [selectedPackage, setSelectedPackage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isActivatingTrial, setIsActivatingTrial] = useState(false);
@@ -137,21 +139,6 @@ export function useSelectPackage() {
     }
   }, []);
 
-  const checkFreeTrialEligibility = useCallback(async () => {
-    try {
-      const response = await userSubscriptionService.checkFreeTrialEligibility();
-      if (response && typeof response === 'object') {
-        setEligibilityCheck({
-          isEligible: response.eligible === true,
-          reason: `User status: ${response.userStatus || 'unknown'}`,
-        });
-      }
-    } catch (error) {
-      console.error('Error checking eligibility:', error);
-      setEligibilityCheck({ isEligible: false, reason: 'Error checking eligibility' });
-    }
-  }, []);
-
   useEffect(() => {
     let isCancelled = false;
 
@@ -177,6 +164,13 @@ export function useSelectPackage() {
       }
       if (isCancelled) return;
 
+      // Real organisation users should not use the standalone package selection flow.
+      // Their organisation is expected to have provisioned/paid a plan for them.
+      if (isAuthenticated && !isStandaloneOrg) {
+        navigate('/dashboard/overview', { replace: true });
+        return;
+      }
+
       const email = localStorage.getItem('userEmail');
       const status = localStorage.getItem('userStatus');
       const requiresPackage = localStorage.getItem('requiresPackageSelection');
@@ -189,19 +183,20 @@ export function useSelectPackage() {
 
       if (isAuthenticated) {
         fetchCurrentSubscription();
-        // Org employees don't need free trial checks — "Hapo" is the default standalone org
-        const isRealOrgEmployee = userOrganisation && userOrganisation.trim() &&
-          userOrganisation.trim().toLowerCase() !== 'hapo';
-        if (!isRealOrgEmployee) {
+        // Org employees don't need free trial checks — "Hapo" is the default standalone org.
+        // Additionally, some backend eligibility checks may classify any org user as ineligible.
+        // For the standalone org (Hapo), we rely on frontend/userStatus gating to avoid UI flicker.
+        if (isStandaloneOrg) {
           fetchFreeTrialStatus();
-          checkFreeTrialEligibility();
+        } else {
+          setEligibilityCheck({ isEligible: false, reason: 'Organisation user' });
         }
       }
     };
 
     run();
     return () => { isCancelled = true; };
-  }, [navigate, isAuthenticated, userOrganisation, fetchCurrentSubscription, fetchFreeTrialStatus, checkFreeTrialEligibility]);
+  }, [navigate, isAuthenticated, userOrganisation, fetchCurrentSubscription, fetchFreeTrialStatus, isStandaloneOrg]);
 
   const handlePackageSelect = useCallback((pkgId: string) => {
     setSelectedPackage(pkgId);
@@ -229,14 +224,14 @@ export function useSelectPackage() {
   const isOnFreeTrial = userStatus === 'FREE_TRIAL';
 
   const isEligibleForFreeTrial = useCallback(() => {
-    // Org employees never get free trial — they're on the org plan
-    // "Hapo" is the default standalone org, not a real employer org
-    const isRealOrgEmployee = userOrganisation && userOrganisation.trim() &&
-      userOrganisation.trim().toLowerCase() !== 'hapo';
-    if (isRealOrgEmployee) return false;
+    // Org employees never get free trial — they're on the org plan.
+    if (!isStandaloneOrg) return false;
 
-    // Backend eligibility check is the source of truth
-    if (eligibilityCheck) return eligibilityCheck.isEligible;
+    // For the standalone org (Hapo / no org), derive eligibility deterministically from state
+    // to avoid flicker caused by async backend checks.
+    if (userStatus === 'PENDING_PACKAGE' && !currentSubscription) {
+      return true;
+    }
 
     // Already has a paid subscription
     if (currentSubscription) return false;
@@ -244,12 +239,12 @@ export function useSelectPackage() {
     // Already on or completed free trial
     if (userStatus === 'FREE_TRIAL') return false;
 
-    // Backend explicitly said not eligible
+    // Backend explicitly said not eligible (when available)
     if (freeTrialStatus && freeTrialStatus.success === false) return false;
 
     // Only PENDING_PACKAGE qualifies
     return userStatus === 'PENDING_PACKAGE';
-  }, [eligibilityCheck, currentSubscription, userStatus, freeTrialStatus, userOrganisation]);
+  }, [currentSubscription, userStatus, freeTrialStatus, isStandaloneOrg]);
 
   const shouldShowFreeTrial = isEligibleForFreeTrial();
 

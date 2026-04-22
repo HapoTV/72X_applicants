@@ -77,18 +77,19 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
                 type="button"
                 onClick={() => {
                   if (isAuthenticated) {
-                    if (!currentSubscription) {
-                      localStorage.removeItem('selectedPackage');
-                    }
+                    // Clear any in-progress package/payment state so the user is not bounced back
+                    // by ProtectedRoute / PackageSelectionRedirect.
+                    localStorage.removeItem('selectedPackage');
+                    localStorage.removeItem('userPackage');
                     localStorage.removeItem('requiresPackageSelection');
-                    if (currentSubscription) {
-                      const status = localStorage.getItem('userStatus');
-                      const shouldRelaxRedirects =
-                        !status || status === 'PENDING_PACKAGE' || status === 'PENDING_PAYMENT';
-                      if (shouldRelaxRedirects) {
-                        localStorage.setItem('userStatus', 'FREE_TRIAL');
-                      }
+
+                    // Treat "skip" as a temporary free-trial-like access window.
+                    // This is frontend-only gating; backend still remains source of truth.
+                    localStorage.setItem('userStatus', 'FREE_TRIAL');
+                    if (!localStorage.getItem('freeTrialStartDate')) {
+                      localStorage.setItem('freeTrialStartDate', new Date().toISOString());
                     }
+
                     localStorage.setItem('skipPackageSelectionUntil', String(Date.now() + 24 * 60 * 60 * 1000));
                   }
                   if (isAuthenticated) {

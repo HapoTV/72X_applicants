@@ -115,6 +115,8 @@ const CreatePassword: React.FC = () => {
           console.warn('Supabase client not initialized; skipping Supabase signUp.');
         } else {
           const emailRedirectTo = `${getPublicSiteUrl()}/signup/success/provided`;
+          localStorage.removeItem('supabaseVerificationEmailFailed');
+
           const { error } = await supabase.auth.signUp({
             email: userEmail,
             password: form.password,
@@ -123,18 +125,28 @@ const CreatePassword: React.FC = () => {
           if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('rate limit')) {
             localStorage.setItem('supabaseEmailRateLimited', 'true');
           }
-          if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('user already registered')) {
+
+          // Supabase intentionally returns 200 for some repeated signup scenarios (anti-enumeration),
+          // which means we won't always get a "user already registered" error. Always attempt a resend
+          // as best-effort to ensure the verification email is triggered.
+          const shouldAttemptResend = !error || (typeof error.message === 'string' && error.message.toLowerCase().includes('user already registered'));
+          if (shouldAttemptResend) {
             const { error: resendErr } = await supabase.auth.resend({
               type: 'signup',
               email: userEmail,
               options: { emailRedirectTo }
             });
-            if (resendErr) console.error('Supabase resend error:', resendErr);
+            if (resendErr) {
+              localStorage.setItem('supabaseVerificationEmailFailed', 'true');
+              console.error('Supabase resend error:', resendErr);
+            }
           } else if (error) {
+            localStorage.setItem('supabaseVerificationEmailFailed', 'true');
             console.error('Supabase signUp error:', error);
           }
         }
       } catch (supabaseErr) {
+        localStorage.setItem('supabaseVerificationEmailFailed', 'true');
         console.error('Supabase signUp unexpected error:', supabaseErr);
       }
 

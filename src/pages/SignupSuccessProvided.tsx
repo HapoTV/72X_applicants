@@ -98,6 +98,14 @@ const SignupSuccessProvided: React.FC = () => {
     }
   }, []);
 
+  React.useEffect(() => {
+    const failed = localStorage.getItem('supabaseVerificationEmailFailed') === 'true';
+    if (failed) {
+      setMessage('We could not confirm that the verification email was sent. Please click “Resend verification email”.');
+      localStorage.removeItem('supabaseVerificationEmailFailed');
+    }
+  }, []);
+
   const resendVerification = async () => {
     if (!supabase) {
       setMessage('Verification service unavailable. Please try again later.');
@@ -132,7 +140,7 @@ const SignupSuccessProvided: React.FC = () => {
         options: { emailRedirectTo }
       });
       if (error) throw error;
-      setMessage('Verification email sent. Please check your inbox (and spam).');
+      setMessage('Verification email request submitted. Please check your inbox (and spam).');
     } catch (err: any) {
       setMessage(err?.message || 'Failed to send verification email. Please try again.');
     } finally {
