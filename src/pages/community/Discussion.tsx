@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { communityService } from '../../services/CommunityService';
 import { useAuth } from '../../context/AuthContext';
@@ -34,43 +34,27 @@ const Discussions: React.FC = () => {
     { id: 'legal', name: 'Legal & Compliance' }
   ];
 
-  const getDeletedReplyCount = useCallback((discussionId: string) => {
-    try {
-      const raw = localStorage.getItem(`discussion_deleted_replies_${discussionId}`);
-      if (!raw) return 0;
-      const ids = JSON.parse(raw) as string[];
-      return Array.isArray(ids) ? ids.length : 0;
-    } catch {
-      return 0;
-    }
-  }, []);
-
-  const adjustDiscussionReplyCount = useCallback((discussion: UserDiscussionItem) => {
-    const deletedCount = getDeletedReplyCount(discussion.id);
-    return {
-      ...discussion,
-      replies: Math.max(0, discussion.replies - deletedCount)
-    };
-  }, [getDeletedReplyCount]);
-
   useEffect(() => {
     const fetchCommunityData = async () => {
       try {
         setLoading(true);
         setError(null);
 
+        console.log('Fetching community data...');
+
         try {
           const discussionsData = await communityService.getActiveDiscussions(selectedCategory);
+          console.log('Discussions fetched successfully:', discussionsData);
           const local = readLocalDiscussions();
-
-          const merged = mergeDiscussions(discussionsData, local)
-            .map(adjustDiscussionReplyCount);
-
+          const merged = mergeDiscussions(discussionsData, local);
           setDiscussions(merged);
           writeLocalDiscussions(merged);
         } catch (discussionsError: any) {
+          console.error('Error fetching discussions:', discussionsError);
+
           if (discussionsError.response?.status === 500) {
-            const local = readLocalDiscussions().map(adjustDiscussionReplyCount);
+            console.log('Backend 500 error - showing empty discussions state');
+            const local = readLocalDiscussions();
             setDiscussions(local);
             setError(null);
           } else {
@@ -81,12 +65,13 @@ const Discussions: React.FC = () => {
 
         try {
           const statsData = await communityService.getCommunityStats();
+          console.log('Stats fetched successfully:', statsData);
           setCommunityStats(statsData);
         } catch (statsError) {
           console.error('Error fetching stats:', statsError);
         }
-
       } catch (error) {
+        console.error('Unexpected error in fetchCommunityData:', error);
         setError('Failed to load community discussions');
       } finally {
         setLoading(false);
@@ -94,13 +79,7 @@ const Discussions: React.FC = () => {
     };
 
     fetchCommunityData();
-  }, [
-    selectedCategory,
-    readLocalDiscussions,
-    writeLocalDiscussions,
-    mergeDiscussions,
-    adjustDiscussionReplyCount
-  ]);
+  }, [selectedCategory]);
 
   const handleNewDiscussion = async (formData: { title: string; category: string; content: string }) => {
     if (!user?.email) {
@@ -123,9 +102,9 @@ const Discussions: React.FC = () => {
         tags: ''
       };
 
+      console.log('Creating discussion:', discussionToAdd);
       const createdDiscussion = await communityService.createDiscussion(discussionToAdd, user.email);
       const nextDiscussions = [createdDiscussion, ...discussions];
-
       setDiscussions(nextDiscussions);
       writeLocalDiscussions(nextDiscussions);
       setShowNewDiscussion(false);
@@ -139,7 +118,10 @@ const Discussions: React.FC = () => {
 
       alert('Discussion created successfully!');
     } catch (error: any) {
+      console.error('Error creating discussion:', error);
+
       if (error.response?.status === 500) {
+        alert('Discussion created successfully! (Backend temporarily unavailable for listing)');
         const localDiscussion: UserDiscussionItem = {
           id: Date.now().toString(),
           title: formData.title,
@@ -155,13 +137,10 @@ const Discussions: React.FC = () => {
           isLocked: false,
           tags: []
         };
-
         const nextDiscussions = [localDiscussion, ...discussions];
         setDiscussions(nextDiscussions);
         writeLocalDiscussions(nextDiscussions);
         setShowNewDiscussion(false);
-
-        alert('Discussion created successfully! (Offline mode)');
       } else {
         alert('Failed to create discussion. Please try again.');
       }
@@ -178,9 +157,7 @@ const Discussions: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Community Forum</h1>
-        <p className="text-gray-600">
-          Share business advice and experiences with other entrepreneurs in the community
-        </p>
+        <p className="text-gray-600">Share business advice and experiences with other entrepreneurs in the community</p>
       </div>
 
       <CommunityStats stats={communityStats} />

@@ -148,7 +148,7 @@ function App() {
                           <Route path="/learning/technical" element={<Technical />} />
                           <Route path="/community" element={<Community />} />
                           <Route path="/community/discussions" element={<CommunityDiscussions />} />
-                          <Route path="/community/discussions/:id" element={<DiscussionDetails />} />
+                          <Route path="/community/:id" element={<DiscussionDetails />} />
                           <Route path="/community/networking" element={<CommunityNetworking />} />
                           <Route path="/community/mentorship" element={<RequirePackage required="essential" upgradePath="/upgrade/mentorship"><CommunityMentorship /></RequirePackage>} />
                           <Route path="/applications" element={<Navigate to="/applications/crm" replace />} />
