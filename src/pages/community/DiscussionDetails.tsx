@@ -97,7 +97,7 @@ const DiscussionDetails: React.FC = () => {
       try {
         const details = await communityService.getDiscussionById(id);
         setDiscussion(details);
-        setLikesCount(Math.max(0, details.likes ?? 0));
+        setLikesCount(details.likes ?? 0);
       } catch (detailsError) {
         console.error('Error loading discussion details by ID:', detailsError);
 
@@ -122,7 +122,7 @@ const DiscussionDetails: React.FC = () => {
               createdBy: foundDiscussion.author,
             };
             setDiscussion(fallbackDiscussion);
-            setLikesCount(Math.max(0, foundDiscussion.likes ?? 0));
+            setLikesCount(foundDiscussion.likes ?? 0);
           } else {
             throw new Error('Discussion not found from active discussions.');
           }
@@ -176,15 +176,9 @@ const DiscussionDetails: React.FC = () => {
     }
 
     const nextLiked = !isLiked;
-    const nextLikesCount = Math.max(0, likesCount + (nextLiked ? 1 : -1));
-
     setIsLiked(nextLiked);
-    setLikesCount(nextLikesCount);
-    setDiscussion((prev) => (
-      prev
-        ? { ...prev, likes: Math.max(0, (prev.likes ?? 0) + (nextLiked ? 1 : -1)) }
-        : prev
-    ));
+    setLikesCount((count) => count + (nextLiked ? 1 : -1));
+    setDiscussion((prev) => (prev ? { ...prev, likes: prev.likes + (nextLiked ? 1 : -1) } : prev));
     setIsLiking(true);
 
     try {

@@ -26,34 +26,10 @@ interface ConversationMeta {
 }
 
 export const DEFAULT_VISIBLE_CONNECTIONS = 10;
-const USERS_CACHE_KEY = 'connections_users_cache';
-const CONVERSATIONS_CACHE_KEY = 'connections_conversations_cache';
-
-const readCachedUsers = (): ConnectionUser[] => {
-  try {
-    const raw = localStorage.getItem(USERS_CACHE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const readCachedConversationMeta = (): Record<string, ConversationMeta> => {
-  try {
-    const raw = localStorage.getItem(CONVERSATIONS_CACHE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
-};
 
 export function useConnections(authUserId?: string) {
-  const [users, setUsers] = useState<ConnectionUser[]>(() => readCachedUsers());
-  const [filteredUsers, setFilteredUsers] = useState<ConnectionUser[]>(() => readCachedUsers());
+  const [users, setUsers] = useState<ConnectionUser[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<ConnectionUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
@@ -62,10 +38,8 @@ export function useConnections(authUserId?: string) {
   const [locations, setLocations] = useState<string[]>([]);
   const [organisations, setOrganisations] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_CONNECTIONS);
-  const [conversationMetaByUserId, setConversationMetaByUserId] = useState<Record<string, ConversationMeta>>(
-    () => readCachedConversationMeta()
-  );
-  const [loading, setLoading] = useState(() => readCachedUsers().length === 0);
+  const [conversationMetaByUserId, setConversationMetaByUserId] = useState<Record<string, ConversationMeta>>({});
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -76,8 +50,9 @@ export function useConnections(authUserId?: string) {
     setVisibleCount(DEFAULT_VISIBLE_CONNECTIONS);
   }, [searchTerm, selectedIndustry, selectedLocation, selectedOrganisation]);
 
+  // Separate effect for loading conversations after users are loaded
   useEffect(() => {
-    if (!authUserId) return;
+    if (!authUserId || users.length === 0) return;
 
     const loadConversations = async () => {
       try {
@@ -96,7 +71,6 @@ export function useConnections(authUserId?: string) {
           };
         }
         setConversationMetaByUserId(meta);
-        localStorage.setItem(CONVERSATIONS_CACHE_KEY, JSON.stringify(meta));
       } catch (error) {
         console.error('Error loading conversations:', error);
         // Don't set error state here to avoid blocking the UI
@@ -108,7 +82,7 @@ export function useConnections(authUserId?: string) {
     // Set up polling every 15 seconds
     const interval = window.setInterval(loadConversations, 15000);
     return () => window.clearInterval(interval);
-  }, [authUserId]);
+  }, [authUserId, users.length]);
 
   const fetchUsers = async () => {
     try {
@@ -139,7 +113,6 @@ export function useConnections(authUserId?: string) {
 
       setUsers(mappedUsers);
       setFilteredUsers(mappedUsers);
-      localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(mappedUsers));
 
       const uniqueIndustries = Array.from(
         new Set(mappedUsers.map((user) => user.industry).filter(Boolean)),
@@ -261,7 +234,6 @@ export function useConnections(authUserId?: string) {
         };
       }
       setConversationMetaByUserId(meta);
-      localStorage.setItem(CONVERSATIONS_CACHE_KEY, JSON.stringify(meta));
     } catch (error) {
       console.error('Error refreshing conversations:', error);
     }

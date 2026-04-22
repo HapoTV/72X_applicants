@@ -33,7 +33,6 @@ function isLoginTypeAllowedForRole(roleRaw: string | undefined | null, loginType
 
 interface UserFormData {
   email: string;
-  businessReference: string;
   password: string;
   rememberMe: boolean;
 }
@@ -65,13 +64,8 @@ export function useLogin() {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      const loginResponse = await authService.login({
-        email: formData.email,
-        password: formData.password,
-        businessReference: formData.businessReference,
-        loginType: 'user'
-      } as LoginRequest);
-      await handleLoginResponse(loginResponse, formData.email, formData.businessReference, 'user');
+      const loginResponse = await authService.login({ email: formData.email, password: formData.password, loginType: 'user' } as LoginRequest);
+      await handleLoginResponse(loginResponse, formData.email, undefined, 'user');
     } catch (error: any) { handleLoginError(error); }
     finally { setIsLoading(false); }
   };
@@ -128,12 +122,7 @@ export function useLogin() {
   };
 
   const fillUserCredentials = (setFormData: (updater: (prev: UserFormData) => UserFormData) => void) => {
-    setFormData(prev => ({
-      ...prev,
-      email: 'asandile.nkala@example.com',
-      businessReference: '7272002',
-      password: '@TesterAsandile123'
-    }));
+    setFormData(prev => ({ ...prev, email: 'asandile.nkala@example.com', password: '@TesterAsandile123' }));
     setErrorMessage('');
   };
 
