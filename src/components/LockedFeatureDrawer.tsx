@@ -19,6 +19,8 @@ type LockedFeatureDrawerProps = {
 export default function LockedFeatureDrawer({ open, feature, onClose }: LockedFeatureDrawerProps) {
   if (!open || !feature) return null;
 
+  const upgradesDisabled = true;
+
   const PackageIcon = feature.requiredPackage === 'premium' ? Zap : Star;
   const packageLabel = feature.requiredPackage === 'premium' ? 'Premium' : 'Essential';
 
@@ -69,8 +71,10 @@ export default function LockedFeatureDrawer({ open, feature, onClose }: LockedFe
           <button
             type="button"
             onClick={() => {
+              if (upgradesDisabled) return;
               window.location.href = feature.upgradePath;
             }}
+            disabled={upgradesDisabled}
             className={feature.requiredPackage === 'premium'
               ? 'w-full py-3 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-700 transition-colors'
               : 'w-full py-3 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors'

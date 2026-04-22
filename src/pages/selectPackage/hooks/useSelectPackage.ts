@@ -24,6 +24,7 @@ export type PackageConfig = {
   color: string;
   bgColor: string;
   popular?: boolean;
+  disabled?: boolean;
 };
 
 export function useSelectPackage() {
@@ -78,6 +79,7 @@ export function useSelectPackage() {
           '14-day free trial',
         ],
         popular: true,
+        disabled: true,
         backendType: UserSubscriptionType.ESSENTIAL,
         iconType: 'sparkles',
         color: 'text-purple-600',
@@ -97,6 +99,7 @@ export function useSelectPackage() {
           'Advanced AI tools',
           '14-day free trial',
         ],
+        disabled: true,
         backendType: UserSubscriptionType.PREMIUM,
         iconType: 'crown',
         color: 'text-amber-600',
@@ -123,7 +126,10 @@ export function useSelectPackage() {
         const currentPackageId = packageConfigs.find(
           (pkg) => pkg.backendType === subscription.subscriptionType,
         )?.id;
-        if (currentPackageId) setSelectedPackage(currentPackageId);
+        if (currentPackageId) {
+          const isDisabled = !!packageConfigs.find((p) => p.id === currentPackageId)?.disabled;
+          setSelectedPackage(isDisabled ? '' : currentPackageId);
+        }
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
@@ -198,10 +204,20 @@ export function useSelectPackage() {
     return () => { isCancelled = true; };
   }, [navigate, isAuthenticated, userOrganisation, fetchCurrentSubscription, fetchFreeTrialStatus, isStandaloneOrg]);
 
+  useEffect(() => {
+    const selected = packageConfigs.find((p) => p.id === selectedPackage);
+    if (selected?.disabled) {
+      setSelectedPackage('');
+      setShowPaymentOptions(false);
+    }
+  }, [packageConfigs, selectedPackage]);
+
   const handlePackageSelect = useCallback((pkgId: string) => {
+    const pkg = packageConfigs.find((p) => p.id === pkgId);
+    if (!pkg || pkg.disabled) return;
     setSelectedPackage(pkgId);
     setShowPaymentOptions(true);
-  }, []);
+  }, [packageConfigs]);
 
   const formatPrice = useCallback((price: number, currency: string) => {
     return currency === 'ZAR' ? `R${price}` : `${currency} ${price}`;
@@ -254,6 +270,10 @@ export function useSelectPackage() {
     setIsActivatingTrial(true);
     try {
       const selectedPkg = packageConfigs.find((p) => p.id === selectedPackage);
+      if (selectedPkg?.disabled) {
+        alert('This package is not available yet. Please select the Start-Up package.');
+        return;
+      }
       if (selectedPkg) {
         const response = await userSubscriptionService.activateFreeTrial(selectedPkg.backendType);
         if (response && response.success) {
@@ -292,6 +312,10 @@ export function useSelectPackage() {
     setIsLoading(true);
     try {
       const selectedPkg = packageConfigs.find((p) => p.id === selectedPackage);
+      if (selectedPkg?.disabled) {
+        alert('This package is not available yet. Please select the Start-Up package.');
+        return;
+      }
       if (selectedPkg) {
         const serializablePackageData = {
           id: selectedPkg.id, name: selectedPkg.name, description: selectedPkg.description,

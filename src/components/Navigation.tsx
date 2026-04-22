@@ -43,6 +43,7 @@ interface NavigationProps {
 const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle, onAppStoreToggle }) => {
   const navigate = useNavigate();
   const { userPackage } = useAuth();
+  const upgradesDisabled = false;
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
   const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
@@ -586,8 +587,10 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
               </div>
               <button
                 onClick={() => {
+                  if (upgradesDisabled) return;
                   navigate('/select-package');
                 }}
+                disabled={upgradesDisabled}
                 className="mt-3 w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
               >
                 Upgrade
@@ -614,8 +617,10 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                 <button
                   onClick={() => {
                     onClose?.();
+                    if (upgradesDisabled) return;
                     navigate('/select-package');
                   }}
+                  disabled={upgradesDisabled}
                   className="mt-3 w-full py-2 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600 transition-colors"
                 >
                   Upgrade

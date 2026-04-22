@@ -23,6 +23,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const { user, isSuperAdmin, userOrganisation } = useAuth();
   const userEmail = localStorage.getItem('userEmail');
   const userStatus = localStorage.getItem('userStatus');
+  const upgradesDisabled = false;
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [freeTrialDropdownOpen, setFreeTrialDropdownOpen] = useState(false);
@@ -178,6 +179,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
 
   const handleUpgradeClick = () => {
     setFreeTrialDropdownOpen(false);
+    if (upgradesDisabled) return;
     navigate('/select-package');
   };
 
@@ -379,6 +381,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                       </p>
                       <button
                         onClick={handleUpgradeClick}
+                        disabled={upgradesDisabled}
                         className="w-full py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg font-medium hover:from-primary-600 hover:to-primary-700 transition-colors"
                       >
                         Upgrade Now
