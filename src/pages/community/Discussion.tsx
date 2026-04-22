@@ -78,21 +78,6 @@ const Discussions: React.FC = () => {
     };
   }, [getDeletedReplyCount]);
 
-  const resetDiscussionEngagement = useCallback((discussion: UserDiscussionItem): UserDiscussionItem => {
-    try {
-      localStorage.removeItem(`discussion_replies_${discussion.id}`);
-      localStorage.removeItem(`discussion_deleted_replies_${discussion.id}`);
-    } catch {
-      // ignore local reset issues
-    }
-
-    return {
-      ...discussion,
-      likes: 0,
-      replies: 0
-    };
-  }, []);
-
   const fetchCommunityData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -105,19 +90,15 @@ const Discussions: React.FC = () => {
     if (discussionsResult.status === 'fulfilled') {
       const local = readLocalDiscussions();
       const merged = mergeDiscussions(discussionsResult.value, local)
-        .map(adjustDiscussionReplyCount)
-        .map(resetDiscussionEngagement);
+        .map(adjustDiscussionReplyCount);
 
       setDiscussions(merged);
       writeLocalDiscussions(merged);
     } else {
-      const local = readLocalDiscussions()
-        .map(adjustDiscussionReplyCount)
-        .map(resetDiscussionEngagement);
+      const local = readLocalDiscussions().map(adjustDiscussionReplyCount);
 
       if (local.length > 0) {
         setDiscussions(local);
-        writeLocalDiscussions(local);
       } else {
         setError('Failed to load community discussions');
       }
@@ -136,8 +117,7 @@ const Discussions: React.FC = () => {
     readLocalDiscussions,
     writeLocalDiscussions,
     mergeDiscussions,
-    adjustDiscussionReplyCount,
-    resetDiscussionEngagement
+    adjustDiscussionReplyCount
   ]);
 
   useEffect(() => {
