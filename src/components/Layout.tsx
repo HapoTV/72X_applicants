@@ -43,21 +43,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const hasActiveSkip = !!(skipUntil && !Number.isNaN(skipUntil) && Date.now() < skipUntil);
     const currentPath = location.pathname;
     
-    console.log('🏗️ Layout status check:', {
-      userStatus: status,
-      currentPath,
-      isSelectPackagePage: currentPath === '/select-package',
-      isPaymentPage: currentPath.includes('/payments'),
-      isPublicPage: currentPath === '/' || 
-                   currentPath === '/login' || 
-                   currentPath === '/signup' ||
-                   currentPath === '/pricing' ||
-                   currentPath === '/request-demo' ||
-                   currentPath.includes('/reset-password') ||
-                   currentPath.includes('/create-password') ||
-                   currentPath.includes('/signup/success')
-    });
-    
     setUserStatus(status || '');
     
     // Define allowed paths for non-ACTIVE users
@@ -81,35 +66,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const isUserActive = status === 'ACTIVE' || status === 'FREE_TRIAL';
     
     const shouldShowLayout = (isUserActive && !isCheckoutPaymentPage) || isPublicPage || isSelectPackagePage;
-    //const shouldShowLayout = isUserActive && !isPaymentPage && !isSelectPackagePage && !isPublicPage;
-    
-    console.log('🔍 Layout decision:', {
-      isUserActive,
-      isPublicPage,
-      isSelectPackagePage,
-      isPaymentPage,
-      isCheckoutPaymentPage,
-      shouldShowLayout
-    });
-    
     setShowLayout(shouldShowLayout);
     
-    // 🔴 UPDATED: Better redirect logic for non-active users
+    // Redirect logic for non-active users
     if (!isUserActive && !isPublicPage && !isSelectPackagePage && !isPaymentPage) {
-      console.log('🔄 Non-active user trying to access protected route');
-      
       if (!hasActiveSkip && (status === 'PENDING_PACKAGE' || requiresPackage)) {
-        console.log('📦 Redirecting to package selection (PENDING_PACKAGE)');
         navigate('/select-package');
       } else if (status === 'PENDING_PAYMENT' && selectedPackage) {
-        console.log('💳 Redirecting to payment (PENDING_PAYMENT with package)');
         navigate('/payments/new');
       } else if (status === 'PENDING_PAYMENT' && !selectedPackage) {
-        console.log('⚠️ PENDING_PAYMENT but no package, redirecting to package selection');
         navigate('/select-package');
       } else if (!status) {
-        // If no status at all, redirect to login
-        console.log('🔐 No status, redirecting to login');
         navigate('/login');
       }
     }
@@ -139,8 +106,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Lightweight engagement tracker - Only run if layout is shown and user is ACTIVE
   useEffect(() => {
-    if (!showLayout || userStatus !== 'ACTIVE') return; // Skip tracking if layout is hidden or user not active
-    
+    if (!showLayout || userStatus !== 'ACTIVE') return;
+
+    // Only track once per day — not on every route change
+    const today = new Date().toISOString().slice(0, 10);
+    const lastTracked = sessionStorage.getItem('engagementTrackedDate');
+    if (lastTracked === today) return; // Already tracked today in this session
+    sessionStorage.setItem('engagementTrackedDate', today);
+
     try {
       const today = new Date();
       const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD

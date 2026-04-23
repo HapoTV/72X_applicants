@@ -1,6 +1,7 @@
 // src/components/FundingFinder.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Banknote, Calendar, ExternalLink, Bookmark, Building2, Tag } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { fundingService } from '../services/FundingService';
 import type { UserFundingItem } from '../interfaces/FundingData';
 
@@ -9,10 +10,7 @@ const FundingFinder: React.FC = () => {
   const [selectedType, setSelectedType] = useState('all');
   const [selectedIndustry, setSelectedIndustry] = useState('all');
   const [selectedAmount, setSelectedAmount] = useState('all');
-  const [fundingOpportunities, setFundingOpportunities] = useState<UserFundingItem[]>([]);
   const [filteredOpportunities, setFilteredOpportunities] = useState<UserFundingItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const types = [
     { id: 'all', name: 'All Types' },
@@ -46,26 +44,18 @@ const FundingFinder: React.FC = () => {
     { id: '500k+', name: 'R500K+' }
   ];
 
-  useEffect(() => {
-    fetchFundingOpportunities();
-  }, []);
+  const {
+    data: fundingOpportunities = [],
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery<UserFundingItem[]>({
+    queryKey: ['funding-opportunities'],
+    queryFn: () => fundingService.getActiveFunding(),
+    staleTime: 3 * 60 * 1000,
+  });
 
-  const fetchFundingOpportunities = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      console.log('Fetching funding opportunities...');
-      const opportunities = await fundingService.getActiveFunding();
-      console.log('Fetched opportunities:', opportunities);
-      setFundingOpportunities(opportunities);
-    } catch (err) {
-      console.error('Error fetching funding opportunities:', err);
-      setError('Failed to load funding opportunities');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const error = isError ? 'Failed to load funding opportunities' : null;
 
   const applyFilters = useCallback(() => {
     console.log('Applying filters with:', {
@@ -166,7 +156,7 @@ const FundingFinder: React.FC = () => {
   ).slice(0, 3);
 
   const refreshFunding = () => {
-    fetchFundingOpportunities();
+    refetch();
   };
 
   if (loading) {

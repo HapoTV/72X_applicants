@@ -1,6 +1,7 @@
 // src/pages/Profile.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Edit, Save, Bell, Shield, Eye, EyeOff, X, Trash2, Building2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
 import type { UserFormData } from '../interfaces/UserData';
@@ -39,10 +40,7 @@ const Profile: React.FC = () => {
     employees: '',
     founded: '',
   });
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  // Password change modal states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -72,9 +70,38 @@ const Profile: React.FC = () => {
     { id: 'security', name: 'Security', icon: Shield },
   ];
 
+  const { data: userData, isLoading: loading } = useQuery({
+    queryKey: ['profile', user?.userId ?? user?.email],
+    queryFn: () => authService.getCurrentUser(),
+    staleTime: 3 * 60 * 1000,
+    enabled: !!(user?.userId || user?.email),
+  });
+
+  // Sync fetched profile data into local form state
   useEffect(() => {
-    fetchUserProfile();
-  }, []);
+    if (!userData) return;
+    setProfileData({
+      fullName: userData.fullName || '',
+      email: userData.email || '',
+      mobileNumber: userData.mobileNumber || '',
+      companyName: userData.companyName || '',
+      organisation: userData.organisation || '',
+      industry: userData.industry || '',
+      location: userData.location || '',
+      employees: userData.employees || '',
+      founded: userData.founded || '',
+    });
+    setProfileImageUrl(userData.profileImageUrl || '');
+    try {
+      const raw = localStorage.getItem('user');
+      const parsed = raw ? JSON.parse(raw) : {};
+      const nextUser = { ...parsed, ...userData };
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      window.dispatchEvent(new CustomEvent('user-updated'));
+    } catch (e) {
+      // ignore
+    }
+  }, [userData]);
 
   useEffect(() => {
     if (activeTab !== 'notifications') return;
@@ -97,39 +124,6 @@ const Profile: React.FC = () => {
       console.error('Error loading notification preferences:', error);
     }
   }, [activeTab, user?.userId, user?.email]);
-
-  const fetchUserProfile = async () => {
-    try {
-      setLoading(true);
-      const userData = await authService.getCurrentUser();
-      setProfileData({
-        fullName: userData.fullName || '',
-        email: userData.email || '',
-        mobileNumber: userData.mobileNumber || '',
-        companyName: userData.companyName || '',
-        organisation: userData.organisation || '', // NEW
-        industry: userData.industry || '',
-        location: userData.location || '',
-        employees: userData.employees || '',
-        founded: userData.founded || '',
-      });
-      setProfileImageUrl(userData.profileImageUrl || '');
-
-      try {
-        const raw = localStorage.getItem('user');
-        const parsed = raw ? JSON.parse(raw) : {};
-        const nextUser = { ...parsed, ...userData };
-        localStorage.setItem('user', JSON.stringify(nextUser));
-        window.dispatchEvent(new CustomEvent('user-updated'));
-      } catch (e) {
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      alert('Failed to load profile data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSaveNotificationPreferences = async () => {
     try {

@@ -1,5 +1,5 @@
 // src/pages/Notifications.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Bell, 
   Trash2, 
@@ -11,42 +11,29 @@ import {
   Building2,
   Crown
 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NotificationService from '../services/NotificationService';
 import { useAuth } from '../context/AuthContext';
 import type { Notification } from '../services/NotificationService';
 
 const Notifications: React.FC = () => {
   const { user, isSuperAdmin, userOrganisation } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [filterType, setFilterType] = useState<'all' | 'unread'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [filterType]);
+  const {
+    data: notifications = [],
+    isLoading: loading,
+    refetch,
+  } = useQuery<Notification[]>({
+    queryKey: ['notifications', filterType],
+    queryFn: () => NotificationService.getUserNotifications(filterType === 'unread'),
+    staleTime: 3 * 60 * 1000,
+    select: (data) => (Array.isArray(data) ? data : []),
+  });
 
-  useEffect(() => {
-    // Update unread count whenever notifications change
-    setUnreadCount(notifications.filter(n => !n.read).length);
-  }, [notifications]);
-
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      // Get notifications based on filter
-      const data = await NotificationService.getUserNotifications(filterType === 'unread');
-      // Ensure we're working with an array
-      const notificationsArray = Array.isArray(data) ? data : [];
-      setNotifications(notificationsArray);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const filteredNotifications = [...notifications].sort((a, b) => {
     if (sortBy === 'newest') {
@@ -59,8 +46,8 @@ const Notifications: React.FC = () => {
   const markAsRead = async (id: string) => {
     try {
       await NotificationService.markAsRead([id], true);
-      // Update local state
-      setNotifications(prev => 
+      // Update cache
+      queryClient.setQueryData<Notification[]>(['notifications', filterType], (prev = []) =>
         prev.map(n => n.id === id ? { ...n, read: true } : n)
       );
     } catch (error) {
@@ -70,9 +57,7 @@ const Notifications: React.FC = () => {
 
   const markAsUnread = async (id: string) => {
     try {
-      // Note: This might not be supported by the backend
-      // If not, we'll just update local state
-      setNotifications(prev => 
+      queryClient.setQueryData<Notification[]>(['notifications', filterType], (prev = []) =>
         prev.map(n => n.id === id ? { ...n, read: false } : n)
       );
     } catch (error) {
@@ -83,7 +68,9 @@ const Notifications: React.FC = () => {
   const deleteNotification = async (id: string) => {
     try {
       await NotificationService.deleteNotification(id);
-      setNotifications(prev => prev.filter(n => n.id !== id));
+      queryClient.setQueryData<Notification[]>(['notifications', filterType], (prev = []) =>
+        prev.filter(n => n.id !== id)
+      );
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -92,7 +79,9 @@ const Notifications: React.FC = () => {
   const markAllAsRead = async () => {
     try {
       await NotificationService.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      queryClient.setQueryData<Notification[]>(['notifications', filterType], (prev = []) =>
+        prev.map(n => ({ ...n, read: true }))
+      );
     } catch (error) {
       console.error('Error marking all as read:', error);
     }

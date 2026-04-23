@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Clock, Star, BookOpen, Lock, X, Brain, CheckCircle } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { learningService } from '../services/LearningService';
 import { adService } from '../services/AdService';
 import { useAuth } from '../context/AuthContext';
@@ -10,14 +11,18 @@ import { EngagementType } from '../interfaces/AdData';
 import FlipCardQuizModal from '../components/learning/FlipCardQuizModal';
 // import CelebrationModal from '../components/learning/CelebrationModal';
 
+// ─── localStorage helpers ────────────────────────────────────────────────────
+const lsGet = (key: string) => { try { return localStorage.getItem(key); } catch { return null; } };
+const lsSet = (key: string, val: string) => { try { localStorage.setItem(key, val); } catch { /* ignore */ } };
+const lsDel = (key: string) => { try { localStorage.removeItem(key); } catch { /* ignore */ } };
+
 const LearningModules: React.FC = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   
   const [selectedCategory, setSelectedCategory] = useState<'all' | string>('BUSINESS_PLANNING');
   const [modules, setModules] = useState<UserLearningModule[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [openMaterial, setOpenMaterial] = useState<UserLearningModule | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
@@ -29,6 +34,10 @@ const LearningModules: React.FC = () => {
   const [quizPassedMaterialIds, setQuizPassedMaterialIds] = useState<string[]>([]);
   const [materialReadyForQuiz, setMaterialReadyForQuiz] = useState(false);
   const [readTimerDone, setReadTimerDone] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
+
+  // ── session-persistence: restore open material once modules are loaded ──────
+  const sessionRestoredRef = React.useRef(false);
 
   const categories = [
     { id: 'BUSINESS_PLANNING', name: 'Business Planning' },
@@ -88,46 +97,67 @@ useEffect(() => {
     return count;
   }, [modules, startedMaterialIds, openMaterial?.id, quizPassedMaterialIds]);
 
-  // Fetch learning data
-  const fetchLearningData = useCallback(async () => {
-    if (!user?.email) {
-      setError('User email not found');
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
+  // Fetch learning data with caching
+  const { isLoading: loading, error: queryError, data: queryData } = useQuery({
+    queryKey: ['learning-modules', user?.email, selectedCategory],
+    queryFn: async () => {
+      if (!user?.email) throw new Error('User email not found');
       const filter = { category: selectedCategory as any };
       const modulesData = await learningService.getUserModules(user.email, filter);
-      setModules(modulesData);
 
       const started = new Set<string>();
       const quizPassed = new Set<string>();
-
       modulesData.forEach(m => {
         if (m.openedAt || (m.progress && m.progress > 0)) started.add(m.id);
         if (m.quizPassedAt) quizPassed.add(m.id);
       });
 
-      setStartedMaterialIds(Array.from(started));
-      setQuizPassedMaterialIds(Array.from(quizPassed));
+      return { modules: modulesData, started: Array.from(started), quizPassed: Array.from(quizPassed) };
+    },
+    enabled: !!user?.email,
+    staleTime: 3 * 60 * 1000,
+  });
 
-    } catch (err) {
-      setError('Failed to load learning materials');
-      console.error('Error fetching learning data:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.email, selectedCategory]);
-
+  // Sync local state from cache — runs on mount AND when cache returns data
   useEffect(() => {
-    if (user?.email) {
-      fetchLearningData();
+    if (queryData) {
+      setModules(queryData.modules);
+      setStartedMaterialIds(queryData.started);
+      setQuizPassedMaterialIds(queryData.quizPassed);
+
+      // ── restore open material from previous session (only once per mount) ──
+      if (!sessionRestoredRef.current && user?.email) {
+        sessionRestoredRef.current = true;
+        const savedId = lsGet(`learning_open_material_${user.email}`);
+        if (savedId) {
+          const found = queryData.modules.find(m => m.id === savedId);
+          if (found) {
+            // restore materialReadyForQuiz state
+            const readyKey = `learning_ready_for_quiz_${savedId}`;
+            const wasReady = lsGet(readyKey) === '1';
+            setOpenMaterial(found);
+            setMaterialReadyForQuiz(wasReady);
+            setReadTimerDone(wasReady); // allow "I finished reading" button if already done
+          }
+        }
+      }
     }
-  }, [user?.email, fetchLearningData]);
+  }, [queryData, user?.email]);
+
+  const error = queryError ? 'Failed to load learning materials' : quizError;
+
+  // ── restore scroll position when material viewer opens ──────────────────────
+  useEffect(() => {
+    if (!openMaterial) return;
+    const savedScroll = lsGet(`learning_scroll_${openMaterial.id}`);
+    if (!savedScroll) return;
+    // wait for the modal to render, then scroll
+    const raf = requestAnimationFrame(() => {
+      const modal = document.querySelector('.learning-material-modal') as HTMLElement | null;
+      if (modal) modal.scrollTop = parseInt(savedScroll, 10);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [openMaterial?.id]);
 
   // Timer effect for reading materials
   useEffect(() => {
@@ -175,6 +205,11 @@ useEffect(() => {
     );
     setMaterialReadyForQuiz(false);
     setReadTimerDone(false);
+
+    // persist open material to localStorage
+    if (user?.email) {
+      lsSet(`learning_open_material_${user.email}`, material.id);
+    }
 
     if (user?.email) {
       learningService.recordOpened(user.email, material.id);
@@ -285,6 +320,9 @@ useEffect(() => {
   }, [mapQuestionType, tryParseStructuredOptionPayload]);
 
   const recordMaterialFinished = useCallback(async (material: UserLearningModule) => {
+    // persist "ready for quiz" state
+    lsSet(`learning_ready_for_quiz_${material.id}`, '1');
+
     try {
       if (user?.email) {
         await learningService.recordFinished(user.email, material.id);
@@ -306,7 +344,7 @@ useEffect(() => {
 
   const beginQuizForMaterial = useCallback(async (material: UserLearningModule) => {
     setQuizLoading(true);
-    setError(null);
+    setQuizError(null);
     
     try {
       let quiz = await learningService.getQuiz(material.id);
@@ -348,7 +386,7 @@ useEffect(() => {
     } catch (error) {
       console.error('❌ Failed to start quiz:', error);
       const message = error instanceof Error ? error.message : 'Failed to generate quiz. Please try again.';
-      setError(message);
+      setQuizError(message);
     } finally {
       setQuizLoading(false);
     }
@@ -391,6 +429,13 @@ useEffect(() => {
         )
       );
 
+      // clear session persistence for this material after passing
+      lsDel(`learning_ready_for_quiz_${quizMaterial.id}`);
+      lsDel(`learning_quiz_question_${quizMaterial.id}`);
+
+      // Invalidate cache so next visit shows updated progress
+      queryClient.invalidateQueries({ queryKey: ['learning-modules', user?.email, selectedCategory] });
+
     } catch (error) {
       console.error('Error recording quiz pass:', error);
     } finally {
@@ -400,12 +445,13 @@ useEffect(() => {
       setQuizQuestions([]);
       setCompletedModule(null);
     }
-  }, [user?.email, quizMaterial]);
+  }, [user?.email, quizMaterial, queryClient, selectedCategory]);
 
   const handleCloseQuiz = useCallback(() => {
     setShowQuiz(false);
     setQuizMaterial(null);
     setQuizQuestions([]);
+    // note: we intentionally keep learning_quiz_question_* in localStorage so user can resume
   }, []);
 
   const detectViewerKind = useCallback((material: UserLearningModule): 'video' | 'pdf' | 'doc' | 'url' | 'unknown' => {
@@ -592,14 +638,26 @@ useEffect(() => {
       {/* Material Viewer Modal */}
       {openMaterial && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-5xl w-full mx-4 max-h-[95vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl p-8 max-w-5xl w-full mx-4 max-h-[95vh] overflow-y-auto learning-material-modal"
+            onScroll={(e) => {
+              if (openMaterial) {
+                lsSet(`learning_scroll_${openMaterial.id}`, String((e.currentTarget as HTMLElement).scrollTop));
+              }
+            }}
+          >
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{openMaterial.title}</h2>
                 <p className="text-sm text-gray-600 mt-1">{openMaterial.type || 'Learning Material'}</p>
               </div>
               <button
-                onClick={() => setOpenMaterial(null)}
+                onClick={() => {
+                  // clear localStorage on close
+                  if (user?.email) {
+                    lsDel(`learning_open_material_${user.email}`);
+                  }
+                  setOpenMaterial(null);
+                }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-6 h-6" />
@@ -623,12 +681,24 @@ useEffect(() => {
                   return (
                     <div>
                       <iframe
+                        key={openMaterial.id}
                         title="Document Viewer"
                         src={kind === 'doc' 
                           ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`
                           : url
                         }
                         className="w-full h-[72vh] rounded-lg bg-white"
+                        onLoad={(e) => {
+                          // restore scroll position inside the modal container
+                          const savedScroll = lsGet(`learning_scroll_${openMaterial.id}`);
+                          if (savedScroll) {
+                            const container = (e.currentTarget as HTMLIFrameElement)
+                              .closest('.overflow-y-auto') as HTMLElement | null;
+                            if (container) {
+                              container.scrollTop = parseInt(savedScroll, 10);
+                            }
+                          }
+                        }}
                       />
                       <div className="mt-3 flex items-center justify-between gap-3">
                         <div className="text-xs text-gray-600">
@@ -637,6 +707,7 @@ useEffect(() => {
                         <button
                           onClick={async () => {
                             setMaterialReadyForQuiz(true);
+                            setReadTimerDone(true);
                             await recordMaterialFinished(openMaterial);
                           }}
                           disabled={!readTimerDone}
@@ -708,13 +779,21 @@ useEffect(() => {
 
             <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end">
               <button
-                onClick={() => setOpenMaterial(null)}
+                onClick={() => {
+                  if (user?.email) {
+                    lsDel(`learning_open_material_${user.email}`);
+                  }
+                  setOpenMaterial(null);
+                }}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Close
               </button>
               <button
                 onClick={() => {
+                  if (user?.email) {
+                    lsDel(`learning_open_material_${user.email}`);
+                  }
                   setOpenMaterial(null);
                   beginQuizForMaterial(openMaterial);
                 }}
@@ -740,6 +819,7 @@ useEffect(() => {
         moduleTitle={quizMaterial?.title || ''}
         questions={quizQuestions}
         passPercentage={70}
+        materialId={quizMaterial?.id}
         onClose={handleCloseQuiz}
         onPass={handleQuizPass}
       />

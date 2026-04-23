@@ -24,17 +24,24 @@ interface FlipCardQuizModalProps {
   moduleTitle: string;
   questions: QuizQuestion[];
   passPercentage?: number;
+  materialId?: string;
   onClose: () => void;
   onPass: (score: number, totalQuestions: number, percentage: number) => void;
 }
 
 type FeedbackState = 'idle' | 'correct' | 'incorrect';
 
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+const lsGet = (key: string) => { try { return localStorage.getItem(key); } catch { return null; } };
+const lsSet = (key: string, val: string) => { try { localStorage.setItem(key, val); } catch { /* ignore */ } };
+const lsDel = (key: string) => { try { localStorage.removeItem(key); } catch { /* ignore */ } };
+
 const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
   isOpen,
   moduleTitle,
   questions,
   passPercentage = 50,
+  materialId,
   onClose,
   onPass,
 }) => {
@@ -167,8 +174,6 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
       .map(({ q }) => q);
 
     setShuffledQuestions(shuffled);
-    setQuizStarted(false);
-    setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setFeedback('idle');
     setRevealedExplanation(false);
@@ -183,7 +188,15 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
     setOrderTouched(false);
     setCategorizeAssignments({});
     setFillBlankSelected(null);
-  }, [isOpen, questions]);
+
+    // restore saved question index (resume from where user left off)
+    const savedIdx = materialId ? lsGet(`learning_quiz_question_${materialId}`) : null;
+    const resumeIdx = savedIdx ? parseInt(savedIdx, 10) : 0;
+    const validIdx = !isNaN(resumeIdx) && resumeIdx > 0 && resumeIdx < questions.length ? resumeIdx : 0;
+
+    setCurrentQuestionIndex(validIdx);
+    setQuizStarted(validIdx > 0); // auto-start if resuming mid-quiz
+  }, [isOpen, questions, materialId]);
 
   useEffect(() => {
     const q = currentQ;
@@ -313,6 +326,9 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
     }
 
     setCurrentQuestionIndex(nextIndex);
+    // persist progress so user can resume
+    if (materialId) lsSet(`learning_quiz_question_${materialId}`, String(nextIndex));
+
     setSelectedAnswer(null);
     setFeedback('idle');
     setRevealedExplanation(false);
@@ -325,6 +341,8 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
   };
 
   const handleRetry = () => {
+    if (materialId) lsDel(`learning_quiz_question_${materialId}`);
+
     const reshuffled = [...shuffledQuestions]
       .map((q) => ({ q, sort: Math.random() }))
       .sort((a, b) => a.sort - b.sort)
@@ -350,6 +368,7 @@ const FlipCardQuizModal: React.FC<FlipCardQuizModalProps> = ({
   };
 
   const handlePass = () => {
+    if (materialId) lsDel(`learning_quiz_question_${materialId}`);
     onPass(score, totalQuestions, percentage);
   };
 

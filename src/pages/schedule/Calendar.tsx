@@ -1,6 +1,7 @@
 // src/components/Calendar/Calendar.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Bell, BellOff } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { eventService } from '../../services/EventService';
 import { useAuth } from '../../context/AuthContext';
 import type { CalendarEventItem, UserEventItem } from '../../interfaces/EventData';
@@ -8,41 +9,33 @@ import type { CalendarEventItem, UserEventItem } from '../../interfaces/EventDat
 const Calendar: React.FC = () => {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [calendarEvents, setCalendarEvents] = useState<CalendarEventItem[]>([]);
-  const [userEvents, setUserEvents] = useState<UserEventItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user?.email) {
-      fetchCalendarData();
-    }
-  }, [currentDate, user?.email]);
+  const monthKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
 
-  const fetchCalendarData = async () => {
-    if (!user?.email) {
-      setError('User email not found');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery<{ calendarEvents: CalendarEventItem[]; userEvents: UserEventItem[] }>({
+    queryKey: ['calendar', user?.email, monthKey],
+    queryFn: async () => {
       const [calendarData, userEventsData] = await Promise.all([
-        eventService.getCalendarEvents(user.email),
-        eventService.getUserEvents(user.email)
+        eventService.getCalendarEvents(user!.email),
+        eventService.getUserEvents(user!.email),
       ]);
-      
-      setCalendarEvents(calendarData);
-      setUserEvents(userEventsData);
-    } catch (err) {
-      setError('Failed to load calendar data');
-      console.error('Error fetching calendar data:', err);
-    } finally {
-      setLoading(false);
-    }
+      return { calendarEvents: calendarData, userEvents: userEventsData };
+    },
+    staleTime: 3 * 60 * 1000,
+    enabled: !!user?.email,
+  });
+
+  const calendarEvents = data?.calendarEvents ?? [];
+  const userEvents = data?.userEvents ?? [];
+  const error = isError ? 'Failed to load calendar data' : null;
+
+  const fetchCalendarData = () => {
+    refetch();
   };
 
   const getDaysInMonth = (date: Date) => {
@@ -86,7 +79,6 @@ const Calendar: React.FC = () => {
       fetchCalendarData();
     } catch (err) {
       console.error('Error toggling reminder:', err);
-      setError('Failed to update reminder');
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { communityService } from '../../services/CommunityService';
 import { useAuth } from '../../context/AuthContext';
 import type { UserDiscussionItem, CommunityStats as CommunityStatsType } from '../../interfaces/CommunityData';
@@ -11,12 +12,13 @@ import { useLocalDiscussions } from './useLocalDiscussions';
 
 const Discussions: React.FC = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { readLocalDiscussions, writeLocalDiscussions, mergeDiscussions } = useLocalDiscussions();
   
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewDiscussion, setShowNewDiscussion] = useState(false);
   const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() => readLocalDiscussions());
-  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [communityStats, setCommunityStats] = useState<CommunityStatsType>({
     totalMembers: 0,
@@ -34,51 +36,35 @@ const Discussions: React.FC = () => {
     { id: 'legal', name: 'Legal & Compliance' }
   ];
 
+  const {
+    data: remoteDiscussions,
+    isLoading: loading,
+  } = useQuery<UserDiscussionItem[]>({
+    queryKey: ['discussions', selectedCategory],
+    queryFn: () => communityService.getActiveDiscussions(selectedCategory),
+    staleTime: 3 * 60 * 1000,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 500) return false;
+      return failureCount < 1;
+    },
+  });
+
+  // Sync remote discussions into local state, merging with locally-created ones
   useEffect(() => {
-    const fetchCommunityData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    if (remoteDiscussions) {
+      const local = readLocalDiscussions();
+      const merged = mergeDiscussions(remoteDiscussions, local);
+      setDiscussions(merged);
+      writeLocalDiscussions(merged);
+      setError(null);
+    }
+  }, [remoteDiscussions]);
 
-        console.log('Fetching community data...');
-
-        try {
-          const discussionsData = await communityService.getActiveDiscussions(selectedCategory);
-          console.log('Discussions fetched successfully:', discussionsData);
-          const local = readLocalDiscussions();
-          const merged = mergeDiscussions(discussionsData, local);
-          setDiscussions(merged);
-          writeLocalDiscussions(merged);
-        } catch (discussionsError: any) {
-          console.error('Error fetching discussions:', discussionsError);
-
-          if (discussionsError.response?.status === 500) {
-            console.log('Backend 500 error - showing empty discussions state');
-            const local = readLocalDiscussions();
-            setDiscussions(local);
-            setError(null);
-          } else {
-            setError('Failed to load community discussions');
-          }
-          return;
-        }
-
-        try {
-          const statsData = await communityService.getCommunityStats();
-          console.log('Stats fetched successfully:', statsData);
-          setCommunityStats(statsData);
-        } catch (statsError) {
-          console.error('Error fetching stats:', statsError);
-        }
-      } catch (error) {
-        console.error('Unexpected error in fetchCommunityData:', error);
-        setError('Failed to load community discussions');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCommunityData();
+  // Fetch community stats separately (not cached — lightweight)
+  useEffect(() => {
+    communityService.getCommunityStats()
+      .then(setCommunityStats)
+      .catch((err) => console.error('Error fetching stats:', err));
   }, [selectedCategory]);
 
   const handleNewDiscussion = async (formData: { title: string; category: string; content: string }) => {
@@ -93,7 +79,7 @@ const Discussions: React.FC = () => {
     }
 
     try {
-      setLoading(true);
+      setIsSubmitting(true);
 
       const discussionToAdd = {
         title: formData.title,
@@ -145,7 +131,7 @@ const Discussions: React.FC = () => {
         alert('Failed to create discussion. Please try again.');
       }
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -198,7 +184,7 @@ const Discussions: React.FC = () => {
         categories={categories}
         onSubmit={handleNewDiscussion}
         onCancel={() => setShowNewDiscussion(false)}
-        isLoading={loading}
+        isLoading={isSubmitting}
       />
     </div>
   );
