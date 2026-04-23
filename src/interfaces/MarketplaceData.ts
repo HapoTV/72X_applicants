@@ -79,6 +79,7 @@ export interface UserProductItem {
   description: string;
   price: string;
   seller: string;
+  sellerId?: string;
   location: string;
   category: string;
   categoryName?: string;
@@ -92,6 +93,7 @@ export interface UserProductItem {
   status: 'active' | 'sold' | 'pending' | 'removed';
   timeAgo?: string;
   isLiked?: boolean;
+  createdAt?: string;
 }
 
 // ==================== CATEGORIES ====================

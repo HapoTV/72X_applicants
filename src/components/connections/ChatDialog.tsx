@@ -9,9 +9,11 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onMarkAsRead?: () => void; // Add this callback to refresh the list
+  initialMessage?: string;
+  autoSend?: boolean;
 }
 
-const ChatDialog: React.FC<Props> = ({ selectedUser, isOpen, onClose, onMarkAsRead }) => {
+const ChatDialog: React.FC<Props> = ({ selectedUser, isOpen, onClose, onMarkAsRead, initialMessage, autoSend }) => {
   // Mark messages as read when dialog opens
   useEffect(() => {
     if (selectedUser && isOpen) {
@@ -71,6 +73,8 @@ const ChatDialog: React.FC<Props> = ({ selectedUser, isOpen, onClose, onMarkAsRe
             receiverEmail={selectedUser.email}
             onClose={onClose}
             isOpen={isOpen}
+            initialMessage={initialMessage}
+            autoSend={autoSend}
           />
         </div>
       </div>

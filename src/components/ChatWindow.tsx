@@ -24,6 +24,8 @@ interface ChatWindowProps {
   receiverEmail: string;
   onClose: () => void;
   isOpen: boolean;
+  initialMessage?: string;
+  autoSend?: boolean;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -31,16 +33,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   receiverName,
   receiverEmail,
   isOpen,
-  onClose,
+  onClose: _onClose,
+  initialMessage,
+  autoSend,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout>();
-  
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastAutoSentKeyRef = useRef<string>('');
+
   // Get current user ID from localStorage
   const getCurrentUserId = (): string => {
     const userStr = localStorage.getItem('user');
@@ -54,36 +59,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
     return localStorage.getItem('userId') || '';
   };
-  
+
   const currentUserId = getCurrentUserId();
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isOpen && currentUserId && receiverId) {
-      fetchMessages();
-      
-      // Set up polling for new messages every 3 seconds
-      pollingIntervalRef.current = setInterval(fetchMessages, 3000);
-      
-      return () => {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-        }
-      };
-    }
-  }, [isOpen, currentUserId, receiverId]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   const fetchMessages = async () => {
     if (!receiverId || !currentUserId) {
@@ -94,36 +71,32 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     try {
       setLoading(true);
       setError(null);
-      
-      // Check if user is authenticated
+
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.error('No authentication token found');
         setError('Please login to continue');
         throw new Error('Please login to continue');
       }
-      
+
       console.log('Fetching messages between:', currentUserId, 'and', receiverId);
-      
-      // Pass only the receiverId - the backend will get sender ID from the token
+
       const fetchedMessages = await MessageServices.getMessagesBetweenUsers(receiverId);
       console.log('Fetched messages:', fetchedMessages);
-      
+
       setMessages(fetchedMessages);
-      
-      // Mark messages as read if there are any unread messages from the receiver
+
       const hasUnreadFromReceiver = fetchedMessages.some(
-        msg => msg.senderId === receiverId && !msg.isRead
+        (msg) => msg.senderId === receiverId && !msg.isRead
       );
-      
+
       if (hasUnreadFromReceiver) {
         console.log('Marking messages as read from:', receiverId);
         await MessageServices.markMessagesAsRead(receiverId);
       }
     } catch (error: any) {
       console.error('Error fetching messages:', error);
-      
-      // Handle specific error cases
+
       if (error.response?.status === 403) {
         setError('Access denied. You may not have permission to view this conversation.');
       } else if (error.response?.status === 401) {
@@ -136,6 +109,84 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const shouldAutoSend = Boolean(autoSend);
+    const content = (initialMessage || '').trim();
+    if (!isOpen) return;
+    if (!shouldAutoSend) return;
+    if (!content) return;
+    if (!currentUserId || !receiverId) return;
+
+    const key = `${receiverId}::${content}`;
+    if (lastAutoSentKeyRef.current === key) return;
+
+    const run = async () => {
+      try {
+        lastAutoSentKeyRef.current = key;
+        setSending(true);
+        setError(null);
+
+        const sentMessage = await MessageServices.sendMessage({
+          content,
+          senderId: currentUserId,
+          receiverId,
+          messageType: 'TEXT' as const,
+        });
+
+        setMessages((prev) => [...prev, sentMessage]);
+        setNewMessage('');
+        setTimeout(() => fetchMessages(), 500);
+      } catch (err: any) {
+        console.error('Error auto-sending message:', err);
+        setError(err?.message || 'Failed to send message');
+      } finally {
+        setSending(false);
+      }
+    };
+
+    void run();
+  }, [autoSend, currentUserId, initialMessage, isOpen, receiverId]);
+
+  useEffect(() => {
+    if (isOpen && currentUserId && receiverId) {
+      fetchMessages();
+
+      // Set up polling for new messages every 3 seconds
+      pollingIntervalRef.current = setInterval(fetchMessages, 3000);
+
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+      };
+    }
+  }, [isOpen, currentUserId, receiverId]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    lastAutoSentKeyRef.current = '';
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!initialMessage || !initialMessage.trim()) return;
+
+    setNewMessage((prev) => (prev.trim().length > 0 ? prev : initialMessage));
+  }, [isOpen, initialMessage]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -146,7 +197,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     try {
       setSending(true);
       setError(null);
-      
+
       const messageData = {
         content: newMessage.trim(),
         senderId: currentUserId,

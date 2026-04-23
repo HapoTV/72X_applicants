@@ -1,5 +1,6 @@
 // src/pages/MyConnections.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useConnections, DEFAULT_VISIBLE_CONNECTIONS } from './hooks/useConnections';
 import type { ConnectionUser } from './hooks/useConnections';
@@ -9,8 +10,12 @@ import ChatDialog from '../components/connections/ChatDialog';
 
 const MyConnections: React.FC = () => {
   const { user: authUser } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ConnectionUser | null>(null);
+  const [initialMessage, setInitialMessage] = useState<string | undefined>(undefined);
+  const [autoSend, setAutoSend] = useState<boolean | undefined>(undefined);
 
   const {
     users,
@@ -37,14 +42,39 @@ const MyConnections: React.FC = () => {
     refreshConversations, // Make sure this is exported from useConnections
   } = useConnections(authUser?.userId);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const targetUserId = params.get('userId') || '';
+    const message = params.get('message') || '';
+    const autoSendRaw = params.get('autoSend');
+    const shouldAutoSend = autoSendRaw === '1' || autoSendRaw?.toLowerCase() === 'true';
+
+    if (!targetUserId) return;
+    if (!users || users.length === 0) return;
+
+    const match = users.find((u) => u.userId === targetUserId);
+    if (!match) return;
+
+    setSelectedUser(match);
+    setChatOpen(true);
+    setInitialMessage(message || undefined);
+    setAutoSend(shouldAutoSend || undefined);
+
+    navigate('/connections', { replace: true });
+  }, [location.search, navigate, users]);
+
   const handleStartChat = (user: ConnectionUser) => {
     setSelectedUser(user);
     setChatOpen(true);
+    setInitialMessage(undefined);
+    setAutoSend(undefined);
   };
 
   const handleCloseChat = () => {
     setChatOpen(false);
     setSelectedUser(null);
+    setInitialMessage(undefined);
+    setAutoSend(undefined);
     // Refresh conversations when chat closes to update unread counts
     refreshConversations();
   };
@@ -151,11 +181,13 @@ const MyConnections: React.FC = () => {
       )}
 
       {/* Chat Dialog */}
-      <ChatDialog 
-        selectedUser={selectedUser} 
-        isOpen={chatOpen} 
+      <ChatDialog
+        selectedUser={selectedUser}
+        isOpen={chatOpen}
         onClose={handleCloseChat}
         onMarkAsRead={handleMarkAsRead}
+        initialMessage={initialMessage}
+        autoSend={autoSend}
       />
     </div>
   );

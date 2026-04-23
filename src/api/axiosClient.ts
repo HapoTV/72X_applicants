@@ -49,7 +49,9 @@ axiosClient.interceptors.request.use(
     }
 
     const url = typeof config.url === 'string' ? config.url : '';
-    const shouldSkipOrganisationHeader = url.startsWith('/users/me');
+    const shouldSkipOrganisationHeader =
+      url.startsWith('/users/me') ||
+      url.startsWith('/marketplace/');
 
     if (!shouldSkipOrganisationHeader && organisation && userRole !== 'SUPER_ADMIN') {
       config.headers['X-Organisation'] = organisation;

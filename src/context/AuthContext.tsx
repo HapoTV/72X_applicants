@@ -195,6 +195,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.setItem('userPackage', mapped);
           setUserPackage(mapped);
           window.dispatchEvent(new CustomEvent('user-package-updated'));
+
+          const currentStatus = localStorage.getItem('userStatus');
+          if (currentStatus !== 'ACTIVE') {
+            localStorage.setItem('userStatus', 'ACTIVE');
+          }
+          localStorage.removeItem('requiresPackageSelection');
+          localStorage.removeItem('selectedPackage');
         } else {
           const userOrg = localStorage.getItem('userOrganisation');
           const isStandaloneOrg = !userOrg || userOrg.trim().toLowerCase() === 'hapo';

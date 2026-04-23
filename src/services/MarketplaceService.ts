@@ -5,21 +5,14 @@ import type {
   AdminProductItem,
   UserProductItem,
   ProductApiResponse,
-  ProductRequest,
   MarketplaceCategory,
   MarketplaceLocation,
-  SellerFormData,
-  SellerApiResponse,
   ProductReview,
   ReviewFormData,
   ReviewRequest,
-  ProductMessage,
-  MessageFormData,
-  MessageRequest,
   MarketplaceAnalytics,
   ProductSearchParams,
-  ProductSearchResponse,
-  ReportFormData
+  ProductSearchResponse
 } from '../interfaces/MarketplaceData';
 
 class MarketplaceService {
@@ -40,6 +33,67 @@ class MarketplaceService {
       }
     }
     return '';
+  }
+
+  private getBackendBaseUrl(): string {
+    const rawBaseUrl = axiosClient.defaults.baseURL;
+    if (typeof rawBaseUrl !== 'string' || !rawBaseUrl.trim()) return '';
+    return rawBaseUrl.replace(/\/?api\/?$/i, '');
+  }
+
+  private normalizeImageUrl(url: string): string {
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+
+    if (
+      trimmed.startsWith('data:') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('blob:')
+    ) {
+      return trimmed;
+    }
+
+    const backendBaseUrl = this.getBackendBaseUrl();
+    if (!backendBaseUrl) return trimmed;
+
+    try {
+      return new URL(trimmed, backendBaseUrl).toString();
+    } catch {
+      return trimmed;
+    }
+  }
+
+  private normalizeImages(raw: unknown): string[] {
+    if (Array.isArray(raw)) {
+      return raw
+        .filter((x) => typeof x === 'string')
+        .map((x) => this.normalizeImageUrl(x))
+        .filter((x) => x.length > 0);
+    }
+
+    if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (!trimmed) return [];
+
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            return parsed
+              .filter((x) => typeof x === 'string')
+              .map((x) => this.normalizeImageUrl(x))
+              .filter((x) => x.length > 0);
+          }
+        } catch {
+          // fall through
+        }
+      }
+
+      return [this.normalizeImageUrl(trimmed)].filter((x) => x.length > 0);
+    }
+
+    return [];
   }
 
   // ==================== PRODUCT OPERATIONS ====================
@@ -124,10 +178,18 @@ class MarketplaceService {
       const response = await axiosClient.get(`/marketplace/products/${productId}`, {
         headers: this.getAuthHeader()
       });
-      return response.data;
+      const data: any = response.data;
+
+      return {
+        ...data,
+        productId: data?.productId || data?.id,
+        seller: data?.seller ?? data?.sellerName,
+        sellerId: data?.sellerId,
+        images: this.normalizeImages(data?.images)
+      } as ProductApiResponse;
     } catch (error) {
       console.error('Error fetching product:', error);
-      throw new Error('Failed to fetch product');
+      throw error;
     }
   }
 
@@ -148,14 +210,61 @@ class MarketplaceService {
 
   async updateProduct(productId: string, productData: ProductFormData, createdBy: string): Promise<AdminProductItem> {
     try {
-      const productRequest: ProductRequest = this.transformToProductRequest(productData, createdBy);
-      const response = await axiosClient.put(`/marketplace/products/${productId}`, productRequest, {
-        headers: this.getAuthHeader()
-      });
+      const productDTO = this.transformToProductDTO(productData, createdBy);
+      const tagsValue =
+        typeof productDTO.tags === 'string'
+          ? productDTO.tags
+          : Array.isArray(productDTO.tags)
+            ? productDTO.tags.join(',')
+            : null;
+
+      const specificationsValue =
+        typeof productDTO.specifications === 'string'
+          ? productDTO.specifications
+          : productDTO.specifications && typeof productDTO.specifications === 'object'
+            ? this.formatSpecifications(productDTO.specifications)
+            : null;
+
+      const imagesValue =
+        typeof productDTO.images === 'string'
+          ? productDTO.images
+          : Array.isArray(productDTO.images) && productDTO.images.length > 0
+            ? productDTO.images[0]
+            : null;
+
+      const response = await axiosClient.put(
+        `/marketplace/products/${productId}`,
+        {
+          title: productDTO.title,
+          description: productDTO.description,
+          price: productDTO.price,
+          category: productDTO.category,
+          location: productDTO.location,
+          condition: productDTO.condition,
+          tags: tagsValue,
+          specifications: specificationsValue,
+          shippingInfo: productDTO.shippingInfo,
+          returnPolicy: productDTO.returnPolicy,
+          negotiable: productDTO.negotiable,
+          images: imagesValue,
+          createdBy: productDTO.createdBy
+        },
+        {
+          headers: this.getAuthHeader()
+        }
+      );
       return this.transformToAdminProductItem(response.data);
-    } catch (error) {
-      console.error('Error updating product:', error);
-      throw new Error('Failed to update product');
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const data = error?.response?.data;
+      const messageFromBackend =
+        typeof data === 'string'
+          ? data
+          : typeof data?.message === 'string'
+            ? data.message
+            : undefined;
+      console.error('Error updating product:', { status, data });
+      throw new Error(messageFromBackend || 'Failed to update product');
     }
   }
 
@@ -167,6 +276,18 @@ class MarketplaceService {
     } catch (error) {
       console.error('Error deleting product:', error);
       throw new Error('Failed to delete product');
+    }
+  }
+
+  async updateProductStatus(productId: string, status: 'active' | 'sold' | 'pending' | 'removed'): Promise<void> {
+    try {
+      await axiosClient.patch(`/marketplace/products/${productId}/status`, null, {
+        params: { status },
+        headers: this.getAuthHeader()
+      });
+    } catch (error) {
+      console.error('Error updating product status:', error);
+      throw new Error('Failed to update product status');
     }
   }
 
@@ -182,6 +303,35 @@ class MarketplaceService {
       console.error('Error fetching seller products:', error);
       throw new Error('Failed to fetch seller products');
     }
+  }
+
+  async getCategories(): Promise<MarketplaceCategory[]> {
+    return [
+      { id: 'all', name: 'All Categories' },
+      { id: 'food', name: 'Food & Beverages' },
+      { id: 'crafts', name: 'Arts & Crafts' },
+      { id: 'clothing', name: 'Clothing & Fashion' },
+      { id: 'services', name: 'Services' },
+      { id: 'agriculture', name: 'Agriculture' },
+      { id: 'beauty', name: 'Beauty & Personal Care' },
+      { id: 'electronics', name: 'Electronics & Repairs' },
+      { id: 'home', name: 'Home & Garden' },
+      { id: 'other', name: 'Other' },
+    ];
+  }
+
+  async getLocations(): Promise<MarketplaceLocation[]> {
+    return [
+      { id: 'all', name: 'All Locations' },
+      { id: 'soweto', name: 'Soweto' },
+      { id: 'alexandra', name: 'Alexandra' },
+      { id: 'khayelitsha', name: 'Khayelitsha' },
+      { id: 'mitchells-plain', name: 'Mitchells Plain' },
+      { id: 'mamelodi', name: 'Mamelodi' },
+      { id: 'umlazi', name: 'Umlazi' },
+      { id: 'mdantsane', name: 'Mdantsane' },
+      { id: 'other', name: 'Other' },
+    ];
   }
 
   // ==================== REVIEW OPERATIONS ====================
@@ -240,7 +390,7 @@ class MarketplaceService {
 
   private transformToAdminProductItem(apiProduct: any): AdminProductItem {
     return {
-      id: apiProduct.productId,
+      id: apiProduct.productId || apiProduct.id,
       title: apiProduct.title,
       description: apiProduct.description,
       price: apiProduct.price,
@@ -250,7 +400,7 @@ class MarketplaceService {
       category: apiProduct.category,
       rating: apiProduct.rating,
       reviews: apiProduct.reviews,
-      images: apiProduct.images,
+      images: this.normalizeImages(apiProduct.images),
       featured: apiProduct.featured || false,
       inStock: apiProduct.inStock !== false,
       condition: apiProduct.condition,
@@ -270,41 +420,25 @@ class MarketplaceService {
 
   private transformToUserProductItem(apiProduct: any): UserProductItem {
     return {
-      id: apiProduct.productId,
+      id: apiProduct.productId || apiProduct.id,
       title: apiProduct.title,
       description: apiProduct.description,
       price: apiProduct.price,
       seller: apiProduct.seller,
+      sellerId: apiProduct.sellerId,
       location: apiProduct.location,
       category: apiProduct.category,
       rating: apiProduct.rating,
       reviews: apiProduct.reviews,
-      images: apiProduct.images,
+      images: this.normalizeImages(apiProduct.images),
       featured: apiProduct.featured || false,
       inStock: apiProduct.inStock !== false,
       condition: apiProduct.condition,
       negotiable: apiProduct.negotiable,
       status: apiProduct.status,
       timeAgo: this.formatTimeAgo(apiProduct.createdAt),
-      isLiked: false
-    };
-  }
-
-  private transformToProductRequest(formData: ProductFormData, createdBy: string): ProductRequest {
-    return {
-      title: formData.title,
-      description: formData.description,
-      price: formData.price,
-      category: formData.category,
-      location: formData.location,
-      condition: formData.condition,
-      tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0),
-      specifications: this.parseSpecifications(formData.specifications),
-      shippingInfo: formData.shippingInfo || undefined,
-      returnPolicy: formData.returnPolicy || undefined,
-      negotiable: formData.negotiable,
-      images: formData.images,
-      createdBy: createdBy
+      isLiked: false,
+      createdAt: apiProduct.createdAt
     };
   }
 
@@ -339,15 +473,6 @@ class MarketplaceService {
     };
   }
 
-  private transformToMessageRequest(formData: MessageFormData, createdBy: string): MessageRequest {
-    return {
-      productId: formData.productId,
-      receiverId: formData.receiverId,
-      message: formData.message,
-      createdBy: createdBy
-    };
-  }
-
   transformToProductFormData(product: AdminProductItem): ProductFormData {
     return {
       title: product.title,
@@ -366,20 +491,6 @@ class MarketplaceService {
   }
 
   // ==================== UTILITY METHODS ====================
-
-  private parseSpecifications(specString: string): Record<string, string> {
-    const specs: Record<string, string> = {};
-    if (!specString) return specs;
-    
-    specString.split('\n').forEach(line => {
-      const [key, ...valueParts] = line.split(':');
-      if (key && valueParts.length > 0) {
-        specs[key.trim()] = valueParts.join(':').trim();
-      }
-    });
-    
-    return specs;
-  }
 
   private formatSpecifications(specs: Record<string, string>): string {
     return Object.entries(specs)
