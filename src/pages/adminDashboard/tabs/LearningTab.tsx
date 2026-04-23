@@ -106,6 +106,8 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
         resourceUrl: string;
         description: string;
         file?: File;
+        thumbnailFile?: File;
+        thumbnailPreview?: string;
         targetOrganisation?: string;
         isPublic?: boolean;
         showAllOrganisations?: boolean;
@@ -116,6 +118,8 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
         resourceUrl: '',
         description: '',
         file: undefined,
+        thumbnailFile: undefined,
+        thumbnailPreview: undefined,
         targetOrganisation: '',
         isPublic: false,
         showAllOrganisations: false
@@ -281,6 +285,11 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
                 }
             }
 
+            // Append thumbnail if provided
+            if (newLearning.thumbnailFile) {
+                formData.append('thumbnailFile', newLearning.thumbnailFile);
+            }
+
             await axiosClient.post('/learning-materials', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
                 onUploadProgress: (event) => {
@@ -303,6 +312,8 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
                 resourceUrl: '',
                 description: '',
                 file: undefined,
+                thumbnailFile: undefined,
+                thumbnailPreview: undefined,
                 targetOrganisation: '',
                 isPublic: false,
                 showAllOrganisations: false,

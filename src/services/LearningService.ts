@@ -405,6 +405,7 @@ class LearningService {
         resourceUrl: item.resourceUrl,
         fileName: item.fileName,
         type: item.type,
+        thumbnailUrl: item.thumbnailUrl || item.thumbnail,
         openedAt: item.openedAt,
         finishedAt: item.finishedAt,
         quizStartedAt: item.quizStartedAt,

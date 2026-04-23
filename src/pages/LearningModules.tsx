@@ -1,7 +1,7 @@
 // src/pages/LearningModules.tsx
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Clock, Star, BookOpen, Lock, X, Brain, CheckCircle } from 'lucide-react';
+import { Clock, Star, BookOpen, Lock, X, Brain, CheckCircle, FileText, Video, Link as LinkIcon, BarChart2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { learningService } from '../services/LearningService';
 import { adService } from '../services/AdService';
@@ -15,6 +15,98 @@ import FlipCardQuizModal from '../components/learning/FlipCardQuizModal';
 const lsGet = (key: string) => { try { return localStorage.getItem(key); } catch { return null; } };
 const lsSet = (key: string, val: string) => { try { localStorage.setItem(key, val); } catch { /* ignore */ } };
 const lsDel = (key: string) => { try { localStorage.removeItem(key); } catch { /* ignore */ } };
+
+// ─── Category gradient + icon config ─────────────────────────────────────────
+const CATEGORY_STYLES: Record<string, { gradient: string; icon: React.ReactNode; accent: string }> = {
+  BUSINESS_PLANNING:    { gradient: 'from-blue-600 to-blue-800',    icon: <BarChart2 className="w-8 h-8 text-white/80" />,  accent: 'bg-blue-600' },
+  MARKETING_SALES:      { gradient: 'from-orange-500 to-pink-600',  icon: <Star className="w-8 h-8 text-white/80" />,       accent: 'bg-orange-500' },
+  FINANCIAL_MANAGEMENT: { gradient: 'from-green-600 to-teal-700',   icon: <BarChart2 className="w-8 h-8 text-white/80" />,  accent: 'bg-green-600' },
+  OPERATIONS:           { gradient: 'from-purple-600 to-indigo-700',icon: <CheckCircle className="w-8 h-8 text-white/80" />,accent: 'bg-purple-600' },
+  LEADERSHIP:           { gradient: 'from-yellow-500 to-orange-600',icon: <Star className="w-8 h-8 text-white/80" />,       accent: 'bg-yellow-500' },
+  TECHNICAL:            { gradient: 'from-cyan-600 to-blue-700',    icon: <Brain className="w-8 h-8 text-white/80" />,      accent: 'bg-cyan-600' },
+};
+
+const DEFAULT_STYLE = { gradient: 'from-gray-600 to-gray-800', icon: <BookOpen className="w-8 h-8 text-white/80" />, accent: 'bg-gray-600' };
+
+const getTypeIcon = (type?: string) => {
+  const t = (type || '').toLowerCase();
+  if (t.includes('video')) return <Video className="w-3 h-3" />;
+  if (t.includes('pdf') || t.includes('doc')) return <FileText className="w-3 h-3" />;
+  return <LinkIcon className="w-3 h-3" />;
+};
+
+// ─── Card thumbnail component ─────────────────────────────────────────────────
+const CardThumbnail: React.FC<{
+  module: UserLearningModule;
+  hasPassedQuiz: boolean;
+}> = ({ module, hasPassedQuiz }) => {
+  const [imgError, setImgError] = useState(false);
+  const thumbnailUrl = module.thumbnailUrl || module.thumbnail;
+  const showImage = thumbnailUrl && !imgError;
+
+  const catKey = (module.category || '').toUpperCase().replace(/-/g, '_');
+  const style = CATEGORY_STYLES[catKey] || DEFAULT_STYLE;
+
+  // Get initials from title (up to 2 words)
+  const initials = (module.title || '')
+    .split(' ')
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div className="relative w-full h-40 overflow-hidden rounded-t-xl">
+      {showImage ? (
+        <img
+          src={thumbnailUrl}
+          alt={module.title}
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className={`w-full h-full bg-gradient-to-br ${style.gradient} flex flex-col items-center justify-center gap-2 p-4`}>
+          {style.icon}
+          <span className="text-white font-bold text-sm text-center line-clamp-2 leading-tight px-2">
+            {module.title}
+          </span>
+          <span className="text-white/50 text-xs font-bold tracking-widest absolute bottom-2 right-3">
+            {initials}
+          </span>
+        </div>
+      )}
+
+      {/* Type badge */}
+      <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
+        {getTypeIcon(module.type)}
+        <span className="capitalize">{(module.type || 'material').toLowerCase()}</span>
+      </div>
+
+      {/* Passed badge */}
+      {hasPassedQuiz && (
+        <div className="absolute top-2 right-2 flex items-center gap-1 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+          <CheckCircle className="w-3 h-3" />
+          Passed
+        </div>
+      )}
+
+      {/* Premium badge */}
+      {module.isPremium && !hasPassedQuiz && (
+        <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded-full font-semibold">
+          Premium
+        </div>
+      )}
+
+      {/* Progress bar overlay at bottom of image */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+        <div
+          className="h-full bg-green-400 transition-all duration-500"
+          style={{ width: `${hasPassedQuiz ? 100 : module.progress}%` }}
+        />
+      </div>
+    </div>
+  );
+};
 
 const LearningModules: React.FC = () => {
   const { user } = useAuth();
@@ -544,86 +636,85 @@ useEffect(() => {
           <p className="text-gray-500">No learning materials available for this category yet.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {modules.map((module) => {
             const { isLocked, gateText } = getIsLockedByGate(module.id);
             const hasPassedQuiz = quizPassedMaterialIds.includes(module.id);
-            
+            const isDisabled = module.isLocked || isLocked;
+
             return (
-              <div key={module.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="relative bg-gray-50 h-16">
-                  {hasPassedQuiz && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      Passed
-                    </div>
-                  )}
-                  {module.isPremium && (
-                    <div className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-semibold">
-                      Premium
-                    </div>
-                  )}
-                  <div className="absolute bottom-2 left-2 right-2">
-                    <div className="bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
-                      <div className="flex items-center justify-between text-white text-xs">
-                        <span>Progress</span>
-                        <span className="font-semibold">{hasPassedQuiz ? 100 : module.progress}%</span>
-                      </div>
-                      <div className="w-full bg-white/30 rounded-full h-1 mt-1">
-                        <div 
-                          className="bg-green-500 h-1 rounded-full transition-all duration-500"
-                          style={{ width: `${hasPassedQuiz ? 100 : module.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4">
-                  <h3 className="text-sm font-semibold mb-1 line-clamp-1">{module.title}</h3>
-                  <p className="text-gray-600 text-xs mb-3 line-clamp-2">{module.description}</p>
-                  
+              <div
+                key={module.id}
+                className={`bg-white rounded-xl shadow-md overflow-hidden flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${isDisabled ? 'opacity-70' : ''}`}
+              >
+                {/* Thumbnail */}
+                <CardThumbnail module={module} hasPassedQuiz={hasPassedQuiz} />
+
+                {/* Card body */}
+                <div className="p-4 flex flex-col flex-1">
+                  <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2 leading-snug">
+                    {module.title}
+                  </h3>
+                  <p className="text-gray-500 text-xs mb-3 line-clamp-2 flex-1">
+                    {module.description}
+                  </p>
+
+                  {/* Meta row */}
                   <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
                     <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
+                      <Clock className="w-3.5 h-3.5" />
                       <span>{module.duration}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-400" />
-                      <span>{module.rating}</span>
-                    </div>
+                    {module.rating > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                        <span className="font-medium text-gray-700">{module.rating.toFixed(1)}</span>
+                      </div>
+                    )}
+                    <span className="text-gray-400 capitalize text-xs">{module.difficulty}</span>
                   </div>
 
+                  {/* Progress text */}
+                  {!hasPassedQuiz && module.progress > 0 && (
+                    <div className="text-xs text-gray-500 mb-2">
+                      {module.progress}% complete
+                    </div>
+                  )}
+
+                  {/* Gate warning */}
                   {isLocked && (
                     <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-2">
                       <div className="text-xs font-semibold text-blue-900 flex items-center gap-1">
-                        <Lock className="w-3 h-3" />
+                        <Lock className="w-3 h-3 flex-shrink-0" />
                         {gateText}
                       </div>
                     </div>
                   )}
 
+                  {/* CTA button */}
                   <button
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-all transform hover:scale-[1.02] ${
-                      module.isLocked || isLocked
+                    className={`mt-auto w-full py-2 px-4 rounded-lg text-sm font-semibold transition-all ${
+                      isDisabled
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : hasPassedQuiz
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
-                          : 'bg-primary-600 text-white hover:bg-primary-700'
+                          ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-300'
+                          : module.progress > 0
+                            ? 'bg-primary-50 text-primary-700 hover:bg-primary-100 border border-primary-300'
+                            : 'bg-primary-600 text-white hover:bg-primary-700'
                     }`}
-                    disabled={module.isLocked || isLocked}
+                    disabled={isDisabled}
                     onClick={() => openMaterialAndTrack(module)}
                   >
-                    {module.isLocked || isLocked ? (
+                    {isDisabled ? (
                       <span className="inline-flex items-center justify-center gap-2">
-                        <Lock className="w-4 h-4" />
-                        Locked
+                        <Lock className="w-4 h-4" /> Locked
                       </span>
                     ) : hasPassedQuiz ? (
                       <span className="inline-flex items-center justify-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        Review Material
+                        <CheckCircle className="w-4 h-4" /> Review Material
                       </span>
+                    ) : module.progress > 0 ? (
+                      'Continue Learning'
                     ) : (
                       'Start Learning'
                     )}

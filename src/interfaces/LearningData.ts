@@ -97,6 +97,7 @@ export interface UserLearningModule {
   isPremium: boolean;
   progress: number;
   thumbnail?: string;
+  thumbnailUrl?: string;
   isCompleted: boolean;
   isLocked: boolean;
   lastAccessed?: string;

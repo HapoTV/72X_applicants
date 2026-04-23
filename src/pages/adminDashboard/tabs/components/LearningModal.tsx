@@ -7,6 +7,8 @@ interface NewLearningData {
     resourceUrl: string;
     description: string;
     file?: File;
+    thumbnailFile?: File;
+    thumbnailPreview?: string;
     targetOrganisation?: string;
     isPublic?: boolean;
     showAllOrganisations?: boolean;
@@ -169,6 +171,51 @@ export const LearningModal: React.FC<LearningModalProps> = ({
                                 </p>
                             </div>
                         )}
+                    </div>
+
+                    {/* Thumbnail Upload Section */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cover Image <span className="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                            Shown on the learning card. If not provided, a gradient placeholder is used.
+                        </p>
+                        <div className="flex gap-3 items-start">
+                            {/* Preview */}
+                            <div className="flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center">
+                                {newLearning.thumbnailPreview ? (
+                                    <img src={newLearning.thumbnailPreview} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-xs text-gray-400 text-center px-1">No image</span>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    disabled={uploading}
+                                    onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (!f) return;
+                                        const preview = URL.createObjectURL(f);
+                                        onNewLearningChange({ thumbnailFile: f, thumbnailPreview: preview });
+                                    }}
+                                    className="w-full text-sm"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP — max 5MB</p>
+                                {newLearning.thumbnailFile && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onNewLearningChange({ thumbnailFile: undefined, thumbnailPreview: undefined })}
+                                        className="mt-1 text-xs text-red-500 hover:text-red-700"
+                                        disabled={uploading}
+                                    >
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <div>
