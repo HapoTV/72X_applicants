@@ -197,15 +197,16 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
                 try {
                     const groups = await OrganisationService.getSignupOrganisationGroups();
                     setOrganisationGroups(groups);
-                } catch (_e) {
+                } catch {
                     setOrganisationGroups({ organisations: [], cocSubOrganisations: [] });
                 }
             }
+
             if (isCocAdmin) {
                 try {
                     const subs = await cocOrganisationService.listMine();
                     setOrganisations(subs.map((s) => s.name).filter(Boolean));
-                } catch (_e) {
+                } catch {
                     setOrganisations([]);
                 }
             }

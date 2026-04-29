@@ -53,7 +53,7 @@ const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout }) => {
             // Try to get unread count from dedicated endpoint
             const count = await NotificationService.getUnreadCount();
             setUnreadCount(count);
-        } catch (error) {
+        } catch {
             // Fallback to fetching notifications and counting
             try {
                 const notifications = await NotificationService.getUserNotifications(true);

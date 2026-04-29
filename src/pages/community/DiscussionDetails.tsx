@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { communityService } from '../../services/CommunityService';
-import type { AdminDiscussionItem, UserDiscussionItem } from '../../interfaces/CommunityData';
+import type { AdminDiscussionItem } from '../../interfaces/CommunityData';
 
 const DiscussionDetails: React.FC = () => {
   const navigate = useNavigate();

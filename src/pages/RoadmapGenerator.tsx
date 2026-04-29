@@ -1,6 +1,6 @@
 // src/pages/RoadmapGenerator.tsx
 import React, { useState, useEffect } from 'react';
-import { Map, ArrowRight, CheckCircle, Clock, Download, FileText, Trash2, Loader2 } from 'lucide-react';
+import { Map, ArrowRight, CheckCircle, FileText, Trash2, Loader2 } from 'lucide-react';
 import { roadmapService } from '../services/RoadmapService';
 import type { 
   RoadmapGenerationRequest,
@@ -91,15 +91,15 @@ const RoadmapGenerator: React.FC = () => {
   useEffect(() => {
     const userId = getUserId();
     if (userId) {
-      loadUserRoadmaps(userId);
+      loadUserRoadmaps();
     }
   }, []);
 
-  const loadUserRoadmaps = async (userId: string) => {
+  const loadUserRoadmaps = async () => {
     setLoading(true);
     setError(null);
     try {
-      const roadmaps = await roadmapService.getUserRoadmaps(userId);
+      const roadmaps = await roadmapService.getUserRoadmaps();
       setUserRoadmaps(roadmaps);
     } catch (err: any) {
       setError(err.message || 'Failed to load your roadmaps');
@@ -201,11 +201,11 @@ const RoadmapGenerator: React.FC = () => {
       };
 
       // Save to backend
-      await roadmapService.createRoadmap(roadmapData, userId);
+      await roadmapService.createRoadmap(roadmapData);
       
       setSuccessMessage('Roadmap saved successfully!');
       // Refresh user roadmaps
-      loadUserRoadmaps(userId);
+      loadUserRoadmaps();
       
     } catch (err: any) {
       setError(err.message || 'Failed to save roadmap');

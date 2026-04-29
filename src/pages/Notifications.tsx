@@ -17,7 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import type { Notification } from '../services/NotificationService';
 
 const Notifications: React.FC = () => {
-  const { user, isSuperAdmin, userOrganisation } = useAuth();
+  const { isSuperAdmin, userOrganisation } = useAuth();
   const queryClient = useQueryClient();
   const [filterType, setFilterType] = useState<'all' | 'unread'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
@@ -25,7 +25,6 @@ const Notifications: React.FC = () => {
   const {
     data: notifications = [],
     isLoading: loading,
-    refetch,
   } = useQuery<Notification[]>({
     queryKey: ['notifications', filterType],
     queryFn: () => NotificationService.getUserNotifications(filterType === 'unread'),

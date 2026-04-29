@@ -726,14 +726,14 @@ class PaymentService {
     if (!dateString) return 'N/A';
     
     try {
-      return new Date(dateString).toLocaleDateString('en-ZA', {
+      return new Date(dateString).toLocaleString('en-ZA', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric',
+        day: '2-digit',
         hour: '2-digit',
         minute: '2-digit'
       });
-    } catch (_e) {
+    } catch {
       return dateString;
     }
   }

@@ -21,8 +21,8 @@ const Calendar: React.FC = () => {
     queryKey: ['calendar', user?.email, monthKey],
     queryFn: async () => {
       const [calendarData, userEventsData] = await Promise.all([
-        eventService.getCalendarEvents(user!.email),
-        eventService.getUserEvents(user!.email),
+        eventService.getCalendarEvents(),
+        eventService.getUserEvents(),
       ]);
       return { calendarEvents: calendarData, userEvents: userEventsData };
     },
@@ -57,11 +57,6 @@ const Calendar: React.FC = () => {
 
   const nextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
-  };
-
-  const hasEvent = (day: number) => {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return calendarEvents.find(event => event.date === dateStr);
   };
 
   const getEventsForDay = (day: number) => {

@@ -102,7 +102,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
             const parsed = raw ? JSON.parse(raw) : {};
             const nextUser = { ...parsed, profileImageUrl: url };
             localStorage.setItem('user', JSON.stringify(nextUser));
-          } catch (e) {}
+          } catch {}
         }
       } catch (error) {
         console.error('Error hydrating profile image:', error);

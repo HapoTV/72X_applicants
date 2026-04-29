@@ -150,10 +150,10 @@ const AdminProfile: React.FC = () => {
                 const nextUser = { ...parsed, ...userData };
                 localStorage.setItem('user', JSON.stringify(nextUser));
                 window.dispatchEvent(new CustomEvent('user-updated'));
-            } catch (_e) {
+            } catch {
                 // ignore localStorage errors
             }
-        } catch (_err) {
+        } catch {
             alert('Failed to load profile data');
         } finally {
             setLoading(false);
@@ -179,12 +179,11 @@ const AdminProfile: React.FC = () => {
                 const nextUser = { ...parsed, ...updatedUser };
                 localStorage.setItem('user', JSON.stringify(nextUser));
                 window.dispatchEvent(new CustomEvent('user-updated'));
-            } catch (_e) {
+            } catch {
                 // ignore localStorage errors
             }
         } catch (err: any) {
-            alert('Failed to save profile');
-            console.error(err);
+            alert(err?.message || 'Failed to update profile');
         } finally {
             setSaving(false);
         }
@@ -386,7 +385,7 @@ const AdminProfile: React.FC = () => {
                 try {
                     const response = await axiosClient.get(`/users/organisation/${userOrganisation}`);
                     users = response.data || [];
-                } catch (_orgError: any) {
+                } catch {
                     const response = await axiosClient.get('/users/admin/all');
                     const allUsersData = response.data || [];
                     users = allUsersData.filter((u: any) => u.organisation === userOrganisation);

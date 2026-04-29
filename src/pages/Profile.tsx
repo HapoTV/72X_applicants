@@ -98,7 +98,7 @@ const Profile: React.FC = () => {
       const nextUser = { ...parsed, ...userData };
       localStorage.setItem('user', JSON.stringify(nextUser));
       window.dispatchEvent(new CustomEvent('user-updated'));
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [userData]);

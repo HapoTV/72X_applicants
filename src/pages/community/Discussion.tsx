@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { communityService } from '../../services/CommunityService';
 import { useAuth } from '../../context/AuthContext';
 import type { UserDiscussionItem, CommunityStats as CommunityStatsType } from '../../interfaces/CommunityData';
@@ -12,7 +12,6 @@ import { useLocalDiscussions } from './useLocalDiscussions';
 
 const Discussions: React.FC = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const { readLocalDiscussions, writeLocalDiscussions, mergeDiscussions } = useLocalDiscussions();
   
   const [selectedCategory, setSelectedCategory] = useState('all');

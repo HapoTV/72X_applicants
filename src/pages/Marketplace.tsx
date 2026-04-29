@@ -9,6 +9,7 @@ const Marketplace: React.FC = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   const isFreeTrialUser = localStorage.getItem('userStatus') === 'FREE_TRIAL';
+  const currentUserId = String((user as any)?.id || (user as any)?.userId || '');
   const [activeView, setActiveView] = useState<'featured' | 'my'>('featured');
   const [storageAuthToken, setStorageAuthToken] = useState<string | null>(() => localStorage.getItem('authToken'));
   const [featuredSearchTerm, setFeaturedSearchTerm] = useState('');
@@ -105,7 +106,7 @@ const Marketplace: React.FC = () => {
 
       const details = await marketplaceService.getProductById(product.id);
       setPreviewProduct(details);
-    } catch (e: any) {
+    } catch {
       setPreviewProduct(product as any);
       setPreviewError('Could not load full product details. Showing a basic preview.');
     } finally {
@@ -125,6 +126,11 @@ const Marketplace: React.FC = () => {
     const sellerId = previewProduct?.sellerId;
     if (!sellerId) {
       alert('Seller information is not available for this product.');
+      return;
+    }
+
+    if (currentUserId && String(sellerId) === currentUserId) {
+      alert("You can't contact yourself about your own product.");
       return;
     }
 
@@ -178,6 +184,8 @@ const Marketplace: React.FC = () => {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [activePreviewImageIndex, setActivePreviewImageIndex] = useState(0);
 
+  const isOwnPreviewProduct = Boolean(currentUserId) && String(previewProduct?.sellerId || '') === currentUserId;
+
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -204,6 +212,12 @@ const Marketplace: React.FC = () => {
   // Handle form submission
   const handleListProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isFreeTrialUser) {
+      alert('Users on Free Trial cannot list products. Please subscribe to a plan to continue.');
+      navigate('/select-package');
+      return;
+    }
     
     if (!user?.email) {
       alert('Please login to list a product');
@@ -496,7 +510,7 @@ const Marketplace: React.FC = () => {
           const productsResponse = await marketplaceService.getActiveProducts(searchParams);
           setProducts(productsResponse.products.filter((p) => p?.status !== 'sold'));
         }
-      } catch (apiError) {
+      } catch {
         try {
           if (activeView === 'featured') {
             const featured = await marketplaceService.getFeaturedProducts();
@@ -543,7 +557,7 @@ const Marketplace: React.FC = () => {
         
         setCategories(categoriesData);
         setLocations(locationsData);
-      } catch (fallbackError) {
+      } catch {
         console.log('Categories/Locations API not available, using fallback data');
         // Fallback data when backend is not available
         setCategories([
@@ -671,13 +685,27 @@ const Marketplace: React.FC = () => {
           </div>
 
           {user && (
-            <button
-              onClick={() => setShowAddProduct(true)}
-              className="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5 text-xs font-medium shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>List Product</span>
-            </button>
+            <div className="relative group">
+              <button
+                onClick={isFreeTrialUser ? undefined : () => setShowAddProduct(true)}
+                disabled={isFreeTrialUser}
+                className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium shadow-sm ${
+                  isFreeTrialUser
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-primary-600 text-white hover:bg-primary-700'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>List Product</span>
+              </button>
+              {isFreeTrialUser && (
+                <div className="pointer-events-none absolute -top-10 right-0 hidden group-hover:block">
+                  <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
+                    Users on Free Trial cannot list products. Subscribe to a plan to continue.
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -1030,10 +1058,10 @@ const Marketplace: React.FC = () => {
                     </button>
                     <div className="relative group">
                       <button
-                        onClick={isFreeTrialUser ? undefined : handleContactSellerFromPreview}
-                        disabled={isFreeTrialUser}
+                        onClick={isFreeTrialUser || isOwnPreviewProduct ? undefined : handleContactSellerFromPreview}
+                        disabled={isFreeTrialUser || isOwnPreviewProduct}
                         className={`px-4 py-2 rounded-lg transition-colors text-sm ${
-                          isFreeTrialUser
+                          isFreeTrialUser || isOwnPreviewProduct
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                             : 'bg-primary-500 text-white hover:bg-primary-600'
                         }`}
@@ -1044,6 +1072,13 @@ const Marketplace: React.FC = () => {
                         <div className="pointer-events-none absolute -top-10 right-0 hidden group-hover:block">
                           <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
                             Users on Free Trial cannot contact sellers. Subscribe to access messaging.
+                          </div>
+                        </div>
+                      )}
+                      {!isFreeTrialUser && isOwnPreviewProduct && (
+                        <div className="pointer-events-none absolute -top-10 right-0 hidden group-hover:block">
+                          <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
+                            You can't contact yourself about your own product.
                           </div>
                         </div>
                       )}
