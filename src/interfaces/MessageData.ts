@@ -1,3 +1,4 @@
+// src/interfaces/MessageData.ts
 export interface Message {
   messageId: string;
   senderId: string;
