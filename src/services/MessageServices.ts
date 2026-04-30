@@ -4,7 +4,6 @@ import type { Message, MessageSendRequest, Conversation } from '../interfaces/Me
 import type { User } from '../interfaces/UserData';
 
 class MessageServices {
-  
   private getAuthHeader() {
     const token = localStorage.getItem('authToken');
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -16,14 +15,13 @@ class MessageServices {
       try {
         const user = JSON.parse(userStr);
         return user.id || user.userId || '';
-      } catch (e) {
-        console.error('Error parsing user data:', e);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
       }
     }
     return '';
   }
 
-  // Send a message
   async sendMessage(messageData: MessageSendRequest): Promise<Message> {
     try {
       const senderId = this.getCurrentUserId();
@@ -48,7 +46,6 @@ class MessageServices {
     }
   }
 
-  // Get messages between two users
   async getMessagesBetweenUsers(receiverId: string): Promise<Message[]> {
     try {
       const currentUserId = this.getCurrentUserId();
@@ -66,7 +63,6 @@ class MessageServices {
     }
   }
 
-  // Get conversations for current user
   async getUserConversations(): Promise<Conversation[]> {
     try {
       console.log('Fetching conversations...');
@@ -82,7 +78,6 @@ class MessageServices {
     }
   }
 
-  // Mark messages as read
   async markMessagesAsRead(senderId: string): Promise<void> {
     try {
       console.log('Marking messages as read from sender:', senderId);
@@ -95,7 +90,6 @@ class MessageServices {
     }
   }
 
-  // Get unread message count for current user
   async getUnreadCount(): Promise<number> {
     try {
       const response = await axiosClient.get('/messaging/unread-count', {
@@ -108,7 +102,6 @@ class MessageServices {
     }
   }
 
-  // Get recent messages for current user
   async getRecentMessages(limit: number = 10): Promise<Message[]> {
     try {
       const response = await axiosClient.get('/messaging/recent', {
@@ -122,11 +115,10 @@ class MessageServices {
     }
   }
 
-  // Get all users for chat
   async getChatUsers(): Promise<User[]> {
     try {
       const response = await axiosClient.get('/users/role/USER', {
-        headers: this.getAuthHeader()
+        headers: this.getAuthHeader(),
       });
       return response.data;
     } catch (error) {
@@ -135,12 +127,11 @@ class MessageServices {
     }
   }
 
-  // Search users for chat 
   async searchUsers(searchTerm: string): Promise<User[]> {
     try {
       const response = await axiosClient.get('/users/role/USER', {
         params: { query: searchTerm },
-        headers: this.getAuthHeader()
+        headers: this.getAuthHeader(),
       });
       return response.data;
     } catch (error) {
@@ -149,11 +140,10 @@ class MessageServices {
     }
   }
 
-  // Get user by ID
   async getUserById(userId: string): Promise<User | null> {
     try {
       const response = await axiosClient.get(`/users/${userId}`, {
-        headers: this.getAuthHeader()
+        headers: this.getAuthHeader(),
       });
       return response.data;
     } catch (error) {

@@ -1,6 +1,6 @@
 // src/components/connections/ConnectionsList.tsx
 import React from 'react';
-import { BriefcaseBusiness, MapPin, MessageCircle, Building2, MessageSquare } from 'lucide-react';
+import { BriefcaseBusiness, MapPin, MessageCircle, MessageSquare, Building2 } from 'lucide-react';
 import type { ConnectionUser } from '../../pages/hooks/useConnections';
 
 interface Props {
