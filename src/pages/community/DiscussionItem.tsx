@@ -14,10 +14,11 @@ interface DiscussionItemProps {
 const DiscussionItem: React.FC<DiscussionItemProps> = ({
   discussion,
   categoryColor,
-  categoryName
+  categoryName,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(Math.max(0, discussion.likes ?? 0));
   const [isLiking, setIsLiking] = useState(false);
@@ -26,6 +27,7 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
 
   useEffect(() => {
     setLikeCount(Math.max(0, discussion.likes ?? 0));
+
     if (user?.email) {
       setLiked(localStorage.getItem(localStorageLikeKey) === 'true');
     } else {
@@ -35,6 +37,7 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
 
   const handleLikeClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
+
     if (!user?.email) {
       alert('Please login to like a discussion');
       return;
@@ -48,19 +51,15 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
     setIsLiking(true);
 
     try {
-      // Save to local storage immediately (source of truth)
       localStorage.setItem(localStorageLikeKey, nextLiked ? 'true' : 'false');
 
-      // Backend sync is best-effort - local storage is already updated
       if (nextLiked) {
         await communityService.likeDiscussion(discussion.id, user.email);
       } else {
         await communityService.unlikeDiscussion(discussion.id, user.email);
       }
-      console.log('Like status updated successfully');
     } catch (error) {
-      // Backend error is not critical since local storage is already updated
-      console.warn('Backend like sync failed (local update succeeded):', error);
+      console.warn('Backend like sync failed:', error);
     } finally {
       setIsLiking(false);
     }
@@ -69,18 +68,20 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
   return (
     <div
       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-      onClick={() => navigate(`/community/discussions/${discussion.id}`)}
+      onClick={() => navigate(`/community/${discussion.id}`)}
       role="button"
       tabIndex={0}
-      onKeyPress={(event) => {
+      onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
-          navigate(`/community/discussions/${discussion.id}`);
+          navigate(`/community/${discussion.id}`);
         }
       }}
     >
       <div className="flex items-start space-x-4">
         <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
-          <span className="text-white text-sm font-medium">{discussion.author?.charAt(0) || 'U'}</span>
+          <span className="text-white text-sm font-medium">
+            {discussion.author?.charAt(0) || 'U'}
+          </span>
         </div>
 
         <div className="flex-1">
@@ -94,17 +95,28 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
                   </span>
                 )}
               </h3>
+
               <div className="flex items-center space-x-2 mt-1">
-                <span className="text-sm text-gray-600">by {discussion.author || 'Anonymous'}</span>
-                <span className={`px-2 py-1 text-xs rounded-full ${categoryColor}`}>
-                  {categoryName}
+                <span className="text-sm text-gray-600">
+                  by {discussion.author || 'Anonymous'}
                 </span>
+
+                {categoryName && (
+                  <span className={`px-2 py-1 text-xs rounded-full ${categoryColor}`}>
+                    {categoryName}
+                  </span>
+                )}
               </div>
             </div>
-            <span className="text-sm text-gray-500">{discussion.timeAgo}</span>
+
+            <span className="text-sm text-gray-500">
+              {discussion.timeAgo}
+            </span>
           </div>
 
-          <p className="text-gray-600 text-sm mb-3">{discussion.preview}</p>
+          <p className="text-gray-600 text-sm mb-3">
+            {discussion.preview}
+          </p>
 
           <div className="flex items-center justify-between text-sm text-gray-500">
             <div className="flex items-center gap-3">
@@ -118,9 +130,16 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
                 }`}
                 disabled={isLiking}
               >
-                <Heart className={`w-4 h-4 ${liked ? 'fill-current text-red-500' : 'text-gray-400'}`} />
-                <span>{likeCount} {likeCount === 1 ? 'Like' : 'Likes'}</span>
+                <Heart
+                  className={`w-4 h-4 ${
+                    liked ? 'fill-current text-red-500' : 'text-gray-400'
+                  }`}
+                />
+                <span>
+                  {likeCount} {likeCount === 1 ? 'Like' : 'Likes'}
+                </span>
               </button>
+
               <div className="inline-flex items-center gap-1">
                 <MessageCircle className="w-4 h-4" />
                 <span>{discussion.replies} replies</span>
