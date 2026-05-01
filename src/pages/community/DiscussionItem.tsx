@@ -1,4 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Heart, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { communityService } from '../../services/CommunityService';
 import type { UserDiscussionItem } from '../../interfaces/CommunityData';
 
 interface DiscussionItemProps {
@@ -7,16 +11,12 @@ interface DiscussionItemProps {
   categoryName?: string;
 }
 
-import { useNavigate } from 'react-router-dom';
-
 const DiscussionItem: React.FC<DiscussionItemProps> = ({
   discussion,
   categoryColor,
   categoryName
 }) => {
   const navigate = useNavigate();
-<<<<<<< HEAD
-=======
   const { user } = useAuth();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(Math.max(0, discussion.likes ?? 0));
@@ -65,17 +65,16 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
       setIsLiking(false);
     }
   };
->>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
 
   return (
     <div
       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-      onClick={() => navigate(`/community/${discussion.id}`)}
+      onClick={() => navigate(`/community/discussions/${discussion.id}`)}
       role="button"
       tabIndex={0}
       onKeyPress={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
-          navigate(`/community/${discussion.id}`);
+          navigate(`/community/discussions/${discussion.id}`);
         }
       }}
     >
@@ -106,8 +105,6 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
           </div>
 
           <p className="text-gray-600 text-sm mb-3">{discussion.preview}</p>
-<<<<<<< HEAD
-=======
 
           <div className="flex items-center justify-between text-sm text-gray-500">
             <div className="flex items-center gap-3">
@@ -130,7 +127,6 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
               </div>
             </div>
           </div>
->>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
         </div>
       </div>
     </div>

@@ -1,17 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Heart } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Heart, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { communityService } from '../../services/CommunityService';
-import type { AdminDiscussionItem } from '../../interfaces/CommunityData';
+import { useAuth } from '../../context/AuthContext';
+import type { AdminDiscussionItem, DiscussionReply } from '../../interfaces/CommunityData';
 
 const DiscussionDetails: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+
   const [discussion, setDiscussion] = useState<AdminDiscussionItem | null>(null);
+  const [replies, setReplies] = useState<DiscussionReply[]>([]);
+  const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-<<<<<<< HEAD
-=======
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
@@ -62,25 +65,27 @@ const DiscussionDetails: React.FC = () => {
     saveDeletedReplies(discussionId, next);
   };
 
+  const cleanDeletedReplies = (discussionId: string, fetchedReplies: DiscussionReply[]) => {
+    const existing = readDeletedReplies(discussionId);
+    const stillDeleted = existing.filter((replyId) => fetchedReplies.some((reply) => reply.replyId === replyId));
+    if (stillDeleted.length !== existing.length) {
+      saveDeletedReplies(discussionId, stillDeleted);
+    }
+    return stillDeleted;
+  };
+
+  const readLocalLike = (discussionId: string, userEmail: string) => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(getLocalLikeKey(discussionId, userEmail)) === 'true';
+  };
+
   const saveLocalLike = (discussionId: string, userEmail: string, liked: boolean) => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(getLocalLikeKey(discussionId, userEmail), liked ? 'true' : 'false');
   };
->>>>>>> de53e04 (Reset community likes and comments)
-
-  const clearDiscussionEngagement = (discussionId: string, userEmail?: string) => {
-    if (typeof window === 'undefined') return;
-
-    window.localStorage.removeItem(getLocalReplyKey(discussionId));
-    window.localStorage.removeItem(getDeletedReplyKey(discussionId));
-
-    if (userEmail) {
-      window.localStorage.removeItem(getLocalLikeKey(discussionId, userEmail));
-    }
-  };
 
   useEffect(() => {
-    const loadDiscussion = async () => {
+    const fetchDiscussion = async () => {
       if (!id) {
         setError('Invalid discussion selected.');
         return;
@@ -91,20 +96,8 @@ const DiscussionDetails: React.FC = () => {
 
       try {
         const details = await communityService.getDiscussionById(id);
-<<<<<<< HEAD
         setDiscussion(details);
-<<<<<<< HEAD
-=======
-        setDiscussion({
-          ...details,
-          likes: 0,
-          replies: 0
-        });
-        setLikesCount(0);
->>>>>>> de53e04 (Reset community likes and comments)
-=======
         setLikesCount(Math.max(0, details.likes ?? 0));
->>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
       } catch (detailsError) {
         console.error('Error loading discussion details by ID:', detailsError);
 
@@ -113,31 +106,23 @@ const DiscussionDetails: React.FC = () => {
           const foundDiscussion = discussions.find((item) => item.id === id);
 
           if (foundDiscussion) {
-            setDiscussion({
+            const fallbackDiscussion: AdminDiscussionItem = {
               id: foundDiscussion.id,
               title: foundDiscussion.title,
               content: foundDiscussion.preview,
               author: foundDiscussion.author,
               authorAvatar: foundDiscussion.authorAvatar,
               category: foundDiscussion.category,
-              replies: 0,
-              likes: 0,
+              replies: foundDiscussion.replies,
+              likes: foundDiscussion.likes,
               isHot: foundDiscussion.isHot,
               isPinned: foundDiscussion.isPinned,
               isLocked: foundDiscussion.isLocked,
               tags: foundDiscussion.tags,
               createdBy: foundDiscussion.author,
-<<<<<<< HEAD
-            });
-=======
             };
             setDiscussion(fallbackDiscussion);
-<<<<<<< HEAD
-            setLikesCount(0);
->>>>>>> de53e04 (Reset community likes and comments)
-=======
             setLikesCount(Math.max(0, foundDiscussion.likes ?? 0));
->>>>>>> 511f5bf (Fix community flows and improve page responsiveness)
           } else {
             throw new Error('Discussion not found from active discussions.');
           }
@@ -150,31 +135,28 @@ const DiscussionDetails: React.FC = () => {
       }
     };
 
-<<<<<<< HEAD
-    loadDiscussion();
-  }, [id]);
-
-=======
     const fetchReplies = async () => {
       if (!id) return;
       try {
-        await communityService.getDiscussionReplies(id);
-        clearDiscussionEngagement(id, user?.email);
-        setReplies([]);
-        saveLocalReplies(id, []);
-        setDiscussion((prev) => (prev ? { ...prev, replies: 0 } : prev));
+        const fetchedReplies = await communityService.getDiscussionReplies(id);
+        const deletedReplyIds = readDeletedReplies(id);
+        const filteredReplies = fetchedReplies.filter((reply) => !deletedReplyIds.includes(reply.replyId));
+        cleanDeletedReplies(id, fetchedReplies);
+
+        setReplies(filteredReplies);
+        saveLocalReplies(id, filteredReplies);
+        setDiscussion((prev) => (prev ? { ...prev, replies: filteredReplies.length } : prev));
       } catch (repliesError) {
         console.error('Error loading replies:', repliesError);
-        clearDiscussionEngagement(id, user?.email);
-        setReplies([]);
-        saveLocalReplies(id, []);
-        setDiscussion((prev) => (prev ? { ...prev, replies: 0 } : prev));
+        const localReplies = readLocalReplies(id);
+        setReplies(localReplies);
+        setDiscussion((prev) => (prev ? { ...prev, replies: localReplies.length } : prev));
       }
     };
 
     fetchDiscussion();
     fetchReplies();
-  }, [id, user?.email]);
+  }, [id]);
 
   useEffect(() => {
     if (!id || !user?.email) {
@@ -182,8 +164,7 @@ const DiscussionDetails: React.FC = () => {
       return;
     }
 
-    clearDiscussionEngagement(id, user.email);
-    setIsLiked(false);
+    setIsLiked(readLocalLike(id, user.email));
   }, [id, user?.email]);
 
   const handleToggleLike = async (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -322,7 +303,6 @@ const DiscussionDetails: React.FC = () => {
     }
   };
 
->>>>>>> de53e04 (Reset community likes and comments)
   if (loading) {
     return (
       <div className="p-6 bg-white rounded-xl shadow-sm">
@@ -367,32 +347,117 @@ const DiscussionDetails: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-3">
               <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 uppercase tracking-wide text-xs">
                 {discussion.category}
               </span>
-              <span>{discussion.createdAt ? new Date(discussion.createdAt).toLocaleDateString() : ''}</span>
+              <span>{discussion.createdAt ? new Date(discussion.createdAt).toLocaleDateString() : 'Today'}</span>
+
             </div>
             <h1 className="text-2xl font-semibold text-gray-900">{discussion.title}</h1>
-            <p className="text-sm text-gray-600 mt-2">
-              Posted by {discussion.author || 'Anonymous'}
-            </p>
+            <p className="text-sm text-gray-600 mt-2">Posted by {discussion.author || 'Anonymous'}</p>
           </div>
 
-          <div className="flex items-center gap-4 text-gray-500 text-sm">
-            <div className="inline-flex items-center gap-1">
-              <Heart className="w-4 h-4 text-red-500" />
-              <span>{discussion.likes} likes</span>
-            </div>
-            <div className="inline-flex items-center gap-1">
-              <span className="font-semibold">{discussion.replies}</span>
-              replies
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleToggleLike}
+              disabled={isLiking}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${isLiked ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+            >
+              <Heart className={`w-4 h-4 ${isLiked ? 'text-red-500' : 'text-gray-400'}`} />
+              <span>{likesCount} {likesCount === 1 ? 'Like' : 'Likes'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleFocusReply}
+              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Reply</span>
+            </button>
           </div>
         </div>
 
         <div className="prose prose-sm max-w-none text-gray-700">
           <p>{discussion.content || 'No discussion content is available.'}</p>
+        </div>
+      </div>
+
+      <div ref={replySectionRef} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Comments</h2>
+            <p className="text-sm text-gray-500">Share your insight or ask a follow-up question.</p>
+          </div>
+          <span className="text-sm text-gray-500">{replies.length} {replies.length === 1 ? 'comment' : 'comments'}</span>
+        </div>
+
+        <form onSubmit={handleAddReply} className="space-y-4">
+          <div>
+            <textarea
+              ref={replyInputRef}
+              rows={4}
+              value={commentText}
+              onChange={(event) => setCommentText(event.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              placeholder="Write a helpful comment or answer..."
+              aria-label="Write a comment"
+              disabled={isPostingReply}
+            />
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-gray-500">Your comment will appear below once posted.</p>
+            <button
+              type="submit"
+              disabled={isPostingReply || commentText.trim().length === 0}
+              className="inline-flex items-center justify-center rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isPostingReply ? 'Posting...' : 'Post comment'}
+              <Send className="w-4 h-4 ml-2" />
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-6 space-y-4">
+          {replies.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-500">
+              No comments yet. Be the first to add one.
+            </div>
+          ) : (
+            replies.map((reply) => (
+              <div key={reply.replyId} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-500 text-sm font-semibold text-white">
+                      {reply.author?.charAt(0) || 'A'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{reply.author || 'Anonymous'}</p>
+                      <p className="text-xs text-gray-500">{reply.createdAt ? new Date(reply.createdAt).toLocaleString() : 'Just now'}</p>
+                    </div>
+                  </div>
+                  {user?.email === reply.createdBy && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteReply(reply.replyId)}
+                      disabled={isDeletingReplyId === reply.replyId}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition ${
+                        isDeletingReplyId === reply.replyId
+                          ? 'cursor-not-allowed bg-gray-100 text-gray-300'
+                          : 'text-gray-400 hover:bg-gray-100 hover:text-red-600'
+                      }`}
+                      aria-label="Delete comment"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-gray-700 whitespace-pre-wrap">{reply.content}</p>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
