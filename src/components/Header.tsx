@@ -1,7 +1,7 @@
 // src/components/Header.tsx
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Menu, Bell, Search, Clock, Gift, ChevronDown, BellRing } from 'lucide-react';
+import { Menu, Bell, Search, Clock, Gift, ChevronDown, BellRing, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationService from '../services/NotificationService';
 import UserSubscriptionService from '../services/UserSubscriptionService';
@@ -25,6 +25,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const userStatus = localStorage.getItem('userStatus');
   const upgradesDisabled = false;
   const [query, setQuery] = useState('');
+
   const [open, setOpen] = useState(false);
   const [freeTrialDropdownOpen, setFreeTrialDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -36,6 +37,11 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [freeTrialInfo, setFreeTrialInfo] = useState<FreeTrialInfo | null>(null);
   const [isLoadingTrial, setIsLoadingTrial] = useState(false);
+
+  const isPaidPremium = useMemo(() => {
+    const pkg = localStorage.getItem('userPackage');
+    return pkg === 'premium' && userStatus !== 'FREE_TRIAL';
+  }, [userStatus]);
 
   // Check if user is on free trial - using both status and trial info
   const isFreeTrial = userStatus === 'FREE_TRIAL';
@@ -433,8 +439,16 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
             {userMenuOpen && (
               <div className="absolute right-0 top-12 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
                 <div className="p-3 border-b border-gray-100">
-                  <div className="text-sm font-medium text-gray-900">
-                    {user?.fullName || userEmail || 'User'}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-medium text-gray-900">
+                      {user?.fullName || userEmail || 'User'}
+                    </div>
+                    {isPaidPremium && (
+                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-800">
+                        <Crown className="w-3.5 h-3.5" />
+                        Premium
+                      </div>
+                    )}
                   </div>
                   <div className="text-xs text-gray-500">{user?.email || userEmail}</div>
                   {userStatus && <div className="text-xs text-gray-500 mt-1">Status: {userStatus}</div>}
