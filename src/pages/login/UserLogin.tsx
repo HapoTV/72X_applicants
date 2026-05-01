@@ -1,6 +1,6 @@
 // src/pages/login/UserLogin.tsx
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Users, Building2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useLogin';
 import Logo from '../../assets/Logo.svg';
@@ -15,7 +15,6 @@ const UserLogin: React.FC = () => {
     
     const [formData, setFormData] = useState({
         email: '',
-        businessReference: '',
         password: '',
         rememberMe: false
     });
@@ -74,24 +73,6 @@ const UserLogin: React.FC = () => {
                                     value={formData.email}
                                     onChange={(e) => handleInputChange('email', e.target.value)}
                                     placeholder="Enter your email"
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    required
-                                    disabled={isLoading}
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Business Reference
-                            </label>
-                            <div className="relative">
-                                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={formData.businessReference}
-                                    onChange={(e) => handleInputChange('businessReference', e.target.value)}
-                                    placeholder="Enter your business reference"
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                     required
                                     disabled={isLoading}
@@ -166,7 +147,6 @@ const UserLogin: React.FC = () => {
                         <div className="text-sm text-gray-600 space-y-1">
                             <p><strong>Test User:</strong></p>
                             <p className="ml-4">Email: asandile.nkala@example.com</p>
-                            <p className="ml-4">Business Ref: 7272002</p>
                             <p className="ml-4">Password: @TesterAsandile123</p>
                         </div>
                         <button

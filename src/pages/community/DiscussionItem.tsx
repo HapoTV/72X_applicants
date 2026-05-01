@@ -55,8 +55,6 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
 
       if (nextLiked) {
         await communityService.likeDiscussion(discussion.id, user.email);
-      } else {
-        await communityService.unlikeDiscussion(discussion.id, user.email);
       }
     } catch (error) {
       console.warn('Backend like sync failed:', error);

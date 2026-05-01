@@ -29,6 +29,7 @@ interface Props {
   moduleTitle: string;
   questions: QuizQuestion[];
   passPercentage?: number;
+  materialId?: string;
   onClose: () => void;
   onPass: (score: number, total: number, percentage: number) => void;
 }
@@ -79,7 +80,15 @@ const FlipCardQuizModal: React.FC<Props> = ({
 
   const passed = percentage >= passPercentage;
 
-  const resetQuestionState = () => {
+  // RESET STATE (clean fix for your error)
+  useEffect(() => {
+    if (!isOpen || !questions.length) return;
+
+    const shuffled = [...questions].sort(() => Math.random() - 0.5);
+    setShuffledQuestions(shuffled);
+
+    setCompleted(false);
+    setIndex(0);
     setSelectedAnswer(null);
     setFillBlankSelected(null);
     setMatchSelectedTerm(null);
@@ -90,38 +99,26 @@ const FlipCardQuizModal: React.FC<Props> = ({
     setCategorizeAssignments({});
     setRevealedExplanation(false);
     setFeedback('idle');
-  };
-
-  const resetProgress = () => {
-    setCompleted(false);
-    setIndex(0);
-    resetQuestionState();
     setScore(0);
     setXp(0);
     setStreak(0);
-  };
-
-  const resetQuiz = () => {
-    resetProgress();
     setQuizStarted(false);
-  };
-
-  useEffect(() => {
-    if (!isOpen || !questions.length) return;
-
-    const shuffled = [...questions].sort(() => Math.random() - 0.5);
-    setShuffledQuestions(shuffled);
-    resetProgress();
   }, [isOpen, questions]);
 
   useEffect(() => {
     if (!currentQ) return;
 
-    resetQuestionState();
+    setSelectedAnswer(null);
+    setFillBlankSelected(null);
+    setMatchSelectedTerm(null);
+    setMatchMapping({});
+    setCategorizeAssignments({});
+    setRevealedExplanation(false);
+    setFeedback('idle');
 
     if (currentQ.type === 'match_pairs' && currentQ.pairs) {
       setMatchDefinitions(
-        currentQ.pairs.map((pair) => pair.definition).sort(() => Math.random() - 0.5)
+        currentQ.pairs.map((p) => p.definition).sort(() => Math.random() - 0.5)
       );
     }
 
@@ -143,26 +140,17 @@ const FlipCardQuizModal: React.FC<Props> = ({
 
     switch (currentQ.type) {
       case 'fill_blank':
-        return fillBlankSelected !== null;
+        return !!fillBlankSelected;
       case 'match_pairs':
-        return !!currentQ.pairs?.length && currentQ.pairs.every((pair) => !!matchMapping[pair.term]);
+        return currentQ.pairs?.every((p) => matchMapping[p.term]);
       case 'order_steps':
-        return orderTouched && !!currentQ.steps?.length && orderedSteps.length === currentQ.steps.length;
+        return orderedSteps.length === currentQ.steps?.length;
       case 'categorize':
-        return !!currentQ.items?.length && currentQ.items.every((item) => !!categorizeAssignments[item.label]);
-      case 'multiple_choice':
+        return currentQ.items?.every((i) => categorizeAssignments[i.label]);
       default:
         return selectedAnswer !== null;
     }
-  }, [
-    currentQ,
-    fillBlankSelected,
-    matchMapping,
-    orderTouched,
-    orderedSteps,
-    categorizeAssignments,
-    selectedAnswer,
-  ]);
+  }, [currentQ, selectedAnswer, fillBlankSelected, matchMapping, orderedSteps, categorizeAssignments]);
 
   const handleSubmit = () => {
     if (!currentQ || feedback !== 'idle') return;
@@ -171,34 +159,26 @@ const FlipCardQuizModal: React.FC<Props> = ({
 
     switch (currentQ.type) {
       case 'fill_blank':
-        if (!fillBlankSelected) return;
         correct = fillBlankSelected === currentQ.correctWord;
         break;
       case 'match_pairs':
-        if (!currentQ.pairs?.length) return;
-        correct = currentQ.pairs.every((pair) => matchMapping[pair.term] === pair.definition);
+        correct = currentQ.pairs?.every((p) => matchMapping[p.term] === p.definition) ?? false;
         break;
       case 'order_steps':
-        if (!currentQ.steps?.length || orderedSteps.length !== currentQ.steps.length) return;
-        correct = currentQ.steps.every((step, stepIndex) => orderedSteps[stepIndex] === step);
+        correct = currentQ.steps?.every((s, i) => orderedSteps[i] === s) ?? false;
         break;
       case 'categorize':
-        if (!currentQ.items?.length) return;
-        correct = currentQ.items.every(
-          (item) => categorizeAssignments[item.label] === item.category
-        );
+        correct = currentQ.items?.every((i) => categorizeAssignments[i.label] === i.category) ?? false;
         break;
-      case 'multiple_choice':
       default:
-        if (selectedAnswer === null) return;
         correct = selectedAnswer === currentQ.correctAnswer;
     }
 
     if (correct) {
       setFeedback('correct');
-      setScore((value) => value + 1);
-      setStreak((value) => value + 1);
-      setXp((value) => value + 10);
+      setScore((v) => v + 1);
+      setStreak((v) => v + 1);
+      setXp((v) => v + 10);
     } else {
       setFeedback('incorrect');
       setStreak(0);
@@ -208,32 +188,25 @@ const FlipCardQuizModal: React.FC<Props> = ({
   const next = () => {
     if (index + 1 >= total) {
       setCompleted(true);
-      return;
+    } else {
+      setIndex((v) => v + 1);
     }
-
-    setIndex((value) => value + 1);
   };
 
   const retry = () => {
-    const reshuffled = [...shuffledQuestions].sort(() => Math.random() - 0.5);
-    setShuffledQuestions(reshuffled);
-    resetQuiz();
     setQuizStarted(true);
-  };
-
-  const handlePass = () => {
-    onPass(score, total, percentage);
+    setCompleted(false);
+    setIndex(0);
+    setScore(0);
+    setXp(0);
+    setStreak(0);
   };
 
   if (!isOpen) return null;
 
-  if (quizStarted && !completed && !currentQ) {
-    return <div className="text-center p-10">Loading next question...</div>;
-  }
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      {showConfetti && <Confetti numberOfPieces={400} recycle={false} />}
+      {showConfetti && <Confetti />}
 
       <div className="bg-white rounded-2xl p-8 max-w-4xl w-full">
         <QuizHeader onClose={onClose} />
@@ -259,7 +232,7 @@ const FlipCardQuizModal: React.FC<Props> = ({
             score={score}
             totalQuestions={total}
             percentage={percentage}
-            onPass={handlePass}
+            onPass={() => onPass(score, total, percentage)}
             onRetry={retry}
             onClose={onClose}
           />
@@ -287,7 +260,7 @@ const FlipCardQuizModal: React.FC<Props> = ({
 
             <QuizSubmit
               onSubmit={handleSubmit}
-              disabled={feedback !== 'idle' || !isQuestionAnswered}
+              disabled={!isQuestionAnswered || feedback !== 'idle'}
               passPercentage={passPercentage}
             />
 
@@ -298,7 +271,7 @@ const FlipCardQuizModal: React.FC<Props> = ({
               streak={streak}
               explanation={currentQ?.explanation}
               revealedExplanation={revealedExplanation}
-              onToggleExplanation={() => setRevealedExplanation((value) => !value)}
+              onToggleExplanation={() => setRevealedExplanation((v) => !v)}
               onNext={next}
             />
           </>
