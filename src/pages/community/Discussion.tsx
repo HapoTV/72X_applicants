@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { communityService } from '../../services/CommunityService';
@@ -12,6 +12,7 @@ import CategoryFilter from './CategoryFilter';
 import DiscussionsList from './DiscussionsList';
 import NewDiscussionModal from './NewDiscussionModal';
 import { useLocalDiscussions } from './useLocalDiscussions';
+import { getCommunityEngagementCounts } from './communityEngagementStorage';
 
 const Discussions: React.FC = () => {
   const { user } = useAuth();
@@ -21,7 +22,14 @@ const Discussions: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewDiscussion, setShowNewDiscussion] = useState(false);
   const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() =>
-    readLocalDiscussions()
+    readLocalDiscussions().map((discussion) => {
+      const engagementCounts = getCommunityEngagementCounts(discussion.id);
+
+      return {
+        ...discussion,
+        ...engagementCounts,
+      };
+    })
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +67,14 @@ const Discussions: React.FC = () => {
     if (!remoteDiscussions) return;
 
     const local = readLocalDiscussions();
-    const merged = mergeDiscussions(remoteDiscussions, local);
+    const merged = mergeDiscussions(remoteDiscussions, local).map((discussion) => {
+      const engagementCounts = getCommunityEngagementCounts(discussion.id);
+
+      return {
+        ...discussion,
+        ...engagementCounts,
+      };
+    });
 
     setDiscussions(merged);
     writeLocalDiscussions(merged);
@@ -105,7 +120,10 @@ const Discussions: React.FC = () => {
         user.email
       );
 
-      const nextDiscussions = [createdDiscussion, ...discussions];
+      const nextDiscussions = [
+        { ...createdDiscussion, ...getCommunityEngagementCounts(createdDiscussion.id) },
+        ...discussions,
+      ];
       setDiscussions(nextDiscussions);
       writeLocalDiscussions(nextDiscussions);
       setShowNewDiscussion(false);
@@ -157,6 +175,20 @@ const Discussions: React.FC = () => {
       selectedCategory === 'all' || discussion.category === selectedCategory
   );
 
+  const handleEngagementChange = useCallback((
+    discussionId: string,
+    changes: Partial<Pick<UserDiscussionItem, 'likes' | 'replies'>>
+  ) => {
+    setDiscussions((currentDiscussions) => {
+      const nextDiscussions = currentDiscussions.map((discussion) =>
+        discussion.id === discussionId ? { ...discussion, ...changes } : discussion
+      );
+
+      writeLocalDiscussions(nextDiscussions);
+      return nextDiscussions;
+    });
+  }, [writeLocalDiscussions]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -199,6 +231,7 @@ const Discussions: React.FC = () => {
               setError(null);
               refetch();
             }}
+            onEngagementChange={handleEngagementChange}
           />
         </div>
       </div>

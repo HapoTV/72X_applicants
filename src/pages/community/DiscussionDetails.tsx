@@ -1,16 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Heart } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { communityService } from '../../services/CommunityService';
+import { useAuth } from '../../context/AuthContext';
 import type { AdminDiscussionItem } from '../../interfaces/CommunityData';
+import {
+  getCommunityComments,
+  setCommunityComments,
+  type StoredCommunityComment,
+} from './communityEngagementStorage';
 
 const DiscussionDetails: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
 
   const [discussion, setDiscussion] = useState<AdminDiscussionItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [comments, setComments] = useState<StoredCommunityComment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [showComments, setShowComments] = useState(false);
+  const currentUserId = user?.email ?? '';
+  const currentUserName = user?.fullName || user?.email || 'Anonymous';
 
   useEffect(() => {
     const loadDiscussion = async () => {
@@ -68,6 +80,56 @@ const DiscussionDetails: React.FC = () => {
     loadDiscussion();
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+
+    setComments(getCommunityComments(id));
+  }, [id]);
+
+  const handleCommentSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const trimmedComment = commentText.trim();
+    if (!trimmedComment) return;
+
+    if (!id) return;
+
+    if (!currentUserId) {
+      alert('Please login to comment on a discussion');
+      return;
+    }
+
+    const nextComments = [
+      ...comments,
+      {
+        id: `${discussion?.id ?? 'discussion'}-${Date.now()}`,
+        content: trimmedComment,
+        author: currentUserName,
+        userId: currentUserId,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    setCommunityComments(id, nextComments);
+    setComments(nextComments);
+    setCommentText('');
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    if (!id) return;
+
+    const commentToDelete = comments.find((comment) => comment.id === commentId);
+
+    if (!commentToDelete || commentToDelete.userId !== currentUserId) {
+      return;
+    }
+
+    const nextComments = comments.filter((comment) => comment.id !== commentId);
+
+    setCommunityComments(id, nextComments);
+    setComments(nextComments);
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-white rounded-xl shadow-sm">
@@ -106,7 +168,7 @@ const DiscussionDetails: React.FC = () => {
       </button>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="mb-6">
           <div>
             <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
               <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-700 uppercase tracking-wide text-xs">
@@ -127,22 +189,67 @@ const DiscussionDetails: React.FC = () => {
               Posted by {discussion.author || 'Anonymous'}
             </p>
           </div>
-
-          <div className="flex items-center gap-4 text-gray-500 text-sm">
-            <div className="inline-flex items-center gap-1">
-              <Heart className="w-4 h-4 text-red-500" />
-              <span>{discussion.likes ?? 0} likes</span>
-            </div>
-
-            <div className="inline-flex items-center gap-1">
-              <span className="font-semibold">{discussion.replies ?? 0}</span>
-              replies
-            </div>
-          </div>
         </div>
 
         <div className="prose prose-sm max-w-none text-gray-700">
           <p>{discussion.content || 'No discussion content is available.'}</p>
+        </div>
+
+        <div className="mt-6 border-t border-gray-100 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowComments((isOpen) => !isOpen)}
+            className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary-600"
+            aria-expanded={showComments}
+          >
+            <MessageCircle className="h-4 w-4 text-gray-400" />
+            <span>{comments.length} {comments.length === 1 ? 'comment' : 'comments'}</span>
+          </button>
+
+          {showComments && (
+            <div className="mt-3 rounded-lg bg-gray-50 p-3 space-y-2">
+              {comments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className="flex items-start justify-between gap-3 rounded-lg bg-white px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-700">{comment.author}</p>
+                    <p className="break-words text-sm text-gray-600">{comment.content}</p>
+                  </div>
+                  {comment.userId === currentUserId && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="shrink-0 rounded-full p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                      aria-label="Delete comment"
+                      title="Delete comment"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={(event) => setCommentText(event.target.value)}
+                  placeholder="Add a comment..."
+                  className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                />
+                <button
+                  type="submit"
+                  disabled={!commentText.trim()}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Send className="h-4 w-4" />
+                  <span>Comment</span>
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>
