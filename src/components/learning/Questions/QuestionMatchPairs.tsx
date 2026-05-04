@@ -18,16 +18,11 @@ const QuestionMatchPairs: React.FC<QuestionMatchPairsProps> = ({
   matchDefinitions,
 }) => {
   const terms = pairs.map((p) => p.term);
-  const definitions = matchDefinitions;
-
-  // ✅ Prevent duplicate usage of definitions
   const isDefinitionUsed = (definition: string) =>
     Object.values(matchMapping).includes(definition);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      
-      {/* TERMS */}
       <div className="space-y-2">
         <div className="text-xs font-semibold text-gray-600">Terms</div>
 
@@ -50,17 +45,16 @@ const QuestionMatchPairs: React.FC<QuestionMatchPairsProps> = ({
 
                 {mapped ? (
                   <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-1">
-                    ✔ Matched
+                    Matched
                   </span>
                 ) : (
                   <span className="text-xs text-gray-400">Select</span>
                 )}
               </div>
 
-              {/* ✅ Show what it's matched to */}
               {mapped && (
                 <div className="text-xs text-gray-500 mt-1 truncate">
-                  → {mapped}
+                  {mapped}
                 </div>
               )}
             </button>
@@ -68,11 +62,10 @@ const QuestionMatchPairs: React.FC<QuestionMatchPairsProps> = ({
         })}
       </div>
 
-      {/* DEFINITIONS */}
       <div className="space-y-2">
         <div className="text-xs font-semibold text-gray-600">Definitions</div>
 
-        {definitions.map((def) => {
+        {matchDefinitions.map((def) => {
           const used = isDefinitionUsed(def);
 
           return (
@@ -93,8 +86,8 @@ const QuestionMatchPairs: React.FC<QuestionMatchPairsProps> = ({
                 used
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : matchSelectedTerm
-                  ? 'border-gray-200 hover:bg-gray-50'
-                  : 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                    ? 'border-gray-200 hover:bg-gray-50'
+                    : 'bg-gray-50 text-gray-400 cursor-not-allowed'
               }`}
             >
               <span className="text-sm">{def}</span>
@@ -102,7 +95,6 @@ const QuestionMatchPairs: React.FC<QuestionMatchPairsProps> = ({
           );
         })}
 
-        {/* RESET */}
         <button
           onClick={() => {
             onMatchTermSelect(null);

@@ -12,7 +12,6 @@ const QuestionFillBlank: React.FC<QuestionFillBlankProps> = ({
   onFillBlankSelect,
 }) => {
   const handleSelect = (word: string) => {
-    // ✅ Toggle selection (better UX)
     if (fillBlankSelected === word) {
       onFillBlankSelect(null);
     } else {
@@ -28,20 +27,20 @@ const QuestionFillBlank: React.FC<QuestionFillBlankProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {wordBank.map((w) => {
-            const isSelected = fillBlankSelected === w;
+          {wordBank.map((word) => {
+            const isSelected = fillBlankSelected === word;
 
             return (
               <button
-                key={w}
-                onClick={() => handleSelect(w)}
+                key={word}
+                onClick={() => handleSelect(word)}
                 className={`px-3 py-2 rounded-lg border text-sm transition ${
                   isSelected
                     ? 'border-green-500 bg-green-50 text-green-700'
                     : 'border-gray-200 hover:bg-gray-50 text-gray-800'
                 }`}
               >
-                {w}
+                {word}
               </button>
             );
           })}

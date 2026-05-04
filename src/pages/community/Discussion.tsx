@@ -1,8 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { communityService } from '../../services/CommunityService';
 import { useAuth } from '../../context/AuthContext';
-import type { UserDiscussionItem, CommunityStats as CommunityStatsType } from '../../interfaces/CommunityData';
+import type {
+  UserDiscussionItem,
+  CommunityStats as CommunityStatsType,
+} from '../../interfaces/CommunityData';
 import CommunityStats from './CommunityStats';
 import CategoryFilter from './CategoryFilter';
 import DiscussionsList from './DiscussionsList';
@@ -11,17 +15,20 @@ import { useLocalDiscussions } from './useLocalDiscussions';
 
 const Discussions: React.FC = () => {
   const { user } = useAuth();
-  const { readLocalDiscussions, writeLocalDiscussions, mergeDiscussions } = useLocalDiscussions();
-  
+  const { readLocalDiscussions, writeLocalDiscussions, mergeDiscussions } =
+    useLocalDiscussions();
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewDiscussion, setShowNewDiscussion] = useState(false);
-  const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() => readLocalDiscussions());
-  const [loading, setLoading] = useState(true);
+  const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() =>
+    readLocalDiscussions()
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [communityStats, setCommunityStats] = useState<CommunityStatsType>({
     totalMembers: 0,
     activeDiscussions: 0,
-    totalMentors: 0
+    totalMentors: 0,
   });
 
   const categories = [
@@ -31,78 +38,48 @@ const Discussions: React.FC = () => {
     { id: 'finance', name: 'Finance & Funding' },
     { id: 'operations', name: 'Operations' },
     { id: 'tech', name: 'Technology' },
-    { id: 'legal', name: 'Legal & Compliance' }
+    { id: 'legal', name: 'Legal & Compliance' },
   ];
 
-  const getDeletedReplyCount = useCallback((discussionId: string) => {
-    try {
-      const raw = localStorage.getItem(`discussion_deleted_replies_${discussionId}`);
-      if (!raw) return 0;
-      const ids = JSON.parse(raw) as string[];
-      return Array.isArray(ids) ? ids.length : 0;
-    } catch {
-      return 0;
-    }
-  }, []);
-
-  const adjustDiscussionReplyCount = useCallback((discussion: UserDiscussionItem) => {
-    const deletedCount = getDeletedReplyCount(discussion.id);
-    return {
-      ...discussion,
-      replies: Math.max(0, discussion.replies - deletedCount)
-    };
-  }, [getDeletedReplyCount]);
+  const {
+    data: remoteDiscussions,
+    isLoading: loading,
+    refetch,
+  } = useQuery<UserDiscussionItem[]>({
+    queryKey: ['discussions', selectedCategory],
+    queryFn: () => communityService.getActiveDiscussions(selectedCategory),
+    staleTime: 3 * 60 * 1000,
+    retry: (failureCount, queryError: any) => {
+      if (queryError?.response?.status === 500) return false;
+      return failureCount < 1;
+    },
+  });
 
   useEffect(() => {
-    const fetchCommunityData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    if (!remoteDiscussions) return;
 
-        try {
-          const discussionsData = await communityService.getActiveDiscussions(selectedCategory);
-          const local = readLocalDiscussions();
+    const local = readLocalDiscussions();
+    const merged = mergeDiscussions(remoteDiscussions, local);
 
-          const merged = mergeDiscussions(discussionsData, local)
-            .map(adjustDiscussionReplyCount);
+    setDiscussions(merged);
+    writeLocalDiscussions(merged);
+    setError(null);
+  }, [remoteDiscussions, readLocalDiscussions, writeLocalDiscussions, mergeDiscussions]);
 
-          setDiscussions(merged);
-          writeLocalDiscussions(merged);
-        } catch (discussionsError: any) {
-          if (discussionsError.response?.status === 500) {
-            const local = readLocalDiscussions().map(adjustDiscussionReplyCount);
-            setDiscussions(local);
-            setError(null);
-          } else {
-            setError('Failed to load community discussions');
-          }
-          return;
-        }
+  useEffect(() => {
+    communityService
+      .getCommunityStats()
+      .then(setCommunityStats)
+      .catch((statsError) => {
+        console.error('Error fetching stats:', statsError);
+      });
+  }, []);
 
-        try {
-          const statsData = await communityService.getCommunityStats();
-          setCommunityStats(statsData);
-        } catch (statsError) {
-          console.error('Error fetching stats:', statsError);
-        }
-
-      } catch (error) {
-        setError('Failed to load community discussions');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCommunityData();
-  }, [
-    selectedCategory,
-    readLocalDiscussions,
-    writeLocalDiscussions,
-    mergeDiscussions,
-    adjustDiscussionReplyCount
-  ]);
-
-  const handleNewDiscussion = async (formData: { title: string; category: string; content: string }) => {
+  const handleNewDiscussion = async (formData: {
+    title: string;
+    category: string;
+    content: string;
+  }) => {
     if (!user?.email) {
       alert('Please login to create a discussion');
       return;
@@ -114,18 +91,21 @@ const Discussions: React.FC = () => {
     }
 
     try {
-      setLoading(true);
+      setIsSubmitting(true);
 
       const discussionToAdd = {
         title: formData.title,
         category: formData.category,
         content: formData.content,
-        tags: ''
+        tags: '',
       };
 
-      const createdDiscussion = await communityService.createDiscussion(discussionToAdd, user.email);
-      const nextDiscussions = [createdDiscussion, ...discussions];
+      const createdDiscussion = await communityService.createDiscussion(
+        discussionToAdd,
+        user.email
+      );
 
+      const nextDiscussions = [createdDiscussion, ...discussions];
       setDiscussions(nextDiscussions);
       writeLocalDiscussions(nextDiscussions);
       setShowNewDiscussion(false);
@@ -138,8 +118,12 @@ const Discussions: React.FC = () => {
       }
 
       alert('Discussion created successfully!');
-    } catch (error: any) {
-      if (error.response?.status === 500) {
+    } catch (createError: any) {
+      console.error('Error creating discussion:', createError);
+
+      if (createError.response?.status === 500) {
+        alert('Discussion created successfully! Backend listing is temporarily unavailable.');
+
         const localDiscussion: UserDiscussionItem = {
           id: Date.now().toString(),
           title: formData.title,
@@ -153,33 +137,35 @@ const Discussions: React.FC = () => {
           isHot: false,
           isPinned: false,
           isLocked: false,
-          tags: []
+          tags: [],
         };
 
         const nextDiscussions = [localDiscussion, ...discussions];
         setDiscussions(nextDiscussions);
         writeLocalDiscussions(nextDiscussions);
         setShowNewDiscussion(false);
-
-        alert('Discussion created successfully! (Offline mode)');
       } else {
         alert('Failed to create discussion. Please try again.');
       }
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const filteredDiscussions = discussions.filter(discussion =>
-    selectedCategory === 'all' || discussion.category === selectedCategory
+  const filteredDiscussions = discussions.filter(
+    (discussion) =>
+      selectedCategory === 'all' || discussion.category === selectedCategory
   );
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Community Forum</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          Community Forum
+        </h1>
         <p className="text-gray-600">
-          Share business advice and experiences with other entrepreneurs in the community
+          Share business advice and experiences with other entrepreneurs in the
+          community
         </p>
       </div>
 
@@ -194,6 +180,7 @@ const Discussions: React.FC = () => {
           />
 
           <button
+            type="button"
             onClick={() => setShowNewDiscussion(true)}
             className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
           >
@@ -210,7 +197,7 @@ const Discussions: React.FC = () => {
             error={error}
             onRetry={() => {
               setError(null);
-              window.location.reload();
+              refetch();
             }}
           />
         </div>
@@ -221,7 +208,7 @@ const Discussions: React.FC = () => {
         categories={categories}
         onSubmit={handleNewDiscussion}
         onCancel={() => setShowNewDiscussion(false)}
-        isLoading={loading}
+        isLoading={isSubmitting}
       />
     </div>
   );
