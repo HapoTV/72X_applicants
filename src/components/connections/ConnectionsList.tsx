@@ -1,6 +1,6 @@
 // src/components/connections/ConnectionsList.tsx
 import React from 'react';
-import { BriefcaseBusiness, MapPin, MessageCircle, Building2, MessageSquare } from 'lucide-react';
+import { BriefcaseBusiness, MapPin, MessageCircle, Building2 } from 'lucide-react';
 import type { ConnectionUser } from '../../pages/hooks/useConnections';
 
 interface Props {
@@ -39,7 +39,6 @@ const ConnectionsList: React.FC<Props> = ({ users, conversationMetaByUserId, onS
         {users.map((user) => {
           const meta = conversationMetaByUserId[user.userId];
           const unread = meta?.unread || 0;
-          const lastMessage = meta?.lastMessage || '';
 
           // Debug: Log each user's unread status
           if (unread > 0) {
@@ -115,8 +114,6 @@ const ConnectionsList: React.FC<Props> = ({ users, conversationMetaByUserId, onS
                       </span>
                     </div>
 
-                    <div className="text-sm text-gray-600 truncate">{user.email}</div>
-
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                       {user.organisation && (
                         <span className="inline-flex items-center gap-1">
@@ -137,21 +134,6 @@ const ConnectionsList: React.FC<Props> = ({ users, conversationMetaByUserId, onS
                         </span>
                       )}
                     </div>
-
-                    {/* Last message preview */}
-                    {lastMessage && (
-                      <div className={`mt-2 text-sm truncate flex items-center gap-1 ${
-                        unread > 0 ? 'text-blue-600 font-medium' : 'text-gray-500'
-                      }`}>
-                        <MessageSquare className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{lastMessage}</span>
-                        {unread > 0 && (
-                          <span className="ml-1 text-xs font-bold text-blue-600">
-                            (unread)
-                          </span>
-                        )}
-                      </div>
-                    )}
 
                     {!user.isOnline && user.lastSeen && (
                       <div className="mt-1 text-xs text-gray-400">
