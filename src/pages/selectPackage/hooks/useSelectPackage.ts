@@ -127,8 +127,10 @@ export function useSelectPackage() {
           (pkg) => pkg.backendType === subscription.subscriptionType,
         )?.id;
         if (currentPackageId) {
-          const isDisabled = !!packageConfigs.find((p) => p.id === currentPackageId)?.disabled;
-          setSelectedPackage(isDisabled ? '' : currentPackageId);
+          // Even if a package is marked as "Coming Soon" for new selections, existing users
+          // on that plan must still see it as their current plan.
+          setSelectedPackage(currentPackageId);
+          setShowPaymentOptions(false);
         }
       }
     } catch (error) {
@@ -204,13 +206,23 @@ export function useSelectPackage() {
     return () => { isCancelled = true; };
   }, [navigate, isAuthenticated, userOrganisation, fetchCurrentSubscription, fetchFreeTrialStatus, isStandaloneOrg]);
 
+  const isCurrentPackage = useCallback(
+    (pkgId: string) => {
+      if (!currentSubscription) return false;
+      const pkg = packageConfigs.find((p) => p.id === pkgId);
+      return !!(pkg && currentSubscription.subscriptionType === pkg.backendType);
+    },
+    [currentSubscription, packageConfigs],
+  );
+
   useEffect(() => {
     const selected = packageConfigs.find((p) => p.id === selectedPackage);
-    if (selected?.disabled) {
+    const selectedIsCurrent = isCurrentPackage(selectedPackage);
+    if (selected?.disabled && !selectedIsCurrent) {
       setSelectedPackage('');
       setShowPaymentOptions(false);
     }
-  }, [packageConfigs, selectedPackage]);
+  }, [packageConfigs, selectedPackage, isCurrentPackage]);
 
   const handlePackageSelect = useCallback((pkgId: string) => {
     const pkg = packageConfigs.find((p) => p.id === pkgId);
@@ -222,15 +234,6 @@ export function useSelectPackage() {
   const formatPrice = useCallback((price: number, currency: string) => {
     return currency === 'ZAR' ? `R${price}` : `${currency} ${price}`;
   }, []);
-
-  const isCurrentPackage = useCallback(
-    (pkgId: string) => {
-      if (!currentSubscription) return false;
-      const pkg = packageConfigs.find((p) => p.id === pkgId);
-      return !!(pkg && currentSubscription.subscriptionType === pkg.backendType);
-    },
-    [currentSubscription, packageConfigs],
-  );
 
   const handleLoginRedirect = useCallback(() => { navigate('/login'); }, [navigate]);
 

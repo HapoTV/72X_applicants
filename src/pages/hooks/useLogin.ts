@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/AuthService';
 import { useAuth } from '../../context/AuthContext';
 import type { LoginRequest, LoginResponse, User } from '../../interfaces/UserData';
+import userSubscriptionService from '../../services/UserSubscriptionService';
 
 export type LoginType = 'user' | 'admin' | 'superadmin' | 'cocadmin';
 
@@ -174,6 +175,30 @@ async function completeLogin(loginResponse: LoginResponse, login: (user: User, a
     if (loginResponse.organisation) localStorage.setItem('userOrganisation', loginResponse.organisation);
 
     login({ userId: loginResponse.userId, fullName: loginResponse.fullName, email: loginResponse.email, role: userRole, status: loginResponse.status || 'ACTIVE', companyName: loginResponse.companyName, profileImageUrl: loginResponse.profileImageUrl, organisation: loginResponse.organisation } as User, loginResponse.token);
+
+    // Ensure package state is refreshed from the backend right after login.
+    // This guarantees that manual plan changes in Supabase/backend apply on the user's next login.
+    // Admin roles don't participate in the standalone subscription flow.
+    try {
+      const roleUpper = (userRole || '').toUpperCase();
+      if (roleUpper !== 'ADMIN' && roleUpper !== 'SUPER_ADMIN' && roleUpper !== 'COC_ADMIN') {
+        const subscription = await userSubscriptionService.getCurrentUserPackage();
+        const subscriptionType = subscription?.subscriptionType;
+        const mapped =
+          subscriptionType === 'ESSENTIAL' ? 'essential' :
+          subscriptionType === 'PREMIUM' ? 'premium' :
+          subscriptionType === 'START_UP' ? 'startup' : null;
+
+        if (mapped) {
+          localStorage.setItem('userPackage', mapped);
+          window.dispatchEvent(new CustomEvent('user-package-updated'));
+          localStorage.setItem('userStatus', 'ACTIVE');
+          localStorage.removeItem('requiresPackageSelection');
+        }
+      }
+    } catch {
+      // Non-blocking: redirect logic below still handles PENDING_PACKAGE/PENDING_PAYMENT, etc.
+    }
 
     setTimeout(() => {
       const baseUrl = import.meta.env.BASE_URL;
