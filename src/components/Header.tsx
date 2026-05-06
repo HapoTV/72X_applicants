@@ -451,7 +451,29 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
                     )}
                   </div>
                   <div className="text-xs text-gray-500">{user?.email || userEmail}</div>
-                  {userStatus && <div className="text-xs text-gray-500 mt-1">Status: {userStatus}</div>}
+                  {(() => {
+                    const pkg = localStorage.getItem('userPackage');
+                    const label = pkg === 'premium' ? 'Premium'
+                      : pkg === 'essential' ? 'Essential'
+                      : pkg === 'startup' ? 'Start Up'
+                      : userStatus === 'FREE_TRIAL' ? 'Free Trial'
+                      : userStatus === 'ACTIVE' ? 'Active'
+                      : userStatus || 'Inactive';
+                    const style = pkg === 'premium'
+                      ? 'text-purple-600'
+                      : pkg === 'essential'
+                        ? 'text-blue-600'
+                        : pkg === 'startup'
+                          ? 'text-green-600'
+                          : userStatus === 'FREE_TRIAL'
+                            ? 'text-yellow-600'
+                            : 'text-gray-500';
+                    return (
+                      <div className={`text-xs font-medium mt-1 ${style}`}>
+                        Plan: {label}
+                      </div>
+                    );
+                  })()}
                   {freeTrialInfo && (
                     <div className="text-xs text-green-600 mt-1">
                       Trial: {freeTrialInfo.remainingDays} days left
