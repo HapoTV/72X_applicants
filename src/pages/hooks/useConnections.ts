@@ -18,6 +18,7 @@ export interface ConnectionUser {
   profileImage?: string;
   isOnline?: boolean;
   lastSeen?: string;
+  subscriptionType?: string;
 }
 
 interface ConversationMeta {
@@ -83,8 +84,9 @@ export function useConnections(authUserId?: string) {
           industry: u.industry,
           organisation: u.organisation,
           profileImage: u.profileImageUrl,
-          isOnline: false,
-          lastSeen: new Date(Date.now() - Math.random() * 3600000).toISOString(),
+          isOnline: u.availabilityStatus === 'ONLINE',
+          lastSeen: u.lastSeenAt || null,
+          subscriptionType: u.subscriptionType || null,
         };
       });
 

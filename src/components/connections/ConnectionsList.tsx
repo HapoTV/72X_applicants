@@ -155,6 +155,30 @@ const ConnectionsList: React.FC<Props> = ({
                         {user.firstName} {user.lastName}
                       </span>
 
+                      {/* Subscription badge */}
+                      {(() => {
+                        const sub = user.subscriptionType;
+                        const label = sub === 'PREMIUM' ? 'premium'
+                          : sub === 'ESSENTIAL' ? 'essential'
+                          : sub === 'START_UP' ? 'start up'
+                          : sub === 'FREE_TRIAL' ? 'free trial'
+                          : 'inactive';
+                        const style = sub === 'PREMIUM'
+                          ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                          : sub === 'ESSENTIAL'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            : sub === 'START_UP'
+                              ? 'bg-green-100 text-green-700 border border-green-200'
+                              : sub === 'FREE_TRIAL'
+                                ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                                : 'bg-gray-100 text-gray-500 border border-gray-200';
+                        return (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${style}`}>
+                            {label}
+                          </span>
+                        );
+                      })()}
+
                       {/* Connection status badge */}
                       {isConnected && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
