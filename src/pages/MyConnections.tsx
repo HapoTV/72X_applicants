@@ -6,6 +6,7 @@ import { useConnections, DEFAULT_VISIBLE_CONNECTIONS } from './hooks/useConnecti
 import type { ConnectionUser } from './hooks/useConnections';
 import ConnectionsFilters from '../components/connections/ConnectionsFilters';
 import ConnectionsList from '../components/connections/ConnectionsList';
+import PendingRequestsPanel from '../components/connections/PendingRequestsPanel';
 import ChatDialog from '../components/connections/ChatDialog';
 
 const MyConnections: React.FC = () => {
@@ -16,6 +17,7 @@ const MyConnections: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<ConnectionUser | null>(null);
   const [initialMessage, setInitialMessage] = useState<string | undefined>(undefined);
   const [autoSend, setAutoSend] = useState<boolean | undefined>(undefined);
+  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
 
   const {
     users,
@@ -31,6 +33,9 @@ const MyConnections: React.FC = () => {
     loading,
     error,
     conversationMetaByUserId,
+    connectionStatusByUserId,
+    pendingRequests,
+    pendingRequestsCount,
     visibleCount,
     setVisibleCount,
     setSearchTerm,
@@ -39,9 +44,11 @@ const MyConnections: React.FC = () => {
     setSelectedOrganisation,
     clearFilters,
     refetch,
-    refreshConversations, // Make sure this is exported from useConnections
+    refreshConversations,
+    refreshConnectionStatuses,
   } = useConnections(authUser?.userId);
 
+  // Handle auto-open chat from URL params (e.g. from marketplace "Contact Seller")
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const targetUserId = params.get('userId') || '';
@@ -49,8 +56,7 @@ const MyConnections: React.FC = () => {
     const autoSendRaw = params.get('autoSend');
     const shouldAutoSend = autoSendRaw === '1' || autoSendRaw?.toLowerCase() === 'true';
 
-    if (!targetUserId) return;
-    if (!users || users.length === 0) return;
+    if (!targetUserId || !users || users.length === 0) return;
 
     const match = users.find((u) => u.userId === targetUserId);
     if (!match) return;
@@ -59,7 +65,6 @@ const MyConnections: React.FC = () => {
     setChatOpen(true);
     setInitialMessage(message || undefined);
     setAutoSend(shouldAutoSend || undefined);
-
     navigate('/connections', { replace: true });
   }, [location.search, navigate, users]);
 
@@ -75,13 +80,11 @@ const MyConnections: React.FC = () => {
     setSelectedUser(null);
     setInitialMessage(undefined);
     setAutoSend(undefined);
-    // Refresh conversations when chat closes to update unread counts
     refreshConversations();
   };
 
-  const handleMarkAsRead = () => {
-    // Refresh conversations after marking messages as read
-    refreshConversations();
+  const handleConnectionStatusChange = () => {
+    refreshConnectionStatuses();
   };
 
   if (loading) {
@@ -108,76 +111,119 @@ const MyConnections: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Connections</h1>
-        <p className="text-gray-600">Connect with fellow entrepreneurs, share experiences, and grow together</p>
-      </div>
-
-      {/* Search and Filter Bar */}
-      <ConnectionsFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        selectedIndustry={selectedIndustry}
-        onIndustryChange={setSelectedIndustry}
-        selectedLocation={selectedLocation}
-        onLocationChange={setSelectedLocation}
-        selectedOrganisation={selectedOrganisation}
-        onOrganisationChange={setSelectedOrganisation}
-        industries={industries}
-        locations={locations}
-        organisations={organisations}
-        onClearFilters={clearFilters}
-      />
-
-      {/* Results Summary */}
-      <div className="mb-3 flex justify-between items-center">
-        <div className="text-sm text-gray-700">
-          Showing {visibleUsers.length} of {sortedFilteredUsers.length} users
-        </div>
-        <div className="flex gap-2">
-          <div className="text-xs px-2.5 py-1 rounded-full border border-blue-200 text-blue-700 bg-blue-50">
-            {Object.keys(conversationMetaByUserId).length} conversations
-          </div>
-          <div className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-700 bg-gray-50">
-            {users.length} total users
-          </div>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Connections</h1>
+          <p className="text-gray-600">Connect with fellow entrepreneurs, share experiences, and grow together</p>
         </div>
       </div>
 
-      {/* Users List */}
-      {sortedFilteredUsers.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
-          <div className="text-base font-semibold text-gray-700">
-            No users found matching your criteria
-          </div>
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'all'
+              ? 'border-blue-600 text-blue-700'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          All Users
+          <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded-full">{users.length}</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'pending'
+              ? 'border-blue-600 text-blue-700'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Pending Requests
+          {pendingRequestsCount > 0 && (
+            <span className="ml-2 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
+              {pendingRequestsCount}
+            </span>
+          )}
+        </button>
+      </div>
 
-          <div className="text-sm text-gray-500 mt-2">
-            Try adjusting your search or filters
-          </div>
-          <button
-            onClick={clearFilters}
-            className="mt-3 inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-          >
-            Clear All Filters
-          </button>
-        </div>
-      ) : (
-        <ConnectionsList
-          users={visibleUsers}
-          conversationMetaByUserId={conversationMetaByUserId}
-          onStartChat={handleStartChat}
+      {activeTab === 'pending' ? (
+        <PendingRequestsPanel
+          requests={pendingRequests}
+          onStatusChange={handleConnectionStatusChange}
         />
-      )}
+      ) : (
+        <>
+          {/* Search and Filter Bar */}
+          <ConnectionsFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedIndustry={selectedIndustry}
+            onIndustryChange={setSelectedIndustry}
+            selectedLocation={selectedLocation}
+            onLocationChange={setSelectedLocation}
+            selectedOrganisation={selectedOrganisation}
+            onOrganisationChange={setSelectedOrganisation}
+            industries={industries}
+            locations={locations}
+            organisations={organisations}
+            onClearFilters={clearFilters}
+          />
 
-      {sortedFilteredUsers.length > visibleCount && (
-        <div className="flex justify-center">
-          <button
-            onClick={() => setVisibleCount((c) => c + DEFAULT_VISIBLE_CONNECTIONS)}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
-          >
-            Show more users
-          </button>
-        </div>
+          {/* Results Summary */}
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-700">
+              Showing {visibleUsers.length} of {sortedFilteredUsers.length} users
+            </div>
+            <div className="flex gap-2">
+              {pendingRequestsCount > 0 && (
+                <button
+                  onClick={() => setActiveTab('pending')}
+                  className="text-xs px-2.5 py-1 rounded-full border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                >
+                  {pendingRequestsCount} pending request{pendingRequestsCount > 1 ? 's' : ''}
+                </button>
+              )}
+              <div className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-700 bg-gray-50">
+                {users.length} total users
+              </div>
+            </div>
+          </div>
+
+          {/* Users List */}
+          {sortedFilteredUsers.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+              <div className="text-base font-semibold text-gray-700">No users found matching your criteria</div>
+              <div className="text-sm text-gray-500 mt-2">Try adjusting your search or filters</div>
+              <button
+                onClick={clearFilters}
+                className="mt-3 inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+              >
+                Clear All Filters
+              </button>
+            </div>
+          ) : (
+            <ConnectionsList
+              users={visibleUsers}
+              conversationMetaByUserId={conversationMetaByUserId}
+              connectionStatusByUserId={connectionStatusByUserId}
+              onStartChat={handleStartChat}
+              onConnectionStatusChange={handleConnectionStatusChange}
+            />
+          )}
+
+          {sortedFilteredUsers.length > visibleCount && (
+            <div className="flex justify-center">
+              <button
+                onClick={() => setVisibleCount((c) => c + DEFAULT_VISIBLE_CONNECTIONS)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+              >
+                Show more users
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Chat Dialog */}
@@ -185,7 +231,7 @@ const MyConnections: React.FC = () => {
         selectedUser={selectedUser}
         isOpen={chatOpen}
         onClose={handleCloseChat}
-        onMarkAsRead={handleMarkAsRead}
+        onMarkAsRead={refreshConversations}
         initialMessage={initialMessage}
         autoSend={autoSend}
       />

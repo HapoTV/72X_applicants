@@ -1,37 +1,91 @@
 // src/components/connections/ConnectionsList.tsx
-import React from 'react';
-import { BriefcaseBusiness, MapPin, MessageCircle, Building2 } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  BriefcaseBusiness,
+  MapPin,
+  MessageCircle,
+  MessageSquare,
+  Building2,
+  UserPlus,
+  UserCheck,
+  UserX,
+  Clock,
+  X,
+} from 'lucide-react';
 import type { ConnectionUser } from '../../pages/hooks/useConnections';
+import type { ConnectionStatusDTO } from '../../services/ConnectionRequestService';
+import ConnectionRequestService from '../../services/ConnectionRequestService';
 
 interface Props {
   users: ConnectionUser[];
   conversationMetaByUserId: Record<string, { unread: number; lastMessageAt: string; lastMessage: string }>;
+  connectionStatusByUserId: Record<string, ConnectionStatusDTO>;
   onStartChat: (user: ConnectionUser) => void;
+  onConnectionStatusChange: () => void;
 }
 
-const ConnectionsList: React.FC<Props> = ({ users, conversationMetaByUserId, onStartChat }) => {
-  if (users.length === 0) {
-    return null;
-  }
+const ConnectionsList: React.FC<Props> = ({
+  users,
+  conversationMetaByUserId,
+  connectionStatusByUserId,
+  onStartChat,
+  onConnectionStatusChange,
+}) => {
+  const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
+  const [connectMessage, setConnectMessage] = useState<Record<string, string>>({});
+  const [showMessageInput, setShowMessageInput] = useState<string | null>(null);
+
+  if (users.length === 0) return null;
 
   const formatLastSeen = (lastSeen?: string): string => {
     if (!lastSeen) return 'Offline';
-    const lastSeenDate = new Date(lastSeen);
-    const now = new Date();
-    const diffMs = now.getTime() - lastSeenDate.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-    return lastSeenDate.toLocaleDateString();
+    const diff = Date.now() - new Date(lastSeen).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1440) return `${Math.floor(mins / 60)}h ago`;
+    return new Date(lastSeen).toLocaleDateString();
   };
 
-  // Debug: Log the conversation data to see what's coming in
-  console.log('Conversation Meta Data:', conversationMetaByUserId);
-  console.log('Users with unread:', Object.entries(conversationMetaByUserId)
-    .filter(([_, meta]) => meta.unread > 0)
-    .map(([userId, meta]) => ({ userId, unread: meta.unread })));
+  const handleSendRequest = async (user: ConnectionUser) => {
+    setLoadingUserId(user.userId);
+    try {
+      const msg = connectMessage[user.userId] || undefined;
+      await ConnectionRequestService.sendRequest(user.userId, msg);
+      setShowMessageInput(null);
+      setConnectMessage((prev) => ({ ...prev, [user.userId]: '' }));
+      onConnectionStatusChange();
+    } catch (err: any) {
+      console.error('Error sending connection request:', err);
+    } finally {
+      setLoadingUserId(null);
+    }
+  };
+
+  const handleCancelRequest = async (requestId: string, userId: string) => {
+    setLoadingUserId(userId);
+    try {
+      await ConnectionRequestService.cancelRequest(requestId);
+      onConnectionStatusChange();
+    } catch (err) {
+      console.error('Error cancelling request:', err);
+    } finally {
+      setLoadingUserId(null);
+    }
+  };
+
+  const handleRemoveConnection = async (requestId: string, userId: string) => {
+    if (!window.confirm('Remove this connection?')) return;
+    setLoadingUserId(userId);
+    try {
+      await ConnectionRequestService.removeConnection(requestId);
+      onConnectionStatusChange();
+    } catch (err) {
+      console.error('Error removing connection:', err);
+    } finally {
+      setLoadingUserId(null);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -39,31 +93,31 @@ const ConnectionsList: React.FC<Props> = ({ users, conversationMetaByUserId, onS
         {users.map((user) => {
           const meta = conversationMetaByUserId[user.userId];
           const unread = meta?.unread || 0;
-
-          // Debug: Log each user's unread status
-          if (unread > 0) {
-            console.log(`User ${user.firstName} ${user.lastName} has ${unread} unread messages`);
-          }
+          const lastMessage = meta?.lastMessage || '';
+          const connStatus = connectionStatusByUserId[user.userId];
+          const status = connStatus?.status ?? 'NONE';
+          const requestId = connStatus?.requestId ?? null;
+          const isLoading = loadingUserId === user.userId;
+          const isConnected = status === 'ACCEPTED';
 
           return (
-            <div 
-              key={user.userId} 
+            <div
+              key={user.userId}
               className={`p-4 hover:bg-gray-50 transition-colors ${
-                unread > 0 ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                unread > 0 && isConnected ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
               }`}
             >
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="relative">
-                    <div className={`w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-700 ${
-                      unread > 0 ? 'ring-2 ring-blue-400 ring-offset-2' : ''
-                    }`}>
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                {/* Avatar */}
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className="relative flex-shrink-0">
+                    <div
+                      className={`w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center text-sm font-semibold text-gray-700 ${
+                        unread > 0 && isConnected ? 'ring-2 ring-blue-400 ring-offset-2' : ''
+                      }`}
+                    >
                       {user.profileImage ? (
-                        <img
-                          src={user.profileImage}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={user.profileImage} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span>
                           {user.firstName?.[0]}
@@ -71,18 +125,18 @@ const ConnectionsList: React.FC<Props> = ({ users, conversationMetaByUserId, onS
                         </span>
                       )}
                     </div>
-                    
-                    {/* Online/Offline indicator */}
+
+                    {/* Online indicator */}
                     {user.isOnline ? (
                       <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-green-500 ring-2 ring-white" />
                     ) : (
                       <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-gray-400 ring-2 ring-white" />
                     )}
-                    
-                    {/* Unread badge on avatar - this is the key part! */}
-                    {unread > 0 && (
+
+                    {/* Unread badge — only for connected users */}
+                    {unread > 0 && isConnected && (
                       <span className="absolute -top-1 -right-1 flex h-5 w-5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-[10px] text-white items-center justify-center font-bold">
                           {unread > 9 ? '9+' : unread}
                         </span>
@@ -90,26 +144,50 @@ const ConnectionsList: React.FC<Props> = ({ users, conversationMetaByUserId, onS
                     )}
                   </div>
 
+                  {/* User info */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div className={`font-semibold text-gray-900 truncate ${
-                        unread > 0 ? 'text-blue-900' : ''
-                      }`}>
+                      <span
+                        className={`font-semibold text-gray-900 truncate ${
+                          unread > 0 && isConnected ? 'text-blue-900' : ''
+                        }`}
+                      >
                         {user.firstName} {user.lastName}
-                      </div>
-                      
-                      {/* Unread count badge next to name */}
-                      {unread > 0 && (
+                      </span>
+
+                      {/* Connection status badge */}
+                      {isConnected && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          <UserCheck className="w-3 h-3" />
+                          Connected
+                        </span>
+                      )}
+                      {status === 'PENDING_SENT' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+                          <Clock className="w-3 h-3" />
+                          Request sent
+                        </span>
+                      )}
+                      {status === 'PENDING_RECEIVED' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                          <UserPlus className="w-3 h-3" />
+                          Wants to connect
+                        </span>
+                      )}
+
+                      {/* Unread badge */}
+                      {unread > 0 && isConnected && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
                           {unread} new
                         </span>
                       )}
-                      
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        user.isOnline 
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
+
+                      {/* Online status */}
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                          user.isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
                         {user.isOnline ? 'Online' : 'Offline'}
                       </span>
                     </div>
@@ -135,33 +213,155 @@ const ConnectionsList: React.FC<Props> = ({ users, conversationMetaByUserId, onS
                       )}
                     </div>
 
+                    {/* Last message preview — only for connected users */}
+                    {isConnected && lastMessage && (
+                      <div
+                        className={`mt-2 text-sm truncate flex items-center gap-1 ${
+                          unread > 0 ? 'text-blue-600 font-medium' : 'text-gray-500'
+                        }`}
+                      >
+                        <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{lastMessage}</span>
+                      </div>
+                    )}
+
                     {!user.isOnline && user.lastSeen && (
                       <div className="mt-1 text-xs text-gray-400">
                         Last seen: {formatLastSeen(user.lastSeen)}
                       </div>
                     )}
+
+                    {/* Optional connect message input */}
+                    {showMessageInput === user.userId && status === 'NONE' && (
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Add a note (optional)..."
+                          value={connectMessage[user.userId] || ''}
+                          onChange={(e) =>
+                            setConnectMessage((prev) => ({ ...prev, [user.userId]: e.target.value }))
+                          }
+                          maxLength={500}
+                          className="flex-1 text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSendRequest(user);
+                            if (e.key === 'Escape') setShowMessageInput(null);
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => setShowMessageInput(null)}
+                          className="p-1.5 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="sm:ml-auto flex items-center gap-2">
-                  <button
-                    onClick={() => onStartChat(user)}
-                    className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-medium transition-all ${
-                      unread > 0 
-                        ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 animate-pulse' 
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    {unread > 0 ? `Message (${unread})` : 'Message'}
-                  </button>
+                {/* Action buttons */}
+                <div className="sm:ml-auto flex items-center gap-2 flex-shrink-0">
+                  {/* CONNECTED: Message + Remove */}
+                  {isConnected && (
+                    <>
+                      <button
+                        onClick={() => onStartChat(user)}
+                        className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg text-sm font-medium transition-all ${
+                          unread > 0
+                            ? 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        {unread > 0 ? `Message (${unread})` : 'Message'}
+                      </button>
+                      {requestId && (
+                        <button
+                          onClick={() => handleRemoveConnection(requestId, user.userId)}
+                          disabled={isLoading}
+                          title="Remove connection"
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <UserX className="w-4 h-4" />
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {/* PENDING RECEIVED: Accept + Decline */}
+                  {status === 'PENDING_RECEIVED' && requestId && (
+                    <>
+                      <button
+                        onClick={async () => {
+                          setLoadingUserId(user.userId);
+                          try {
+                            await ConnectionRequestService.acceptRequest(requestId);
+                            onConnectionStatusChange();
+                          } finally {
+                            setLoadingUserId(null);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        Accept
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setLoadingUserId(user.userId);
+                          try {
+                            await ConnectionRequestService.declineRequest(requestId);
+                            onConnectionStatusChange();
+                          } finally {
+                            setLoadingUserId(null);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                      >
+                        <UserX className="w-4 h-4" />
+                        Decline
+                      </button>
+                    </>
+                  )}
+
+                  {/* PENDING SENT: Cancel */}
+                  {status === 'PENDING_SENT' && requestId && (
+                    <button
+                      onClick={() => handleCancelRequest(requestId, user.userId)}
+                      disabled={isLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 border border-yellow-300 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      <Clock className="w-4 h-4" />
+                      {isLoading ? 'Cancelling...' : 'Pending'}
+                    </button>
+                  )}
+
+                  {/* NOT CONNECTED: Connect button */}
+                  {status === 'NONE' && (
+                    <button
+                      onClick={() => {
+                        if (showMessageInput === user.userId) {
+                          handleSendRequest(user);
+                        } else {
+                          setShowMessageInput(user.userId);
+                        }
+                      }}
+                      disabled={isLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                      style={{ backgroundColor: '#2563eb' }}
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      {isLoading ? 'Sending...' : 'Connect'}
+                    </button>
+                  )}
                 </div>
               </div>
 
               {user.bio && (
-                <div className={`mt-2 text-sm ${
-                  unread > 0 ? 'text-blue-700' : 'text-gray-600'
-                }`}>
+                <div className="mt-2 text-sm text-gray-600">
                   {user.bio.length > 100 ? `${user.bio.substring(0, 100)}...` : user.bio}
                 </div>
               )}
