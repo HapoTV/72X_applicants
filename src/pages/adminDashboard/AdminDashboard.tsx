@@ -1,10 +1,12 @@
 // src/pages/adminDashboard/AdminDashboard.tsx
+import type { ReactNode } from 'react';
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AdminNavbar from './AdminNavbar';
 import AdminSidebar from './AdminSidebar';
 import type { AdminTab } from './AdminSidebar';
 import { useAuth } from '../../context/AuthContext';
+import { getActiveTabFromPathname } from './utils/adminTabRouting';
 import ApplicantsTab from './tabs/ApplicantsTab';
 import EventsTab from './tabs/EventsTab';
 import FundingTab from './tabs/FundingTab';
@@ -41,48 +43,42 @@ export default function AdminDashboard({ dashboardBasePath }: AdminDashboardProp
 
     useEffect(() => {
         const path = location.pathname;
-        const adminBase = '/admin/dashboard/';
-        const cocBase = '/cocadmin/dashboard/';
-        const base = path.startsWith(cocBase) ? cocBase : adminBase;
-        if (path.startsWith(base)) {
-            const segment = path.slice(base.length).split('/')[0];
-            const validTabs = [
-                'applicants', 'events', 'learning', 'mentorship',
-                'funding', 'ad', 'profile', 'monitoring', 'payments',
-                'organisation', 'admins', 'business-ref'
-            ] as const;
-            if (segment && (validTabs as readonly string[]).includes(segment)) {
-                setActiveTab(segment as AdminTab);
-                return;
-            }
+        const next = getActiveTabFromPathname(path);
+        if (next) {
+            setActiveTab(next);
+            return;
         }
         if (!path.includes('/admin/') && !path.includes('/cocadmin/')) {
             navigate('/admin/dashboard/applicants', { replace: true });
         }
     }, [location.pathname, navigate]);
 
+    const accessDenied = <div className="p-8 text-center text-red-600">Access Denied</div>;
+    const tabRenderers: Record<AdminTab, () => ReactNode> = {
+        applicants: () => <ApplicantsTab />,
+        events: () => <EventsTab />,
+        learning: () => <LearningTab isCocAdmin={isCocAdmin} />,
+        mentorship: () => <MentorshipTab />,
+        funding: () => <FundingTab />,
+        ad: () => (isSuperAdmin ? <AdTab /> : accessDenied),
+        profile: () => <AdminProfile />,
+        payments: () => <AdminPaymentsTab />,
+        monitoring: () => (isSuperAdmin ? <AdminMonitor /> : accessDenied),
+        organisation: () => {
+            if (isSuperAdmin) return <AdminOrganisationManagement />;
+            if (isCocAdmin) return <CocOrganisationManagement />;
+            return accessDenied;
+        },
+        admins: () => (isSuperAdmin ? <AdminManagement /> : accessDenied),
+        'business-ref': () => {
+            if (isCocAdmin) return <CocBusinessRefPanel />;
+            if (!isSuperAdmin) return <OrgAdminBusinessRefPanel />;
+            return accessDenied;
+        },
+    };
+
     const renderActiveTab = () => {
-        switch (activeTab) {
-            case 'applicants': return <ApplicantsTab />;
-            case 'events': return <EventsTab />;
-            case 'learning': return <LearningTab isCocAdmin={isCocAdmin} />;
-            case 'mentorship': return <MentorshipTab />;
-            case 'funding': return <FundingTab />;
-            case 'ad': return isSuperAdmin ? <AdTab /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
-            case 'profile': return <AdminProfile />;
-            case 'monitoring': return isSuperAdmin ? <AdminMonitor /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
-            case 'payments': return <AdminPaymentsTab />;
-            case 'organisation':
-                if (isSuperAdmin) return <AdminOrganisationManagement />;
-                if (isCocAdmin) return <CocOrganisationManagement />;
-                return <div className="p-8 text-center text-red-600">Access Denied</div>;
-            case 'admins': return isSuperAdmin ? <AdminManagement /> : <div className="p-8 text-center text-red-600">Access Denied</div>;
-            case 'business-ref':
-                if (isCocAdmin) return <CocBusinessRefPanel />;
-                if (!isSuperAdmin) return <OrgAdminBusinessRefPanel />;
-                return <div className="p-8 text-center text-red-600">Access Denied</div>;
-            default: return <ApplicantsTab />;
-        }
+        return tabRenderers[activeTab]?.() ?? <ApplicantsTab />;
     };
 
     return (
