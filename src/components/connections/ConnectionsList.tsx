@@ -35,6 +35,8 @@ const ConnectionsList: React.FC<Props> = ({
   const [connectMessage, setConnectMessage] = useState<Record<string, string>>({});
   const [showMessageInput, setShowMessageInput] = useState<string | null>(null);
 
+  const isFreeTrialUser = localStorage.getItem('userStatus') === 'FREE_TRIAL';
+
   if (users.length === 0) return null;
 
   const formatLastSeen = (lastSeen?: string): string => {
@@ -316,22 +318,35 @@ const ConnectionsList: React.FC<Props> = ({
                   {/* PENDING RECEIVED: Accept + Decline */}
                   {status === 'PENDING_RECEIVED' && requestId && (
                     <>
-                      <button
-                        onClick={async () => {
-                          setLoadingUserId(user.userId);
-                          try {
-                            await ConnectionRequestService.acceptRequest(requestId);
-                            onConnectionStatusChange();
-                          } finally {
-                            setLoadingUserId(null);
-                          }
-                        }}
-                        disabled={isLoading}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                      >
-                        <UserCheck className="w-4 h-4" />
-                        Accept
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={isFreeTrialUser ? undefined : async () => {
+                            setLoadingUserId(user.userId);
+                            try {
+                              await ConnectionRequestService.acceptRequest(requestId);
+                              onConnectionStatusChange();
+                            } finally {
+                              setLoadingUserId(null);
+                            }
+                          }}
+                          disabled={isLoading || isFreeTrialUser}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                            isFreeTrialUser
+                              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                        >
+                          <UserCheck className="w-4 h-4" />
+                          Accept
+                        </button>
+                        {isFreeTrialUser && (
+                          <div className="pointer-events-none absolute -top-10 left-0 hidden group-hover:block">
+                            <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
+                              Free Trial users cannot accept connection requests. Subscribe to connect.
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={async () => {
                           setLoadingUserId(user.userId);
@@ -365,21 +380,34 @@ const ConnectionsList: React.FC<Props> = ({
 
                   {/* NOT CONNECTED: Connect button */}
                   {status === 'NONE' && (
-                    <button
-                      onClick={() => {
-                        if (showMessageInput === user.userId) {
-                          handleSendRequest(user);
-                        } else {
-                          setShowMessageInput(user.userId);
-                        }
-                      }}
-                      disabled={isLoading}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                      style={{ backgroundColor: '#2563eb' }}
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      {isLoading ? 'Sending...' : 'Connect'}
-                    </button>
+                    <div className="relative group">
+                      <button
+                        onClick={isFreeTrialUser ? undefined : () => {
+                          if (showMessageInput === user.userId) {
+                            handleSendRequest(user);
+                          } else {
+                            setShowMessageInput(user.userId);
+                          }
+                        }}
+                        disabled={isLoading || isFreeTrialUser}
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                          isFreeTrialUser
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-primary-600 hover:bg-primary-700 text-white'
+                        }`}
+                        style={isFreeTrialUser ? {} : { backgroundColor: '#2563eb' }}
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        {isLoading ? 'Sending...' : 'Connect'}
+                      </button>
+                      {isFreeTrialUser && (
+                        <div className="pointer-events-none absolute -top-10 right-0 hidden group-hover:block">
+                          <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
+                            Free Trial users cannot send connection requests. Subscribe to connect.
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
