@@ -1,5 +1,5 @@
 // src/pages/adminDashboard/tabs/ApplicantsTab.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
 import { cocOrganisationService } from '../../../services/CocOrganisationService';
@@ -11,6 +11,26 @@ import { UserStats } from './components/UserStats';
 import { UserFilters } from './components/UserFilters';
 import { UserTable } from './components/UserTable';
 import { AddUserModal } from './components/AddUserModal';
+import { UserDetailsModal } from './components/UserDetailsModal';
+import { ApplicantsFetchError } from './components/ApplicantsFetchError';
+import {
+  doesUserMatchOrganisationFilter,
+  doesUserMatchRoleFilter,
+  doesUserMatchSearchTerm,
+  doesUserMatchStatusFilter,
+  formatUserLastSeen,
+  getInitialNewAdminData,
+} from './components/applicantsHelpers';
+import {
+  enhanceUsersWithSubscriptionData,
+  fetchAllAdminUsers,
+  fetchOrganisationUsers,
+  filterUsersByAllowedOrganisations,
+  getUniqueUserOrganisations,
+  removeSuperAdminUsers,
+} from './components/applicantsDataHelpers';
+import { calculateApplicantsStats } from './components/applicantsStatsHelpers';
+import { applyApplicantsVisibilityFilter } from './components/applicantsFilterHelpers';
 
 import type { User } from '../../../interfaces/UserData';
 import type { UserWithSubscription, StatsData, NewUserData } from './components/types';
@@ -20,19 +40,11 @@ export default function ApplicantsTab() {
   const effectiveRole = (user?.role || localStorage.getItem('userRole') || '').toUpperCase();
   const isCocAdmin = effectiveRole === 'COC_ADMIN';
   const [users, setUsers] = useState<UserWithSubscription[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<UserWithSubscription[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
   const [addingAdmin, setAddingAdmin] = useState(false);
-  const [newAdminData, setNewAdminData] = useState<NewUserData>({
-    fullName: '',
-    email: '',
-    mobileNumber: '',
-    organisation: userOrganisation || '',
-    role: 'ADMIN',
-    status: 'PENDING_PASSWORD'
-  });
+  const [newAdminData, setNewAdminData] = useState<NewUserData>(() => getInitialNewAdminData(userOrganisation));
 
   const [selectedUser, setSelectedUser] = useState<UserWithSubscription | null>(null);
 
@@ -62,35 +74,7 @@ export default function ApplicantsTab() {
   }, []);
 
   const calculateStats = useCallback((usersList: UserWithSubscription[]) => {
-    const relevantUsers = usersList;
-
-    const activeUsers = relevantUsers.filter(u => 
-      u.status === 'ACTIVE' || u.status === 'active'
-    );
-    
-    const onlineUsers = relevantUsers.filter(u => u.isOnline);
-    
-    const freeTrialUsers = relevantUsers.filter(u => 
-      u.subscription?.subscriptionType === 'START_UP' && 
-      u.subscription?.trialEndsAt && 
-      new Date(u.subscription.trialEndsAt) > new Date()
-    );
-    
-    const uniqueOrgs = isSuperAdmin 
-      ? [...new Set(usersList.map(u => u.organisation).filter(Boolean))]
-      : [];
-
-    setStats({
-      totalUsers: relevantUsers.length,
-      activeUsers: activeUsers.length,
-      onlineUsers: onlineUsers.length,
-      offlineUsers: relevantUsers.length - onlineUsers.length,
-      inactiveUsers: relevantUsers.filter(u => u.status === 'INACTIVE' || u.status === 'inactive').length,
-      freeTrialUsers: freeTrialUsers.length,
-      totalOrganisations: uniqueOrgs.length,
-      adminsCount: relevantUsers.filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' || u.role === 'COC_ADMIN').length,
-      usersCount: relevantUsers.filter(u => u.role === 'USER').length
-    });
+    setStats(calculateApplicantsStats(usersList, isSuperAdmin));
   }, [isSuperAdmin]);
 
   const fetchAllUsers = useCallback(async () => {
@@ -105,14 +89,12 @@ export default function ApplicantsTab() {
         userEmail: user?.email
       });
       
-      let response;
       let allUsers: User[] = [];
       
       if (isSuperAdmin) {
         // Super admin - fetch all users
         console.log('👑 Super admin fetching all users...');
-        response = await axiosClient.get('/users/admin/all');
-        allUsers = response.data;
+        allUsers = await fetchAllAdminUsers();
         console.log(`✅ Super Admin fetched ${allUsers.length} users from backend`);
       } else {
         // Regular admin - fetch users from their organisation only
@@ -125,31 +107,14 @@ export default function ApplicantsTab() {
 
           console.log('👤 COC Admin fetching users for allowed organisations:', cocAllowedOrganisations);
 
-          response = await axiosClient.get('/users/admin/all');
-          const allUsersData = response.data;
-          allUsers = allUsersData.filter((u: User) =>
-            !!u.organisation && cocAllowedOrganisations.includes(u.organisation)
-          );
+          const allUsersData = await fetchAllAdminUsers();
+          allUsers = filterUsersByAllowedOrganisations(allUsersData, cocAllowedOrganisations);
           console.log(`✅ COC Admin fetched and filtered ${allUsers.length} users in allowed organisations`);
         } else if (userOrganisation) {
           console.log(`👤 Admin fetching users for organisation: ${userOrganisation}`);
           
-          try {
-            // Try the organisation-specific endpoint first
-            response = await axiosClient.get(`/users/organisation/${userOrganisation}`);
-            allUsers = response.data;
-            console.log(`✅ Admin fetched ${allUsers.length} users for organisation: ${userOrganisation}`);
-          } catch {
-            console.warn('⚠️ Organisation endpoint failed, falling back to filtering:');
-            
-            // Fallback: fetch all and filter
-            response = await axiosClient.get('/users/admin/all');
-            const allUsersData = response.data;
-            allUsers = allUsersData.filter((u: User) => 
-              u.organisation === userOrganisation
-            );
-            console.log(`✅ Admin fetched and filtered ${allUsers.length} users for organisation: ${userOrganisation}`);
-          }
+          allUsers = await fetchOrganisationUsers(userOrganisation);
+          console.log(`✅ Admin fetched ${allUsers.length} users for organisation: ${userOrganisation}`);
         } else {
           console.error('❌ No organisation found for admin');
           setFetchError('Your account has no organisation assigned. Please contact support.');
@@ -160,50 +125,22 @@ export default function ApplicantsTab() {
       
       // Filter out SUPER_ADMIN users for non-super admins
       if (!isSuperAdmin) {
-        allUsers = allUsers.filter(u => u.role !== 'SUPER_ADMIN');
+        allUsers = removeSuperAdminUsers(allUsers);
         console.log(`🔍 Filtered out super admins, remaining: ${allUsers.length} users`);
       }
       
       // Enhance users with subscription and online status
-      const enhancedUsers = await Promise.all(
-        allUsers.map(async (userData) => {
-          try {
-            let subscription = null;
-            try {
-              subscription = await userSubscriptionService.getUserPackageByUserId(userData.userId);
-            } catch {
-              // Silently fail
-            }
-            
-            const isOnline = checkUserOnlineStatus(userData);
-            const lastActive = userData.lastSeenAt || userData.updatedAt || '';
-            
-            return {
-              ...userData,
-              subscription,
-              isOnline,
-              lastActive
-            };
-          } catch {
-            const lastActive = userData.lastSeenAt || userData.updatedAt || '';
-            return {
-              ...userData,
-              subscription: null,
-              isOnline: false,
-              lastActive
-            };
-          }
-        })
+      const enhancedUsers = await enhanceUsersWithSubscriptionData(
+        allUsers,
+        checkUserOnlineStatus,
+        userSubscriptionService.getUserPackageByUserId
       );
 
       setUsers(enhancedUsers);
       
       // Extract unique organisations (for super admin only)
       if (isSuperAdmin) {
-        const uniqueOrgs = [...new Set(enhancedUsers
-          .map(u => u.organisation)
-          .filter((org): org is string => org !== undefined && org !== null && org !== '')
-        )];
+        const uniqueOrgs = getUniqueUserOrganisations(enhancedUsers);
         setOrganisations(uniqueOrgs);
       }
       
@@ -310,53 +247,37 @@ export default function ApplicantsTab() {
     fetchAllUsers();
   }, [isSuperAdmin, userOrganisation, fetchAllUsers, isCocAdmin, cocAllowedOrganisations]);
 
-  useEffect(() => {
-    let filtered = [...users];
+  const filteredUsers = useMemo(() => {
+    let filtered = applyApplicantsVisibilityFilter({
+      users,
+      isSuperAdmin,
+      isCocAdmin,
+      cocAllowedOrganisations,
+      userOrganisation,
+    });
 
-    // For non-super admins, ensure filtering is applied correctly
-    if (!isSuperAdmin) {
-      if (isCocAdmin && cocAllowedOrganisations) {
-        filtered = filtered.filter(u => !!u.organisation && cocAllowedOrganisations.includes(u.organisation));
-      } else if (userOrganisation) {
-        filtered = filtered.filter(u => u.organisation === userOrganisation);
-      }
+    filtered = filtered.filter((u) => doesUserMatchSearchTerm(u, searchTerm));
+    filtered = filtered.filter((u) => doesUserMatchStatusFilter(u, statusFilter));
+    filtered = filtered.filter((u) => doesUserMatchRoleFilter(u, roleFilter));
+
+    if (isSuperAdmin) {
+      filtered = filtered.filter((u) => doesUserMatchOrganisationFilter(u, organisationFilter));
     }
 
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(u => 
-        u.fullName?.toLowerCase().includes(searchLower) ||
-        u.email?.toLowerCase().includes(searchLower) ||
-        u.mobileNumber?.toLowerCase().includes(searchLower) ||
-        u.organisation?.toLowerCase().includes(searchLower) ||
-        u.userId?.toLowerCase().includes(searchLower) ||
-        u.businessReference?.toLowerCase().includes(searchLower)
-      );
-    }
+    return filtered;
+  }, [
+    users,
+    isSuperAdmin,
+    isCocAdmin,
+    cocAllowedOrganisations,
+    userOrganisation,
+    searchTerm,
+    statusFilter,
+    roleFilter,
+    organisationFilter,
+  ]);
 
-    if (statusFilter !== 'All') {
-      filtered = filtered.filter(u => {
-        if (statusFilter === 'Active') return u.status === 'ACTIVE' || u.status === 'active';
-        if (statusFilter === 'Inactive') return u.status === 'INACTIVE' || u.status === 'inactive';
-        if (statusFilter === 'Pending') return u.status === 'PENDING' || u.status === 'pending' || u.status === 'PENDING_PASSWORD';
-        if (statusFilter === 'Online') return u.isOnline;
-        if (statusFilter === 'Offline') return !u.isOnline;
-        return true;
-      });
-    }
-
-    if (roleFilter !== 'All') {
-      filtered = filtered.filter(u => u.role === roleFilter);
-    }
-
-    if (isSuperAdmin && organisationFilter !== 'all') {
-      filtered = filtered.filter(u => u.organisation === organisationFilter);
-    }
-
-    setFilteredUsers(filtered);
-  }, [users, searchTerm, statusFilter, roleFilter, organisationFilter, isSuperAdmin, userOrganisation, isCocAdmin, cocAllowedOrganisations]);
-
-  const handleAddAdmin = async () => {
+  const handleAddAdmin = useCallback(async () => {
     if (!newAdminData.email || !newAdminData.fullName) {
       alert('Please fill in required fields');
       return;
@@ -373,14 +294,7 @@ export default function ApplicantsTab() {
       
       alert(`${newAdminData.role} created successfully. An account setup email has been sent to ${newAdminData.email}.`);
       setShowAddAdminModal(false);
-      setNewAdminData({
-        fullName: '',
-        email: '',
-        mobileNumber: '',
-        organisation: '',
-        role: 'ADMIN',
-        status: 'PENDING_PASSWORD'
-      });
+      setNewAdminData(getInitialNewAdminData(null));
       
       fetchAllUsers();
       
@@ -390,9 +304,9 @@ export default function ApplicantsTab() {
     } finally {
       setAddingAdmin(false);
     }
-  };
+  }, [fetchAllUsers, newAdminData, userOrganisation]);
 
-  const handleDeleteUser = async (userId: string, userRole: string, userOrg?: string) => {
+  const handleDeleteUser = useCallback(async (userId: string, userRole: string, userOrg?: string) => {
     if (!isSuperAdmin && userRole === 'SUPER_ADMIN') {
       alert('You cannot delete a super admin.');
       return;
@@ -420,9 +334,9 @@ export default function ApplicantsTab() {
         alert(`Error deleting user: ${error.response?.data || error.message}`);
       }
     }
-  };
+  }, [fetchAllUsers, isSuperAdmin, user?.role, user?.userId, userOrganisation]);
 
-  const handleResendInvite = async (userId: string) => {
+  const handleResendInvite = useCallback(async (userId: string) => {
     if (!isSuperAdmin) {
       alert('Only Super Admins can resend invites.');
       return;
@@ -437,145 +351,57 @@ export default function ApplicantsTab() {
         alert(`Error resending invite: ${error.response?.data?.message || error.response?.data || error.message}`);
       }
     }
-  };
+  }, [isSuperAdmin]);
 
-  const formatLastSeen = (lastSeenAt: string): string => {
-    if (!lastSeenAt) return '-';
+  const formatLastSeen = useCallback((lastSeenAt: string) => {
+    return formatUserLastSeen(lastSeenAt);
+  }, []);
 
-    const lastSeen = new Date(lastSeenAt);
-    if (Number.isNaN(lastSeen.getTime())) return '-';
+  const handleViewDetails = useCallback((selected: UserWithSubscription) => {
+    setSelectedUser(selected);
+  }, []);
 
-    const now = new Date();
-    const diffMs = now.getTime() - lastSeen.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  const handleOpenAddUserModal = useCallback(() => {
+    setShowAddAdminModal(true);
+  }, []);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-  };
+  const handleCloseAddUserModal = useCallback(() => {
+    setShowAddAdminModal(false);
+    setNewAdminData(getInitialNewAdminData(null));
+  }, []);
 
-  const handleViewDetails = (user: UserWithSubscription) => {
-    setSelectedUser(user);
-  };
-
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setSearchTerm('');
     setStatusFilter('All');
     setRoleFilter('All');
     if (isSuperAdmin) setOrganisationFilter('all');
-  };
+  }, [isSuperAdmin]);
 
-  const hasActiveFilters = searchTerm !== '' || 
-    statusFilter !== 'All' || 
-    roleFilter !== 'All' || 
-    (isSuperAdmin && organisationFilter !== 'all');
+  const hasActiveFilters = useMemo(() => {
+    return (
+      searchTerm !== '' ||
+      statusFilter !== 'All' ||
+      roleFilter !== 'All' ||
+      (isSuperAdmin && organisationFilter !== 'all')
+    );
+  }, [searchTerm, statusFilter, roleFilter, isSuperAdmin, organisationFilter]);
 
   // Show error state
   if (fetchError) {
     return (
-      <div className="w-full">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Users</h3>
-          <p className="text-red-600">{fetchError}</p>
-          <button
-            onClick={() => {
-              setFetchError(null);
-              fetchAllUsers();
-            }}
-            className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
+      <ApplicantsFetchError
+        message={fetchError}
+        onRetry={() => {
+          setFetchError(null);
+          fetchAllUsers();
+        }}
+      />
     );
   }
 
   return (
     <div className="w-full">
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">User Details</h2>
-                <p className="text-sm text-gray-500">{selectedUser.fullName || selectedUser.email}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedUser(null)}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs font-medium text-gray-500">Full Name</div>
-                <div className="text-sm text-gray-900">{selectedUser.fullName || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Email</div>
-                <div className="text-sm text-gray-900 break-all">{selectedUser.email || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Mobile</div>
-                <div className="text-sm text-gray-900">{selectedUser.mobileNumber || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Company</div>
-                <div className="text-sm text-gray-900">{selectedUser.companyName || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Organisation</div>
-                <div className="text-sm text-gray-900">{selectedUser.organisation || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Role</div>
-                <div className="text-sm text-gray-900">{selectedUser.role || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Status</div>
-                <div className="text-sm text-gray-900">{selectedUser.status || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Business Reference</div>
-                <div className="text-sm text-gray-900 break-all">{selectedUser.businessReference || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Industry</div>
-                <div className="text-sm text-gray-900">{selectedUser.industry || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Location</div>
-                <div className="text-sm text-gray-900">{selectedUser.location || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Employees</div>
-                <div className="text-sm text-gray-900">{selectedUser.employees || '-'}</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-gray-500">Founded</div>
-                <div className="text-sm text-gray-900">{selectedUser.founded || '-'}</div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedUser(null)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <UserDetailsModal user={selectedUser} onClose={() => setSelectedUser(null)} />
 
       <UserManagementHeader
         isSuperAdmin={isSuperAdmin}
@@ -583,7 +409,7 @@ export default function ApplicantsTab() {
         totalUsers={users.length}
         totalOrganisations={stats.totalOrganisations}
         statsTotalUsers={stats.totalUsers}
-        onAddUser={() => setShowAddAdminModal(true)}
+        onAddUser={handleOpenAddUserModal}
       />
 
       <UserStats stats={stats} isSuperAdmin={isSuperAdmin} />
@@ -619,17 +445,7 @@ export default function ApplicantsTab() {
 
       <AddUserModal
         isOpen={showAddAdminModal}
-        onClose={() => {
-          setShowAddAdminModal(false);
-          setNewAdminData({
-            fullName: '',
-            email: '',
-            mobileNumber: '',
-            organisation: '',
-            role: 'ADMIN',
-            status: 'PENDING_PASSWORD'
-          });
-        }}
+        onClose={handleCloseAddUserModal}
         onAdd={handleAddAdmin}
         newUserData={newAdminData}
         setNewUserData={setNewAdminData}

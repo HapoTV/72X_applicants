@@ -1,10 +1,268 @@
 // src/pages/adminDashboard/tabs/AdminProfile.tsx
 import React, { useRef, useState, useEffect } from 'react';
-import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building2, Eye, EyeOff, X } from 'lucide-react';
+import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building2 } from 'lucide-react';
 import { authService } from '../../../services/AuthService';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
 import type { UserFormData } from '../../../interfaces/UserData';
+import { AdminProfilePasswordModal } from './components/AdminProfilePasswordModal';
+
+type NotificationPreferences = {
+    email: {
+        weeklyReports: boolean;
+        monthlyAnalytics: boolean;
+        urgentAlerts: boolean;
+    };
+    system: {
+        newApplicants: boolean;
+        systemAlerts: boolean;
+        fundingUpdates: boolean;
+        eventReminders: boolean;
+    };
+};
+
+type SystemPreferenceId = 'new-applicants' | 'system-alerts' | 'funding-updates' | 'event-reminders';
+type EmailPreferenceId = 'weekly-reports' | 'monthly-analytics' | 'urgent-alerts';
+
+const ADMIN_PROFILE_TABS = [
+    { id: 'profile', name: 'Profile', icon: User },
+    { id: 'notifications', name: 'Notifications', icon: Bell },
+    { id: 'security', name: 'Security', icon: Shield },
+] as const;
+
+const INDUSTRY_OPTIONS = [
+    'Technology',
+    'Finance & Banking',
+    'Healthcare',
+    'Retail & E-commerce',
+    'Manufacturing',
+    'Construction',
+    'Education',
+    'Hospitality & Tourism',
+    'Transportation & Logistics',
+    'Media & Entertainment',
+    'Agriculture',
+    'Real Estate',
+    'Energy & Utilities',
+    'Professional Services',
+    'Consultancy',
+    'Non-profit',
+    'Other',
+] as const;
+
+const SYSTEM_NOTIFICATION_OPTIONS: Array<{ id: SystemPreferenceId; label: string }> = [
+    { id: 'new-applicants', label: 'New applicant registrations' },
+    { id: 'system-alerts', label: 'System alerts and updates' },
+    { id: 'funding-updates', label: 'Funding opportunity updates' },
+    { id: 'event-reminders', label: 'Event reminders' },
+];
+
+const EMAIL_NOTIFICATION_OPTIONS: Array<{ id: EmailPreferenceId; label: string }> = [
+    { id: 'weekly-reports', label: 'Weekly activity reports' },
+    { id: 'monthly-analytics', label: 'Monthly analytics summary' },
+    { id: 'urgent-alerts', label: 'Urgent system alerts' },
+];
+
+type NotificationOption<T extends string> = {
+    id: T;
+    label: string;
+};
+
+const getNotificationPreferencesStorageKey = (user: { userId?: string; email?: string } | null) => {
+    const userKey = user?.userId || user?.email || localStorage.getItem('userEmail') || 'anonymous';
+    return `notificationPreferences:${userKey}`;
+};
+
+type PasswordRequirements = {
+    minLength: boolean;
+    hasNumber: boolean;
+    hasUppercase: boolean;
+    hasLowercase: boolean;
+    hasSpecialChar: boolean;
+};
+
+type PasswordChangeData = {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+};
+
+type PasswordVisibilityState = {
+    current: boolean;
+    new: boolean;
+    confirm: boolean;
+};
+
+const INITIAL_PASSWORD_DATA: PasswordChangeData = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+};
+
+const INITIAL_PASSWORD_VISIBILITY: PasswordVisibilityState = {
+    current: false,
+    new: false,
+    confirm: false,
+};
+
+const INITIAL_PASSWORD_REQUIREMENTS: PasswordRequirements = {
+    minLength: false,
+    hasNumber: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasSpecialChar: false,
+};
+
+const getPasswordRequirements = (password: string): PasswordRequirements => {
+    return {
+        minLength: password.length >= 8,
+        hasNumber: /\d/.test(password),
+        hasUppercase: /[A-Z]/.test(password),
+        hasLowercase: /[a-z]/.test(password),
+        hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+};
+
+const getPasswordValidationError = (passwordData: PasswordChangeData, passwordRequirements: PasswordRequirements): string | null => {
+    if (!passwordData.currentPassword) return 'Current password is required';
+    if (!passwordData.newPassword) return 'New password is required';
+    if (passwordData.newPassword !== passwordData.confirmPassword) return 'Passwords do not match';
+    if (passwordData.newPassword.length < 8) return 'Password must be at least 8 characters long';
+
+    if (
+        !passwordRequirements.hasNumber ||
+        !passwordRequirements.hasUppercase ||
+        !passwordRequirements.hasLowercase ||
+        !passwordRequirements.hasSpecialChar
+    ) {
+        return 'Password does not meet all requirements';
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+        return 'New password must be different from current password';
+    }
+
+    return null;
+};
+
+const syncUserInLocalStorage = (partialUser: Record<string, unknown>) => {
+    try {
+        const raw = localStorage.getItem('user');
+        const parsed = raw ? JSON.parse(raw) : {};
+        const nextUser = { ...parsed, ...partialUser };
+        localStorage.setItem('user', JSON.stringify(nextUser));
+        window.dispatchEvent(new CustomEvent('user-updated'));
+    } catch {
+        // ignore localStorage errors
+    }
+};
+
+const escapeCsvValue = (value: unknown) => {
+    if (value === undefined || value === null) return '';
+    const str = typeof value === 'string' ? value : JSON.stringify(value);
+    const needsQuotes = /[",\n\r]/.test(str);
+    const escaped = str.replace(/"/g, '""');
+    return needsQuotes ? `"${escaped}"` : escaped;
+};
+
+const buildOrganisationUsersCsv = (users: any[]) => {
+    const headers = [
+        'fullName',
+        'email',
+        'mobileNumber',
+        'companyName',
+        'organisation',
+        'role',
+        'status',
+        'createdAt',
+        'lastLoginAt',
+    ];
+
+    const lines = [
+        headers.join(','),
+        ...users.map((u) => headers.map((h) => escapeCsvValue((u as any)[h])).join(',')),
+    ];
+
+    return lines.join('\r\n');
+};
+
+const getOrganisationSlug = (userOrganisation: string | null) => {
+    return (userOrganisation || 'all')
+        .toString()
+        .replace(/[^a-z0-9-_ ]/gi, '')
+        .trim()
+        .replace(/\s+/g, '_');
+};
+
+const getSystemPreferenceChecked = (preferences: NotificationPreferences, id: SystemPreferenceId): boolean => {
+    if (id === 'new-applicants') return preferences.system.newApplicants;
+    if (id === 'system-alerts') return preferences.system.systemAlerts;
+    if (id === 'funding-updates') return preferences.system.fundingUpdates;
+    return preferences.system.eventReminders;
+};
+
+const getEmailPreferenceChecked = (preferences: NotificationPreferences, id: EmailPreferenceId): boolean => {
+    if (id === 'weekly-reports') return preferences.email.weeklyReports;
+    if (id === 'monthly-analytics') return preferences.email.monthlyAnalytics;
+    return preferences.email.urgentAlerts;
+};
+
+const updateSystemPreference = (
+    preferences: NotificationPreferences,
+    id: SystemPreferenceId,
+    checked: boolean
+): NotificationPreferences => {
+    if (id === 'new-applicants') {
+        return { ...preferences, system: { ...preferences.system, newApplicants: checked } };
+    }
+    if (id === 'system-alerts') {
+        return { ...preferences, system: { ...preferences.system, systemAlerts: checked } };
+    }
+    if (id === 'funding-updates') {
+        return { ...preferences, system: { ...preferences.system, fundingUpdates: checked } };
+    }
+    return { ...preferences, system: { ...preferences.system, eventReminders: checked } };
+};
+
+const updateEmailPreference = (
+    preferences: NotificationPreferences,
+    id: EmailPreferenceId,
+    checked: boolean
+): NotificationPreferences => {
+    if (id === 'weekly-reports') {
+        return { ...preferences, email: { ...preferences.email, weeklyReports: checked } };
+    }
+    if (id === 'monthly-analytics') {
+        return { ...preferences, email: { ...preferences.email, monthlyAnalytics: checked } };
+    }
+    return { ...preferences, email: { ...preferences.email, urgentAlerts: checked } };
+};
+
+const NotificationCheckboxGroup = <T extends string>({
+    options,
+    isChecked,
+    onChange,
+}: {
+    options: Array<NotificationOption<T>>;
+    isChecked: (id: T) => boolean;
+    onChange: (id: T, checked: boolean) => void;
+}) => {
+    return (
+        <div className="space-y-3">
+            {options.map((item) => (
+                <label key={item.id} className="flex items-center space-x-3">
+                    <input
+                        type="checkbox"
+                        checked={isChecked(item.id)}
+                        onChange={(e) => onChange(item.id, e.target.checked)}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+                    />
+                    <span className="text-gray-700">{item.label}</span>
+                </label>
+            ))}
+        </div>
+    );
+};
 
 const AdminProfile: React.FC = () => {
     const { user, login, isSuperAdmin, userOrganisation } = useAuth();
@@ -12,7 +270,7 @@ const AdminProfile: React.FC = () => {
     const [activeTab, setActiveTab] = useState('profile');
 
     const [notificationSaving, setNotificationSaving] = useState(false);
-    const [notificationPreferences, setNotificationPreferences] = useState({
+    const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
         email: {
             weeklyReports: true,
             monthlyAnalytics: true,
@@ -26,31 +284,7 @@ const AdminProfile: React.FC = () => {
         },
     });
 
-    const tabs = [
-        { id: 'profile', name: 'Profile', icon: User },
-        { id: 'notifications', name: 'Notifications', icon: Bell },
-        { id: 'security', name: 'Security', icon: Shield },
-    ];
-
-    const INDUSTRY_OPTIONS = [
-        'Technology',
-        'Finance & Banking',
-        'Healthcare',
-        'Retail & E-commerce',
-        'Manufacturing',
-        'Construction',
-        'Education',
-        'Hospitality & Tourism',
-        'Transportation & Logistics',
-        'Media & Entertainment',
-        'Agriculture',
-        'Real Estate',
-        'Energy & Utilities',
-        'Professional Services',
-        'Consultancy',
-        'Non-profit',
-        'Other',
-    ];
+    const tabs = ADMIN_PROFILE_TABS;
 
     const [profileData, setProfileData] = useState<UserFormData>({
         fullName: '',
@@ -79,25 +313,11 @@ const AdminProfile: React.FC = () => {
     const [deletingAccount, setDeletingAccount] = useState(false);
 
     const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [passwordData, setPasswordData] = useState({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-    });
-    const [showPasswords, setShowPasswords] = useState({
-        current: false,
-        new: false,
-        confirm: false,
-    });
+    const [passwordData, setPasswordData] = useState<PasswordChangeData>(INITIAL_PASSWORD_DATA);
+    const [showPasswords, setShowPasswords] = useState<PasswordVisibilityState>(INITIAL_PASSWORD_VISIBILITY);
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [changingPassword, setChangingPassword] = useState(false);
-    const [passwordRequirements, setPasswordRequirements] = useState({
-        minLength: false,
-        hasNumber: false,
-        hasUppercase: false,
-        hasLowercase: false,
-        hasSpecialChar: false,
-    });
+    const [passwordRequirements, setPasswordRequirements] = useState<PasswordRequirements>(INITIAL_PASSWORD_REQUIREMENTS);
 
     useEffect(() => {
         fetchUserProfile();
@@ -106,8 +326,7 @@ const AdminProfile: React.FC = () => {
     useEffect(() => {
         if (activeTab !== 'notifications') return;
 
-        const userKey = user?.userId || user?.email || localStorage.getItem('userEmail') || 'anonymous';
-        const storageKey = `notificationPreferences:${userKey}`;
+        const storageKey = getNotificationPreferencesStorageKey(user);
 
         const raw = localStorage.getItem(storageKey);
         if (!raw) return;
@@ -143,16 +362,7 @@ const AdminProfile: React.FC = () => {
             });
 
             setProfileImageUrl(userData.profileImageUrl || '');
-
-            try {
-                const raw = localStorage.getItem('user');
-                const parsed = raw ? JSON.parse(raw) : {};
-                const nextUser = { ...parsed, ...userData };
-                localStorage.setItem('user', JSON.stringify(nextUser));
-                window.dispatchEvent(new CustomEvent('user-updated'));
-            } catch {
-                // ignore localStorage errors
-            }
+            syncUserInLocalStorage(userData as Record<string, unknown>);
         } catch {
             alert('Failed to load profile data');
         } finally {
@@ -172,16 +382,7 @@ const AdminProfile: React.FC = () => {
             setIsEditing(false);
             console.log('Profile saved:', updatedUser);
             alert('Profile updated successfully!');
-
-            try {
-                const raw = localStorage.getItem('user');
-                const parsed = raw ? JSON.parse(raw) : {};
-                const nextUser = { ...parsed, ...updatedUser };
-                localStorage.setItem('user', JSON.stringify(nextUser));
-                window.dispatchEvent(new CustomEvent('user-updated'));
-            } catch {
-                // ignore localStorage errors
-            }
+            syncUserInLocalStorage(updatedUser as Record<string, unknown>);
         } catch (err: any) {
             alert(err?.message || 'Failed to update profile');
         } finally {
@@ -192,8 +393,7 @@ const AdminProfile: React.FC = () => {
     const handleSaveNotificationPreferences = async () => {
         try {
             setNotificationSaving(true);
-            const userKey = user?.userId || user?.email || localStorage.getItem('userEmail') || 'anonymous';
-            const storageKey = `notificationPreferences:${userKey}`;
+            const storageKey = getNotificationPreferencesStorageKey(user);
             localStorage.setItem(storageKey, JSON.stringify(notificationPreferences));
             alert('Preferences saved successfully!');
         } catch (error) {
@@ -253,13 +453,7 @@ const AdminProfile: React.FC = () => {
     };
 
     const checkPasswordRequirements = (password: string) => {
-        setPasswordRequirements({
-            minLength: password.length >= 8,
-            hasNumber: /\d/.test(password),
-            hasUppercase: /[A-Z]/.test(password),
-            hasLowercase: /[a-z]/.test(password),
-            hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-        });
+        setPasswordRequirements(getPasswordRequirements(password));
     };
 
     const handleNewPasswordChange = (value: string) => {
@@ -268,34 +462,9 @@ const AdminProfile: React.FC = () => {
     };
 
     const validatePassword = (): boolean => {
-        if (!passwordData.currentPassword) {
-            setPasswordError('Current password is required');
-            return false;
-        }
-
-        if (!passwordData.newPassword) {
-            setPasswordError('New password is required');
-            return false;
-        }
-
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
-            setPasswordError('Passwords do not match');
-            return false;
-        }
-
-        if (passwordData.newPassword.length < 8) {
-            setPasswordError('Password must be at least 8 characters long');
-            return false;
-        }
-
-        const requirements = passwordRequirements;
-        if (!requirements.hasNumber || !requirements.hasUppercase || !requirements.hasLowercase || !requirements.hasSpecialChar) {
-            setPasswordError('Password does not meet all requirements');
-            return false;
-        }
-
-        if (passwordData.currentPassword === passwordData.newPassword) {
-            setPasswordError('New password must be different from current password');
+        const error = getPasswordValidationError(passwordData, passwordRequirements);
+        if (error) {
+            setPasswordError(error);
             return false;
         }
 
@@ -328,42 +497,15 @@ const AdminProfile: React.FC = () => {
 
     const closePasswordModal = () => {
         setShowPasswordModal(false);
-        setPasswordData({
-            currentPassword: '',
-            newPassword: '',
-            confirmPassword: '',
-        });
+        setPasswordData(INITIAL_PASSWORD_DATA);
         setPasswordError(null);
-        setShowPasswords({
-            current: false,
-            new: false,
-            confirm: false,
-        });
-        setPasswordRequirements({
-            minLength: false,
-            hasNumber: false,
-            hasUppercase: false,
-            hasLowercase: false,
-            hasSpecialChar: false,
-        });
+        setShowPasswords(INITIAL_PASSWORD_VISIBILITY);
+        setPasswordRequirements(INITIAL_PASSWORD_REQUIREMENTS);
     };
 
     const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
         setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
     };
-
-    const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
-        <div className="flex items-center gap-2">
-            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${met ? 'bg-green-100' : 'bg-gray-100'}`}>
-                <span className={`text-xs ${met ? 'text-green-600' : 'text-gray-400'}`}>
-                    {met ? '✓' : '○'}
-                </span>
-            </div>
-            <span className={`text-sm ${met ? 'text-green-700' : 'text-gray-500'}`}>
-                {text}
-            </span>
-        </div>
-    );
 
     const handleDownloadOrganisationUsers = async () => {
         if (downloadingOrgData) return;
@@ -394,40 +536,11 @@ const AdminProfile: React.FC = () => {
                 users = users.filter((u: any) => u.role !== 'SUPER_ADMIN');
             }
 
-            const escapeCsv = (value: unknown) => {
-                if (value === undefined || value === null) return '';
-                const str = typeof value === 'string' ? value : JSON.stringify(value);
-                const needsQuotes = /[",\n\r]/.test(str);
-                const escaped = str.replace(/"/g, '""');
-                return needsQuotes ? `"${escaped}"` : escaped;
-            };
-
-            const headers = [
-                'fullName',
-                'email',
-                'mobileNumber',
-                'companyName',
-                'organisation',
-                'role',
-                'status',
-                'createdAt',
-                'lastLoginAt',
-            ];
-
-            const lines = [
-                headers.join(','),
-                ...users.map((u) => headers.map((h) => escapeCsv((u as any)[h])).join(',')),
-            ];
-
-            const csv = lines.join('\r\n');
+            const csv = buildOrganisationUsersCsv(users);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            const orgSlug = (userOrganisation || 'all')
-                .toString()
-                .replace(/[^a-z0-9-_ ]/gi, '')
-                .trim()
-                .replace(/\s+/g, '_');
+            const orgSlug = getOrganisationSlug(userOrganisation);
             a.href = url;
             a.download = `72X_${orgSlug}_users.csv`;
             document.body.appendChild(a);
@@ -809,70 +922,24 @@ const AdminProfile: React.FC = () => {
                         <div className="space-y-6">
                             <div>
                                 <h4 className="text-md font-medium text-gray-900 mb-4">System Notifications</h4>
-                                <div className="space-y-3">
-                                    {[
-                                        { id: 'new-applicants', label: 'New applicant registrations', checked: notificationPreferences.system.newApplicants },
-                                        { id: 'system-alerts', label: 'System alerts and updates', checked: notificationPreferences.system.systemAlerts },
-                                        { id: 'funding-updates', label: 'Funding opportunity updates', checked: notificationPreferences.system.fundingUpdates },
-                                        { id: 'event-reminders', label: 'Event reminders', checked: notificationPreferences.system.eventReminders },
-                                    ].map(item => (
-                                        <label key={item.id} className="flex items-center space-x-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={item.checked}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setNotificationPreferences((prev) => {
-                                                        if (item.id === 'new-applicants') {
-                                                            return { ...prev, system: { ...prev.system, newApplicants: checked } };
-                                                        }
-                                                        if (item.id === 'system-alerts') {
-                                                            return { ...prev, system: { ...prev.system, systemAlerts: checked } };
-                                                        }
-                                                        if (item.id === 'funding-updates') {
-                                                            return { ...prev, system: { ...prev.system, fundingUpdates: checked } };
-                                                        }
-                                                        return { ...prev, system: { ...prev.system, eventReminders: checked } };
-                                                    });
-                                                }}
-                                                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
-                                            />
-                                            <span className="text-gray-700">{item.label}</span>
-                                        </label>
-                                    ))}
-                                </div>
+                                <NotificationCheckboxGroup
+                                    options={SYSTEM_NOTIFICATION_OPTIONS}
+                                    isChecked={(id) => getSystemPreferenceChecked(notificationPreferences, id)}
+                                    onChange={(id, checked) => {
+                                        setNotificationPreferences((prev) => updateSystemPreference(prev, id, checked));
+                                    }}
+                                />
                             </div>
 
                             <div>
                                 <h4 className="text-md font-medium text-gray-900 mb-4">Email Notifications</h4>
-                                <div className="space-y-3">
-                                    {[
-                                        { id: 'weekly-reports', label: 'Weekly activity reports', checked: notificationPreferences.email.weeklyReports },
-                                        { id: 'monthly-analytics', label: 'Monthly analytics summary', checked: notificationPreferences.email.monthlyAnalytics },
-                                        { id: 'urgent-alerts', label: 'Urgent system alerts', checked: notificationPreferences.email.urgentAlerts },
-                                    ].map(item => (
-                                        <label key={item.id} className="flex items-center space-x-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={item.checked}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setNotificationPreferences((prev) => {
-                                                        if (item.id === 'weekly-reports') {
-                                                            return { ...prev, email: { ...prev.email, weeklyReports: checked } };
-                                                        }
-                                                        if (item.id === 'monthly-analytics') {
-                                                            return { ...prev, email: { ...prev.email, monthlyAnalytics: checked } };
-                                                        }
-                                                        return { ...prev, email: { ...prev.email, urgentAlerts: checked } };
-                                                    });
-                                                }}
-                                                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
-                                            />
-                                            <span className="text-gray-700">{item.label}</span>
-                                        </label>
-                                    ))}
-                                </div>
+                                <NotificationCheckboxGroup
+                                    options={EMAIL_NOTIFICATION_OPTIONS}
+                                    isChecked={(id) => getEmailPreferenceChecked(notificationPreferences, id)}
+                                    onChange={(id, checked) => {
+                                        setNotificationPreferences((prev) => updateEmailPreference(prev, id, checked));
+                                    }}
+                                />
                             </div>
                         </div>
 
@@ -954,124 +1021,19 @@ const AdminProfile: React.FC = () => {
                 )}
             </div>
 
-            {showPasswordModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <h3 className="text-xl font-semibold text-gray-900">Change Password</h3>
-                            <button
-                                type="button"
-                                onClick={closePasswordModal}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            {passwordError && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                    <p className="text-red-600 text-sm">{passwordError}</p>
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
-                                <div className="relative">
-                                    <input
-                                        type={showPasswords.current ? 'text' : 'password'}
-                                        value={passwordData.currentPassword}
-                                        onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                                        className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="Enter current password"
-                                        required
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => togglePasswordVisibility('current')}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                    >
-                                        {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                                <div className="relative">
-                                    <input
-                                        type={showPasswords.new ? 'text' : 'password'}
-                                        value={passwordData.newPassword}
-                                        onChange={(e) => handleNewPasswordChange(e.target.value)}
-                                        className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="Enter new password"
-                                        required
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => togglePasswordVisibility('new')}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                    >
-                                        {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                                <div className="relative">
-                                    <input
-                                        type={showPasswords.confirm ? 'text' : 'password'}
-                                        value={passwordData.confirmPassword}
-                                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                                        className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        placeholder="Confirm new password"
-                                        required
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => togglePasswordVisibility('confirm')}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                    >
-                                        {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                                <h3 className="text-sm font-medium text-gray-700 mb-2">Password Requirements</h3>
-                                <RequirementItem met={passwordRequirements.minLength} text="At least 8 characters long" />
-                                <RequirementItem met={passwordRequirements.hasUppercase} text="One uppercase letter" />
-                                <RequirementItem met={passwordRequirements.hasLowercase} text="One lowercase letter" />
-                                <RequirementItem met={passwordRequirements.hasNumber} text="One number" />
-                                <RequirementItem met={passwordRequirements.hasSpecialChar} text="One special character" />
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
-                            <button
-                                type="button"
-                                onClick={closePasswordModal}
-                                disabled={changingPassword}
-                                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handlePasswordChange}
-                                disabled={changingPassword}
-                                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors flex items-center space-x-2"
-                            >
-                                {changingPassword && (
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                )}
-                                <span>{changingPassword ? 'Changing Password...' : 'Change Password'}</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <AdminProfilePasswordModal
+                isOpen={showPasswordModal}
+                passwordError={passwordError}
+                passwordData={passwordData}
+                showPasswords={showPasswords}
+                passwordRequirements={passwordRequirements}
+                changingPassword={changingPassword}
+                onClose={closePasswordModal}
+                onPasswordDataChange={setPasswordData}
+                onNewPasswordChange={handleNewPasswordChange}
+                onTogglePasswordVisibility={togglePasswordVisibility}
+                onSubmit={handlePasswordChange}
+            />
         </div>
     );
 };
