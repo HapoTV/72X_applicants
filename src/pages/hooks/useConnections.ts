@@ -4,6 +4,7 @@ import MessageServices from '../../services/MessageServices';
 import ConnectionRequestService from '../../services/ConnectionRequestService';
 import type { Conversation } from '../../interfaces/MessageData';
 import type { ConnectionStatusDTO, ConnectionRequestDTO } from '../../services/ConnectionRequestService';
+import { messagingPollingService } from '../../services/MessagingPollingService';
 
 export interface ConnectionUser {
   userId: string;
@@ -163,18 +164,35 @@ export function useConnections(authUserId?: string) {
 
   useEffect(() => {
     if (!authUserId || users.length === 0) return;
-    loadConversations();
+
+    // Subscribe to shared polling service for conversations (avoids duplicate polling with Header)
+    const unsubscribeConversations = messagingPollingService.subscribeToConversations((conversations: Conversation[]) => {
+      const meta: Record<string, ConversationMeta> = {};
+      for (const c of conversations) {
+        const otherUserId = c.user1Id === authUserId ? c.user2Id : c.user1Id;
+        meta[otherUserId] = {
+          unread: c.unreadCount || 0,
+          lastMessageAt: c.lastMessageAt,
+          conversationId: c.conversationId,
+          lastMessage: c.lastMessage || '',
+        };
+      }
+      setConversationMetaByUserId(meta);
+    });
+
+    // Connection statuses and pending requests still poll independently (not messaging data)
     loadConnectionStatuses();
     loadPendingRequests();
-
     const interval = window.setInterval(() => {
-      loadConversations();
       loadConnectionStatuses();
       loadPendingRequests();
     }, 15000);
 
-    return () => window.clearInterval(interval);
-  }, [authUserId, users.length, loadConversations, loadConnectionStatuses, loadPendingRequests]);
+    return () => {
+      unsubscribeConversations();
+      window.clearInterval(interval);
+    };
+  }, [authUserId, users.length, loadConnectionStatuses, loadPendingRequests]);
 
   // ─── Reset visible count on filter change ──────────────────────────────────
 

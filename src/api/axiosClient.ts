@@ -7,10 +7,8 @@ const API_URL =
   import.meta.env.VITE_PRODUCTION_URL ||
   'http://localhost:8080';
 
-console.log('🔧 API Base URL:', API_URL);
-
 // For Production
-// const API_URL = import.meta.env. VITE_BACKEND_URL;
+// const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 export const publicAxios = axios.create({
   baseURL: `${API_URL}/api`,
@@ -33,17 +31,7 @@ axiosClient.interceptors.request.use(
     const organisation = localStorage.getItem("userOrganisation");
     const userRole = localStorage.getItem("userRole");
 
-    console.log("🔧 Axios Request Config:", {
-      url: config.url,
-      method: config.method,
-      hasToken: !!token,
-      token: token ? token.substring(0, 20) + "..." : "Missing",
-      organisation: organisation || "None",
-      role: userRole || "None",
-      isFormData: config.data instanceof FormData
-    });
-
-    // ✅ Add token ONLY if it exists
+    // Add token ONLY if it exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -55,7 +43,6 @@ axiosClient.interceptors.request.use(
 
     if (!shouldSkipOrganisationHeader && organisation && userRole !== 'SUPER_ADMIN') {
       config.headers['X-Organisation'] = organisation;
-      console.log("🏢 Added organisation header:", organisation);
     }
 
     // ✅ IMPORTANT:
@@ -67,20 +54,11 @@ axiosClient.interceptors.request.use(
 
     return config;
   },
-  (error: unknown) => {
-    console.error("❌ Request interceptor error:", error);
-    return Promise.reject(error);
-  }
+  (error: unknown) => Promise.reject(error)
 );
 
 axiosClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    console.log("✅ Axios Response Success:", {
-      url: response.config.url,
-      status: response.status
-    });
-    return response;
-  },
+  (response: AxiosResponse) => response,
   (error: AxiosError) => {
     const url = error.config?.url as string | undefined;
     const method = (error.config?.method as string | undefined)?.toLowerCase();
@@ -102,12 +80,10 @@ axiosClient.interceptors.response.use(
     }
 
     if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
-      console.error("🌐 Network error - Check backend/CORS");
       throw new Error("Cannot connect to server. Please check if the backend is running.");
     }
 
     if (error.response?.status === 401) {
-      console.warn("🔐 Unauthorized - Token invalid/expired");
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
       localStorage.removeItem("userRole");
@@ -136,8 +112,7 @@ axiosClient.interceptors.response.use(
     }
 
     if (error.response?.status === 403) {
-      console.error("🚫 Forbidden - No permission");
-      // Could show a user-friendly message
+      // No permission — caller handles this
     }
 
     return Promise.reject(error);

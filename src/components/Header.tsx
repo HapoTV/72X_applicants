@@ -3,10 +3,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Menu, Bell, Search, Clock, Gift, ChevronDown, BellRing, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import NotificationService from '../services/NotificationService';
 import UserSubscriptionService from '../services/UserSubscriptionService';
 import NotificationPopup from './NotificationPopup';
 import { useAuth } from '../context/AuthContext';
+import { messagingPollingService } from '../services/MessagingPollingService';
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
@@ -65,16 +65,14 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   const effectiveFreeTrialInfo = freeTrialInfo ?? localFreeTrialInfo;
 
   useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    const handleNotificationsUpdated = () => {
-      void fetchUnreadCount();
-    };
-
+    // Use unified polling service instead of a standalone 30s interval
+    const unsubscribe = messagingPollingService.subscribeToUnreadCount((count) => {
+      setUnreadCount(count);
+    });
+    const handleNotificationsUpdated = () => void messagingPollingService.refresh();
     window.addEventListener('notifications-updated', handleNotificationsUpdated as EventListener);
-
     return () => {
-      clearInterval(interval);
+      unsubscribe();
       window.removeEventListener('notifications-updated', handleNotificationsUpdated as EventListener);
     };
   }, []);
@@ -101,15 +99,6 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const fetchUnreadCount = async () => {
-    try {
-      const count = await NotificationService.getUnreadCount();
-      setUnreadCount(count);
-    } catch (error) {
-      console.error('Error fetching unread count:', error);
-    }
-  };
 
   const fetchFreeTrialInfo = async () => {
     if (isLoadingTrial) return;
