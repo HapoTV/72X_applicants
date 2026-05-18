@@ -1,5 +1,5 @@
 // src/components/ChatWindow.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Box,
   TextField,
@@ -32,6 +32,7 @@ import {
   InsertDriveFile,
   Close,
 } from '@mui/icons-material';
+
 import MessageServices from '../services/MessageServices';
 import type { Message } from '../interfaces/MessageData';
 
@@ -52,6 +53,21 @@ interface SelectedAttachment {
 }
 
 const EMOJI_OPTIONS = ['😀', '😂', '😍', '😊', '👍', '👏', '🙏', '🔥', '🎉', '❤️', '😎', '🤝'];
+
+const getCurrentUserId = (): string => {
+  const userStr = localStorage.getItem('user');
+
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      return user.id || user.userId || '';
+    } catch (e) {
+      console.error('Error parsing user data:', e);
+    }
+  }
+
+  return localStorage.getItem('userId') || '';
+};
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
   receiverId,
@@ -80,35 +96,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const documentInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-  const getCurrentUserId = (): string => {
-    const userStr = localStorage.getItem('user');
-
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        return user.id || user.userId || '';
-      } catch (e) {
-        console.error('Error parsing user data:', e);
-      }
-    }
-
-    return localStorage.getItem('userId') || '';
-  };
-
   const currentUserId = getCurrentUserId();
 
-  const clearPolling = () => {
+  const clearPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
-  };
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!receiverId || !currentUserId) return;
 
     try {
@@ -145,7 +146,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [receiverId, currentUserId]);
 
   useEffect(() => {
     if (!isOpen || !currentUserId || !receiverId) {
@@ -153,14 +154,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       return;
     }
 
-    fetchMessages();
+    setMessages([]);
+    void fetchMessages();
+
     clearPolling();
-    pollingIntervalRef.current = setInterval(fetchMessages, 3000);
+    pollingIntervalRef.current = setInterval(() => {
+      void fetchMessages();
+    }, 3000);
 
     return () => {
       clearPolling();
     };
-  }, [isOpen, currentUserId, receiverId]);
+  }, [isOpen, currentUserId, receiverId, fetchMessages, clearPolling]);
 
   useEffect(() => {
     scrollToBottom();
@@ -202,7 +207,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
         setMessages((prev) => [...prev, sentMessage]);
         setNewMessage('');
-        setTimeout(() => fetchMessages(), 500);
+
+        setTimeout(() => {
+          void fetchMessages();
+        }, 500);
       } catch (err: any) {
         console.error('Error auto-sending message:', err);
         setError(err?.message || 'Failed to send message');
@@ -212,7 +220,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     };
 
     void run();
-  }, [autoSend, currentUserId, initialMessage, isOpen, receiverId]);
+  }, [autoSend, currentUserId, initialMessage, isOpen, receiverId, fetchMessages]);
 
   const buildAttachmentSummary = () => {
     if (selectedAttachments.length === 0) return '';
@@ -246,7 +254,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       setNewMessage('');
       setSelectedAttachments([]);
 
-      setTimeout(() => fetchMessages(), 500);
+      setTimeout(() => {
+        void fetchMessages();
+      }, 500);
     } catch (err: any) {
       console.error('Error sending message:', err);
       setError(err.message || 'Failed to send message');
@@ -264,6 +274,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
+
     return date.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
@@ -511,6 +522,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 </ListItem>
               );
             })}
+
             <div ref={messagesEndRef} />
           </List>
         )}

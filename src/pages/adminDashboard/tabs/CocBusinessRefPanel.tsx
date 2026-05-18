@@ -2,19 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyRound, Shield, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { cocOrganisationService, type CocSubOrganisation } from '../../../services/CocOrganisationService';
-
-const subscriptionBadge = (type: string | undefined) => {
-  switch (type) {
-    case 'PREMIUM':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">PREMIUM</span>;
-    case 'ESSENTIAL':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">ESSENTIAL</span>;
-    case 'START_UP':
-      return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">START_UP</span>;
-    default:
-      return null;
-  }
-};
+import { renderSubscriptionBadge, toggleSetMembership } from './components/cocOrgHelpers';
 
 const CocBusinessRefPanel: React.FC = () => {
   const { isCocAdmin } = useAuth();
@@ -43,10 +31,7 @@ const CocBusinessRefPanel: React.FC = () => {
 
   const toggleReveal = (id: string) => {
     setRevealedRefs((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+      return toggleSetMembership(prev, id);
     });
   };
 
@@ -134,7 +119,7 @@ const CocBusinessRefPanel: React.FC = () => {
                     <div className="font-medium text-gray-900">{item.name}</div>
                   </td>
                   <td className="px-6 py-4">
-                    {subscriptionBadge(item.subscriptionType)}
+                    {renderSubscriptionBadge(item.subscriptionType)}
                   </td>
                   <td className="px-6 py-4">
                     {editingId === item.id ? (
