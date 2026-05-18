@@ -1,3 +1,4 @@
+// src/components/ChatWindow.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -73,7 +74,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastAutoSentKeyRef = useRef('');
-  const chatOpenedAtRef = useRef<number>(Date.now());
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -123,12 +123,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       }
 
       const fetchedMessages = await MessageServices.getMessagesBetweenUsers(receiverId);
-      const visibleMessages = fetchedMessages.filter((message) => {
-        const createdAt = new Date(message.createdAt).getTime();
-        return Number.isNaN(createdAt) || createdAt >= chatOpenedAtRef.current;
-      });
-
-      setMessages(visibleMessages);
+      setMessages(fetchedMessages);
 
       const hasUnreadFromReceiver = fetchedMessages.some(
         (msg) => msg.senderId === receiverId && !msg.isRead
@@ -158,8 +153,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       return;
     }
 
-    chatOpenedAtRef.current = Date.now();
-    setMessages([]);
     fetchMessages();
     clearPolling();
     pollingIntervalRef.current = setInterval(fetchMessages, 3000);
