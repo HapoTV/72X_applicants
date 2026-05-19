@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Plus, Camera, Tag } from 'lucide-react';
+import { Plus, Tag } from 'lucide-react';
 import { marketplaceService } from '../services/MarketplaceService';
 import { useAuth } from '../context/AuthContext';
 import type { UserProductItem, MarketplaceCategory, MarketplaceLocation } from '../interfaces/MarketplaceData';
+import {
+  getPrimaryProductImage,
+  DEFAULT_CATEGORIES,
+  DEFAULT_LOCATIONS,
+  readFeaturedCache,
+  writeFeaturedCache,
+  removeFromFeaturedCache
+} from './marketplaceHelpers';
+import ProductCard from './components/ProductCard';
+import ProductFormModal from './components/ProductFormModal';
+import ProductPreviewModal from './components/ProductPreviewModal';
+import MarketplaceFilters from './components/MarketplaceFilters';
+import type { ProductFormData } from './components/ProductFormModal';
 
 const Marketplace: React.FC = () => {
   const { user, token } = useAuth();
@@ -21,81 +34,6 @@ const Marketplace: React.FC = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const getPrimaryProductImage = (product: UserProductItem): string | null => {
-    if (!product.images || product.images.length === 0) return null;
-    const first = product.images[0];
-    if (typeof first !== 'string') return null;
-    const trimmed = first.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  };
-
-  const normalizePreviewImages = (raw: any): string[] => {
-    if (Array.isArray(raw)) {
-      return raw
-        .filter((x) => typeof x === 'string')
-        .map((x) => x.trim())
-        .filter((x) => x.length > 0);
-    }
-
-    if (typeof raw === 'string') {
-      const trimmed = raw.trim();
-      if (!trimmed) return [];
-
-      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          if (Array.isArray(parsed)) {
-            return parsed
-              .filter((x) => typeof x === 'string')
-              .map((x) => x.trim())
-              .filter((x) => x.length > 0);
-          }
-        } catch {
-          return [trimmed];
-        }
-      }
-
-      return [trimmed];
-    }
-
-    return [];
-  };
-
-  const toTitleCase = (value: unknown): string => {
-    if (typeof value !== 'string') return '';
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-  };
-
-  const formatPrice = (value: unknown): string => {
-    if (typeof value !== 'string') return '';
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    if (/^r\b/i.test(trimmed)) return trimmed;
-    return `R ${trimmed}`;
-  };
-
-  const formatConditionLabel = (value: unknown): string => {
-    if (typeof value !== 'string') return '';
-    const v = value.trim().toLowerCase();
-    if (!v) return '';
-    if (v === 'new') return 'New';
-    if (v === 'used') return 'Pre-owned';
-    return toTitleCase(v);
-  };
-
-  const canEditProduct = (product: UserProductItem): boolean => {
-    const createdAt = product.createdAt;
-    if (!createdAt) return true;
-
-    const createdMs = new Date(createdAt).getTime();
-    if (Number.isNaN(createdMs)) return true;
-
-    const deadlineMs = createdMs + 3 * 60 * 60 * 1000;
-    return Date.now() <= deadlineMs;
-  };
 
   const openProductPreview = async (product: UserProductItem) => {
     try {
@@ -145,7 +83,7 @@ const Marketplace: React.FC = () => {
   };
 
   // Form state for new product
-  const [newProduct, setNewProduct] = useState({
+  const [newProduct, setNewProduct] = useState<ProductFormData>({
     title: '',
     description: '',
     price: '',
@@ -153,8 +91,7 @@ const Marketplace: React.FC = () => {
     category: 'food',
     location: 'soweto',
     condition: 'new' as 'new' | 'used',
-    negotiable: false,
-    image: ''
+    negotiable: false
   });
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [myProducts, setMyProducts] = useState<UserProductItem[]>([]);
@@ -163,7 +100,7 @@ const Marketplace: React.FC = () => {
   const [myStatusFilter, setMyStatusFilter] = useState<'available' | 'sold' | 'all'>('available');
   const [showEditProduct, setShowEditProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<UserProductItem | null>(null);
-  const [editProduct, setEditProduct] = useState({
+  const [editProduct, setEditProduct] = useState<ProductFormData>({
     title: '',
     description: '',
     price: '',
@@ -274,8 +211,7 @@ const Marketplace: React.FC = () => {
         category: 'food',
         location: 'soweto',
         condition: 'new' as 'new' | 'used',
-        negotiable: false,
-        image: ''
+        negotiable: false
       });
       setUploadedImage(null);
       setShowAddProduct(false);
@@ -398,17 +334,7 @@ const Marketplace: React.FC = () => {
       setProducts((prev) => prev.filter((p) => p.id !== productId));
 
       try {
-        const featuredCacheKey = 'marketplace_featured_cache_v1';
-        const raw = localStorage.getItem(featuredCacheKey);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            localStorage.setItem(
-              featuredCacheKey,
-              JSON.stringify(parsed.filter((p: any) => (p?.id || p?.productId) !== productId))
-            );
-          }
-        }
+        removeFromFeaturedCache(productId);
       } catch {
         // ignore
       }
@@ -452,28 +378,6 @@ const Marketplace: React.FC = () => {
       setLoading(false);
       return;
     }
-
-    const featuredCacheKey = 'marketplace_featured_cache_v1';
-
-    const readFeaturedCache = (): UserProductItem[] | null => {
-      try {
-        const raw = localStorage.getItem(featuredCacheKey);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? (parsed as UserProductItem[]) : null;
-      } catch {
-        return null;
-      }
-    };
-
-    const writeFeaturedCache = (items: UserProductItem[]) => {
-      try {
-        const safeItems = Array.isArray(items) ? items.filter((p) => p?.status !== 'sold') : [];
-        localStorage.setItem(featuredCacheKey, JSON.stringify(safeItems));
-      } catch {
-        // ignore
-      }
-    };
 
     try {
       setLoading(true);
@@ -560,30 +464,8 @@ const Marketplace: React.FC = () => {
       } catch {
         console.log('Categories/Locations API not available, using fallback data');
         // Fallback data when backend is not available
-        setCategories([
-          { id: 'all', name: 'All Categories' },
-          { id: 'food', name: 'Food & Beverages' },
-          { id: 'crafts', name: 'Arts & Crafts' },
-          { id: 'clothing', name: 'Clothing & Fashion' },
-          { id: 'services', name: 'Services' },
-          { id: 'agriculture', name: 'Agriculture' },
-          { id: 'beauty', name: 'Beauty & Personal Care' },
-          { id: 'electronics', name: 'Electronics & Repairs' },
-          { id: 'home', name: 'Home & Garden' },
-          { id: 'other', name: 'Other' }
-        ]);
-        
-        setLocations([
-          { id: 'all', name: 'All Locations' },
-          { id: 'soweto', name: 'Soweto' },
-          { id: 'alexandra', name: 'Alexandra' },
-          { id: 'khayelitsha', name: 'Khayelitsha' },
-          { id: 'mitchells-plain', name: 'Mitchells Plain' },
-          { id: 'mamelodi', name: 'Mamelodi' },
-          { id: 'umlazi', name: 'Umlazi' },
-          { id: 'mdantsane', name: 'Mdantsane' },
-          { id: 'other', name: 'Other' }
-        ]);
+        setCategories(DEFAULT_CATEGORIES);
+        setLocations(DEFAULT_LOCATIONS);
       }
     } catch (err) {
       console.error('Error fetching marketplace data:', err);
@@ -724,48 +606,19 @@ const Marketplace: React.FC = () => {
           </div>
 
           <div className="space-y-4 mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search my products..."
-                value={mySearchTerm}
-                onChange={(e) => setMySearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <select
-                value={mySelectedCategory}
-                onChange={(e) => setMySelectedCategory(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-              >
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>{category.name}</option>
-                ))}
-              </select>
-
-              <select
-                value={mySelectedLocation}
-                onChange={(e) => setMySelectedLocation(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-              >
-                {locations.map(location => (
-                  <option key={location.id} value={location.id}>{location.name}</option>
-                ))}
-              </select>
-
-              <select
-                value={myStatusFilter}
-                onChange={(e) => setMyStatusFilter(e.target.value as any)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-              >
-                <option value="available">Available</option>
-                <option value="sold">Sold/History</option>
-                <option value="all">All</option>
-              </select>
-            </div>
+            <MarketplaceFilters
+              searchTerm={mySearchTerm}
+              selectedCategory={mySelectedCategory}
+              selectedLocation={mySelectedLocation}
+              categories={categories}
+              locations={locations}
+              statusFilter={myStatusFilter}
+              onSearchChange={setMySearchTerm}
+              onCategoryChange={setMySelectedCategory}
+              onLocationChange={setMySelectedLocation}
+              onStatusChange={setMyStatusFilter}
+              showStatusFilter={true}
+            />
           </div>
 
           {myProductsError && (
@@ -779,78 +632,14 @@ const Marketplace: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredMyProducts.map((p) => (
-                <div key={p.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="relative">
-                    {getPrimaryProductImage(p) ? (
-                      <img
-                        src={getPrimaryProductImage(p) ?? undefined}
-                        alt={p.title}
-                        className="w-full h-32 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-32 bg-gray-100 flex items-center justify-center px-3 text-center">
-                        <span className="text-xs text-gray-500">No product picture uploaded</span>
-                      </div>
-                    )}
-
-                    <div className="absolute top-2 left-2">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full font-medium ${
-                          p.status === 'sold'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}
-                      >
-                        {p.status === 'sold' ? 'Sold' : 'Available'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3">
-                    <h3 className="font-semibold text-gray-900 mb-1 text-sm line-clamp-1">{p.title}</h3>
-                    <p className="text-gray-600 text-xs mb-2 line-clamp-2">{p.description}</p>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-bold text-primary-600 text-sm">{formatPrice(p.price)}</span>
-                      <span className="text-xs text-gray-500">{p.timeAgo}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="relative group">
-                        <button
-                          onClick={() => openEditModal(p)}
-                          disabled={!canEditProduct(p)}
-                          className={`w-full py-1.5 bg-white border rounded-lg transition-colors text-xs ${
-                            canEditProduct(p)
-                              ? 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                              : 'border-gray-200 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          Edit
-                        </button>
-                        {!canEditProduct(p) && (
-                          <div className="pointer-events-none absolute -top-10 left-0 hidden group-hover:block">
-                            <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
-                              Edit time expired. You cannot edit a product after 3 hours.
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteMyProduct(p.id)}
-                        className="py-1.5 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-xs"
-                      >
-                        Delete
-                      </button>
-                      <button
-                        onClick={() => handleToggleMyProductStatus(p)}
-                        className="col-span-2 py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-xs"
-                      >
-                        {p.status === 'sold' ? 'Mark Available' : 'Mark Sold'}
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  variant="my"
+                  onEdit={openEditModal}
+                  onDelete={handleDeleteMyProduct}
+                  onToggleStatus={handleToggleMyProductStatus}
+                />
               ))}
             </div>
           )}
@@ -858,40 +647,16 @@ const Marketplace: React.FC = () => {
       ) : (
         <>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search featured products..."
-                  value={featuredSearchTerm}
-                  onChange={(e) => setFeaturedSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <select
-                  value={featuredSelectedCategory}
-                  onChange={(e) => setFeaturedSelectedCategory(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                >
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={featuredSelectedLocation}
-                  onChange={(e) => setFeaturedSelectedLocation(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                >
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>{location.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <MarketplaceFilters
+              searchTerm={featuredSearchTerm}
+              selectedCategory={featuredSelectedCategory}
+              selectedLocation={featuredSelectedLocation}
+              categories={categories}
+              locations={locations}
+              onSearchChange={setFeaturedSearchTerm}
+              onCategoryChange={setFeaturedSelectedCategory}
+              onLocationChange={setFeaturedSelectedLocation}
+            />
           </div>
 
           <div>
@@ -901,46 +666,12 @@ const Marketplace: React.FC = () => {
             {featuredProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {featuredProducts.map(product => (
-                  <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="relative">
-                      {getPrimaryProductImage(product) ? (
-                        <img
-                          src={getPrimaryProductImage(product) ?? undefined}
-                          alt={product.title}
-                          className="w-full h-32 object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-32 bg-gray-100 flex items-center justify-center px-4 text-center">
-                          <span className="text-sm text-gray-500">No product picture uploaded</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="p-3">
-                      <h3 className="font-semibold text-gray-900 mb-1 text-sm">{product.title}</h3>
-                      <p className="text-gray-600 text-xs mb-2 line-clamp-2">{product.description}</p>
-                      
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-primary-600">{formatPrice(product.price)}</span>
-                        <span className="text-xs text-gray-500">{product.timeAgo}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                        <span>{product.seller}</span>
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="w-3 h-3" />
-                          <span>{toTitleCase(product.location)}</span>
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => openProductPreview(product)}
-                        className="w-full py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-xs"
-                      >
-                        Preview Product
-                      </button>
-                    </div>
-                  </div>
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    variant="featured"
+                    onPreview={openProductPreview}
+                  />
                 ))}
               </div>
             ) : (
@@ -959,465 +690,53 @@ const Marketplace: React.FC = () => {
       )}
 
       {/* Product Preview Modal */}
-      {showProductPreview && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
-          onClick={closeProductPreview}
-        >
-          <div
-            className="bg-white rounded-xl w-full max-w-3xl max-h-[95vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="text-lg font-semibold text-gray-900">Product Preview</div>
-              <button onClick={closeProductPreview} className="p-1 hover:bg-gray-100 rounded">×</button>
-            </div>
-
-            <div className="p-4">
-              {previewLoading ? (
-                <div className="text-sm text-gray-600">Loading...</div>
-              ) : previewError ? (
-                <div className="text-sm text-red-600">{previewError}</div>
-              ) : previewProduct ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      {normalizePreviewImages(previewProduct.images).length > 0 ? (
-                        <div className="space-y-2">
-                          <img
-                            src={normalizePreviewImages(previewProduct.images)[
-                              Math.min(activePreviewImageIndex, normalizePreviewImages(previewProduct.images).length - 1)
-                            ]}
-                            alt={previewProduct.title}
-                            className="w-full h-64 object-cover rounded-lg border border-gray-100"
-                          />
-
-                          {normalizePreviewImages(previewProduct.images).length > 1 && (
-                            <div className="flex gap-2 overflow-x-auto">
-                              {normalizePreviewImages(previewProduct.images).map((img: string, idx: number) => (
-                                <button
-                                  key={`${img}-${idx}`}
-                                  onClick={() => setActivePreviewImageIndex(idx)}
-                                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border ${
-                                    idx === activePreviewImageIndex ? 'border-primary-500' : 'border-gray-200'
-                                  }`}
-                                >
-                                  <img src={img} alt="" className="w-full h-full object-cover" />
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="w-full h-64 bg-gray-100 flex items-center justify-center px-4 text-center rounded-lg">
-                          <span className="text-sm text-gray-500">No product picture uploaded</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="text-xl font-bold text-gray-900">{previewProduct.title}</div>
-                      <div className="text-lg font-semibold text-primary-600">{formatPrice(previewProduct.price)}</div>
-                      <div className="text-sm text-gray-600">{previewProduct.description}</div>
-
-                      <div className="pt-2 space-y-1 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-500">Seller</span>
-                          <span className="text-gray-900">{previewProduct.seller}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-500">Category</span>
-                          <span className="text-gray-900">{toTitleCase(previewProduct.category)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-500">Location</span>
-                          <span className="text-gray-900">{toTitleCase(previewProduct.location)}</span>
-                        </div>
-                        {previewProduct.condition && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-500">Condition</span>
-                            <span className="text-gray-900">{formatConditionLabel(previewProduct.condition)}</span>
-                          </div>
-                        )}
-                        {typeof previewProduct.negotiable === 'boolean' && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-500">Negotiable</span>
-                            <span className="text-gray-900">{previewProduct.negotiable ? 'Yes' : 'No'}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2">
-                    <button
-                      onClick={closeProductPreview}
-                      className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                    >
-                      Close
-                    </button>
-                    <div className="relative group">
-                      <button
-                        onClick={isFreeTrialUser || isOwnPreviewProduct ? undefined : handleContactSellerFromPreview}
-                        disabled={isFreeTrialUser || isOwnPreviewProduct}
-                        className={`px-4 py-2 rounded-lg transition-colors text-sm ${
-                          isFreeTrialUser || isOwnPreviewProduct
-                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                            : 'bg-primary-500 text-white hover:bg-primary-600'
-                        }`}
-                      >
-                        Contact Seller
-                      </button>
-                      {isFreeTrialUser && (
-                        <div className="pointer-events-none absolute -top-10 right-0 hidden group-hover:block">
-                          <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
-                            Users on Free Trial cannot contact sellers. Subscribe to access messaging.
-                          </div>
-                        </div>
-                      )}
-                      {!isFreeTrialUser && isOwnPreviewProduct && (
-                        <div className="pointer-events-none absolute -top-10 right-0 hidden group-hover:block">
-                          <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
-                            You can't contact yourself about your own product.
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
+      <ProductPreviewModal
+        isOpen={showProductPreview}
+        previewProduct={previewProduct}
+        previewLoading={previewLoading}
+        previewError={previewError}
+        activePreviewImageIndex={activePreviewImageIndex}
+        isFreeTrialUser={isFreeTrialUser}
+        isOwnPreviewProduct={isOwnPreviewProduct}
+        onClose={closeProductPreview}
+        onContactSeller={handleContactSellerFromPreview}
+        onImageIndexChange={setActivePreviewImageIndex}
+      />
 
       {/* Add Product Modal */}
-      {showAddProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">List Your Product</h3>
-              <button
-                onClick={() => setShowAddProduct(false)}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                ×
-              </button>
-            </div>
-            
-            <form onSubmit={handleListProduct} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                <input
-                  type="text"
-                  value={newProduct.title}
-                  onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  placeholder="Enter product name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                <input
-                  type="text"
-                  value={newProduct.businessName}
-                  onChange={(e) => setNewProduct({...newProduct, businessName: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  placeholder="Enter your business name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  placeholder="Describe your product"
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                  <input
-                    type="text"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                    placeholder="R 0.00"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select 
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>{category.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <select 
-                  value={newProduct.location}
-                  onChange={(e) => setNewProduct({...newProduct, location: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                >
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>{location.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
-                  <select
-                    value={newProduct.condition}
-                    onChange={(e) => setNewProduct({ ...newProduct, condition: e.target.value as 'new' | 'used' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    <option value="new">New</option>
-                    <option value="used">Pre-owned</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Negotiable</label>
-                  <select
-                    value={newProduct.negotiable ? 'yes' : 'no'}
-                    onChange={(e) => setNewProduct({ ...newProduct, negotiable: e.target.value === 'yes' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Photos</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center relative">
-                  {uploadedImage ? (
-                    <div className="relative">
-                      <img 
-                        src={uploadedImage} 
-                        alt="Product preview" 
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setUploadedImage(null)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 mb-2">Click to upload photos</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddProduct(false)}
-                  className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm"
-                >
-                  List Product
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductFormModal
+        isOpen={showAddProduct}
+        mode="add"
+        formData={newProduct}
+        uploadedImage={uploadedImage}
+        categories={categories}
+        locations={locations}
+        loading={loading}
+        onClose={() => setShowAddProduct(false)}
+        onFormChange={(field, value) => setNewProduct(prev => ({ ...prev, [field]: value }))}
+        onImageUpload={handleImageUpload}
+        onImageRemove={() => setUploadedImage(null)}
+        onSubmit={handleListProduct}
+      />
 
       {/* Edit Product Modal */}
-      {showEditProduct && editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
-              <button
-                onClick={() => {
-                  setShowEditProduct(false);
-                  setEditingProduct(null);
-                }}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateProduct} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                <input
-                  type="text"
-                  value={editProduct.title}
-                  onChange={(e) => setEditProduct({ ...editProduct, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  value={editProduct.description}
-                  onChange={(e) => setEditProduct({ ...editProduct, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                  <input
-                    type="text"
-                    value={editProduct.price}
-                    onChange={(e) => setEditProduct({ ...editProduct, price: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    value={editProduct.category}
-                    onChange={(e) => setEditProduct({ ...editProduct, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>{category.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <select
-                  value={editProduct.location}
-                  onChange={(e) => setEditProduct({ ...editProduct, location: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                >
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>{location.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
-                  <select
-                    value={editProduct.condition}
-                    onChange={(e) => setEditProduct({ ...editProduct, condition: e.target.value as 'new' | 'used' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    <option value="new">New</option>
-                    <option value="used">Pre-owned</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Negotiable</label>
-                  <select
-                    value={editProduct.negotiable ? 'yes' : 'no'}
-                    onChange={(e) => setEditProduct({ ...editProduct, negotiable: e.target.value === 'yes' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Photo</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center relative">
-                  {editUploadedImage ? (
-                    <div className="relative">
-                      <img
-                        src={editUploadedImage}
-                        alt="Product preview"
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setEditUploadedImage(null)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 mb-2">Click to upload photo</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleEditImageUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditProduct(false);
-                    setEditingProduct(null);
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductFormModal
+        isOpen={showEditProduct}
+        mode="edit"
+        formData={editProduct}
+        uploadedImage={editUploadedImage}
+        categories={categories}
+        locations={locations}
+        loading={loading}
+        onClose={() => {
+          setShowEditProduct(false);
+          setEditingProduct(null);
+        }}
+        onFormChange={(field, value) => setEditProduct(prev => ({ ...prev, [field]: value }))}
+        onImageUpload={handleEditImageUpload}
+        onImageRemove={() => setEditUploadedImage(null)}
+        onSubmit={handleUpdateProduct}
+      />
     </div>
   );
 };
