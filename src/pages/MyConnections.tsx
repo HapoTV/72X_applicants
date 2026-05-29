@@ -8,6 +8,7 @@ import ConnectionsFilters from '../components/connections/ConnectionsFilters';
 import ConnectionsList from '../components/connections/ConnectionsList';
 import PendingRequestsPanel from '../components/connections/PendingRequestsPanel';
 import ChatDialog from '../components/connections/ChatDialog';
+import Spinner from '../components/Spinner';
 
 const MyConnections: React.FC = () => {
   const { user: authUser } = useAuth();
