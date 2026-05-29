@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Tag } from 'lucide-react';
+import Spinner from '../components/Spinner';
 import { marketplaceService } from '../services/MarketplaceService';
 import { useAuth } from '../context/AuthContext';
 import type { UserProductItem, MarketplaceCategory, MarketplaceLocation } from '../interfaces/MarketplaceData';
@@ -501,11 +502,10 @@ const Marketplace: React.FC = () => {
     return matchesSearch && matchesCategory && matchesLocation && matchesStatus;
   });
 
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+        <Spinner size="xl" color="primary" />
       </div>
     );
   }

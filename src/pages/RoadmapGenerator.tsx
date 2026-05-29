@@ -1,6 +1,6 @@
 // src/pages/RoadmapGenerator.tsx
 import React, { useState, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import Spinner from '../components/Spinner';
 import { roadmapService } from '../services/RoadmapService';
 import type {
   RoadmapGenerationRequest,
@@ -202,7 +202,7 @@ const RoadmapGenerator: React.FC = () => {
   if (loading) {
     return (
       <div className="text-center py-12">
-        <Loader2 className="w-12 h-12 text-primary-500 animate-spin mx-auto mb-4" />
+        <Spinner size="xl" color="primary" className="mx-auto mb-4" />
         <p className="text-gray-600">Loading your roadmaps...</p>
       </div>
     );

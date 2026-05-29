@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
-import type { PasswordRequirements } from './profileHelpers';
+import type { PasswordRequirements } from '../../utils/passwordHelpers';
+import PasswordRequirementsBox from '../../components/PasswordRequirementsBox';
 
 interface PasswordData {
   currentPassword: string;
@@ -26,15 +27,6 @@ interface ChangePasswordModalProps {
   onSubmit: () => void;
   onClose: () => void;
 }
-
-const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
-  <div className="flex items-center gap-2">
-    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${met ? 'bg-green-100' : 'bg-gray-100'}`}>
-      <span className={`text-xs ${met ? 'text-green-600' : 'text-gray-400'}`}>{met ? '✓' : '○'}</span>
-    </div>
-    <span className={`text-sm ${met ? 'text-green-700' : 'text-gray-500'}`}>{text}</span>
-  </div>
-);
 
 const inputClass = 'w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent';
 
@@ -88,14 +80,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           </div>
         ))}
 
-        <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Password Requirements</h3>
-          <RequirementItem met={requirements.minLength} text="At least 8 characters long" />
-          <RequirementItem met={requirements.hasUppercase} text="One uppercase letter" />
-          <RequirementItem met={requirements.hasLowercase} text="One lowercase letter" />
-          <RequirementItem met={requirements.hasNumber} text="One number" />
-          <RequirementItem met={requirements.hasSpecialChar} text="One special character" />
-        </div>
+        <PasswordRequirementsBox requirements={requirements} />
       </div>
 
       <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">

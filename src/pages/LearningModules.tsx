@@ -1,6 +1,7 @@
 // src/pages/LearningModules.tsx
 import React from 'react';
 import { BookOpen, Brain } from 'lucide-react';
+import Spinner from '../components/Spinner';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, useLearningModules } from './learning/useLearningModules';
 import LearningStatsBar from './learning/LearningStatsBar';
@@ -39,7 +40,7 @@ const LearningModules: React.FC = () => {
     return (
       <div className="space-y-6 animate-fade-in px-2 sm:px-0">
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-6" />
+          <Spinner size="xl" color="blue" className="mx-auto mb-6" />
           <p className="mt-4 text-gray-600">Loading learning materials...</p>
         </div>
       </div>
@@ -149,7 +150,7 @@ const LearningModules: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60]">
           <div className="bg-white rounded-2xl p-12 text-center max-w-md">
             <div className="relative">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary-200 border-t-primary-600 mx-auto mb-6" />
+              <Spinner size="xl" color="primary" className="mx-auto mb-6" />
               <Brain className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-primary-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">Generating AI Knowledge Check</h3>

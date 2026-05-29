@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { authService } from '../services/AuthService';
+import { checkPasswordRequirements, validateNewPassword, EMPTY_PASSWORD_REQUIREMENTS } from '../utils/passwordHelpers';
+import PasswordRequirementsBox from '../components/PasswordRequirementsBox';
+import Spinner from '../components/Spinner';
 
 const ResetPasswordVerify: React.FC = () => {
 const navigate = useNavigate();
@@ -17,13 +20,7 @@ const [showPassword, setShowPassword] = useState(false);
 const [showConfirm, setShowConfirm] = useState(false);
 
 // Real-time password requirements (like Profile component)
-const [passwordRequirements, setPasswordRequirements] = useState({
-minLength: false,
-hasNumber: false,
-hasUppercase: false,
-hasLowercase: false,
-hasSpecialChar: false,
-});
+const [passwordRequirements, setPasswordRequirements] = useState(EMPTY_PASSWORD_REQUIREMENTS);
 
 useEffect(() => {
 const extractTokenFromUrl = () => {
@@ -72,47 +69,15 @@ setIsReady(false);
 extractTokenFromUrl();
 }, []);
 
-// Real-time password requirements check (like Profile component)
-const checkPasswordRequirements = (pwd: string) => {
-setPasswordRequirements({
-minLength: pwd.length >= 8,
-hasNumber: /\d/.test(pwd),
-hasUppercase: /[A-Z]/.test(pwd),
-hasLowercase: /[a-z]/.test(pwd),
-hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
-});
-};
-
 const handlePasswordChange = (value: string) => {
 setPassword(value);
-checkPasswordRequirements(value);
+setPasswordRequirements(checkPasswordRequirements(value));
 setError(null);
 };
 
-// Validation logic (like Profile component)
 const validatePassword = (): boolean => {
-if (!password) {
-setError('New password is required');
-return false;
-}
-
-if (password !== confirm) {
-setError('Passwords do not match');
-return false;
-}
-
-if (password.length < 8) {
-setError('Password must be at least 8 characters long');
-return false;
-}
-
-const requirements = passwordRequirements;
-if (!requirements.hasNumber || !requirements.hasUppercase ||
-!requirements.hasLowercase || !requirements.hasSpecialChar) {
-setError('Password does not meet all requirements');
-return false;
-}
-
+const err = validateNewPassword(password, confirm, passwordRequirements);
+if (err) { setError(err); return false; }
 return true;
 };
 
@@ -160,20 +125,6 @@ setError(errorMessage);
 setIsLoading(false);
 }
 };
-
-// Requirement Item Component (like Profile component)
-const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
-<div className="flex items-center gap-2">
-<div className={`w-4 h-4 rounded-full flex items-center justify-center ${met ? 'bg-green-100' : 'bg-gray-100'}`}>
-<span className={`text-xs ${met ? 'text-green-600' : 'text-gray-400'}`}>
-{met ? '✓' : '○'}
-</span>
-</div>
-<span className={`text-sm ${met ? 'text-green-700' : 'text-gray-500'}`}>
-{text}
-</span>
-</div>
-);
 
 // Show error screen if no valid token
 if (!isReady && error) {
@@ -275,15 +226,7 @@ disabled={!isReady}
 </div>
 </div>
 
-{/* Password Requirements (Like Profile component) */}
-<div className="bg-gray-50 p-4 rounded-lg space-y-2">
-<h3 className="text-sm font-medium text-gray-700 mb-2">Password Requirements</h3>
-<RequirementItem met={passwordRequirements.minLength} text="At least 8 characters long" />
-<RequirementItem met={passwordRequirements.hasUppercase} text="One uppercase letter" />
-<RequirementItem met={passwordRequirements.hasLowercase} text="One lowercase letter" />
-<RequirementItem met={passwordRequirements.hasNumber} text="One number" />
-<RequirementItem met={passwordRequirements.hasSpecialChar} text="One special character" />
-</div>
+<PasswordRequirementsBox requirements={passwordRequirements} />
 
 {/* Submit Button */}
 <button
@@ -291,9 +234,7 @@ type="submit"
 disabled={isLoading || !isReady}
 className="w-full px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
 >
-{isLoading && (
-<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-)}
+{isLoading && <Spinner size="sm" color="white" />}
 <span>{isLoading ? 'Resetting Password...' : 'Reset Password'}</span>
 </button>
 </form>
