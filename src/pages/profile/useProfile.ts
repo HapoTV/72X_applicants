@@ -3,15 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { authService } from '../../services/AuthService';
 import { useAuth } from '../../context/AuthContext';
 import type { UserFormData } from '../../interfaces/UserData';
-import {
-  checkPasswordRequirements,
-  validatePasswordData,
-  buildUserDataCsv,
-  type ProfileTabId,
-} from './profileHelpers';
+import { checkPasswordRequirements, validatePasswordChange, EMPTY_PASSWORD_REQUIREMENTS } from '../../utils/passwordHelpers';
+import { syncUserInLocalStorage, getNotificationStorageKey } from '../../utils/userHelpers';
+import { buildUserDataCsv, type ProfileTabId } from './profileHelpers';
 
 const EMPTY_PASSWORD = { currentPassword: '', newPassword: '', confirmPassword: '' };
-const EMPTY_REQS = { minLength: false, hasNumber: false, hasUppercase: false, hasLowercase: false, hasSpecialChar: false };
+const EMPTY_REQS = EMPTY_PASSWORD_REQUIREMENTS;
 
 export const useProfile = () => {
   const { user, login, userOrganisation } = useAuth();
@@ -77,16 +74,12 @@ export const useProfile = () => {
       founded,
     });
     setProfileImageUrl(userData.profileImageUrl || '');
-    try {
-      const parsed = JSON.parse(localStorage.getItem('user') || '{}');
-      localStorage.setItem('user', JSON.stringify({ ...parsed, ...userData }));
-      window.dispatchEvent(new CustomEvent('user-updated'));
-    } catch { /* ignore */ }
+    syncUserInLocalStorage(userData);
   }, [userData]);
 
   useEffect(() => {
     if (activeTab !== 'notifications') return;
-    const raw = localStorage.getItem(`notificationPreferences:${userKey}`);
+    const raw = localStorage.getItem(getNotificationStorageKey(user));
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw);
@@ -119,7 +112,7 @@ export const useProfile = () => {
   const handleSaveNotificationPreferences = async () => {
     try {
       setNotificationSaving(true);
-      localStorage.setItem(`notificationPreferences:${userKey}`, JSON.stringify(notificationPreferences));
+      localStorage.setItem(getNotificationStorageKey(user), JSON.stringify(notificationPreferences));
       alert('Preferences saved successfully!');
     } catch (e) {
       console.error('Error saving notification preferences:', e);
@@ -166,7 +159,7 @@ export const useProfile = () => {
 
   const handlePasswordChange = async () => {
     setPasswordError(null);
-    const error = validatePasswordData(
+    const error = validatePasswordChange(
       passwordData.currentPassword, passwordData.newPassword,
       passwordData.confirmPassword, passwordRequirements
     );

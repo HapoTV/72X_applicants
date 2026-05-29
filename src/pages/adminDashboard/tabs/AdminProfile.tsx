@@ -4,8 +4,12 @@ import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building2 
 import { authService } from '../../../services/AuthService';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
-import type { UserFormData } from '../../../interfaces/UserData';
+import type { User, UserFormData } from '../../../interfaces/UserData';
 import { AdminProfilePasswordModal } from './components/AdminProfilePasswordModal';
+import { calculateYearsInBusiness, syncUserInLocalStorage, getNotificationStorageKey } from '../../../utils/userHelpers';
+import { checkPasswordRequirements, validatePasswordChange, EMPTY_PASSWORD_REQUIREMENTS } from '../../../utils/passwordHelpers';
+import type { PasswordRequirements as SharedPasswordRequirements } from '../../../utils/passwordHelpers';
+import ProfileSkeleton from '../../../components/ProfileSkeleton';
 
 type NotificationPreferences = {
     email: {
@@ -68,18 +72,9 @@ type NotificationOption<T extends string> = {
     label: string;
 };
 
-const getNotificationPreferencesStorageKey = (user: { userId?: string; email?: string } | null) => {
-    const userKey = user?.userId || user?.email || localStorage.getItem('userEmail') || 'anonymous';
-    return `notificationPreferences:${userKey}`;
-};
+const getNotificationPreferencesStorageKey = getNotificationStorageKey;
 
-type PasswordRequirements = {
-    minLength: boolean;
-    hasNumber: boolean;
-    hasUppercase: boolean;
-    hasLowercase: boolean;
-    hasSpecialChar: boolean;
-};
+type PasswordRequirements = SharedPasswordRequirements;
 
 type PasswordChangeData = {
     currentPassword: string;
@@ -105,57 +100,7 @@ const INITIAL_PASSWORD_VISIBILITY: PasswordVisibilityState = {
     confirm: false,
 };
 
-const INITIAL_PASSWORD_REQUIREMENTS: PasswordRequirements = {
-    minLength: false,
-    hasNumber: false,
-    hasUppercase: false,
-    hasLowercase: false,
-    hasSpecialChar: false,
-};
 
-const getPasswordRequirements = (password: string): PasswordRequirements => {
-    return {
-        minLength: password.length >= 8,
-        hasNumber: /\d/.test(password),
-        hasUppercase: /[A-Z]/.test(password),
-        hasLowercase: /[a-z]/.test(password),
-        hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-    };
-};
-
-const getPasswordValidationError = (passwordData: PasswordChangeData, passwordRequirements: PasswordRequirements): string | null => {
-    if (!passwordData.currentPassword) return 'Current password is required';
-    if (!passwordData.newPassword) return 'New password is required';
-    if (passwordData.newPassword !== passwordData.confirmPassword) return 'Passwords do not match';
-    if (passwordData.newPassword.length < 8) return 'Password must be at least 8 characters long';
-
-    if (
-        !passwordRequirements.hasNumber ||
-        !passwordRequirements.hasUppercase ||
-        !passwordRequirements.hasLowercase ||
-        !passwordRequirements.hasSpecialChar
-    ) {
-        return 'Password does not meet all requirements';
-    }
-
-    if (passwordData.currentPassword === passwordData.newPassword) {
-        return 'New password must be different from current password';
-    }
-
-    return null;
-};
-
-const syncUserInLocalStorage = (partialUser: Record<string, unknown>) => {
-    try {
-        const raw = localStorage.getItem('user');
-        const parsed = raw ? JSON.parse(raw) : {};
-        const nextUser = { ...parsed, ...partialUser };
-        localStorage.setItem('user', JSON.stringify(nextUser));
-        window.dispatchEvent(new CustomEvent('user-updated'));
-    } catch {
-        // ignore localStorage errors
-    }
-};
 
 const escapeCsvValue = (value: unknown) => {
     if (value === undefined || value === null) return '';
@@ -317,7 +262,7 @@ const AdminProfile: React.FC = () => {
     const [showPasswords, setShowPasswords] = useState<PasswordVisibilityState>(INITIAL_PASSWORD_VISIBILITY);
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [changingPassword, setChangingPassword] = useState(false);
-    const [passwordRequirements, setPasswordRequirements] = useState<PasswordRequirements>(INITIAL_PASSWORD_REQUIREMENTS);
+    const [passwordRequirements, setPasswordRequirements] = useState<PasswordRequirements>(EMPTY_PASSWORD_REQUIREMENTS);
 
     useEffect(() => {
         fetchUserProfile();
@@ -362,7 +307,7 @@ const AdminProfile: React.FC = () => {
             });
 
             setProfileImageUrl(userData.profileImageUrl || '');
-            syncUserInLocalStorage(userData as Record<string, unknown>);
+            syncUserInLocalStorage(userData as User);
         } catch {
             alert('Failed to load profile data');
         } finally {
@@ -382,7 +327,7 @@ const AdminProfile: React.FC = () => {
             setIsEditing(false);
             console.log('Profile saved:', updatedUser);
             alert('Profile updated successfully!');
-            syncUserInLocalStorage(updatedUser as Record<string, unknown>);
+            syncUserInLocalStorage(updatedUser);
         } catch (err: any) {
             alert(err?.message || 'Failed to update profile');
         } finally {
@@ -452,22 +397,19 @@ const AdminProfile: React.FC = () => {
         }
     };
 
-    const checkPasswordRequirements = (password: string) => {
-        setPasswordRequirements(getPasswordRequirements(password));
-    };
-
     const handleNewPasswordChange = (value: string) => {
         setPasswordData(prev => ({ ...prev, newPassword: value }));
-        checkPasswordRequirements(value);
+        setPasswordRequirements(checkPasswordRequirements(value));
     };
 
     const validatePassword = (): boolean => {
-        const error = getPasswordValidationError(passwordData, passwordRequirements);
-        if (error) {
-            setPasswordError(error);
-            return false;
-        }
-
+        const error = validatePasswordChange(
+            passwordData.currentPassword,
+            passwordData.newPassword,
+            passwordData.confirmPassword,
+            passwordRequirements
+        );
+        if (error) { setPasswordError(error); return false; }
         return true;
     };
 
@@ -500,7 +442,7 @@ const AdminProfile: React.FC = () => {
         setPasswordData(INITIAL_PASSWORD_DATA);
         setPasswordError(null);
         setShowPasswords(INITIAL_PASSWORD_VISIBILITY);
-        setPasswordRequirements(INITIAL_PASSWORD_REQUIREMENTS);
+        setPasswordRequirements(EMPTY_PASSWORD_REQUIREMENTS);
     };
 
     const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
@@ -574,48 +516,7 @@ const AdminProfile: React.FC = () => {
         }
     };
 
-    const calculateYearsInBusiness = (): string => {
-        const foundedRaw = profileData.founded;
-        if (!foundedRaw || !foundedRaw.trim()) return '';
-
-        const currentYear = new Date().getFullYear();
-
-        const asNumber = Number(foundedRaw);
-        if (Number.isFinite(asNumber) && asNumber >= 1800 && asNumber <= currentYear) {
-            const years = Math.max(0, currentYear - Math.floor(asNumber));
-            return String(years);
-        }
-
-        const parsed = new Date(foundedRaw);
-        if (Number.isNaN(parsed.getTime())) return '';
-
-        const createdYear = parsed.getFullYear();
-        if (createdYear < 1800 || createdYear > currentYear) return '';
-
-        const years = Math.max(0, currentYear - createdYear);
-        return String(years);
-    };
-
-    if (loading) {
-        return (
-            <div className="space-y-6 animate-fade-in">
-                <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div className="animate-pulse space-y-4">
-                        <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {[...Array(6)].map((_, i) => (
-                                <div key={i} className="h-10 bg-gray-100 rounded"></div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    if (loading) return <ProfileSkeleton />;
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -886,7 +787,7 @@ const AdminProfile: React.FC = () => {
                                         </label>
                                         <input
                                             type="text"
-                                            value={calculateYearsInBusiness() ? `${calculateYearsInBusiness()} years` : ''}
+                                            value={calculateYearsInBusiness(profileData.founded) ? `${calculateYearsInBusiness(profileData.founded)} years` : ''}
                                             disabled
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
                                         />
