@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { AppWindow, Package, Zap, Shield, TrendingUp } from 'lucide-react';
 
 const AppStore: React.FC = () => {
@@ -26,13 +27,13 @@ const AppStore: React.FC = () => {
             <p className="text-gray-600 mb-4">
               Manage customer relationships, track leads, and streamline your sales process with our comprehensive CRM system.
             </p>
-            <a 
-              href="/applications/crm" 
+            <Link 
+              to="/applications/crm" 
               className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium"
             >
               <span>Open CRM</span>
               <TrendingUp className="w-4 h-4" />
-            </a>
+            </Link>
           </div>
 
           {/* Finance Manager App Card */}
@@ -46,13 +47,13 @@ const AppStore: React.FC = () => {
             <p className="text-gray-600 mb-4">
               Track expenses, manage budgets, and monitor your financial performance with advanced reporting tools.
             </p>
-            <a 
-              href="/applications/finance-manager" 
+            <Link 
+              to="/applications/finance-manager" 
               className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium"
             >
               <span>Open Finance Manager</span>
               <TrendingUp className="w-4 h-4" />
-            </a>
+            </Link>
           </div>
 
           {/* TenderlyAI App Card */}
@@ -66,13 +67,13 @@ const AppStore: React.FC = () => {
             <p className="text-gray-600 mb-4">
               AI-powered tender management system that helps you create, manage, and track tender applications efficiently.
             </p>
-            <a 
-              href="/applications/tenderlyai" 
+            <Link 
+              to="/applications/tenderlyai" 
               className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium"
             >
               <span>Open TenderlyAI</span>
               <TrendingUp className="w-4 h-4" />
-            </a>
+            </Link>
           </div>
         </div>
 

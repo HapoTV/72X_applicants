@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, BarChart3, Home, Pencil, Plus, Search, Target, Trash2, TrendingUp, Users, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, Home, Pencil, Plus, Search, Target, Trash2, TrendingUp, Users, X, Star, HelpCircle, CheckCircle, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const statConfigs = [
@@ -46,8 +46,8 @@ type QuickActionTarget = 'contact' | 'lead' | 'sale';
 
 const navItems: Array<{ id: CrmTab; label: string; icon: React.ElementType }> = [
   { id: 'overview', label: 'Overview', icon: Home },
-  { id: 'contacts', label: 'Contacts', icon: Users },
   { id: 'leads', label: 'Leads', icon: Target },
+  { id: 'contacts', label: 'Contacts', icon: Users },
   { id: 'sales', label: 'Sales', icon: TrendingUp },
   { id: 'reports', label: 'Reports', icon: BarChart3 },
 ];
@@ -85,18 +85,29 @@ type Lead = {
   name: string;
   email: string;
   phone: string;
-  company: string;
   source: string;
-  status: string;
-  value: number;
+  stage: string;
+  notes: string;
+};
+
+type Product = {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
 };
 
 type Sale = {
   id: number;
+  customerId: number;
+  customerName: string;
+  productId: number;
+  productName: string;
   amount: number;
+  paymentMethod: string;
   date: string;
-  description: string;
   status: string;
+  notes: string;
 };
 
 type Activity = {
@@ -110,6 +121,7 @@ const CRM_STORAGE_KEYS = {
   leads: 'crm_leads',
   sales: 'crm_sales',
   activities: 'crm_activities',
+  products: 'crm_products',
 };
 
 const loadCrmStorage = <T,>(key: string, fallback: T): T => {
@@ -143,7 +155,12 @@ const CRM: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>(() => loadCrmStorage<Contact[]>(CRM_STORAGE_KEYS.contacts, []));
   const [leads, setLeads] = useState<Lead[]>(() => loadCrmStorage<Lead[]>(CRM_STORAGE_KEYS.leads, []));
   const [sales, setSales] = useState<Sale[]>(() => loadCrmStorage<Sale[]>(CRM_STORAGE_KEYS.sales, []));
+  const [products, setProducts] = useState<Product[]>(() => loadCrmStorage<Product[]>(CRM_STORAGE_KEYS.products, []));
   const [activities, setActivities] = useState<Activity[]>(() => loadCrmStorage<Activity[]>(CRM_STORAGE_KEYS.activities, []));
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductDescription, setNewProductDescription] = useState('');
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
@@ -170,6 +187,10 @@ const CRM: React.FC = () => {
   useEffect(() => {
     saveCrmStorage(CRM_STORAGE_KEYS.sales, sales);
   }, [sales]);
+
+  useEffect(() => {
+    saveCrmStorage(CRM_STORAGE_KEYS.products, products);
+  }, [products]);
 
   useEffect(() => {
     saveCrmStorage(CRM_STORAGE_KEYS.activities, activities);
@@ -203,18 +224,6 @@ const CRM: React.FC = () => {
 
     return { ...stat, value: `${conversionRate}%` };
   });
-
-  const salesOverviewRows = [
-    { label: 'Total Sales Amount', value: `R${sales.reduce((total, sale) => total + sale.amount, 0).toLocaleString()}` },
-    { label: 'Completed Sales', value: String(sales.length) },
-    { label: 'Total Deals', value: String(sales.length) },
-  ];
-
-  const leadConversionRows = [
-    { label: 'Total Leads', value: String(leads.length) },
-    { label: 'Completed Sales', value: String(sales.length) },
-    { label: 'Conversion Rate', value: `${conversionRate}%` },
-  ];
 
   const searchResults = [
     {
@@ -334,20 +343,55 @@ const CRM: React.FC = () => {
     const name = String(formData.get('name') || 'New lead');
     const email = String(formData.get('email') || '');
     const phone = String(formData.get('phone') || '');
-    const company = String(formData.get('company') || '');
     const source = String(formData.get('source') || '');
-    const status = String(formData.get('status') || 'New');
-    const value = Number(formData.get('value') || 0);
+    const stage = String(formData.get('stage') || 'New');
+    const notes = String(formData.get('notes') || '');
 
     if (editingLead) {
       setLeads((currentLeads) =>
         currentLeads.map((lead) =>
-          lead.id === editingLead.id ? { ...lead, name, email, phone, company, source, status, value } : lead
+          lead.id === editingLead.id ? { ...lead, name, email, phone, source, stage, notes } : lead
         )
       );
+      // If stage is being set to Active, add as contact if not already exists
+      if (stage === 'Active') {
+        const existingContact = contacts.find((c) => c.email === email);
+        if (!existingContact) {
+          setContacts((currentContacts) => [
+            ...currentContacts,
+            {
+              id: Date.now(),
+              name,
+              company: '',
+              email,
+              phone,
+              notes,
+            },
+          ]);
+          addActivity(`Lead "${name}" converted to contact`);
+        }
+      }
       addActivity(`Lead updated: ${name}`);
     } else {
-      setLeads((currentLeads) => [...currentLeads, { id: Date.now(), name, email, phone, company, source, status, value }]);
+      setLeads((currentLeads) => [...currentLeads, { id: Date.now(), name, email, phone, source, stage, notes }]);
+      // If stage is Active, add as contact immediately
+      if (stage === 'Active') {
+        const existingContact = contacts.find((c) => c.email === email);
+        if (!existingContact) {
+          setContacts((currentContacts) => [
+            ...currentContacts,
+            {
+              id: Date.now(),
+              name,
+              company: '',
+              email,
+              phone,
+              notes,
+            },
+          ]);
+          addActivity(`Lead "${name}" converted to contact`);
+        }
+      }
       addActivity(`Lead created: ${name}`);
     }
 
@@ -357,24 +401,70 @@ const CRM: React.FC = () => {
     event.currentTarget.reset();
   };
 
+  const handleLeadStageChange = (lead: Lead, newStage: string) => {
+    // Update lead stage
+    setLeads((currentLeads) =>
+      currentLeads.map((l) =>
+        l.id === lead.id ? { ...l, stage: newStage } : l
+      )
+    );
+
+    // If stage changed to "Active", add as contact
+    if (newStage === 'Active') {
+      const existingContact = contacts.find((c) => c.email === lead.email);
+      if (!existingContact) {
+        setContacts((currentContacts) => [
+          ...currentContacts,
+          {
+            id: Date.now(),
+            name: lead.name,
+            company: '',
+            email: lead.email,
+            phone: lead.phone,
+            notes: lead.notes,
+          },
+        ]);
+        addActivity(`Lead "${lead.name}" converted to contact`);
+      }
+    }
+
+    addActivity(`Lead "${lead.name}" stage changed to ${newStage}`);
+  };
+
+  const handleAddProduct = (productName: string, productPrice: number, productDescription?: string) => {
+    const newProduct: Product = {
+      id: Date.now(),
+      name: productName,
+      description: productDescription || '',
+      price: productPrice,
+    };
+    setProducts((currentProducts) => [...currentProducts, newProduct]);
+    addActivity(`Product added: ${productName}`);
+    return newProduct.id;
+  };
+
   const handleSaleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const customerId = Number(formData.get('customerId') || 0);
+    const customerName = String(formData.get('customerName') || '');
+    const product = String(formData.get('productName') || '');
     const amount = Number(formData.get('amount') || 0);
+    const paymentMethod = String(formData.get('paymentMethod') || '');
     const date = String(formData.get('date') || new Date().toISOString().split('T')[0]);
-    const description = String(formData.get('description') || 'Sale');
-    const status = String(formData.get('status') || 'Completed');
+    const status = String(formData.get('status') || 'Pending');
+    const notes = String(formData.get('notes') || '');
 
     if (editingSale) {
       setSales((currentSales) =>
         currentSales.map((sale) =>
-          sale.id === editingSale.id ? { ...sale, amount, date, description, status } : sale
+          sale.id === editingSale.id ? { ...sale, customerId, customerName, productId: Number(formData.get('productId')), productName: product, amount, paymentMethod, date, status, notes } : sale
         )
       );
-      addActivity(`Sale updated: R${amount.toLocaleString()}`);
+      addActivity(`Sale updated: ${customerName} - R${amount.toLocaleString()}`);
     } else {
-      setSales((currentSales) => [...currentSales, { id: Date.now(), amount, date, description, status }]);
-      addActivity(`Sale recorded: R${amount.toLocaleString()}`);
+      setSales((currentSales) => [...currentSales, { id: Date.now(), customerId, customerName, productId: Number(formData.get('productId')), productName: product, amount, paymentMethod, date, status, notes }]);
+      addActivity(`Sale recorded: ${customerName} - R${amount.toLocaleString()}`);
     }
 
     setEditingSale(null);
@@ -862,14 +952,10 @@ const CRM: React.FC = () => {
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-gray-900">{lead.name}</p>
-                          <p className="text-xs text-gray-500">{lead.company || 'No company added'}</p>
+                          <p className="text-xs text-gray-500">{lead.email || '-'}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="rounded-xl bg-gray-50 px-4 py-2">
-                          <span className="block font-medium text-gray-500">Email</span>
-                          <span className="text-gray-900">{lead.email || '-'}</span>
-                        </div>
                         <div className="rounded-xl bg-gray-50 px-4 py-2">
                           <span className="block font-medium text-gray-500">Phone</span>
                           <span className="text-gray-900">{lead.phone || '-'}</span>
@@ -879,12 +965,24 @@ const CRM: React.FC = () => {
                           <span className="text-gray-900">{lead.source || '-'}</span>
                         </div>
                         <div className="rounded-xl bg-gray-50 px-4 py-2">
-                          <span className="block font-medium text-gray-500">Value</span>
-                          <span className="font-semibold text-gray-900">R{lead.value.toLocaleString()}</span>
+                          <span className="block font-medium text-gray-500">Stage</span>
+                          <select
+                            value={lead.stage || 'New'}
+                            onChange={(e) => handleLeadStageChange(lead, e.target.value)}
+                            className="mt-1 rounded-lg border border-gray-300 px-2 py-1 text-xs font-medium focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                          >
+                            <option value="New">New</option>
+                            <option value="Considering">Considering</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                          </select>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 px-4 py-2">
+                          <span className="block font-medium text-gray-500">Notes</span>
+                          <span className="text-gray-900 truncate">{lead.notes || '-'}</span>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">{lead.status}</span>
                         <button
                           type="button"
                           onClick={() => openLeadEdit(lead)}
@@ -969,19 +1067,6 @@ const CRM: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="lead-company">
-                      Company
-                    </label>
-                    <input
-                      id="lead-company"
-                      name="company"
-                      type="text"
-                      defaultValue={editingLead?.company || ''}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-                    />
-                  </div>
-
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="lead-source">
                       Source
                     </label>
@@ -994,33 +1079,34 @@ const CRM: React.FC = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="lead-status">
-                        Status
-                      </label>
-                      <input
-                        id="lead-status"
-                        name="status"
-                        type="text"
-                        defaultValue={editingLead?.status || 'New'}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="lead-stage">
+                      Stage
+                    </label>
+                    <select
+                      id="lead-stage"
+                      name="stage"
+                      defaultValue={editingLead?.stage || 'New'}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                    >
+                      <option value="New">New</option>
+                      <option value="Considering">Considering</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="lead-value">
-                        Value (R)
-                      </label>
-                      <input
-                        id="lead-value"
-                        name="value"
-                        type="number"
-                        min="0"
-                        defaultValue={editingLead?.value || ''}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="lead-notes">
+                      Notes
+                    </label>
+                    <textarea
+                      id="lead-notes"
+                      name="notes"
+                      rows={3}
+                      defaultValue={editingLead?.notes || ''}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                    />
                   </div>
 
                   <div className="flex justify-end gap-3 pt-2">
@@ -1089,16 +1175,30 @@ const CRM: React.FC = () => {
                           R
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">R{sale.amount.toLocaleString()}</p>
-                          <p className="text-xs text-gray-500">{sale.description}</p>
+                          <p className="text-sm font-semibold text-gray-900">{sale.customerName}</p>
+                          <p className="text-xs text-gray-500">{sale.productName}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-xl bg-gray-50 px-4 py-2">
+                          <span className="block font-medium text-gray-500">Amount</span>
+                          <span className="font-semibold text-gray-900">R{sale.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 px-4 py-2">
+                          <span className="block font-medium text-gray-500">Payment Method</span>
+                          <span className="text-gray-900">{sale.paymentMethod || '-'}</span>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 px-4 py-2">
+                          <span className="block font-medium text-gray-500">Date</span>
+                          <span className="text-gray-900">{sale.date}</span>
+                        </div>
+                        <div className="rounded-xl bg-gray-50 px-4 py-2">
+                          <span className="block font-medium text-gray-500">Notes</span>
+                          <span className="text-gray-900 truncate">{sale.notes || '-'}</span>
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">{sale.status}</span>
-                        <div className="rounded-xl bg-gray-50 px-4 py-2 text-xs">
-                          <span className="block font-medium text-gray-500">Date</span>
-                          <span className="font-semibold text-gray-900">{sale.date}</span>
-                        </div>
                         <button
                           type="button"
                           onClick={() => openSaleEdit(sale)}
@@ -1142,6 +1242,84 @@ const CRM: React.FC = () => {
 
                 <form className="space-y-5" onSubmit={handleSaleSubmit}>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="sale-customer">
+                      Customer *
+                    </label>
+                    <select
+                      id="sale-customer"
+                      name="customerId"
+                      required
+                      defaultValue={editingSale?.customerId || ''}
+                      onChange={(e) => {
+                        const selectedContact = contacts.find((c) => c.id === Number(e.target.value));
+                        const customerNameInput = document.querySelector('input[name="customerName"]') as HTMLInputElement;
+                        if (selectedContact && customerNameInput) {
+                          customerNameInput.value = selectedContact.name;
+                        }
+                      }}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                      autoFocus
+                    >
+                      <option value="">Select a customer...</option>
+                      {contacts.map((contact) => (
+                        <option key={contact.id} value={contact.id}>
+                          {contact.name} ({contact.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <input
+                    type="hidden"
+                    name="customerName"
+                    defaultValue={editingSale?.customerName || ''}
+                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="sale-product">
+                      Product / Service *
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        id="sale-product"
+                        name="productId"
+                        defaultValue={editingSale?.productId || ''}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const selectedProduct = products.find((p) => p.id === Number(e.target.value));
+                            const productNameInput = document.querySelector('input[name="productName"]') as HTMLInputElement;
+                            if (selectedProduct && productNameInput) {
+                              productNameInput.value = selectedProduct.name;
+                            }
+                          }
+                        }}
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                      >
+                        <option value="">Select a product...</option>
+                        {products.map((product) => (
+                          <option key={product.id} value={product.id}>
+                            {product.name} {product.price ? `- R${product.price.toLocaleString()}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setIsProductModalOpen(true)}
+                        className="inline-flex items-center justify-center rounded-lg border border-primary-500 px-3 py-2 text-sm font-semibold text-primary-500 hover:bg-primary-50 transition-colors"
+                        title="Add new product"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <input
+                    type="hidden"
+                    name="productName"
+                    defaultValue={editingSale?.productName || ''}
+                  />
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="sale-amount">
                       Amount (R) *
                     </label>
@@ -1153,19 +1331,20 @@ const CRM: React.FC = () => {
                       defaultValue={editingSale?.amount || ''}
                       required
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-                      autoFocus
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="sale-description">
-                      Description
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="sale-paymentMethod">
+                      Payment Method *
                     </label>
                     <input
-                      id="sale-description"
-                      name="description"
+                      id="sale-paymentMethod"
+                      name="paymentMethod"
                       type="text"
-                      defaultValue={editingSale?.description || ''}
+                      defaultValue={editingSale?.paymentMethod || ''}
+                      required
+                      placeholder="e.g., Cash, Card, Bank Transfer"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                     />
                   </div>
@@ -1173,29 +1352,46 @@ const CRM: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="sale-status">
-                        Status
+                        Status *
                       </label>
-                      <input
+                      <select
                         id="sale-status"
                         name="status"
-                        type="text"
-                        defaultValue={editingSale?.status || 'Completed'}
+                        defaultValue={editingSale?.status || 'Pending'}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-                      />
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="sale-date">
-                        Sale Date
+                        Sale Date *
                       </label>
                       <input
                         id="sale-date"
                         name="date"
                         type="date"
                         defaultValue={editingSale?.date || new Date().toISOString().split('T')[0]}
+                        required
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="sale-notes">
+                      Notes
+                    </label>
+                    <textarea
+                      id="sale-notes"
+                      name="notes"
+                      rows={3}
+                      defaultValue={editingSale?.notes || ''}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                    />
                   </div>
 
                   <div className="flex justify-end gap-3 pt-1">
@@ -1220,6 +1416,114 @@ const CRM: React.FC = () => {
               </section>
             </div>
           )}
+
+          {isProductModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+              <section className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl border border-gray-100">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-semibold text-gray-900">Add New Product</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProductModalOpen(false);
+                      setNewProductName('');
+                      setNewProductPrice('');
+                      setNewProductDescription('');
+                    }}
+                    className="rounded-lg p-1 text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const newId = handleAddProduct(newProductName, Number(newProductPrice) || 0, newProductDescription);
+                    // Update the hidden product name input
+                    const productNameInput = document.querySelector('input[name="productName"]') as HTMLInputElement;
+                    if (productNameInput) {
+                      productNameInput.value = newProductName;
+                    }
+                    // Update the product dropdown
+                    const productSelect = document.querySelector('select[name="productId"]') as HTMLSelectElement;
+                    if (productSelect) {
+                      productSelect.value = String(newId);
+                    }
+                    setIsProductModalOpen(false);
+                    setNewProductName('');
+                    setNewProductPrice('');
+                    setNewProductDescription('');
+                  }}
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="new-product-name">
+                      Product Name *
+                    </label>
+                    <input
+                      id="new-product-name"
+                      type="text"
+                      value={newProductName}
+                      onChange={(e) => setNewProductName(e.target.value)}
+                      required
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="new-product-price">
+                      Price (R) *
+                    </label>
+                    <input
+                      id="new-product-price"
+                      type="number"
+                      min="0"
+                      value={newProductPrice}
+                      onChange={(e) => setNewProductPrice(e.target.value)}
+                      required
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="new-product-description">
+                      Description
+                    </label>
+                    <textarea
+                      id="new-product-description"
+                      value={newProductDescription}
+                      onChange={(e) => setNewProductDescription(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProductModalOpen(false);
+                        setNewProductName('');
+                        setNewProductPrice('');
+                        setNewProductDescription('');
+                      }}
+                      className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center justify-center rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+                    >
+                      Add Product
+                    </button>
+                  </div>
+                </form>
+              </section>
+            </div>
+          )}
         </>
       )}
 
@@ -1234,24 +1538,65 @@ const CRM: React.FC = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-8">Sales Overview</h3>
               <div className="space-y-3">
-                {salesOverviewRows.map((row) => (
-                  <div key={row.label} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">{row.label}</span>
-                    <span className="font-medium text-gray-900">{row.value}</span>
-                  </div>
-                ))}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Total Sales Amount</span>
+                  <span className="font-medium text-gray-900">R{sales.filter(s => s.status === 'Completed').reduce((total, sale) => total + sale.amount, 0).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Completed Sales</span>
+                  <span className="font-medium text-gray-900">{sales.filter(s => s.status === 'Completed').length}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Pending Amount</span>
+                  <span className="font-medium text-gray-900">R{sales.filter(s => s.status === 'Pending').reduce((total, sale) => total + sale.amount, 0).toLocaleString()}</span>
+                </div>
               </div>
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900 mb-8">Lead Conversion</h3>
               <div className="space-y-3">
-                {leadConversionRows.map((row) => (
-                  <div key={row.label} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">{row.label}</span>
-                    <span className="font-medium text-gray-900">{row.value}</span>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Total Leads</span>
+                  <span className="font-medium text-gray-900">{leads.length}</span>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <p className="text-xs font-semibold text-gray-700 mb-3">Leads by Stage</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-yellow-500" />
+                      <span className="text-gray-600">New</span>
+                    </div>
+                    <span className="font-semibold text-gray-900">{leads.filter(l => l.stage === 'New').length}</span>
                   </div>
-                ))}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <HelpCircle className="w-4 h-4 text-blue-500" />
+                      <span className="text-gray-600">Considering</span>
+                    </div>
+                    <span className="font-semibold text-gray-900">{leads.filter(l => l.stage === 'Considering').length}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-gray-600">Active</span>
+                    </div>
+                    <span className="font-semibold text-gray-900">{leads.filter(l => l.stage === 'Active').length}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-500" />
+                      <span className="text-gray-600">Inactive</span>
+                    </div>
+                    <span className="font-semibold text-gray-900">{leads.filter(l => l.stage === 'Inactive').length}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Conversion Rate</span>
+                  <span className="font-medium text-gray-900">{leads.length > 0 ? Math.round((leads.filter(l => l.stage === 'Active').length / leads.length) * 100) : 0}%</span>
+                </div>
               </div>
             </div>
           </section>

@@ -192,9 +192,9 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     
     { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' as PackageType },
     
+    { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
     { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' as PackageType },
     
-    { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
     { path: '/data-input', icon: Upload, label: 'Data Input', package: 'essential' },
     
     { path: '/analytics', icon: BarChart3, label: 'Analytics', package: 'premium' },
