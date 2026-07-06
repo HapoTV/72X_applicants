@@ -1,0 +1,1 @@
+export { useTenders } from './useTenders';
