@@ -128,6 +128,7 @@ export const CRM: React.FC = () => {
             }
             setShowContactForm(false);
             setEditingContact(null);
+            await fetchContacts();
         } catch (error) {
             console.error('Error saving contact:', error);
         }
@@ -143,6 +144,7 @@ export const CRM: React.FC = () => {
             }
             setShowLeadForm(false);
             setEditingLead(null);
+            await fetchLeads();
         } catch (error) {
             console.error('Error saving lead:', error);
         }
@@ -158,6 +160,7 @@ export const CRM: React.FC = () => {
             }
             setShowSaleForm(false);
             setEditingSale(null);
+            await fetchSales();
         } catch (error) {
             console.error('Error saving sale:', error);
         }
@@ -166,6 +169,7 @@ export const CRM: React.FC = () => {
     const handleLeadStageChange = async (lead: Lead, stage: string) => {
         console.log('Lead stage change:', lead.id, stage);
         await updateLeadStage(lead.id, stage as any);
+        await fetchLeads();
     };
 
     // Debug: Log current state
@@ -196,7 +200,7 @@ export const CRM: React.FC = () => {
                 return (
                     <ContactsTab
                         contacts={contacts}
-                        loading={loading}
+                        loading={contactsLoading}
                         onAdd={() => {
                             console.log('Add contact clicked from ContactsTab');
                             setEditingContact(null);
@@ -207,14 +211,14 @@ export const CRM: React.FC = () => {
                             setEditingContact(contact);
                             setShowContactForm(true);
                         }}
-                        onDelete={deleteContact}
+                        onDelete={(contact) => deleteContact(contact.id)}
                     />
                 );
             case 'leads':
                 return (
                     <LeadsTab
                         leads={leads}
-                        loading={loading}
+                        loading={leadsLoading}
                         onAdd={() => {
                             console.log('Add lead clicked from LeadsTab');
                             setEditingLead(null);
@@ -225,7 +229,7 @@ export const CRM: React.FC = () => {
                             setEditingLead(lead);
                             setShowLeadForm(true);
                         }}
-                        onDelete={deleteLead}
+                        onDelete={(lead) => deleteLead(lead.id)}
                         onStageChange={handleLeadStageChange}
                     />
                 );
@@ -235,7 +239,7 @@ export const CRM: React.FC = () => {
                         sales={sales}
                         products={products}
                         contacts={contacts}
-                        loading={loading}
+                        loading={salesLoading}
                         onAdd={() => {
                             console.log('Add sale clicked from SalesTab');
                             setEditingSale(null);
@@ -246,7 +250,7 @@ export const CRM: React.FC = () => {
                             setEditingSale(sale);
                             setShowSaleForm(true);
                         }}
-                        onDelete={deleteSale}
+                        onDelete={(sale) => deleteSale(sale.id)}
                     />
                 );
             case 'reports':

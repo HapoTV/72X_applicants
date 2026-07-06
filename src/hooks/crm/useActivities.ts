@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Activity } from '../../interfaces/crm/activity.interface';
 import { activityService } from '../../services/crm/activity.service';
 import { useCRM } from './useCRM';
+import { crmStorage } from './crmStorage';
 
 export const useActivities = () => {
     const { loading, error, setError, withLoading } = useCRM();
@@ -15,10 +16,10 @@ export const useActivities = () => {
             console.log('useActivities - Fetching activities...');
             const response = await withLoading(() => activityService.getActivities());
             console.log('useActivities - Full response:', response);
-            
+
             let activitiesData: Activity[] = [];
             let count = 0;
-            
+
             if (response) {
                 if (response.success === true && Array.isArray(response.data)) {
                     activitiesData = response.data;
@@ -34,14 +35,22 @@ export const useActivities = () => {
                     count = response.activities.length;
                 }
             }
-            
+
+            if (activitiesData.length === 0) {
+                const fallbackActivities = crmStorage.getActivities();
+                activitiesData = fallbackActivities;
+                count = fallbackActivities.length;
+            }
+
+            crmStorage.setActivities(activitiesData);
             console.log('useActivities - Setting activities:', activitiesData);
             setActivities(activitiesData);
             setTotalCount(count);
         } catch (err) {
             console.error('useActivities - Error fetching activities:', err);
-            setActivities([]);
-            setTotalCount(0);
+            const fallbackActivities = crmStorage.getActivities();
+            setActivities(fallbackActivities);
+            setTotalCount(fallbackActivities.length);
         }
     }, [withLoading]);
 
@@ -49,10 +58,10 @@ export const useActivities = () => {
         try {
             const response = await withLoading(() => activityService.getRecentActivities(limit));
             console.log('useActivities - Recent activities response:', response);
-            
+
             let activitiesData: Activity[] = [];
             let count = 0;
-            
+
             if (response) {
                 if (response.success === true && Array.isArray(response.data)) {
                     activitiesData = response.data;
@@ -65,13 +74,23 @@ export const useActivities = () => {
                     count = response.data.length;
                 }
             }
-            
+
+            if (activitiesData.length === 0) {
+                const fallbackActivities = crmStorage.getActivities().slice(0, limit);
+                activitiesData = fallbackActivities;
+                count = fallbackActivities.length;
+            }
+
+            crmStorage.setActivities(activitiesData);
             setActivities(activitiesData);
             setTotalCount(count);
             return response;
         } catch (err) {
             console.error('useActivities - Error fetching recent activities:', err);
-            return { success: false, data: [], count: 0 };
+            const fallbackActivities = crmStorage.getActivities().slice(0, limit);
+            setActivities(fallbackActivities);
+            setTotalCount(fallbackActivities.length);
+            return { success: false, data: fallbackActivities, count: fallbackActivities.length };
         }
     }, [withLoading]);
 

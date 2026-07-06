@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Product, CreateProductRequest, UpdateProductRequest } from '../../interfaces/crm/product.interface';
 import { productService } from '../../services/crm/product.service';
 import { useCRM } from './useCRM';
+import { crmStorage } from './crmStorage';
 
 export const useProducts = () => {
     const { loading, error, setError, withLoading } = useCRM();
@@ -15,10 +16,10 @@ export const useProducts = () => {
             console.log('useProducts - Fetching products...');
             const response = await withLoading(() => productService.getProducts());
             console.log('useProducts - Full response:', response);
-            
+
             let productsData: Product[] = [];
             let count = 0;
-            
+
             if (response) {
                 if (response.success === true && Array.isArray(response.data)) {
                     productsData = response.data;
@@ -34,14 +35,22 @@ export const useProducts = () => {
                     count = response.products.length;
                 }
             }
-            
+
+            if (productsData.length === 0) {
+                const fallbackProducts = crmStorage.getProducts();
+                productsData = fallbackProducts;
+                count = fallbackProducts.length;
+            }
+
+            crmStorage.setProducts(productsData);
             console.log('useProducts - Setting products:', productsData);
             setProducts(productsData);
             setTotalCount(count);
         } catch (err) {
             console.error('useProducts - Error fetching products:', err);
-            setProducts([]);
-            setTotalCount(0);
+            const fallbackProducts = crmStorage.getProducts();
+            setProducts(fallbackProducts);
+            setTotalCount(fallbackProducts.length);
         }
     }, [withLoading]);
 
@@ -50,11 +59,31 @@ export const useProducts = () => {
     }, [withLoading]);
 
     const createProduct = useCallback(async (data: CreateProductRequest) => {
-        const response = await withLoading(() => productService.createProduct(data));
-        if (response && response.success !== false) {
-            await fetchProducts();
+        try {
+            const response = await withLoading(() => productService.createProduct(data));
+            if (response && response.success !== false) {
+                await fetchProducts();
+                return response;
+            }
+        } catch (err) {
+            console.error('useProducts - createProduct fallback:', err);
         }
-        return response;
+
+        const fallbackProducts = crmStorage.getProducts();
+        const newProduct: Product = {
+            id: `product-${Date.now()}`,
+            userId: 'local-user',
+            name: data.name,
+            price: data.price,
+            description: data.description || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        const updatedProducts = [newProduct, ...fallbackProducts];
+        crmStorage.setProducts(updatedProducts);
+        setProducts(updatedProducts);
+        setTotalCount(updatedProducts.length);
+        return { success: true, data: newProduct, message: 'Product saved locally' };
     }, [withLoading, fetchProducts]);
 
     const updateProduct = useCallback(async (id: string, data: UpdateProductRequest) => {

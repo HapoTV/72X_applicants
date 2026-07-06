@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Lead, CreateLeadRequest, UpdateLeadRequest, LeadStage } from '../../interfaces/crm/lead.interface';
 import { leadService } from '../../services/crm/lead.service';
 import { useCRM } from './useCRM';
+import { crmStorage } from './crmStorage';
 
 export const useLeads = () => {
     const { loading, error, setError, withLoading } = useCRM();
@@ -15,10 +16,10 @@ export const useLeads = () => {
             console.log('useLeads - Fetching leads...');
             const response = await withLoading(() => leadService.getLeads());
             console.log('useLeads - Full response:', response);
-            
+
             let leadsData: Lead[] = [];
             let count = 0;
-            
+
             if (response) {
                 if (response.success === true && Array.isArray(response.data)) {
                     leadsData = response.data;
@@ -34,14 +35,22 @@ export const useLeads = () => {
                     count = response.leads.length;
                 }
             }
-            
+
+            if (leadsData.length === 0) {
+                const fallbackLeads = crmStorage.getLeads();
+                leadsData = fallbackLeads;
+                count = fallbackLeads.length;
+            }
+
+            crmStorage.setLeads(leadsData);
             console.log('useLeads - Setting leads:', leadsData);
             setLeads(leadsData);
             setTotalCount(count);
         } catch (err) {
             console.error('useLeads - Error fetching leads:', err);
-            setLeads([]);
-            setTotalCount(0);
+            const fallbackLeads = crmStorage.getLeads();
+            setLeads(fallbackLeads);
+            setTotalCount(fallbackLeads.length);
         }
     }, [withLoading]);
 
@@ -50,19 +59,55 @@ export const useLeads = () => {
     }, [withLoading]);
 
     const createLead = useCallback(async (data: CreateLeadRequest) => {
-        const response = await withLoading(() => leadService.createLead(data));
-        if (response && response.success !== false) {
-            await fetchLeads();
+        try {
+            const response = await withLoading(() => leadService.createLead(data));
+            if (response && response.success !== false) {
+                await fetchLeads();
+                return response;
+            }
+        } catch (err) {
+            console.error('useLeads - createLead fallback:', err);
         }
-        return response;
+
+        const fallbackLeads = crmStorage.getLeads();
+        const newLead: Lead = {
+            id: `lead-${Date.now()}`,
+            userId: 'local-user',
+            name: data.name,
+            email: data.email || '',
+            phone: data.phone || '',
+            source: data.source || '',
+            stage: data.stage || 'New',
+            notes: data.notes || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        const updatedLeads = [newLead, ...fallbackLeads];
+        crmStorage.setLeads(updatedLeads);
+        setLeads(updatedLeads);
+        setTotalCount(updatedLeads.length);
+        return { success: true, data: newLead, message: 'Lead saved locally' };
     }, [withLoading, fetchLeads]);
 
     const updateLead = useCallback(async (id: string, data: UpdateLeadRequest) => {
-        const response = await withLoading(() => leadService.updateLead(id, data));
-        if (response && response.success !== false) {
-            await fetchLeads();
+        try {
+            const response = await withLoading(() => leadService.updateLead(id, data));
+            if (response && response.success !== false) {
+                await fetchLeads();
+                return response;
+            }
+        } catch (err) {
+            console.error('useLeads - updateLead fallback:', err);
         }
-        return response;
+
+        const fallbackLeads = crmStorage.getLeads();
+        const updatedLeads = fallbackLeads.map((lead) =>
+            lead.id === id ? { ...lead, ...data, updatedAt: new Date().toISOString() } : lead,
+        );
+        crmStorage.setLeads(updatedLeads);
+        setLeads(updatedLeads);
+        setTotalCount(updatedLeads.length);
+        return { success: true, data: updatedLeads.find((lead) => lead.id === id) as Lead, message: 'Lead updated locally' };
     }, [withLoading, fetchLeads]);
 
     const updateLeadStage = useCallback(async (id: string, stage: LeadStage) => {
@@ -74,11 +119,21 @@ export const useLeads = () => {
     }, [withLoading, fetchLeads]);
 
     const deleteLead = useCallback(async (id: string) => {
-        const response = await withLoading(() => leadService.deleteLead(id));
-        if (response && response.success !== false) {
-            await fetchLeads();
+        try {
+            const response = await withLoading(() => leadService.deleteLead(id));
+            if (response && response.success !== false) {
+                await fetchLeads();
+                return response;
+            }
+        } catch (err) {
+            console.error('useLeads - deleteLead fallback:', err);
         }
-        return response;
+
+        const fallbackLeads = crmStorage.getLeads().filter((lead) => lead.id !== id);
+        crmStorage.setLeads(fallbackLeads);
+        setLeads(fallbackLeads);
+        setTotalCount(fallbackLeads.length);
+        return { success: true, message: 'Lead deleted locally' };
     }, [withLoading, fetchLeads]);
 
     const searchLeads = useCallback(async (query: string) => {

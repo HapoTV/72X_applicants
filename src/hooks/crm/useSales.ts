@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Sale, CreateSaleRequest, UpdateSaleRequest } from '../../interfaces/crm/sale.interface';
 import { saleService } from '../../services/crm/sale.service';
 import { useCRM } from './useCRM';
+import { crmStorage } from './crmStorage';
 
 export const useSales = () => {
     const { loading, error, setError, withLoading } = useCRM();
@@ -15,10 +16,10 @@ export const useSales = () => {
             console.log('useSales - Fetching sales...');
             const response = await withLoading(() => saleService.getSales());
             console.log('useSales - Full response:', response);
-            
+
             let salesData: Sale[] = [];
             let count = 0;
-            
+
             if (response) {
                 if (response.success === true && Array.isArray(response.data)) {
                     salesData = response.data;
@@ -34,14 +35,22 @@ export const useSales = () => {
                     count = response.sales.length;
                 }
             }
-            
+
+            if (salesData.length === 0) {
+                const fallbackSales = crmStorage.getSales();
+                salesData = fallbackSales;
+                count = fallbackSales.length;
+            }
+
+            crmStorage.setSales(salesData);
             console.log('useSales - Setting sales:', salesData);
             setSales(salesData);
             setTotalCount(count);
         } catch (err) {
             console.error('useSales - Error fetching sales:', err);
-            setSales([]);
-            setTotalCount(0);
+            const fallbackSales = crmStorage.getSales();
+            setSales(fallbackSales);
+            setTotalCount(fallbackSales.length);
         }
     }, [withLoading]);
 
@@ -50,27 +59,76 @@ export const useSales = () => {
     }, [withLoading]);
 
     const createSale = useCallback(async (data: CreateSaleRequest) => {
-        const response = await withLoading(() => saleService.createSale(data));
-        if (response && response.success !== false) {
-            await fetchSales();
+        try {
+            const response = await withLoading(() => saleService.createSale(data));
+            if (response && response.success !== false) {
+                await fetchSales();
+                return response;
+            }
+        } catch (err) {
+            console.error('useSales - createSale fallback:', err);
         }
-        return response;
+
+        const fallbackSales = crmStorage.getSales();
+        const newSale: Sale = {
+            id: `sale-${Date.now()}`,
+            userId: 'local-user',
+            customerId: data.customerId,
+            customerName: data.customerName,
+            productId: data.productId,
+            productName: data.productName,
+            amount: data.amount,
+            paymentMethod: data.paymentMethod,
+            date: data.date,
+            status: data.status || 'Pending',
+            notes: data.notes || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        const updatedSales = [newSale, ...fallbackSales];
+        crmStorage.setSales(updatedSales);
+        setSales(updatedSales);
+        setTotalCount(updatedSales.length);
+        return { success: true, data: newSale, message: 'Sale saved locally' };
     }, [withLoading, fetchSales]);
 
     const updateSale = useCallback(async (id: string, data: UpdateSaleRequest) => {
-        const response = await withLoading(() => saleService.updateSale(id, data));
-        if (response && response.success !== false) {
-            await fetchSales();
+        try {
+            const response = await withLoading(() => saleService.updateSale(id, data));
+            if (response && response.success !== false) {
+                await fetchSales();
+                return response;
+            }
+        } catch (err) {
+            console.error('useSales - updateSale fallback:', err);
         }
-        return response;
+
+        const fallbackSales = crmStorage.getSales();
+        const updatedSales = fallbackSales.map((sale) =>
+            sale.id === id ? { ...sale, ...data, updatedAt: new Date().toISOString() } : sale,
+        );
+        crmStorage.setSales(updatedSales);
+        setSales(updatedSales);
+        setTotalCount(updatedSales.length);
+        return { success: true, data: updatedSales.find((sale) => sale.id === id) as Sale, message: 'Sale updated locally' };
     }, [withLoading, fetchSales]);
 
     const deleteSale = useCallback(async (id: string) => {
-        const response = await withLoading(() => saleService.deleteSale(id));
-        if (response && response.success !== false) {
-            await fetchSales();
+        try {
+            const response = await withLoading(() => saleService.deleteSale(id));
+            if (response && response.success !== false) {
+                await fetchSales();
+                return response;
+            }
+        } catch (err) {
+            console.error('useSales - deleteSale fallback:', err);
         }
-        return response;
+
+        const fallbackSales = crmStorage.getSales().filter((sale) => sale.id !== id);
+        crmStorage.setSales(fallbackSales);
+        setSales(fallbackSales);
+        setTotalCount(fallbackSales.length);
+        return { success: true, message: 'Sale deleted locally' };
     }, [withLoading, fetchSales]);
 
     const searchSales = useCallback(async (query: string) => {

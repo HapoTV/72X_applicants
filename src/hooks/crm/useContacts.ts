@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Contact, CreateContactRequest, UpdateContactRequest } from '../../interfaces/crm/contact.interface';
 import { contactService } from '../../services/crm/contact.service';
 import { useCRM } from './useCRM';
+import { crmStorage } from './crmStorage';
 
 export const useContacts = () => {
     const { loading, error, setError, withLoading } = useCRM();
@@ -15,41 +16,41 @@ export const useContacts = () => {
             console.log('useContacts - Fetching contacts...');
             const response = await withLoading(() => contactService.getContacts());
             console.log('useContacts - Full response:', response);
-            
-            // Handle different response structures
+
             let contactsData: Contact[] = [];
             let count = 0;
-            
+
             if (response) {
-                // Case 1: Response has success and data properties
                 if (response.success === true && Array.isArray(response.data)) {
                     contactsData = response.data;
                     count = response.count || response.data.length;
-                }
-                // Case 2: Response is directly an array
-                else if (Array.isArray(response)) {
+                } else if (Array.isArray(response)) {
                     contactsData = response;
                     count = response.length;
-                }
-                // Case 3: Response has data property but not success
-                else if (response.data && Array.isArray(response.data)) {
+                } else if (response.data && Array.isArray(response.data)) {
                     contactsData = response.data;
                     count = response.data.length;
-                }
-                // Case 4: Response is an object with contacts property
-                else if (response.contacts && Array.isArray(response.contacts)) {
+                } else if (response.contacts && Array.isArray(response.contacts)) {
                     contactsData = response.contacts;
                     count = response.contacts.length;
                 }
             }
-            
+
+            if (contactsData.length === 0) {
+                const fallbackContacts = crmStorage.getContacts();
+                contactsData = fallbackContacts;
+                count = fallbackContacts.length;
+            }
+
+            crmStorage.setContacts(contactsData);
             console.log('useContacts - Setting contacts:', contactsData);
             setContacts(contactsData);
             setTotalCount(count);
         } catch (err) {
             console.error('useContacts - Error fetching contacts:', err);
-            setContacts([]);
-            setTotalCount(0);
+            const fallbackContacts = crmStorage.getContacts();
+            setContacts(fallbackContacts);
+            setTotalCount(fallbackContacts.length);
         }
     }, [withLoading]);
 
@@ -58,27 +59,87 @@ export const useContacts = () => {
     }, [withLoading]);
 
     const createContact = useCallback(async (data: CreateContactRequest) => {
-        const response = await withLoading(() => contactService.createContact(data));
-        if (response && response.success !== false) {
-            await fetchContacts();
+        try {
+            const response = await withLoading(() => contactService.createContact(data));
+            if (response && response.success !== false) {
+                await fetchContacts();
+                return response;
+            }
+            const fallbackContacts = crmStorage.getContacts();
+            const newContact: Contact = {
+                id: `contact-${Date.now()}`,
+                userId: 'local-user',
+                name: data.name,
+                company: data.company || '',
+                email: data.email || '',
+                phone: data.phone || '',
+                notes: data.notes || '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            const updatedContacts = [newContact, ...fallbackContacts];
+            crmStorage.setContacts(updatedContacts);
+            setContacts(updatedContacts);
+            setTotalCount(updatedContacts.length);
+            return { success: true, data: newContact, message: 'Contact saved locally' };
+        } catch (err) {
+            const fallbackContacts = crmStorage.getContacts();
+            const newContact: Contact = {
+                id: `contact-${Date.now()}`,
+                userId: 'local-user',
+                name: data.name,
+                company: data.company || '',
+                email: data.email || '',
+                phone: data.phone || '',
+                notes: data.notes || '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            const updatedContacts = [newContact, ...fallbackContacts];
+            crmStorage.setContacts(updatedContacts);
+            setContacts(updatedContacts);
+            setTotalCount(updatedContacts.length);
+            return { success: true, data: newContact, message: 'Contact saved locally' };
         }
-        return response;
     }, [withLoading, fetchContacts]);
 
     const updateContact = useCallback(async (id: string, data: UpdateContactRequest) => {
-        const response = await withLoading(() => contactService.updateContact(id, data));
-        if (response && response.success !== false) {
-            await fetchContacts();
+        try {
+            const response = await withLoading(() => contactService.updateContact(id, data));
+            if (response && response.success !== false) {
+                await fetchContacts();
+                return response;
+            }
+        } catch (err) {
+            console.error('useContacts - updateContact fallback:', err);
         }
-        return response;
+
+        const fallbackContacts = crmStorage.getContacts();
+        const updatedContacts = fallbackContacts.map((contact) =>
+            contact.id === id ? { ...contact, ...data, updatedAt: new Date().toISOString() } : contact,
+        );
+        crmStorage.setContacts(updatedContacts);
+        setContacts(updatedContacts);
+        setTotalCount(updatedContacts.length);
+        return { success: true, data: updatedContacts.find((contact) => contact.id === id) as Contact, message: 'Contact updated locally' };
     }, [withLoading, fetchContacts]);
 
     const deleteContact = useCallback(async (id: string) => {
-        const response = await withLoading(() => contactService.deleteContact(id));
-        if (response && response.success !== false) {
-            await fetchContacts();
+        try {
+            const response = await withLoading(() => contactService.deleteContact(id));
+            if (response && response.success !== false) {
+                await fetchContacts();
+                return response;
+            }
+        } catch (err) {
+            console.error('useContacts - deleteContact fallback:', err);
         }
-        return response;
+
+        const fallbackContacts = crmStorage.getContacts().filter((contact) => contact.id !== id);
+        crmStorage.setContacts(fallbackContacts);
+        setContacts(fallbackContacts);
+        setTotalCount(fallbackContacts.length);
+        return { success: true, message: 'Contact deleted locally' };
     }, [withLoading, fetchContacts]);
 
     const searchContacts = useCallback(async (query: string) => {
