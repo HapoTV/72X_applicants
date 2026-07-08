@@ -7,18 +7,21 @@ const API_URL =
   import.meta.env.VITE_PRODUCTION_URL ||
   'http://localhost:8080';
 
+const normalizedApiUrl = API_URL.replace(/\/+$/, '');
+
 // For Production
 // const API_URL = import.meta.env.VITE_BACKEND_URL;
 
 export const publicAxios = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: `${normalizedApiUrl}/api`,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
 const axiosClient = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: `${normalizedApiUrl}/api`,
+  timeout: 15000,
   // 🚫 DO NOT set Content-Type globally
   // Let axios automatically set it depending on request type
   // withCredentials: false (default)
@@ -39,7 +42,10 @@ axiosClient.interceptors.request.use(
     const url = typeof config.url === 'string' ? config.url : '';
     const shouldSkipOrganisationHeader =
       url.startsWith('/users/me') ||
-      url.startsWith('/marketplace/');
+      url.startsWith('/marketplace/') ||
+      url.startsWith('/users/role') ||
+      url.startsWith('/users?role=') ||
+      url.startsWith('/authentication');
 
     if (!shouldSkipOrganisationHeader && organisation && userRole !== 'SUPER_ADMIN') {
       config.headers['X-Organisation'] = organisation;

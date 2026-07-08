@@ -148,7 +148,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
         month: 'long',
         day: 'numeric'
       });
-    } catch (error) {
+    } catch (_error) {
       return 'Date unavailable';
     }
   };
@@ -187,8 +187,8 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     () => [
       { title: 'Dashboard', path: '/dashboard/overview', keywords: ['home', 'overview', 'metrics'] },
       { title: 'Notifications', path: '/notifications', keywords: ['alerts', 'messages', 'updates', 'bell'] },
-      { title: 'Schedule', path: '/schedule/events', keywords: ['calendar', 'events'] },
-      { title: 'Learning', path: '/learning?category=business-plan', keywords: ['modules', 'courses'] },
+      { title: 'Schedule', path: '/schedule', keywords: ['calendar', 'events'] },
+      { title: 'Learning', path: '/learning', keywords: ['modules', 'courses'] },
       { title: 'Community', path: '/community/discussions', keywords: ['discussions', 'networking', 'mentorship'] },
       { title: 'Funding Finder', path: '/funding', keywords: ['grants', 'loans', 'investors'] },
       { title: 'Marketplace', path: '/marketplace', keywords: ['products', 'store'] },
@@ -197,7 +197,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
       { title: 'Profile', path: '/profile', keywords: ['settings', 'my profile', 'my information', 'account', 'user'] },
       { title: 'Settings', path: '/profile', keywords: ['profile', 'account', 'my info', 'my information'] },
       { title: 'Analytics', path: '/analytics', keywords: ['data', 'insights', 'reports', 'customers', 'growth'] },
-      { title: 'Data Input', path: '/data-input', keywords: ['data', 'input', 'capture', 'customers', 'growth'] },
+      // Data Input removed
     ],
     []
   );

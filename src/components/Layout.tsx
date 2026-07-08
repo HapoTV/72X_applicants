@@ -3,10 +3,6 @@ import React, { useEffect, useState } from 'react';
 import Navigation from './Navigation';
 import Header from './Header';
 import MobileNav from './MobileNav';
-import DashboardSubNav from './DashboardSubNav';
-import ScheduleSubNav from './ScheduleSubNav';
-import LearningSubNav from './LearningSubNav';
-import AppStoreSubNav from './AppStoreSubNav';
 import LockedFeatureDrawer from './LockedFeatureDrawer';
 import type { LockedFeaturePayload } from './LockedFeatureDrawer';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -18,10 +14,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
-  const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
-  const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
-  const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
+  // Dashboard subnav removed — features consolidated into main pages
   const [showLayout, setShowLayout] = useState(true);
   const [userStatus, setUserStatus] = useState<string>('');
 
@@ -29,12 +22,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [navCollapsed, setNavCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
 
+  const isAppRoute = location.pathname.startsWith('/applications/') && location.pathname !== '/applications';
+
   const [lockedFeatureOpen, setLockedFeatureOpen] = useState(false);
   const [lockedFeature, setLockedFeature] = useState<LockedFeaturePayload | null>(null);
 
   // Check if layout should be hidden
   useEffect(() => {
-    // Get user status and package requirement
     const status = localStorage.getItem('userStatus');
     const requiresPackage = localStorage.getItem('requiresPackageSelection') === 'true';
     const selectedPackage = localStorage.getItem('selectedPackage');
@@ -42,10 +36,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const skipUntil = skipUntilRaw ? Number(skipUntilRaw) : 0;
     const hasActiveSkip = !!(skipUntil && !Number.isNaN(skipUntil) && Date.now() < skipUntil);
     const currentPath = location.pathname;
-    
+    const userPackageHydrated = localStorage.getItem('userPackageHydrated') === 'true';
+    const authToken = localStorage.getItem('authToken');
+
     setUserStatus(status || '');
-    
-    // Define allowed paths for non-ACTIVE users
+
     const publicPrefixes = [
       '/login',
       '/signup',
@@ -57,18 +52,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     ];
 
     const isPublicPage = currentPath === '/' || publicPrefixes.some((path) => currentPath.startsWith(path));
-    
     const isSelectPackagePage = currentPath === '/select-package';
     const isPaymentPage = currentPath.includes('/payments');
     const isCheckoutPaymentPage = currentPath === '/payments/new';
 
-    // Check if user is fully active
     const isUserActive = status === 'ACTIVE' || status === 'FREE_TRIAL';
-    
     const shouldShowLayout = (isUserActive && !isCheckoutPaymentPage) || isPublicPage || isSelectPackagePage;
     setShowLayout(shouldShowLayout);
-    
-    // Redirect logic for non-active users
+
+    // Wait for subscription status hydration for authenticated users before making redirect decisions.
+    if (authToken && !userPackageHydrated && !isPublicPage && !isSelectPackagePage && !isPaymentPage) {
+      return;
+    }
+
     if (!isUserActive && !isPublicPage && !isSelectPackagePage && !isPaymentPage) {
       if (!hasActiveSkip && (status === 'PENDING_PACKAGE' || requiresPackage)) {
         navigate('/select-package');
@@ -81,9 +77,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       }
     }
   }, [location.pathname, navigate]);
-
-  // Check if current route is an app route (full-screen mode)
-  const isAppRoute = location.pathname.startsWith('/applications/') && location.pathname !== '/applications';
 
   // Listen for sidebar collapse toggle and update margin
   useEffect(() => {
@@ -220,42 +213,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [location.pathname, showLayout, userStatus]); // Added userStatus dependency
 
   // Handle Dashboard toggle - close others
-  const handleDashboardToggle = (isOpen: boolean) => {
-    setIsDashboardSubNavOpen(isOpen);
-    if (isOpen) {
-      setIsScheduleSubNavOpen(false);
-      setIsLearningSubNavOpen(false);
-    }
-  };
+  // Dashboard secondary subnav removed (Overview only)
 
-  // Handle Schedule toggle - close others
-  const handleScheduleToggle = (isOpen: boolean) => {
-    setIsScheduleSubNavOpen(isOpen);
-    if (isOpen) {
-      setIsDashboardSubNavOpen(false);
-      setIsLearningSubNavOpen(false);
-    }
-  };
-
-  // Handle Learning toggle - close others
-  const handleLearningToggle = (isOpen: boolean) => {
-    setIsLearningSubNavOpen(isOpen);
-    if (isOpen) {
-      setIsDashboardSubNavOpen(false);
-      setIsScheduleSubNavOpen(false);
-      setIsAppStoreSubNavOpen(false);
-    }
-  };
-
-  // Handle App Store toggle - close others
-  const handleAppStoreToggle = (isOpen: boolean) => {
-    setIsAppStoreSubNavOpen(isOpen);
-    if (isOpen) {
-      setIsDashboardSubNavOpen(false);
-      setIsScheduleSubNavOpen(false);
-      setIsLearningSubNavOpen(false);
-    }
-  };
+  // Handle Learning toggle removed - categories integrated into Learning page
 
   // If layout should be hidden (for non-ACTIVE users or special pages)
   if (!showLayout) {
@@ -326,66 +286,60 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
 
   // Normal layout mode with navigation (for ACTIVE users only)
+  if (isAppRoute) {
+    return (
+      <main className="min-h-screen bg-gray-50 p-6">
+        {children}
+      </main>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Full-screen app mode - no navigation or sidebar */}
-      {isAppRoute ? (
-        <main className="p-6">
-          {children}
-        </main>
-      ) : (
-        // Normal layout mode with navigation
-        <>
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex">
-            <Navigation 
-              onClose={() => setIsMobileNavOpen(false)}
-              onDashboardToggle={handleDashboardToggle}
-              onScheduleToggle={handleScheduleToggle}
-              onLearningToggle={handleLearningToggle}
-              onAppStoreToggle={handleAppStoreToggle}
-            />
-            {isDashboardSubNavOpen && <DashboardSubNav onClose={() => setIsDashboardSubNavOpen(false)} />}
-            {isScheduleSubNavOpen && <ScheduleSubNav onClose={() => setIsScheduleSubNavOpen(false)} />}
-            {isLearningSubNavOpen && <LearningSubNav onClose={() => setIsLearningSubNavOpen(false)} />}
-            {isAppStoreSubNavOpen && <AppStoreSubNav onClose={() => setIsAppStoreSubNavOpen(false)} />}
-            <div className={`flex-1 ${navCollapsed ? 'ml-20' : 'ml-56'} transition-all duration-200`}>
-              <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
-              <main className="p-6">
-                {children}
-              </main>
-            </div>
-          </div>
-
-          <LockedFeatureDrawer
-            open={lockedFeatureOpen}
-            feature={lockedFeature}
-            onClose={() => setLockedFeatureOpen(false)}
+      {/* Normal layout mode with navigation */}
+      <>
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex">
+          <Navigation 
+            onClose={() => setIsMobileNavOpen(false)}
+  
           />
-
-          {/* Mobile Layout */}
-          <div className="md:hidden">
+          <div className={`flex-1 ${navCollapsed ? 'ml-20' : 'ml-56'} transition-all duration-200`}>
             <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
-            <main className="pb-20 px-4 pt-4">
+            <main className="p-6">
               {children}
             </main>
-            <MobileNav />
           </div>
+        </div>
 
-          {/* Mobile Navigation Overlay */}
-          {isMobileNavOpen && (
-            <div className="fixed inset-0 z-50 md:hidden">
-              <div 
-                className="fixed inset-0 bg-black bg-opacity-50"
-                onClick={() => setIsMobileNavOpen(false)}
-              />
-              <div className="fixed top-0 left-0 w-56 h-full bg-white shadow-lg">
-                <Navigation onClose={() => setIsMobileNavOpen(false)} />
-              </div>
+        <LockedFeatureDrawer
+          open={lockedFeatureOpen}
+          feature={lockedFeature}
+          onClose={() => setLockedFeatureOpen(false)}
+        />
+
+        {/* Mobile Layout */}
+        <div className="md:hidden">
+          <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
+          <main className="pb-20 px-4 pt-4">
+            {children}
+          </main>
+          <MobileNav />
+        </div>
+
+        {/* Mobile Navigation Overlay */}
+        {isMobileNavOpen && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50"
+              onClick={() => setIsMobileNavOpen(false)}
+            />
+            <div className="fixed top-0 left-0 w-56 h-full bg-white shadow-lg">
+              <Navigation onClose={() => setIsMobileNavOpen(false)} />
             </div>
-          )}
-        </>
-      )}
+          </div>
+        )}
+      </>
     </div>
   );
 };

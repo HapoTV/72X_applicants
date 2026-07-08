@@ -66,7 +66,7 @@ const MyConnections: React.FC = () => {
     setChatOpen(true);
     setInitialMessage(message || undefined);
     setAutoSend(shouldAutoSend || undefined);
-    navigate('/connections', { replace: true });
+    navigate('/community?tab=connections', { replace: true });
   }, [location.search, navigate, users]);
 
   const handleStartChat = (user: ConnectionUser) => {

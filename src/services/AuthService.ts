@@ -97,7 +97,7 @@ class AuthService {
         hasBusinessRef: !!loginData.businessReference 
       });
       
-      const response = await axiosClient.post('/authentication/login', loginData);
+      const response = await publicAxios.post('/authentication/login', loginData);
 
       const loginResponse: LoginResponse = response.data;
       console.log("✅ Login response received:", {

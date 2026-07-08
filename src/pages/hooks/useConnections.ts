@@ -100,7 +100,8 @@ export function useConnections(authUserId?: string) {
       setOrganisations(Array.from(new Set(mappedUsers.map((u) => u.organisation).filter(Boolean))) as string[]);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to load users. Please try again.');
+      const message = err instanceof Error ? err.message : 'Please try again.';
+      setError(`Failed to load users. ${message}`);
     } finally {
       setLoading(false);
     }

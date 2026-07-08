@@ -47,13 +47,13 @@ const AnalyticsEmptyState: React.FC = () => {
       <p className="text-gray-600 text-center max-w-md">
         Start by adding your financial data to see analytics.
         <br />
-        Go to Data Input to add revenue, expenses, and customer information.
+        Go to Analytics to view insights. Data Input has been removed.
       </p>
       <button
-        onClick={() => window.location.href = '/data-input'}
+        onClick={() => window.location.href = '/analytics'}
         className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
       >
-        Go to Data Input
+        Open Analytics
       </button>
     </div>
   );

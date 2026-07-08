@@ -635,7 +635,6 @@ const CRM: React.FC = () => {
             <h2 className="text-xl font-semibold text-gray-900 mb-1">Overview</h2>
             <p className="text-sm text-gray-600">Welcome back! Here's what's happening with your business today.</p>
           </section>
-
           <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {stats.map((stat) => {
               const Icon = stat.icon;
@@ -1601,6 +1600,16 @@ const CRM: React.FC = () => {
             </div>
           </section>
 
+          <div className="mt-6 flex justify-end">
+            <button
+              type="button"
+              onClick={() => navigate('/analytics')}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              View Analytics
+            </button>
+          </div>
         </>
       )}
     </div>

@@ -171,7 +171,8 @@ async function completeLogin(loginResponse: LoginResponse, login: (user: User, a
     localStorage.setItem('userEmail', loginResponse.email);
     localStorage.setItem('userId', loginResponse.userId);
     localStorage.setItem('fullName', loginResponse.fullName || '');
-    if (loginResponse.status) localStorage.setItem('userStatus', loginResponse.status);
+    // Ensure userStatus is always set to avoid stale values from previous sessions
+    localStorage.setItem('userStatus', loginResponse.status || 'ACTIVE');
     if (loginResponse.organisation) localStorage.setItem('userOrganisation', loginResponse.organisation);
 
     login({ userId: loginResponse.userId, fullName: loginResponse.fullName, email: loginResponse.email, role: userRole, status: loginResponse.status || 'ACTIVE', companyName: loginResponse.companyName, profileImageUrl: loginResponse.profileImageUrl, organisation: loginResponse.organisation } as User, loginResponse.token);
@@ -198,6 +199,8 @@ async function completeLogin(loginResponse: LoginResponse, login: (user: User, a
       }
     } catch {
       // Non-blocking: redirect logic below still handles PENDING_PACKAGE/PENDING_PAYMENT, etc.
+    } finally {
+      localStorage.setItem('userPackageHydrated', 'true');
     }
 
     setTimeout(() => {

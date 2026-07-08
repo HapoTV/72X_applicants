@@ -310,6 +310,19 @@ export default function BizBoostChatbot() {
   }, [userPackage]);
 
   useEffect(() => {
+    const openChatbot = () => {
+      if (isLocked) {
+        openLockedDrawer();
+      } else {
+        setIsOpen(true);
+      }
+    };
+
+    window.addEventListener('open-chatbot', openChatbot);
+    return () => window.removeEventListener('open-chatbot', openChatbot);
+  }, [isLocked]);
+
+  useEffect(() => {
     localStorage.setItem("bizboost_chat_history", JSON.stringify(history));
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [history]);

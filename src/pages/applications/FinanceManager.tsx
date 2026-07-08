@@ -789,107 +789,109 @@ const FinanceManager: React.FC = () => {
       </div>
 
       {activeTab === "overview" && (
-        <section className="space-y-6">
-          <div className="grid gap-4 xl:grid-cols-4 lg:grid-cols-2">
-            {summaryCards.map((card) => {
-              const Icon = card.icon;
-              return (
-                <div
-                  key={card.label}
-                  className={`${card.cardBg} rounded-xl p-6 shadow-sm border ${card.borderColor}`}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{card.label}</p>
-                      <p className="mt-3 text-2xl font-semibold text-gray-900">{card.value}</p>
-                    </div>
-                    <div className={`w-10 h-10 rounded-lg ${card.iconBg} flex items-center justify-center`}>
-                      {typeof Icon === 'string' ? (
-                        <span className={`text-sm font-bold ${card.iconColor}`}>{Icon}</span>
-                      ) : (
-                        <Icon className={`w-4 h-4 ${card.iconColor}`} />
-                      )}
+        <>
+          <section className="space-y-6">
+            <div className="grid gap-4 xl:grid-cols-4 lg:grid-cols-2">
+              {summaryCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <div
+                    key={card.label}
+                    className={`${card.cardBg} rounded-xl p-6 shadow-sm border ${card.borderColor}`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{card.label}</p>
+                        <p className="mt-3 text-2xl font-semibold text-gray-900">{card.value}</p>
+                      </div>
+                      <div className={`w-10 h-10 rounded-lg ${card.iconBg} flex items-center justify-center`}>
+                        {typeof Icon === 'string' ? (
+                          <span className={`text-sm font-bold ${card.iconColor}`}>{Icon}</span>
+                        ) : (
+                          <Icon className={`w-4 h-4 ${card.iconColor}`} />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Financial activities
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    A quick view of the latest quote and invoice activity.
-                  </p>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Financial activities
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      A quick view of the latest quote and invoice activity.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="rounded-2xl bg-blue-50 p-4">
+                    <p className="text-sm text-blue-700">Recent Quote</p>
+                    <p className="mt-2 text-base font-semibold text-gray-900">
+                      {quotes[0]?.id} • {quotes[0]?.client}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Expires {quotes[0]?.expiresAt}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-green-50 p-4">
+                    <p className="text-sm text-green-700">Recent Paid Invoice</p>
+                    <p className="mt-2 text-base font-semibold text-gray-900">
+                      {invoices.find((invoice) => invoice.status === "Paid")
+                        ?.id || "None yet"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {invoices.find((invoice) => invoice.status === "Paid")
+                        ? `Paid on ${invoices.find((invoice) => invoice.status === "Paid")?.issuedAt}`
+                        : "No paid invoices available"}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-4">
-                <div className="rounded-2xl bg-blue-50 p-4">
-                  <p className="text-sm text-blue-700">Recent Quote</p>
-                  <p className="mt-2 text-base font-semibold text-gray-900">
-                    {quotes[0]?.id} • {quotes[0]?.client}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Expires {quotes[0]?.expiresAt}
-                  </p>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Performance trends
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      Compare revenue and spending over the month.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                    Updated today
+                  </span>
                 </div>
-                <div className="rounded-2xl bg-green-50 p-4">
-                  <p className="text-sm text-green-700">Recent Paid Invoice</p>
-                  <p className="mt-2 text-base font-semibold text-gray-900">
-                    {invoices.find((invoice) => invoice.status === "Paid")
-                      ?.id || "None yet"}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {invoices.find((invoice) => invoice.status === "Paid")
-                      ? `Paid on ${invoices.find((invoice) => invoice.status === "Paid")?.issuedAt}`
-                      : "No paid invoices available"}
-                  </p>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                      <span>Revenue vs expenses</span>
+                      <span>70%</span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-gray-100">
+                      <div className="h-full w-[70%] rounded-full bg-blue-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                      <span>Invoice collection</span>
+                      <span>42%</span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-gray-100">
+                      <div className="h-full w-[42%] rounded-full bg-green-600" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Performance trends
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    Compare revenue and spending over the month.
-                  </p>
-                </div>
-                <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                  Updated today
-                </span>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                    <span>Revenue vs expenses</span>
-                    <span>70%</span>
-                  </div>
-                  <div className="h-3 overflow-hidden rounded-full bg-gray-100">
-                    <div className="h-full w-[70%] rounded-full bg-blue-600" />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                    <span>Invoice collection</span>
-                    <span>42%</span>
-                  </div>
-                  <div className="h-3 overflow-hidden rounded-full bg-gray-100">
-                    <div className="h-full w-[42%] rounded-full bg-green-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+          </section>
+        </>
       )}
 
       {activeTab === "quotes" && (
@@ -1983,6 +1985,17 @@ const FinanceManager: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => navigate('/analytics')}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-600 transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Open Analytics
+            </button>
           </div>
         </section>
       )}

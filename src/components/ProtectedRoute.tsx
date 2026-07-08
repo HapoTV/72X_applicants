@@ -28,6 +28,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     const currentPath = location.pathname;
     const isAdminRole = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN';
+    const userPackageHydrated = localStorage.getItem('userPackageHydrated') === 'true';
 
     if (requireAuth && !authToken) {
         const redirectTo = unauthenticatedRedirectTo || (requireAdmin ? '/login/asadmin' : '/login');
@@ -41,6 +42,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
     // Admins never go through subscription/payment flow
     if (requireAuth && authToken && isAdminRole) return <>{children}</>;
+
+    // During subscription hydration, allow the route to render and let background checks finalize.
+    if (authToken && !isAdminRole && !userPackageHydrated) {
+        return <>{children}</>;
+    }
 
     if (requireAuth && userStatus === 'PENDING_PAYMENT' && selectedPackage) {
         if (currentPath === '/select-package') return <>{children}</>;

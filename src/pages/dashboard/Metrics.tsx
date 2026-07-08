@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Banknote, Users, TrendingUp, Target, Flame } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import MetricCard from '../../components/MetricCard';
-import { dataInputService } from '../../services/DataInputService';
+// DataInputService removed; rely on backend metrics or localStorage fallbacks
 import { adService } from '../../services/AdService';
 import { EngagementPeriod } from '../../interfaces/AdData';
 import { useAuth } from '../../context/AuthContext';
@@ -83,10 +83,9 @@ const Metrics: React.FC = () => {
 
     const load = async () => {
       try {
-        const [metricsRes, engagementSummary] = await Promise.all([
-          dataInputService.getMetrics(),
-          adService.getUserEngagementSummary(EngagementPeriod.ALL_TIME),
-        ]);
+        const engagementSummary = await adService.getUserEngagementSummary(EngagementPeriod.ALL_TIME);
+        // metricsRes removed; read monthlyRevenue from localStorage if present
+        const metricsRes = { totalRevenue: localStorage.getItem('monthlyRevenue') ? Number(localStorage.getItem('monthlyRevenue')) : undefined, totalCustomers: localStorage.getItem('activeCustomers') };
 
         const goalsAchieved =
           (engagementSummary as any)?.engagementByType?.ACHIEVEMENT_UNLOCKED ??
