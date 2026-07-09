@@ -21,7 +21,6 @@ interface IndustryCardProps {
 
 const IndustryCard: React.FC<IndustryCardProps> = ({
   industry,
-  index,
   isFlipped,
   onMouseEnter,
   onMouseLeave,

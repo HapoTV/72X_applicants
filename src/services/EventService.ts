@@ -4,7 +4,6 @@ import type {
   EventFormData, 
   AdminEventItem, 
   UserEventItem, 
-  EventApiResponse, 
   EventRequest,
   EventType,
   CalendarEventItem

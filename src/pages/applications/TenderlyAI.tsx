@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Bell,
   Bookmark,
   Calendar,
   Filter,
+  LogOut,
   MapPin,
   Moon,
   Search,
   TrendingUp,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 import type { TenderItem } from '../../interfaces/TenderlyAIData';
 
@@ -117,7 +117,7 @@ const isClosingWithinDays = (closingAt: string, days: number) => {
 };
 
 export default function TenderlyAI() {
-  const navigate = useNavigate();
+  const { logoutAppTab } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>(() => {
     try {
@@ -259,14 +259,6 @@ export default function TenderlyAI() {
                     Filters
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard/overview')}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Main Dashboard
-                </button>
                 <h1 className="text-xl font-bold text-gray-900">TenderlyAI</h1>
               </div>
 
@@ -288,6 +280,14 @@ export default function TenderlyAI() {
                 </button>
                 <button type="button" className="p-2 rounded-lg hover:bg-gray-100" aria-label="Notifications">
                   <Bell className="w-5 h-5 text-gray-600" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => logoutAppTab()}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
                 </button>
               </div>
             </div>

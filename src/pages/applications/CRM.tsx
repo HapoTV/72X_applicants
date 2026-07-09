@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, BarChart3, Home, Pencil, Plus, Search, Target, Trash2, TrendingUp, Users, X, Star, HelpCircle, CheckCircle, AlertCircle } from 'lucide-react';
+import { BarChart3, Home, LogOut, Pencil, Plus, Search, Target, Trash2, TrendingUp, Users, X, Star, HelpCircle, CheckCircle, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const statConfigs = [
   {
@@ -147,6 +148,7 @@ const saveCrmStorage = <T,>(key: string, value: T) => {
 
 const CRM: React.FC = () => {
   const navigate = useNavigate();
+  const { logoutAppTab } = useAuth();
   const [activeTab, setActiveTab] = useState<CrmTab>('overview');
   const [isContactFormOpen, setIsContactFormOpen] = useState(false);
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
@@ -547,16 +549,7 @@ const CRM: React.FC = () => {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/overview')}
-              className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Main Dashboard
-            </button>
-
-            <div className="flex items-center gap-2 sm:ml-4">
+            <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-white text-xs font-bold">
                 72X
               </div>
@@ -566,17 +559,18 @@ const CRM: React.FC = () => {
           <p className="text-gray-600 mt-2">Manage customer relationships, leads, sales, and business activity.</p>
         </div>
 
-        <div className="relative w-full lg:w-80">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-          />
-          {searchTerm.trim() && (
-            <div className="absolute right-0 top-11 z-40 w-full rounded-xl border border-gray-100 bg-white shadow-lg">
+        <div className="flex items-center gap-3 w-full lg:w-80">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+            {searchTerm.trim() && (
+              <div className="absolute right-0 top-11 z-40 w-full rounded-xl border border-gray-100 bg-white shadow-lg">
               {searchResults.length === 0 ? (
                 <div className="px-4 py-3 text-sm text-gray-500">No CRM results found.</div>
               ) : (
@@ -599,6 +593,15 @@ const CRM: React.FC = () => {
               )}
             </div>
           )}
+          </div>
+          <button
+            type="button"
+            onClick={() => logoutAppTab()}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
         </div>
       </div>
 

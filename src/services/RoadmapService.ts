@@ -343,7 +343,7 @@ class RoadmapService {
     title: string
   ): Promise<AdminRoadmapItem> {
     try {
-      const generatedRoadmap = await this.generateRoadmap(generationRequest);
+      await this.generateRoadmap(generationRequest);
       
       const roadmapData: RoadmapFormData = {
         title: title,

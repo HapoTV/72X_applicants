@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Calendar, Clock, Video, Users, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventService } from '../services/EventService';
 import { useAuth } from '../context/AuthContext';
 import type { UserEventItem } from '../interfaces/EventData';
-
+import type { EventFormData } from '../interfaces/EventData';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../components/ui/dialog';
+import { DEFAULT_EVENT_TYPE, EventTypeOptions } from '../interfaces/EventData';
 interface Event {
   id: number;
   title: string;
@@ -45,43 +47,106 @@ const Schedule: React.FC = () => {
   const upcomingEventsList = data?.upcoming ?? [];
   const error = isError ? 'Failed to load events' : null;
 
-  // Sample events for calendar
-  const events: Event[] = [
-    {
-      id: 1,
-      title: 'Marketing Strategy Meeting',
-      date: '2025-10-16',
-      time: '10:00 AM',
-      type: 'meeting',
-      description: 'Discuss Q4 marketing campaigns',
-      location: 'Conference Room A'
-    },
-    {
-      id: 2,
-      title: 'Expert Session: Financial Planning',
-      date: '2025-10-16',
-      time: '2:00 PM',
-      type: 'session',
-      description: 'Learn about cash flow management',
-      location: 'Virtual'
-    },
-    {
-      id: 3,
-      title: 'Business Plan Submission',
-      date: '2025-10-18',
-      time: '5:00 PM',
-      type: 'deadline',
-      description: 'Submit updated business plan'
-    },
-    {
-      id: 4,
-      title: 'Team Standup',
-      date: '2025-10-17',
-      time: '9:00 AM',
-      type: 'meeting',
-      location: 'Office'
+  // Local user events fetched from backend (used for calendar and lists)
+  const [userEvents, setUserEvents] = useState<UserEventItem[]>([]);
+
+  // Local state for Add Event dialog/form
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [form, setForm] = useState<EventFormData>({
+    title: '',
+    date: new Date().toISOString().slice(0, 10),
+    time: '09:00',
+    location: '',
+    description: '',
+    eventType: DEFAULT_EVENT_TYPE,
+  });
+
+  const loadLocalEvents = useCallback((): UserEventItem[] => {
+    try {
+      const raw = localStorage.getItem(LOCAL_EVENTS_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw) as UserEventItem[];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      console.error('Failed to parse local events', e);
+      return [];
     }
-  ];
+  }, []);
+
+  const fetchUserEvents = useCallback(async () => {
+    try {
+      const ev = await eventService.getUserEvents();
+      const local = loadLocalEvents();
+      setUserEvents([...ev, ...local]);
+    } catch (e) {
+      console.error('Failed to load user events for calendar', e);
+    }
+  }, [loadLocalEvents]);
+
+  useEffect(() => {
+    if (user?.email) {
+      void fetchUserEvents();
+    }
+  }, [fetchUserEvents, user?.email]);
+
+  // ensure we pick up any local events if service not available yet
+  useEffect(() => {
+    const local = loadLocalEvents();
+    if (local.length > 0) setUserEvents(prev => [...prev, ...local.filter(l => !prev.find(p => p.id === l.id))]);
+  }, [loadLocalEvents]);
+
+  const queryClient = useQueryClient();
+
+  const LOCAL_EVENTS_KEY = 'local_user_events';
+
+  const saveLocalEvent = (ev: UserEventItem) => {
+    try {
+      const existing = loadLocalEvents();
+      const next = [...existing, ev];
+      localStorage.setItem(LOCAL_EVENTS_KEY, JSON.stringify(next));
+    } catch (e) {
+      console.error('Failed to save local event', e);
+    }
+  };
+
+  const handleFormChange = (key: keyof EventFormData, value: any) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleCreate = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    // Save locally for now
+    const rawDateTime = `${form.date} ${form.time}:00`;
+    const newEvent: UserEventItem = {
+      id: Date.now().toString(),
+      title: form.title,
+      date: form.date,
+      time: form.time,
+      location: form.location,
+      type: form.eventType,
+      organisation: undefined,
+      hasReminder: false,
+      rawDateTime,
+    };
+
+    try {
+      saveLocalEvent(newEvent);
+      setUserEvents(prev => [...prev, newEvent]);
+      setIsAddOpen(false);
+      setForm({
+        title: '',
+        date: new Date().toISOString().slice(0, 10),
+        time: '09:00',
+        location: '',
+        description: '',
+        eventType: DEFAULT_EVENT_TYPE,
+      });
+      // Trigger refetch for server lists if present
+      queryClient.invalidateQueries(['events', user?.email]);
+    } catch (err) {
+      console.error('Failed to save event locally', err);
+    }
+  };
 
   const getEventTypeColor = (type: string) => {
     switch (type) {
@@ -111,13 +176,28 @@ const Schedule: React.FC = () => {
     }
   };
 
-  // Get events for a specific date
+  // Get events for a specific date (from backend user events)
   const getEventsForDate = (day: number) => {
     if (day <= 0 || day > 31) return [];
-    return events.filter(event => {
-      const eventDate = new Date(event.date);
-      return eventDate.getDate() === day && eventDate.getMonth() === currentDate.getMonth();
-    });
+    const month = currentDate.getMonth();
+    const year = currentDate.getFullYear();
+    return userEvents
+      .filter(ev => {
+        const raw = ev.rawDateTime || '';
+        const datePart = raw.split(' ')[0]; // YYYY-MM-DD
+        if (!datePart) return false;
+        const d = new Date(datePart + 'T00:00:00');
+        return d.getDate() === day && d.getMonth() === month && d.getFullYear() === year;
+      })
+      .map(ev => ({
+        id: Number(ev.id) || Math.floor(Math.random() * 100000),
+        title: ev.title,
+        date: ev.rawDateTime ? ev.rawDateTime.split(' ')[0] : ev.date,
+        time: ev.time,
+        type: (ev.type || 'meeting').toLowerCase() as Event['type'],
+        description: ev?.description,
+        location: ev.location,
+      } as Event));
   };
 
   const monthNames = [
@@ -133,27 +213,39 @@ const Schedule: React.FC = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   };
 
-  const todayEvents = events.filter(event => {
-    const eventDate = new Date(event.date);
+  const todayEvents = userEvents.filter(ev => {
+    const raw = ev.rawDateTime || '';
+    const datePart = raw.split(' ')[0] || ev.date;
+    const d = new Date(datePart + 'T00:00:00');
     const today = new Date();
-    return eventDate.toDateString() === today.toDateString();
+    return d.toDateString() === today.toDateString();
   });
 
-  const upcomingEvents = events.filter(event => {
-    const eventDate = new Date(event.date);
-    const today = new Date();
-    return eventDate > today;
-  }).slice(0, 5);
+  const upcomingEvents = userEvents
+    .filter(ev => {
+      const raw = ev.rawDateTime || '';
+      const datePart = raw.split(' ')[0] || ev.date;
+      const d = new Date(datePart + 'T00:00:00');
+      const today = new Date();
+      return d > today;
+    })
+    .slice(0, 5);
+
+  // Merge server lists (from query) with local events so Events view shows both
+  const combinedTodayList = [...todayEventsList, ...todayEvents];
+  const combinedUpcomingList = [...upcomingEventsList, ...upcomingEvents];
 
   if (!user?.email) {
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl p-6 text-white">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
           <div className="flex items-center space-x-3 mb-2">
-            <Calendar className="w-8 h-8" />
-            <h1 className="text-2xl font-bold">Schedule</h1>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
           </div>
-          <p className="text-primary-100">
+          <p className="text-gray-600">
             Manage your meetings, sessions, and important deadlines
           </p>
         </div>
@@ -169,17 +261,12 @@ const Schedule: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center space-x-3 mb-2">
-              <Calendar className="w-8 h-8" />
-              <h1 className="text-2xl font-bold">Schedule</h1>
-            </div>
-            <p className="text-primary-100">
-              Manage your meetings, sessions, and important deadlines
-            </p>
-          </div>
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Schedule</h1>
+          <p className="text-gray-600 mt-2">
+            Manage your meetings, sessions, and important deadlines
+          </p>
         </div>
       </div>
 
@@ -392,17 +479,69 @@ const Schedule: React.FC = () => {
                   <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-900">Today's Events</h3>
-                      <button 
-                        onClick={() => refetch()}
-                        className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                      >
-                        Refresh
-                      </button>
+                      <div className="flex items-center space-x-3">
+                        <button 
+                          onClick={() => refetch()}
+                          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          Refresh
+                        </button>
+
+                        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                          <DialogTrigger asChild>
+                            <button className="bg-primary-600 text-white text-sm px-3 py-2 rounded-md hover:bg-primary-700">Add Event</button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Create Personal Event</DialogTitle>
+                              <DialogDescription>Add an event to your personal schedule</DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleCreate} className="space-y-4 mt-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700">Title</label>
+                                <input required value={form.title} onChange={e => handleFormChange('title', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700">Date</label>
+                                  <input required type="date" value={form.date} onChange={e => handleFormChange('date', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700">Time</label>
+                                  <input required type="time" value={form.time} onChange={e => handleFormChange('time', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700">Location</label>
+                                <input value={form.location} onChange={e => handleFormChange('location', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700">Type</label>
+                                <select value={form.eventType} onChange={e => handleFormChange('eventType', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200">
+                                  {EventTypeOptions.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea value={form.description} onChange={e => handleFormChange('description', e.target.value)} className="mt-1 block w-full rounded-md border-gray-200" />
+                              </div>
+                              <DialogFooter className="flex items-center justify-end space-x-2">
+                                <DialogClose asChild>
+                                  <button type="button" className="px-3 py-2 rounded-md border">Cancel</button>
+                                </DialogClose>
+                                <button type="submit" className="px-3 py-2 rounded-md bg-primary-600 text-white">Create</button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </div>
                     
-                    {todayEventsList.length > 0 ? (
+                    {combinedTodayList.length > 0 ? (
                       <div className="space-y-3">
-                        {todayEventsList.map((event) => {
+                        {combinedTodayList.map((event) => {
                           const colors = getEventTypeColor(event.type);
                           return (
                             <div
@@ -450,9 +589,9 @@ const Schedule: React.FC = () => {
                       </span>
                     </div>
                     
-                    {upcomingEventsList.length > 0 ? (
+                    {combinedUpcomingList.length > 0 ? (
                       <div className="space-y-3">
-                        {upcomingEventsList.map((event) => {
+                        {combinedUpcomingList.map((event) => {
                           const colors = getEventTypeColor(event.type);
                           return (
                             <div

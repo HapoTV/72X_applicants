@@ -265,8 +265,8 @@ const AdminProfile: React.FC = () => {
     const [passwordRequirements, setPasswordRequirements] = useState<PasswordRequirements>(EMPTY_PASSWORD_REQUIREMENTS);
 
     useEffect(() => {
-        fetchUserProfile();
-    }, []);
+        void fetchUserProfile();
+    }, [user?.userId]);
 
     useEffect(() => {
         if (activeTab !== 'notifications') return;
@@ -287,7 +287,7 @@ const AdminProfile: React.FC = () => {
         } catch (error) {
             console.error('Error loading notification preferences:', error);
         }
-    }, [activeTab, user?.userId, user?.email]);
+    }, [activeTab, user]);
 
     const fetchUserProfile = async () => {
         try {

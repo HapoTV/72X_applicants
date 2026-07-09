@@ -55,7 +55,6 @@ const FlipCardQuizModal: React.FC<Props> = ({
   const [matchMapping, setMatchMapping] = useState<Record<string, string>>({});
   const [matchDefinitions, setMatchDefinitions] = useState<string[]>([]);
   const [orderedSteps, setOrderedSteps] = useState<string[]>([]);
-  const [orderTouched, setOrderTouched] = useState(false);
   const [categorizeAssignments, setCategorizeAssignments] = useState<Record<string, string>>({});
   const [revealedExplanation, setRevealedExplanation] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>('idle');
@@ -95,7 +94,6 @@ const FlipCardQuizModal: React.FC<Props> = ({
     setMatchMapping({});
     setMatchDefinitions([]);
     setOrderedSteps([]);
-    setOrderTouched(false);
     setCategorizeAssignments({});
     setRevealedExplanation(false);
     setFeedback('idle');
@@ -250,7 +248,7 @@ const FlipCardQuizModal: React.FC<Props> = ({
               matchDefinitions={matchDefinitions}
               orderedSteps={orderedSteps}
               onOrderedStepsChange={setOrderedSteps}
-              onOrderTouched={setOrderTouched}
+              onOrderTouched={() => undefined}
               categorizeAssignments={categorizeAssignments}
               onCategorizeAssignmentChange={setCategorizeAssignments}
               fillBlankSelected={fillBlankSelected}

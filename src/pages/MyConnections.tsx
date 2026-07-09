@@ -44,7 +44,6 @@ const MyConnections: React.FC = () => {
     setSelectedLocation,
     setSelectedOrganisation,
     clearFilters,
-    refetch,
     refreshConversations,
     refreshConnectionStatuses,
   } = useConnections(authUser?.userId);
@@ -96,27 +95,14 @@ const MyConnections: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="mt-6">
-        <div className="text-red-600">{error}</div>
-        <button
-          onClick={refetch}
-          className="mt-3 inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Connections</h1>
-          <p className="text-gray-600">Connect with fellow entrepreneurs, share experiences, and grow together</p>
-        </div>
+      <div className="flex flex-col gap-4">
+        {error && users.length > 0 && (
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+            Unable to refresh connections right now. Showing cached results.
+          </div>
+        )}
       </div>
 
       {/* Tabs */}

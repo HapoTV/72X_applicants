@@ -73,17 +73,12 @@ const LearningModules: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in px-2 sm:px-0">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center space-x-3 mb-2">
-              <BookOpen className="w-8 h-8" />
-              <h1 className="text-2xl font-bold">Learning</h1>
-            </div>
-            <p className="text-primary-100">
-              Master essential skills with curated courses and materials
-            </p>
-          </div>
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Learning</h1>
+          <p className="text-gray-600 mt-2">
+            Master essential skills with curated courses and materials
+          </p>
         </div>
       </div>
 

@@ -61,12 +61,10 @@ const Community: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Community</h1>
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Community Forum</h1>
         <p className="text-gray-600">Explore discussions, connect with peers, and find mentorship all in one place.</p>
       </div>
-
-      
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="border-b border-gray-200">

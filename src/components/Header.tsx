@@ -1,6 +1,6 @@
 // src/components/Header.tsx
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Menu, Bell, Search, Clock, Gift, ChevronDown, BellRing, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UserSubscriptionService from '../services/UserSubscriptionService';
@@ -77,30 +77,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (isFreeTrial) {
-      fetchFreeTrialInfo();
-      // Update more frequently to keep countdown accurate (every 30 minutes)
-      const interval = setInterval(fetchFreeTrialInfo, 30 * 60 * 1000); // 30 minutes
-      return () => clearInterval(interval);
-    }
-  }, [isFreeTrial]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (freeTrialRef.current && !freeTrialRef.current.contains(event.target as Node)) {
-        setFreeTrialDropdownOpen(false);
-      }
-
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const fetchFreeTrialInfo = async () => {
+  const fetchFreeTrialInfo = useCallback(async () => {
     if (isLoadingTrial) return;
     
     setIsLoadingTrial(true);
@@ -137,7 +114,32 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
     } finally {
       setIsLoadingTrial(false);
     }
-  };
+  }, [isLoadingTrial]);
+
+  useEffect(() => {
+    if (isFreeTrial) {
+      void fetchFreeTrialInfo();
+      // Update more frequently to keep countdown accurate (every 30 minutes)
+      const interval = setInterval(() => {
+        void fetchFreeTrialInfo();
+      }, 30 * 60 * 1000); // 30 minutes
+      return () => clearInterval(interval);
+    }
+  }, [fetchFreeTrialInfo, isFreeTrial]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (freeTrialRef.current && !freeTrialRef.current.contains(event.target as Node)) {
+        setFreeTrialDropdownOpen(false);
+      }
+
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const formatDate = (dateString: string): string => {
     try {
@@ -148,7 +150,7 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
         month: 'long',
         day: 'numeric'
       });
-    } catch (_error) {
+    } catch {
       return 'Date unavailable';
     }
   };

@@ -12,7 +12,7 @@ interface Props {
 }
 
 const CalendarMonth: React.FC<Props> = ({
-  monthName,
+  monthName: _monthName,
   year,
   month,
   dayNames,

@@ -237,12 +237,12 @@ export const useAdCarousel = (params: {
   const cooldownRemaining = useMemo(() => {
     if (!currentAd?.adId) return 0;
     return adService.getCooldownRemaining(currentAd.adId);
-  }, [currentAd?.adId, clickCooldowns]);
+  }, [currentAd?.adId]);
 
   const canClick = useMemo(() => {
     if (!currentAd?.adId) return true;
     return adService.canClickAd(currentAd.adId);
-  }, [currentAd?.adId, clickCooldowns]);
+  }, [currentAd?.adId]);
 
   return {
     currentAd,

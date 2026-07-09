@@ -76,7 +76,7 @@ const AdTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, isSuperAdmin, itemsPerPage]);
 
   useEffect(() => {
     fetchAds();

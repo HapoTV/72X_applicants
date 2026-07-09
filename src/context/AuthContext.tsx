@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   login: (userData: User, authToken?: string) => void;
   logout: () => void;
+  logoutAppTab: () => void;
   updateUserStatus: (status: string) => void;
   updateUserOrganisation: (organisation: string) => void;
   isAuthenticated: boolean;
@@ -59,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (redirectTo = "/login") => {
     const itemsToKeep = ['language', 'theme'];
     Object.keys(localStorage).forEach(key => {
       if (!itemsToKeep.includes(key)) localStorage.removeItem(key);
@@ -69,7 +70,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setTempSessionToken(null);
     setTwoFactorEnabled(false);
     setUserOrganisation(null);
-    window.location.href = "/login";
+    window.location.href = redirectTo;
+  };
+
+  const logoutAppTab = () => {
+    window.location.href = '/';
   };
 
   const updateUserStatus = (status: string) => {
@@ -154,7 +159,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               trialStatus.message.toLowerCase().includes('expired') ||
               trialStatus.message.toLowerCase().includes('already been used')));
 
-        const currentPath = window.location.pathname;
         if (hasUsedTrial) {
           // mark user as pending payment but do not force-nav; wait for hydration to complete
           localStorage.setItem('userStatus', 'PENDING_PAYMENT');
@@ -238,7 +242,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{
-      user, login, logout, updateUserStatus, updateUserOrganisation,
+      user, login, logout, logoutAppTab, updateUserStatus, updateUserOrganisation,
       isAuthenticated, isAdmin, isSuperAdmin, isCocAdmin,
       token, tempSessionToken, setTempSessionToken,
       twoFactorEnabled, setTwoFactorEnabled,

@@ -121,7 +121,7 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
 
   return (
     <div
-      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+      className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer"
       onClick={() => navigate(`/community/${discussion.id}`)}
       role="button"
       tabIndex={0}
@@ -131,7 +131,7 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
         }
       }}
     >
-      <div className="flex items-start space-x-4">
+      <div className="flex items-start space-x-3">
         <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center">
           <span className="text-white text-sm font-medium">
             {discussion.author?.charAt(0) || 'U'}
@@ -141,41 +141,41 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between mb-2">
             <div className="min-w-0">
-              <h3 className="font-semibold text-gray-900 hover:text-primary-600">
+              <h3 className="font-semibold text-gray-900 hover:text-primary-600 text-base">
                 {discussion.title}
                 {discussion.isHot && (
-                  <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                  <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-[10px] rounded-full">
                     Hot
                   </span>
                 )}
               </h3>
 
-              <div className="flex items-center space-x-2 mt-1">
-                <span className="text-sm text-gray-600">
+              <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-600">
+                <span>
                   by {discussion.author || 'Anonymous'}
                 </span>
 
                 {categoryName && (
-                  <span className={`px-2 py-1 text-xs rounded-full ${categoryColor}`}>
+                  <span className={`px-2 py-1 rounded-full ${categoryColor}`}>
                     {categoryName}
                   </span>
                 )}
               </div>
             </div>
 
-            <span className="text-sm text-gray-500">
+            <span className="text-xs text-gray-500">
               {discussion.timeAgo}
             </span>
           </div>
 
-          <p className="text-gray-600 text-sm mb-3">
+          <p className="text-gray-600 text-sm mb-2 leading-relaxed">
             {discussion.preview}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 border-t border-gray-100 pt-3" onClick={(event) => event.stopPropagation()}>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+      <div className="mt-3 border-t border-gray-100 pt-2" onClick={(event) => event.stopPropagation()}>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
           <button
             type="button"
             onClick={handleLikeClick}
@@ -208,14 +208,14 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
         </div>
 
         {showComments && (
-          <div className="mt-3 rounded-lg bg-gray-50 p-3 space-y-2">
+          <div className="mt-2 rounded-lg bg-gray-50 p-2 space-y-2">
             {comments.map((comment) => (
               <div
                 key={comment.id}
-                className="flex items-start justify-between gap-3 rounded-lg bg-white px-3 py-2"
+                className="flex items-start justify-between gap-3 rounded-lg bg-white px-2 py-1"
               >
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-gray-700">{comment.author}</p>
+                  <p className="text-[11px] font-medium text-gray-700">{comment.author}</p>
                   <p className="break-words text-sm text-gray-600">{comment.content}</p>
                 </div>
                 {comment.userId === currentUserId && (
@@ -239,7 +239,7 @@ const DiscussionItem: React.FC<DiscussionItemProps> = ({
                 onChange={(event) => setCommentText(event.target.value)}
                 onClick={(event) => event.stopPropagation()}
                 placeholder="Add a comment..."
-                className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
               />
               <button
                 type="submit"

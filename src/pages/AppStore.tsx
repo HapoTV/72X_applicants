@@ -1,18 +1,16 @@
 import React from 'react';
-import { AppWindow, Briefcase, Sparkles, Shield, ShieldCheck, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Briefcase, Sparkles, Shield, ShieldCheck, ShoppingBag, TrendingUp } from 'lucide-react';
 
 const AppStore: React.FC = () => {
   return (
     <div className="flex-1 p-6 bg-gray-50 overflow-auto">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center space-x-3 mb-6">
-          <AppWindow className="w-8 h-8 text-blue-600" />
+      <div className="space-y-6 animate-fade-in px-2 sm:px-0">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
           <h1 className="text-3xl font-bold text-gray-900">App Store</h1>
+          <p className="text-gray-700 mt-2">
+            Welcome to the App Store! Here you can access powerful business applications designed to help you manage and grow your business.
+          </p>
         </div>
-        
-        <p className="text-gray-700 mb-8">
-          Welcome to the App Store! Here you can access powerful business applications designed to help you manage and grow your business.
-        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[

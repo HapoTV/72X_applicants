@@ -210,9 +210,15 @@ const RoadmapGenerator: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Acceleration Roadmap Generator</h1>
-        <p className="text-gray-600">Get a personalized roadmap to accelerate your business growth</p>
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Acceleration Roadmap Generator</h1>
+            <p className="text-gray-600 mt-1 max-w-2xl">
+              Get a personalized roadmap to accelerate your business growth
+            </p>
+          </div>
+        </div>
       </div>
 
       {error && (

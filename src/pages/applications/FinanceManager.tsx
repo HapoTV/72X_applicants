@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ArrowLeft,
   BarChart3,
   CreditCard,
   FileText,
   FilePlus,
   Home,
+  LogOut,
   Search,
   Shield,
-  TrendingUp,
 } from "lucide-react";
+import { useAuth } from '../../context/AuthContext';
 
 type FinanceTab = "overview" | "quotes" | "invoices" | "expenses" | "reports";
 
@@ -92,6 +92,7 @@ const RandIcon = ({
 
 const FinanceManager: React.FC = () => {
   const navigate = useNavigate();
+  const { logoutAppTab } = useAuth();
   const [activeTab, setActiveTab] = useState<FinanceTab>("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [quoteFormMode, setQuoteFormMode] = useState<"list" | "create" | "edit">("list");
@@ -690,16 +691,7 @@ const FinanceManager: React.FC = () => {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/overview')}
-              className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Main Dashboard
-            </button>
-
-            <div className="flex items-center gap-2 sm:ml-4">
+            <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-white text-xs font-bold">
                 72X
               </div>
@@ -711,15 +703,25 @@ const FinanceManager: React.FC = () => {
           </p>
         </div>
 
-        <div className="relative w-full lg:w-80">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search finance records..."
-            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
-          />
+        <div className="flex items-center gap-3 w-full lg:w-80">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search finance records..."
+              className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => logoutAppTab()}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
         </div>
       </div>
 
