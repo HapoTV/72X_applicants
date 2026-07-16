@@ -2,14 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" sizes="any" href="%BASE_URL%branding.svg?v=1" />
-    <link rel="shortcut icon" type="image/svg+xml" href="%BASE_URL%branding.svg?v=1" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/branding.svg?v=1" />
+    <link rel="shortcut icon" type="image/svg+xml" href="/branding.svg?v=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>72X</title>
   </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
     <script type="text/javascript">
+      // Handle SPA routing for GitHub Pages
       (function (l) {
         if (l.search && l.search[1] === '/') {
           var decoded = l.search
@@ -25,6 +27,5 @@
         }
       })(window.location);
     </script>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
