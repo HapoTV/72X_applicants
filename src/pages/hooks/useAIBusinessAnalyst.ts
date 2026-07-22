@@ -38,10 +38,15 @@ export function useAIBusinessAnalyst() {
       await fetchUsageStats();
     } catch (err: any) {
       console.error('💥 Analysis error:', err);
-      let message = err.message || 'An error occurred while analyzing your query.';
+      let message =
+        err.response?.data?.error ||
+        err.message ||
+        'An error occurred while analyzing your query.';
 
       if (message.includes('Failed to fetch')) {
         message = 'Cannot connect to backend. Make sure Spring Boot is running on port 8080.';
+      } else if (message.includes('timeout') || message.includes('Timeout')) {
+        message = 'The AI analysis is taking longer than expected. Please try again.';
       } else if (message.includes('Unexpected end of JSON')) {
         message = 'Backend returned empty response. Check server logs for errors.';
       }
