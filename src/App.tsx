@@ -41,6 +41,9 @@ const CreatePassword = React.lazy(() => import('./pages/CreatePassword'));
 const SelectPackage = React.lazy(() => import('./pages/SelectPackage'));
 const RequestDemo = React.lazy(() => import('./pages/RequestDemo'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
+const ProgramsPage = React.lazy(() => import('./pages/ProgramsPage'));
+const ProgrammeDetailsPage = React.lazy(() => import('./pages/programmes/ProgrammeDetailsPage'));
+const ApplicationForm = React.lazy(() => import('./pages/programmes/ApplicationForm'));
 const TenderlyAI = React.lazy(() => import('./pages/applications/TenderlyAI'));
 const ResetPasswordRequest = React.lazy(() => import('./pages/ResetPasswordRequest'));
 const ResetPasswordVerify = React.lazy(() => import('./pages/ResetPasswordVerify'));
@@ -113,6 +116,9 @@ function App() {
               <Route path="/verify-otp" element={<VerifyOtp />} />
               <Route path="/request-demo" element={<RequestDemo />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/programs" element={<ProgramsPage />} />
+              <Route path="/programs/:slug" element={<ProgrammeDetailsPage />} />
+              <Route path="/programs/:slug/apply" element={<ApplicationForm program={{ id: 'business-development-programme', title: 'Business Development Programme', partner: '72X', description: 'A structured programme focused on business growth, mentorship and practical support for entrepreneurs and SMEs.', duration: '12 Weeks', location: 'Gauteng & Eastern Cape', closingDate: '31 August 2026' }} />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/signup/success" element={<SignupSuccessRouter />} />
               <Route path="/signup/success/provided" element={<SignupSuccessProvided />} />
