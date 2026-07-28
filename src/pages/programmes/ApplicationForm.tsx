@@ -5,15 +5,95 @@ import LandingHeader from '../landing/components/LandingHeader';
 import { useLandingPage } from '../landing/hooks/useLandingPage';
 import type { Programme } from './types';
 import FormHeader from './components/FormHeader';
-import BusinessInformationSection from './components/BusinessInformationSection';
-import ApplicantInformationSection from './components/ApplicantInformationSection';
-import BusinessDetailsSection from './components/BusinessDetailsSection';
-import SupportingDocumentsSection from './components/SupportingDocumentsSection';
-import DeclarationSection from './components/DeclarationSection';
 
 interface ApplicationFormProps {
   program: Programme;
 }
+
+const BBEE_LEVELS = [
+  'Level 1',
+  'Level 2',
+  'Level 3',
+  'Level 4',
+  'Level 5',
+  'Level 6',
+  'Level 7',
+  'Level 8',
+  'Non-Compliant',
+  'Exempt Micro Enterprise (EME)',
+];
+
+const YEARS_ESTABLISHED = Array.from({ length: 2024 - 2010 + 1 }, (_, i) => String(2010 + i));
+
+const ANNUAL_TURNOVER_OPTIONS = [
+  'R0 - R1 Million',
+  'R1 Million - R2.5 Million',
+  'R2.5 Million - R5 Million',
+];
+
+const BUSINESS_OWNERSHIP_OPTIONS = ['Woman-Owned', 'Youth-Owned', 'Other'];
+
+const APPLICATION_DOCUMENTS = [
+  'CIPC Registration Document',
+  'Valid B-BBEE Certificate/Affidavit',
+  'Proof of ID',
+  'Valid Tax Clearance Certificate (Optional)',
+  'Business Profile (Optional)',
+];
+
+// Matches the "Supporting Company Documents" upload section for the
+// documents confirmed above. Accepts PDF only, up to 100MB per file.
+const SUPPORTING_DOCUMENT_SLOTS = [
+  { key: 'cipcDocument', label: 'CIPC Registration Document' },
+  { key: 'bbeeDocument', label: 'Valid B-BBEE Certificate/Affidavit' },
+  { key: 'proofOfId', label: 'Proof of ID' },
+  { key: 'taxClearance', label: 'Valid Tax Clearance Certificate (Optional)' },
+  { key: 'businessProfile', label: 'Business Profile (Optional)' },
+] as const;
+
+const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
+
+interface FormState {
+  fullName: string;
+  gender: string;
+  email: string;
+  cellphone: string;
+  businessName: string;
+  cipcNumber: string;
+  businessAddress: string;
+  cityTownship: string;
+  businessIndustry: string;
+  bbeeLevel: string;
+  yearEstablished: string;
+  annualTurnover: string;
+  businessOwnership: string[];
+  businessDescription: string;
+  uniqueValueProposition: string;
+  applicationDocuments: string[];
+  acceptDeclaration: string;
+  supportingDocuments: Partial<Record<(typeof SUPPORTING_DOCUMENT_SLOTS)[number]['key'], File | null>>;
+}
+
+const initialFormState: FormState = {
+  fullName: '',
+  gender: '',
+  email: '',
+  cellphone: '',
+  businessName: '',
+  cipcNumber: '',
+  businessAddress: '',
+  cityTownship: '',
+  businessIndustry: '',
+  bbeeLevel: '',
+  yearEstablished: '',
+  annualTurnover: '',
+  businessOwnership: [],
+  businessDescription: '',
+  uniqueValueProposition: '',
+  applicationDocuments: [],
+  acceptDeclaration: '',
+  supportingDocuments: {},
+};
 
 const ApplicationForm: React.FC<ApplicationFormProps> = ({ program }) => {
   const navigate = useNavigate();
@@ -26,39 +106,39 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ program }) => {
   } = useLandingPage();
 
   const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    businessName: '',
-    tradingName: '',
-    registrationNumber: '',
-    businessType: '',
-    industry: '',
-    yearsInBusiness: '',
-    employees: '',
-    annualTurnover: '',
-    firstName: '',
-    lastName: '',
-    idNumber: '',
-    email: '',
-    mobileNumber: '',
-    alternativeNumber: '',
-    gender: '',
-    age: '',
-    province: '',
-    town: '',
-    businessLocationProvince: '',
-    municipality: '',
-    businessTown: '',
-    address: '',
-    postalCode: '',
-    businessDescription: '',
-    productsServices: '',
-    targetMarket: '',
-    challenges: '',
-    motivation: '',
-  });
+  const [formData, setFormData] = useState<FormState>(initialFormState);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: keyof FormState, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleArrayValue = (field: keyof FormState, value: string) => {
+    setFormData((prev) => {
+      const current = prev[field] as string[];
+      const exists = current.includes(value);
+      return {
+        ...prev,
+        [field]: exists ? current.filter((item) => item !== value) : [...current, value],
+      };
+    });
+  };
+
+  const handleFileChange = (
+    key: (typeof SUPPORTING_DOCUMENT_SLOTS)[number]['key'],
+    file: File | null,
+  ) => {
+    if (file && file.type !== 'application/pdf') {
+      window.alert('Please upload a PDF file.');
+      return;
+    }
+    if (file && file.size > MAX_UPLOAD_SIZE_BYTES) {
+      window.alert('File is too large. Maximum upload size is 100MB.');
+      return;
+    }
+    setFormData((prev) => ({
+      ...prev,
+      supportingDocuments: { ...prev.supportingDocuments, [key]: file },
+    }));
   };
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -67,7 +147,24 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ program }) => {
   };
 
   const isComplete = useMemo(() => {
-    return Object.values(formData).some((value) => value.trim() !== '');
+    return (
+      formData.fullName.trim() !== '' &&
+      formData.gender.trim() !== '' &&
+      formData.email.trim() !== '' &&
+      formData.cellphone.trim() !== '' &&
+      formData.businessName.trim() !== '' &&
+      formData.cipcNumber.trim() !== '' &&
+      formData.businessAddress.trim() !== '' &&
+      formData.cityTownship.trim() !== '' &&
+      formData.businessIndustry.trim() !== '' &&
+      formData.bbeeLevel.trim() !== '' &&
+      formData.yearEstablished.trim() !== '' &&
+      formData.annualTurnover.trim() !== '' &&
+      formData.businessDescription.trim() !== '' &&
+      formData.uniqueValueProposition.trim() !== '' &&
+      formData.applicationDocuments.length > 0 &&
+      formData.acceptDeclaration.trim() !== ''
+    );
   }, [formData]);
 
   if (submitted) {
@@ -128,11 +225,400 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ program }) => {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <FormHeader program={program} />
-          <BusinessInformationSection formData={formData} onChange={handleChange} />
-          <ApplicantInformationSection formData={formData} onChange={handleChange} />
-          <BusinessDetailsSection formData={formData} onChange={handleChange} />
-          <SupportingDocumentsSection />
-          <DeclarationSection />
+
+          {/* Intro / eligibility text */}
+          <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <p className="text-base leading-8 text-slate-600">
+              Standard Bank Enterprise Development, in collaboration with the Gauteng Provincial Treasury, is
+              pleased to announce the return of the Gauteng Township Business Development Programme, in
+              partnership with Classic Oriental Consultancy. The programme will equip 100 selected businesses
+              with essential business skills and mentorship, empowering them to thrive and succeed.
+            </p>
+            <p className="mt-4 text-base leading-8 text-slate-600">
+              Are you a registered township business owner in the Gauteng Province that is willing to learn and
+              grow? Join the Standard Bank 6 Week Township Business Development Programme, see the following for
+              more details:
+            </p>
+
+            <h3 className="mt-6 text-base font-semibold text-slate-900">Who can apply for the programme:</h3>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-7 text-slate-600">
+              <li>Gauteng based Business.</li>
+              <li>Business that is 51% or more black owned (broad-based black; South African citizen).</li>
+              <li>Trading within South Africa and the majority shareholder be a Black South African citizen.</li>
+              <li>An existing, established business with a minimum annual turnover of R0 to R5 Million.</li>
+              <li>Business must be operational for a minimum of 12 months to 5 years.</li>
+              <li>
+                The business must be formally registered with CIPC as a (Pty) Ltd, and the business must be in
+                good standing with all valid compliance documents (B-BBEE certificate, etc.).
+              </li>
+              <li>MUST have transportation to the training venue (in the designated area where you will be trained).</li>
+            </ul>
+
+            <h3 className="mt-6 text-base font-semibold text-slate-900">Exclusions:</h3>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-7 text-slate-600">
+              <li>Non-Profit Organisations, Non-Government Organisations, Co-operatives and joint ventures.</li>
+              <li>Standard Bank staff members.</li>
+            </ul>
+
+            <p className="mt-6 text-sm font-semibold italic text-slate-700">
+              Complete this application form and submit it no later than Tuesday, 23 September 2025.
+            </p>
+
+            <p className="mt-4 text-xs italic leading-6 text-slate-500">
+              By registering for the development programme you acknowledge that your personal information will
+              be processed by us according to our privacy statement which is in line with applicable laws on
+              protecting and processing personal information.
+            </p>
+          </section>
+
+          {/* Personal Details */}
+          <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-xl font-semibold text-slate-900">Personal Details:</h2>
+
+            <div className="mt-6 space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Name and Surname <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.fullName}
+                  onChange={(e) => handleChange('fullName', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-2 flex gap-6">
+                  {['Female', 'Male'].map((option) => (
+                    <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="radio"
+                        name="gender"
+                        required
+                        checked={formData.gender === option}
+                        onChange={() => handleChange('gender', option)}
+                        className="h-4 w-4 text-[#2563EB]"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => handleChange('email', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Cellphone Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.cellphone}
+                  onChange={(e) => handleChange('cellphone', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Business Details */}
+          <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-xl font-semibold text-slate-900">Business Details:</h2>
+
+            <div className="mt-6 space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Business Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.businessName}
+                  onChange={(e) => handleChange('businessName', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  CIPC Company Registration No. <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.cipcNumber}
+                  onChange={(e) => handleChange('cipcNumber', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Business Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.businessAddress}
+                  onChange={(e) => handleChange('businessAddress', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  City/Township <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.cityTownship}
+                  onChange={(e) => handleChange('cityTownship', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Business Industry <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Hair Salon, Spaza Shop, Logistics..."
+                  value={formData.businessIndustry}
+                  onChange={(e) => handleChange('businessIndustry', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  B-BBEE Level Contributor: <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.bbeeLevel}
+                  onChange={(e) => handleChange('bbeeLevel', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                >
+                  <option value="">Please Select</option>
+                  {BBEE_LEVELS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Year Established <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.yearEstablished}
+                  onChange={(e) => handleChange('yearEstablished', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                >
+                  <option value="">Please Select</option>
+                  {YEARS_ESTABLISHED.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Annual Turnover (Last Financial Year) <span className="text-red-500">*</span>
+                </label>
+                <select
+                  required
+                  value={formData.annualTurnover}
+                  onChange={(e) => handleChange('annualTurnover', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                >
+                  <option value="">Please Select</option>
+                  {ANNUAL_TURNOVER_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Select the option that best describes your business: <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-2 space-y-2">
+                  {BUSINESS_OWNERSHIP_OPTIONS.map((option) => (
+                    <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={formData.businessOwnership.includes(option)}
+                        onChange={() => toggleArrayValue('businessOwnership', option)}
+                        className="h-4 w-4 rounded text-[#2563EB]"
+                      />
+                      {option}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  Describe Your Business: (Provide a brief overview of your products or services and the market
+                  you serve) <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={formData.businessDescription}
+                  onChange={(e) => handleChange('businessDescription', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-800">
+                  What is your unique value proposition? <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={formData.uniqueValueProposition}
+                  onChange={(e) => handleChange('uniqueValueProposition', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Disclaimer and Declaration */}
+          <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-xl font-semibold text-slate-900">Disclaimer and Declaration</h2>
+
+            <p className="mt-4 text-sm leading-7 text-slate-600">
+              I hereby confirm that my business possesses all the following valid and up-to-date compliance
+              documents. I understand that I must be able to submit these for verification if my application is
+              shortlisted.
+            </p>
+            <p className="mt-2 text-sm italic leading-7 text-slate-600">
+              Please tick the box next to each document you confirm is valid and up to date:
+            </p>
+
+            <div className="mt-4">
+              <label className="block text-sm font-semibold text-slate-800">
+                Application Documents <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-2 space-y-2">
+                {APPLICATION_DOCUMENTS.map((option) => (
+                  <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={formData.applicationDocuments.includes(option)}
+                      onChange={() => toggleArrayValue('applicationDocuments', option)}
+                      className="h-4 w-4 rounded text-[#2563EB]"
+                    />
+                    {option}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <label className="block text-sm font-semibold text-slate-800">Supporting Company Documents</label>
+              <p className="mt-1 text-xs leading-6 text-slate-500">
+                Upload each document you confirmed above. PDF format only, up to 100MB per file.
+              </p>
+              <div className="mt-3 space-y-3">
+                {SUPPORTING_DOCUMENT_SLOTS.map(({ key, label }) => (
+                  <div key={key} className="rounded-xl border border-slate-300 px-4 py-3">
+                    <p className="text-sm font-medium text-slate-700">{label}</p>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => handleFileChange(key, e.target.files?.[0] ?? null)}
+                      className="mt-2 block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-[#EFF6FF] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#2563EB] hover:file:bg-[#DBEAFE]"
+                    />
+                    {formData.supportingDocuments[key] && (
+                      <p className="mt-1 text-xs text-emerald-600">
+                        {formData.supportingDocuments[key]?.name} attached
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <h3 className="mt-6 text-base font-semibold text-slate-900">Declaration</h3>
+            <ol className="mt-3 list-decimal space-y-3 pl-5 text-sm leading-7 text-slate-600">
+              <li>I certify that I have read, understood, and agree to all the information and terms detailed in this application.</li>
+              <li>
+                I declare that all answers provided in this application are true and correct to the best of my
+                knowledge. I have not wilfully withheld any information pertinent to this application. I further
+                confirm that I am the duly registered owner of the business and possess full legal authority to
+                commit it to this programme.
+              </li>
+              <li>
+                I hereby confirm that the business is an existing 51% or more black-owned business that has been
+                in full operation for more than 1 year.
+              </li>
+              <li>
+                I understand that selection into the programme requires my full commitment to participate in all
+                activities, including in-person training and mentorship sessions, for the entire duration of the
+                programme.
+              </li>
+              {/* Note: the PDF strikes through "and is located within the Gauteng area." on clause 3
+                  and "from October 2025 to November 2025." on clause 4 — both intentionally omitted above. */}
+              <li>
+                I acknowledge that I am solely responsible for arranging my own transportation to and from the
+                designated in-person training venue where I will be trained.
+              </li>
+              <li>Company Documents will be required for verification purposes.</li>
+            </ol>
+
+            <div className="mt-6">
+              <label className="block text-sm font-semibold text-slate-800">
+                I accept the above mentioned: <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-2 flex gap-6">
+                {['Yes', 'No'].map((option) => (
+                  <label key={option} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="acceptDeclaration"
+                      required
+                      checked={formData.acceptDeclaration === option}
+                      onChange={() => handleChange('acceptDeclaration', option)}
+                      className="h-4 w-4 text-[#2563EB]"
+                    />
+                    {option}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </section>
 
           <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
