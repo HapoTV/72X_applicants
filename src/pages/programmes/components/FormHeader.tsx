@@ -1,5 +1,3 @@
-import React from 'react';
-import { CalendarDays, Clock3, MapPin } from 'lucide-react';
 import type { Programme } from '../types';
 
 interface FormHeaderProps {

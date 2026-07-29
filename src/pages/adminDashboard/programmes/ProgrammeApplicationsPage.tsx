@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from '../../../hooks/use-toast';
 import { ArrowDown, FileText } from 'lucide-react';
-import { mockProgrammeApplications } from '../../../data/mockProgrammeApplications';
 import { cocProgrammeService } from '../../../services/coc-admin/CocProgrammeService';
 import { ProgrammeApplicationFilters } from './components/ProgrammeApplicationFilters';
 import { ProgrammeApplicationsTable } from './components/ProgrammeApplicationsTable';
@@ -19,10 +19,10 @@ const ProgrammeApplicationsPage: React.FC = () => {
     const loadApplications = async () => {
       try {
         const data = await cocProgrammeService.getProgrammeApplications();
-        setApplications(data.length ? data : mockProgrammeApplications);
+        setApplications(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Failed to load programme applications from service:', error);
-        setApplications(mockProgrammeApplications);
+        setApplications([]);
       } finally {
         setLoading(false);
       }
@@ -50,8 +50,22 @@ const ProgrammeApplicationsPage: React.FC = () => {
 
     try {
       await cocProgrammeService.updateApplicationStatus(updatedApplication.id, updatedApplication.status);
+      toast({ title: 'Application updated', description: 'Application status updated successfully.' });
     } catch (error) {
       console.error('Failed to update application status through service:', error);
+      let serverMessage = '';
+      try {
+        const e = error as any;
+        if (e?.response?.data) {
+          serverMessage = typeof e.response.data === 'string' ? e.response.data : (e.response.data.message || JSON.stringify(e.response.data));
+        } else {
+          serverMessage = e?.message || 'Unknown error';
+        }
+      } catch {
+        serverMessage = 'Unknown error';
+      }
+
+      toast({ title: 'Update failed (server)', description: `Failed to update on server: ${serverMessage}.`, variant: 'destructive' });
     }
   };
 

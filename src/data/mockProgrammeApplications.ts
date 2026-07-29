@@ -14,9 +14,9 @@ export const mockProgrammeApplications: ProgrammeApplicationItem[] = [
     industry: 'Retail',
     motivation: 'I want to scale my township retail business with support from established partners and gain practical sales training.',
     documents: [
-      { id: 'id-doc', label: 'ID Document', fileName: 'id_document.pdf' },
-      { id: 'reg-doc', label: 'Company Registration', fileName: 'company_registration.pdf' },
-      { id: 'profile-doc', label: 'Business Profile', fileName: 'business_profile.pdf' },
+      { id: 'id-doc', label: 'ID Document', fileName: 'id_document.pdf', fileUrl: '/legal/terms-and-privacy.pdf' },
+      { id: 'reg-doc', label: 'Company Registration', fileName: 'company_registration.pdf', fileUrl: '/legal/terms-and-privacy.pdf' },
+      { id: 'profile-doc', label: 'Business Profile', fileName: 'business_profile.pdf', fileUrl: '/legal/terms-and-privacy.pdf' },
     ],
   },
   {
@@ -32,9 +32,9 @@ export const mockProgrammeApplications: ProgrammeApplicationItem[] = [
     industry: 'Construction',
     motivation: 'My business is ready to move from small contracts to larger municipal opportunities with mentorship and procurement guidance.',
     documents: [
-      { id: 'id-doc', label: 'ID Document', fileName: 'id_document.pdf' },
-      { id: 'reg-doc', label: 'Company Registration', fileName: 'company_registration.pdf' },
-      { id: 'profile-doc', label: 'Business Profile', fileName: 'business_profile.pdf' },
+      { id: 'id-doc', label: 'ID Document', fileName: 'id_document.pdf', fileUrl: '/legal/terms-and-privacy.pdf' },
+      { id: 'reg-doc', label: 'Company Registration', fileName: 'company_registration.pdf', fileUrl: '/legal/terms-and-privacy.pdf' },
+      { id: 'profile-doc', label: 'Business Profile', fileName: 'business_profile.pdf', fileUrl: '/legal/terms-and-privacy.pdf' },
     ],
   },
   {

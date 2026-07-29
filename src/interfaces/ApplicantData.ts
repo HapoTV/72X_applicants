@@ -28,6 +28,27 @@ export interface UpdateApplicationStatusRequest {
   reviewNotes?: string;
 }
 
+export interface ProgrammeApplicationRequest {
+  applicantName: string;
+  email: string;
+  phoneNumber: string;
+  businessName: string;
+  registrationNumber: string;
+  industry: string;
+  gender: string;
+  businessAddress: string;
+  cityTownship: string;
+  bbeeLevel: string;
+  yearEstablished: string;
+  annualTurnover: string;
+  businessOwnership: string;
+  businessDescription: string;
+  uniqueValueProposition: string;
+  applicationDocuments: string;
+  acceptDeclaration: string;
+  motivation: string;
+}
+
 export type ApplicationStatus = 
   | 'PENDING'
   | 'UNDER_REVIEW'

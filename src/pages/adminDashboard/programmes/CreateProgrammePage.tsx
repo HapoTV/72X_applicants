@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
+import { toast } from '../../../hooks/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ProgrammeForm } from './components/ProgrammeForm';
-import { addOrUpdateProgramme, getProgrammeById } from '../../../data/programmesStore';
 import { cocProgrammeService } from '../../../services/coc-admin/CocProgrammeService';
 import type { ProgrammeFormData, ProgrammeListItem } from './types';
 
@@ -59,94 +59,101 @@ const CreateProgrammePage: React.FC = () => {
     thumbnailImagePreview: programme.thumbnailImagePreview,
   });
 
+  const mapFormDataToRequest = (data: ProgrammeFormData) => ({
+    programmeName: data.programmeName,
+    partner: data.partnerName,
+    shortDescription: data.shortDescription,
+    fullDescription: data.fullDescription,
+    duration: data.duration,
+    province: data.province,
+    cityRegion: data.cityRegion,
+    maximumParticipants: data.maximumParticipants,
+    programmeCategory: data.programmeCategory,
+    objectives: data.objectives,
+    benefits: data.benefits,
+    eligibility: data.eligibility,
+    whatParticipantsWillLearn: data.whatParticipantsWillLearn,
+    documentsRequired: data.documentsRequired,
+    applicationsOpenDate: data.applicationsOpenDate,
+    applicationsCloseDate: data.applicationsCloseDate,
+    programmeStartDate: data.programmeStartDate,
+    programmeEndDate: data.programmeEndDate,
+    status: data.status,
+    bannerImagePreview: data.bannerImagePreview,
+    thumbnailImagePreview: data.thumbnailImagePreview,
+  });
+
   const [formData, setFormData] = useState<ProgrammeFormData>(
     stateProgramme ? mapProgrammeToFormData(stateProgramme) : initialProgrammeForm,
   );
-  const [loading, setLoading] = useState<boolean>(!stateProgramme && !!queryProgrammeId);
 
   useEffect(() => {
     if (!queryProgrammeId || stateProgramme) {
-      setLoading(false);
       return;
     }
 
     const loadProgramme = async () => {
-      setLoading(true);
       try {
         const programme = await cocProgrammeService.getProgrammeById(queryProgrammeId);
         setExistingProgramme(programme);
         setFormData(mapProgrammeToFormData(programme));
       } catch (error) {
         console.error('Failed to load programme from service:', error);
-        const fallbackProgramme = queryProgrammeId ? getProgrammeById(queryProgrammeId) : undefined;
-        if (fallbackProgramme) {
-          setExistingProgramme(fallbackProgramme);
-          setFormData(mapProgrammeToFormData(fallbackProgramme));
-        }
-      } finally {
-        setLoading(false);
       }
     };
 
     loadProgramme();
   }, [queryProgrammeId, stateProgramme]);
 
+  const [isSaving, setSaving] = useState(false);
+
   const handleSubmit = async () => {
-    const programmeId = existingProgramme?.id || formData.programmeName.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/(^-|-$)/g, '');
-    const newProgramme: ProgrammeListItem = {
-      id: programmeId,
-      programmeName: formData.programmeName,
-      partner: formData.partnerName,
-      province: formData.province,
-      duration: formData.duration,
-      applications: existingProgramme?.applications ?? 0,
-      status: formData.status,
-      createdDate: existingProgramme?.createdDate || new Date().toISOString().slice(0, 10),
-      cityRegion: formData.cityRegion,
-      maximumParticipants: formData.maximumParticipants,
-      programmeCategory: formData.programmeCategory,
-      shortDescription: formData.shortDescription,
-      fullDescription: formData.fullDescription,
-      objectives: formData.objectives,
-      benefits: formData.benefits,
-      eligibility: formData.eligibility,
-      whatParticipantsWillLearn: formData.whatParticipantsWillLearn,
-      documentsRequired: formData.documentsRequired,
-      applicationsOpenDate: formData.applicationsOpenDate,
-      applicationsCloseDate: formData.applicationsCloseDate,
-      programmeStartDate: formData.programmeStartDate,
-      programmeEndDate: formData.programmeEndDate,
-      bannerImagePreview: formData.bannerImagePreview,
-      thumbnailImagePreview: formData.thumbnailImagePreview,
-    };
+    if (isSaving) return;
 
-    try {
-      if (existingProgramme) {
-        await cocProgrammeService.updateProgramme(programmeId, formData);
-      } else {
-        await cocProgrammeService.createProgramme(formData);
-      }
-      window.alert('Programme saved successfully. Updates will now be available on both admin and user side.');
-    } catch (error) {
-      console.error('Failed to save programme through service:', error);
-      addOrUpdateProgramme(newProgramme);
-      window.alert('Programme saved locally. It will sync when the backend is available.');
-    }
+    const programmeId = queryProgrammeId || existingProgramme?.id;
+    const requestPayload = mapFormDataToRequest(formData);
 
-    navigate('/admin/programmes');
-  };
-
-  const handleImagePreview = (field: 'bannerImagePreview' | 'thumbnailImagePreview', file: File | null) => {
-    if (!file) {
-      setFormData((current) => ({ ...current, [field]: undefined }));
+    if (!programmeId && existingProgramme) {
+      console.error('Expected programme ID for update but none was found', existingProgramme);
+      toast({ title: 'Save failed', description: 'Unable to resolve programme ID for update.', variant: 'destructive' });
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFormData((current) => ({ ...current, [field]: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+    setSaving(true);
+
+    try {
+      let savedProgramme: ProgrammeListItem | undefined;
+
+      if (existingProgramme || programmeId) {
+        const idToUpdate = programmeId as string;
+        savedProgramme = await cocProgrammeService.updateProgramme(idToUpdate, requestPayload);
+      } else {
+        savedProgramme = await cocProgrammeService.createProgramme(requestPayload);
+      }
+
+      if (savedProgramme) {
+        toast({ title: existingProgramme || queryProgrammeId ? 'Programme information successfully updated' : 'Programme created successfully', description: 'Updates are now available on both admin and user side.' });
+      } else {
+        toast({ title: 'Programme save failed', description: 'The server did not return a saved programme.', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('Failed to save programme through service:', err);
+      let serverMessage = '';
+      try {
+        const e = err as any;
+        if (e?.response?.data) {
+          serverMessage = typeof e.response.data === 'string' ? e.response.data : (e.response.data.message || JSON.stringify(e.response.data));
+        } else {
+          serverMessage = e?.message || 'Unknown error';
+        }
+      } catch {
+        serverMessage = 'Unknown error';
+      }
+
+      toast({ title: 'Save failed (server)', description: `Failed to save to server: ${serverMessage}.`, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -161,9 +168,9 @@ const CreateProgrammePage: React.FC = () => {
       <ProgrammeForm
         formData={formData}
         onFormChange={setFormData}
-        onImageChange={handleImagePreview}
         onSubmit={handleSubmit}
         onCancel={() => navigate('/admin/programmes')}
+        isSaving={isSaving}
       />
     </div>
   );

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const legalPdfPath = '/legal/terms-and-privacy.pdf';
 const supportEmail = 'admin@hapogroup.co.za';
 
 const LandingFooter: React.FC = () => {
+  const navigate = useNavigate();
   return (
     <footer className="bg-gray-800 text-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,14 +34,14 @@ const LandingFooter: React.FC = () => {
             <h4 className="font-semibold mb-4">Product</h4>
             <ul className="space-y-2 text-sm text-white/90">
               <li>
-                <a href="#features" className="hover:text-white transition-colors">
+                <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 120); }} className="hover:text-white transition-colors">
                   Features
-                </a>
+                </button>
               </li>
               <li>
-                <a href="#apps" className="hover:text-white transition-colors">
+                <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('apps')?.scrollIntoView({ behavior: 'smooth' }), 120); }} className="hover:text-white transition-colors">
                   Apps
-                </a>
+                </button>
               </li>
               <li>
                 <Link to="/pricing" className="hover:text-white transition-colors">
@@ -59,19 +60,19 @@ const LandingFooter: React.FC = () => {
             <h4 className="font-semibold mb-4">Company</h4>
             <ul className="space-y-2 text-sm text-white/90">
               <li>
-                <a href="#features" className="hover:text-white transition-colors">
+                <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 120); }} className="hover:text-white transition-colors">
                   About
-                </a>
+                </button>
               </li>
               <li>
-                <a href="#industries" className="hover:text-white transition-colors">
+                <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('industries')?.scrollIntoView({ behavior: 'smooth' }), 120); }} className="hover:text-white transition-colors">
                   Industries
-                </a>
+                </button>
               </li>
               <li>
-                <a href="#community" className="hover:text-white transition-colors">
+                <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('community')?.scrollIntoView({ behavior: 'smooth' }), 120); }} className="hover:text-white transition-colors">
                   Community
-                </a>
+                </button>
               </li>
             </ul>
           </div>
@@ -80,9 +81,9 @@ const LandingFooter: React.FC = () => {
             <h4 className="font-semibold mb-4">Support</h4>
             <ul className="space-y-2 text-sm text-white/90">
               <li>
-                <a href="#help" className="hover:text-white transition-colors">
+                <button onClick={() => { navigate('/'); setTimeout(() => document.getElementById('help')?.scrollIntoView({ behavior: 'smooth' }), 120); }} className="hover:text-white transition-colors">
                   Help Center
-                </a>
+                </button>
               </li>
               <li>
                 <a href={`mailto:${supportEmail}`} className="hover:text-white transition-colors">

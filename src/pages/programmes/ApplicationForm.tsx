@@ -7,6 +7,60 @@ import type { Programme } from './types';
 import { programmeService } from '../../services/ProgrammeService';
 import FormHeader from './components/FormHeader';
 
+type SupportingDocumentKey = 'idDocument' | 'bbeeCertificate' | 'financialStatements' | 'other';
+
+type ChangeableFormField =
+  | 'fullName'
+  | 'gender'
+  | 'email'
+  | 'cellphone'
+  | 'businessName'
+  | 'cipcNumber'
+  | 'businessAddress'
+  | 'cityTownship'
+  | 'businessIndustry'
+  | 'bbeeLevel'
+  | 'yearEstablished'
+  | 'annualTurnover'
+  | 'businessDescription'
+  | 'uniqueValueProposition'
+  | 'acceptDeclaration'
+  | 'motivation';
+
+type FormState = {
+  fullName: string;
+  gender: string;
+  email: string;
+  cellphone: string;
+  businessName: string;
+  cipcNumber: string;
+  businessAddress: string;
+  cityTownship: string;
+  businessIndustry: string;
+  bbeeLevel: string;
+  yearEstablished: string;
+  annualTurnover: string;
+  businessOwnership: string[];
+  businessDescription: string;
+  uniqueValueProposition: string;
+  applicationDocuments: string[];
+  supportingDocuments: Record<SupportingDocumentKey, File | null>;
+  acceptDeclaration: string;
+  motivation: string;
+};
+
+const BBEE_LEVELS = ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5', 'Level 6', 'Level 7', 'Level 8'];
+const YEARS_ESTABLISHED = ['Less than 1 year', '1-2 years', '3-5 years', '6-10 years', 'More than 10 years'];
+const ANNUAL_TURNOVER_OPTIONS = ['R0 - R500,000', 'R500,001 - R1,000,000', 'R1,000,001 - R5,000,000', 'More than R5,000,000'];
+const BUSINESS_OWNERSHIP_OPTIONS = ['51%+ Black owned', 'Black woman owned', 'Youth owned', 'Disability owned'];
+const APPLICATION_DOCUMENTS = ['CIPC registration', 'B-BBEE certificate', 'Tax clearance', 'Proof of address'];
+const SUPPORTING_DOCUMENT_SLOTS: Array<{ key: SupportingDocumentKey; label: string }> = [
+  { key: 'idDocument', label: 'Certified ID Document' },
+  { key: 'bbeeCertificate', label: 'B-BBEE Certificate' },
+  { key: 'financialStatements', label: 'Financial Statements' },
+  { key: 'other', label: 'Other Supporting Document' },
+];
+
 const ApplicationForm: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -19,65 +73,118 @@ const ApplicationForm: React.FC = () => {
   } = useLandingPage();
 
   const [submitted, setSubmitted] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [program, setProgram] = useState<Programme | null>(null);
   const [isLoadingProgram, setIsLoadingProgram] = useState(true);
-  const [formData, setFormData] = useState({
-    businessName: '',
-    tradingName: '',
-    registrationNumber: '',
-    businessType: '',
-    industry: '',
-    yearsInBusiness: '',
-    employees: '',
-    annualTurnover: '',
-    firstName: '',
-    lastName: '',
-    idNumber: '',
-    email: '',
-    mobileNumber: '',
-    alternativeNumber: '',
+  const [formData, setFormData] = useState<FormState>({
+    fullName: '',
     gender: '',
-    age: '',
-    province: '',
-    town: '',
-    businessLocationProvince: '',
-    municipality: '',
-    businessTown: '',
-    address: '',
-    postalCode: '',
+    email: '',
+    cellphone: '',
+    businessName: '',
+    cipcNumber: '',
+    businessAddress: '',
+    cityTownship: '',
+    businessIndustry: '',
+    bbeeLevel: '',
+    yearEstablished: '',
+    annualTurnover: '',
+    businessOwnership: [],
     businessDescription: '',
-    productsServices: '',
-    targetMarket: '',
-    challenges: '',
+    uniqueValueProposition: '',
+    applicationDocuments: [],
+    supportingDocuments: {
+      idDocument: null,
+      bbeeCertificate: null,
+      financialStatements: null,
+      other: null,
+    },
+    acceptDeclaration: '',
     motivation: '',
   });
 
-  const handleChange = (field: keyof FormState, value: string) => {
+  const handleChange = (field: ChangeableFormField, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const toggleArrayValue = (field: 'businessOwnership' | 'applicationDocuments', value: string) => {
+    setFormData((prev) => {
+      const currentValues = prev[field];
+      const updatedValues = Array.isArray(currentValues)
+        ? currentValues.includes(value)
+          ? currentValues.filter((item) => item !== value)
+          : [...currentValues, value]
+        : [value];
+      return { ...prev, [field]: updatedValues } as FormState;
+    });
+  };
+
+  const handleFileChange = (key: SupportingDocumentKey, file: File | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      supportingDocuments: {
+        ...prev.supportingDocuments,
+        [key]: file,
+      },
+    }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setSubmissionError(null);
 
     if (!program?.id) {
       console.error('Cannot submit programme application without a valid programme id');
       return;
     }
 
+    if (!isComplete) {
+      setSubmissionError('Please complete all required fields before submitting.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-      await programmeService.submitProgrammeApplication(program.id, {
-        applicantName: `${formData.firstName} ${formData.lastName}`.trim(),
+      const application = await programmeService.submitProgrammeApplication(program.id, {
+        applicantName: formData.fullName.trim(),
         email: formData.email,
-        phoneNumber: formData.mobileNumber,
+        phoneNumber: formData.cellphone,
         businessName: formData.businessName,
-        registrationNumber: formData.registrationNumber,
-        industry: formData.industry,
+        registrationNumber: formData.cipcNumber,
+        industry: formData.businessIndustry,
+        gender: formData.gender,
+        businessAddress: formData.businessAddress,
+        cityTownship: formData.cityTownship,
+        bbeeLevel: formData.bbeeLevel,
+        yearEstablished: formData.yearEstablished,
+        annualTurnover: formData.annualTurnover,
+        businessOwnership: formData.businessOwnership.join(', '),
+        businessDescription: formData.businessDescription,
+        uniqueValueProposition: formData.uniqueValueProposition,
+        applicationDocuments: formData.applicationDocuments.join(', '),
+        acceptDeclaration: formData.acceptDeclaration,
         motivation: formData.motivation,
       });
+
+      const applicationId = application.id;
+      const fileUploads = Object.entries(formData.supportingDocuments).filter(
+        (entry): entry is [SupportingDocumentKey, File] => entry[1] !== null,
+      );
+
+      for (const [key, file] of fileUploads) {
+        const slot = SUPPORTING_DOCUMENT_SLOTS.find((item) => item.key === key);
+        const label = slot?.label ?? 'Supporting document';
+        await programmeService.uploadProgrammeApplicationDocument(applicationId, label, file);
+      }
+
       setSubmitted(true);
     } catch (error) {
       console.error('Failed to submit programme application:', error);
-      setSubmitted(true);
+      setSubmissionError('There was a problem submitting your application. Please try again or contact support.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -98,7 +205,8 @@ const ApplicationForm: React.FC = () => {
       formData.businessDescription.trim() !== '' &&
       formData.uniqueValueProposition.trim() !== '' &&
       formData.applicationDocuments.length > 0 &&
-      formData.acceptDeclaration.trim() !== ''
+      formData.acceptDeclaration.trim() !== '' &&
+      formData.motivation.trim() !== ''
     );
   }, [formData]);
 
@@ -122,12 +230,14 @@ const ApplicationForm: React.FC = () => {
             closingDate: backendProgramme.applicationsCloseDate || backendProgramme.applicationsOpenDate || 'Closing date to be confirmed',
             status: backendProgramme.status,
           });
+          setIsLoadingProgram(false);
+          return;
         }
       } catch (error) {
         console.error('Failed to load programme for application form:', error);
-      } finally {
-        setIsLoadingProgram(false);
       }
+
+      setIsLoadingProgram(false);
     };
 
     loadProgramme();
@@ -201,12 +311,9 @@ const ApplicationForm: React.FC = () => {
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
               <CheckCircle2 className="h-8 w-8" />
             </div>
-            <h1 className="mt-6 text-3xl font-semibold text-slate-900">Application Submitted</h1>
+            <h1 className="mt-6 text-3xl font-semibold text-slate-900">Application Successfully Uploaded</h1>
             <p className="mt-4 text-lg leading-8 text-slate-600">
-              Thank you for applying. Your application has been received successfully.
-            </p>
-            <p className="mt-3 text-base leading-8 text-slate-600">
-              A confirmation email has been sent to your email address. Our team will review all applications and contact shortlisted applicants directly.
+              Thank you for applying to the Standard Bank {program.title} Programme. Your application has been received and is now under review. Our team will assess all applications, and shortlisted applicants will be contacted directly regarding the outcome.
             </p>
             <button
               onClick={() => navigate('/programs')}
@@ -635,6 +742,20 @@ const ApplicationForm: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            <div className="mt-8">
+              <label className="block text-sm font-semibold text-slate-800">
+                Why should your business be selected for this programme? <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                required
+                rows={4}
+                value={formData.motivation}
+                onChange={(e) => handleChange('motivation', e.target.value)}
+                placeholder="Tell us about your business goals, challenges, and how this programme will help you grow."
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#93C5FD]"
+              />
+            </div>
           </section>
 
           <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
@@ -643,12 +764,22 @@ const ApplicationForm: React.FC = () => {
                 <FileText className="h-5 w-5 text-[#2563EB]" />
                 <span>{isComplete ? 'Form ready to submit' : 'Please complete the required fields'}</span>
               </div>
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center rounded-full bg-[#2563EB] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1D4ED8]"
-              >
-                Submit Application
-              </button>
+              <div className="flex flex-col items-start gap-3 sm:items-end">
+                {submissionError && (
+                  <p className="text-sm font-medium text-red-600">{submissionError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={!isComplete || isSubmitting}
+                  className={`inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold text-white transition ${
+                    !isComplete || isSubmitting
+                      ? 'cursor-not-allowed bg-slate-400'
+                      : 'bg-[#2563EB] hover:bg-[#1D4ED8]'
+                  }`}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Application'}
+                </button>
+              </div>
             </div>
           </div>
         </form>

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Navigation from './Navigation';
 import Header from './Header';
+import { Toaster } from './ui/toaster';
 import MobileNav from './MobileNav';
 import LockedFeatureDrawer from './LockedFeatureDrawer';
 import type { LockedFeaturePayload } from './LockedFeatureDrawer';
@@ -306,6 +307,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           />
           <div className={`flex-1 ${navCollapsed ? 'ml-20' : 'ml-56'} transition-all duration-200`}>
             <Header onMobileMenuToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
+            <Toaster />
             <main className="p-6">
               {children}
             </main>

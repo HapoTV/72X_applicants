@@ -27,10 +27,29 @@ class ProgrammeService {
   async submitProgrammeApplication(
     programmeId: string,
     applicationData: ProgrammeApplicationRequest,
-  ): Promise<unknown> {
+  ): Promise<{ id: string }> {
     const response = await axiosClient.post(
       `${this.baseURL}/${programmeId}/applications`,
       applicationData,
+      {
+        headers: this.getAuthHeader(),
+      },
+    );
+    return response.data;
+  }
+
+  async uploadProgrammeApplicationDocument(
+    applicationId: string,
+    label: string,
+    file: File,
+  ): Promise<unknown> {
+    const formData = new FormData();
+    formData.append('label', label);
+    formData.append('file', file);
+
+    const response = await axiosClient.post(
+      `${this.baseURL}/applications/${applicationId}/documents`,
+      formData,
       {
         headers: this.getAuthHeader(),
       },

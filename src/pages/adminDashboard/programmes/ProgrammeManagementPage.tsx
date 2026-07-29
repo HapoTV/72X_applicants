@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from '../../../hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { getProgrammes, deleteProgramme } from '../../../data/programmesStore';
+import { deleteProgramme } from '../../../data/programmesStore';
 import { cocProgrammeService } from '../../../services/coc-admin/CocProgrammeService';
 import { ProgrammeFilters } from './components/ProgrammeFilters';
 import { ProgrammeTable } from './components/ProgrammeTable';
@@ -19,10 +20,10 @@ const ProgrammeManagementPage: React.FC = () => {
     const loadProgrammes = async () => {
       try {
         const data = await cocProgrammeService.getProgrammes();
-        setProgrammes(data.length ? data : getProgrammes());
+        setProgrammes(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Failed to load programmes from service:', error);
-        setProgrammes(getProgrammes());
+        setProgrammes([]);
       } finally {
         setLoading(false);
       }
@@ -55,10 +56,24 @@ const ProgrammeManagementPage: React.FC = () => {
     try {
       await cocProgrammeService.deleteProgramme(programme.id);
       setProgrammes((current) => current.filter((item) => item.id !== programme.id));
-    } catch (error) {
-      console.error('Failed to delete programme through service:', error);
+      toast({ title: 'Programme deleted', description: 'Programme removed successfully.' });
+    } catch (err) {
+      console.error('Failed to delete programme through service:', err);
+      let serverMessage = '';
+      try {
+        const e = err as any;
+        if (e?.response?.data) {
+          serverMessage = typeof e.response.data === 'string' ? e.response.data : (e.response.data.message || JSON.stringify(e.response.data));
+        } else {
+          serverMessage = e?.message || 'Unknown error';
+        }
+      } catch {
+        serverMessage = 'Unknown error';
+      }
+
       const updated = deleteProgramme(programme.id);
       setProgrammes(updated);
+      toast({ title: 'Delete failed (server)', description: `Failed to delete on server: ${serverMessage}. Deleted locally.`, variant: 'destructive' });
     }
   };
 
@@ -91,7 +106,7 @@ const ProgrammeManagementPage: React.FC = () => {
 
       <ProgrammeTable
         programmes={filteredProgrammes}
-        loading={false}
+        loading={loading}
         onEdit={handleEdit}
         onDelete={handleDelete}
       />

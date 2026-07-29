@@ -1,18 +1,24 @@
 import type { ProgrammeListItem } from '../pages/adminDashboard/programmes/types';
-import { mockProgrammes } from './mockProgrammes';
 
 const STORAGE_KEY = '72x_programmes';
 
+function slugifyProgrammeName(programmeName: string): string {
+  return programmeName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 function loadProgrammesFromStorage(): ProgrammeListItem[] {
-  if (typeof window === 'undefined') return mockProgrammes;
+  if (typeof window === 'undefined') return [];
 
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return mockProgrammes;
+    if (!stored) return [];
     const parsed = JSON.parse(stored) as ProgrammeListItem[];
-    return Array.isArray(parsed) ? parsed : mockProgrammes;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return mockProgrammes;
+    return [];
   }
 }
 
@@ -27,6 +33,13 @@ export function getProgrammes(): ProgrammeListItem[] {
 
 export function getProgrammeById(id: string): ProgrammeListItem | undefined {
   return getProgrammes().find((programme) => programme.id === id);
+}
+
+export function getProgrammeBySlug(slug: string): ProgrammeListItem | undefined {
+  const programmes = getProgrammes();
+  return programmes.find(
+    (programme) => programme.id === slug || slugifyProgrammeName(programme.programmeName) === slug,
+  );
 }
 
 export function addOrUpdateProgramme(programme: ProgrammeListItem): ProgrammeListItem[] {

@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, BookOpen, BriefcaseBusiness, Compass, Layers3, Sparkles, Users } from 'lucide-react';
 import LandingHeader from '../landing/components/LandingHeader';
 import { useLandingPage } from '../landing/hooks/useLandingPage';
-import { getProgrammes } from '../../data/programmesStore';
 import { programmeService } from '../../services/ProgrammeService';
 
 const whyApplyItems = [
@@ -62,20 +61,16 @@ const ProgramsPage: React.FC = () => {
     handleProductItemClick,
   } = useLandingPage();
 
-  const [availableProgrammes, setAvailableProgrammes] = useState(() => getProgrammes());
-  const [loadingProgrammes, setLoadingProgrammes] = useState(true);
+  const [availableProgrammes, setAvailableProgrammes] = useState<any[]>([]);
 
   useEffect(() => {
     const loadProgrammes = async () => {
       try {
         const programmes = await programmeService.getProgrammes();
-        if (Array.isArray(programmes) && programmes.length > 0) {
-          setAvailableProgrammes(programmes);
-        }
+        setAvailableProgrammes(Array.isArray(programmes) ? programmes : []);
       } catch (error) {
-        console.error('Failed to load programmes from backend, using local cache:', error);
-      } finally {
-        setLoadingProgrammes(false);
+        console.error('Failed to load programmes from backend:', error);
+        setAvailableProgrammes([]);
       }
     };
 

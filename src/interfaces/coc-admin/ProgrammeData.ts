@@ -57,6 +57,7 @@ export interface ProgrammeApplicationDocument {
   id: string;
   label: string;
   fileName: string;
+  fileUrl?: string;
 }
 
 export interface ProgrammeApplicationItem {

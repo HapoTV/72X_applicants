@@ -12,7 +12,7 @@ interface AdminPageWrapperProps {
 const AdminPageWrapper: React.FC<AdminPageWrapperProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isSuperAdmin, isCocAdmin } = useAuth();
+  useAuth();
 
   const activeTab = useMemo(() => getActiveTabFromPathname(location.pathname) ?? 'applicants', [location.pathname]);
 

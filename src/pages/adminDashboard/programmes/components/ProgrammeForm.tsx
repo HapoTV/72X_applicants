@@ -4,9 +4,9 @@ import type { ProgrammeFormData } from '../types';
 interface ProgrammeFormProps {
   formData: ProgrammeFormData;
   onFormChange: (data: ProgrammeFormData) => void;
-  onImageChange: (field: 'bannerImagePreview' | 'thumbnailImagePreview', file: File | null) => void;
   onSubmit: () => void;
   onCancel: () => void;
+  isSaving?: boolean;
 }
 
 const provinces = [
@@ -35,7 +35,7 @@ const citiesByProvince: Record<string, string[]> = {
 
 const statusOptions = ['Open', 'Closed', 'Coming Soon'] as const;
 
-export function ProgrammeForm({ formData, onFormChange, onSubmit, onCancel }: ProgrammeFormProps) {
+export function ProgrammeForm({ formData, onFormChange, onSubmit, onCancel, isSaving = false }: ProgrammeFormProps) {
   const [provinceQuery, setProvinceQuery] = useState('');
   const [cityQuery, setCityQuery] = useState('');
   const [showProvinceOptions, setShowProvinceOptions] = useState(false);
@@ -305,48 +305,6 @@ export function ProgrammeForm({ formData, onFormChange, onSubmit, onCancel }: Pr
         </div>
       </section>
 
-      <section className="space-y-4 rounded-3xl border border-gray-200 bg-slate-50 p-6">
-        <h2 className="text-xl font-semibold text-slate-900">Media</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-4">
-            <label className="group block rounded-3xl border border-dashed border-gray-300 bg-white p-6 text-center transition hover:border-primary-500 hover:bg-primary-50">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-primary-700">
-                <span className="text-2xl font-semibold">+</span>
-              </div>
-              <p className="mt-4 text-sm font-semibold text-slate-900">Banner Image</p>
-              <p className="mt-2 text-sm text-slate-500">Drag & drop or click to select an image.</p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => onImageChange('bannerImagePreview', e.target.files?.[0] ?? null)}
-                className="sr-only"
-              />
-            </label>
-            {formData.bannerImagePreview ? (
-              <img src={formData.bannerImagePreview} alt="Banner preview" className="h-44 w-full rounded-3xl object-cover" />
-            ) : null}
-          </div>
-
-          <div className="space-y-4">
-            <label className="group block rounded-3xl border border-dashed border-gray-300 bg-white p-6 text-center transition hover:border-primary-500 hover:bg-primary-50">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-primary-700">
-                <span className="text-2xl font-semibold">+</span>
-              </div>
-              <p className="mt-4 text-sm font-semibold text-slate-900">Programme Thumbnail</p>
-              <p className="mt-2 text-sm text-slate-500">Optional image preview for the programme card.</p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => onImageChange('thumbnailImagePreview', e.target.files?.[0] ?? null)}
-                className="sr-only"
-              />
-            </label>
-            {formData.thumbnailImagePreview ? (
-              <img src={formData.thumbnailImagePreview} alt="Thumbnail preview" className="h-44 w-full rounded-3xl object-cover" />
-            ) : null}
-          </div>
-        </div>
-      </section>
 
       <section className="rounded-3xl border border-gray-200 bg-slate-50 p-6">
         <h2 className="text-xl font-semibold text-slate-900">Status</h2>
@@ -381,9 +339,10 @@ export function ProgrammeForm({ formData, onFormChange, onSubmit, onCancel }: Pr
         <button
           type="button"
           onClick={onSubmit}
-          className="w-full rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-700 sm:w-auto"
+          disabled={isSaving}
+          className={`w-full rounded-xl px-6 py-3 text-sm font-semibold text-white transition sm:w-auto ${isSaving ? 'cursor-not-allowed bg-primary-400' : 'bg-primary-600 hover:bg-primary-700'}`}
         >
-          Save Programme
+          {isSaving ? 'Saving...' : 'Save Programme'}
         </button>
       </div>
     </div>

@@ -38,18 +38,18 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
             />
 
             <nav className="hidden md:flex space-x-8 items-center">
-              <a
-                href="#features"
+              <button
+                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 120); }}
                 className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
               >
                 Features
-              </a>
-              <a
-                href="#industries"
+              </button>
+              <button
+                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('industries')?.scrollIntoView({ behavior: 'smooth' }), 120); }}
                 className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
               >
                 Industries
-              </a>
+              </button>
 
               <div
                 className="relative"

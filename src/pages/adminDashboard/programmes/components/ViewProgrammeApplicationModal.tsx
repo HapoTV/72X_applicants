@@ -9,9 +9,10 @@ interface ViewProgrammeApplicationModalProps {
 
 const statusOptions: ApplicationStatus[] = ['Under Review', 'Shortlisted', 'Not selected'];
 
-const getDocumentPreviewUrl = (fileName: string) => {
-  // Use an existing local PDF preview file for documents.
-  // All documents preview the same local sample file for now.
+const getDocumentPreviewUrl = (document: { fileUrl?: string; fileName: string }) => {
+  if (document.fileUrl && document.fileUrl.trim() !== '') {
+    return document.fileUrl;
+  }
   return '/legal/terms-and-privacy.pdf';
 };
 
@@ -20,9 +21,9 @@ export function ViewProgrammeApplicationModal({ application, onClose, onSave }: 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLabel, setPreviewLabel] = useState<string>('');
 
-  const handleOpenDocument = (document: { label: string; fileName: string }) => {
+  const handleOpenDocument = (document: { label: string; fileName: string; fileUrl?: string }) => {
     setPreviewLabel(document.label);
-    setPreviewUrl(getDocumentPreviewUrl(document.fileName));
+    setPreviewUrl(getDocumentPreviewUrl(document));
   };
 
   const handleClosePreview = () => {
@@ -104,18 +105,36 @@ export function ViewProgrammeApplicationModal({ application, onClose, onSave }: 
           <ul className="mt-4 space-y-3">
             {application.documents.map((document) => (
               <li key={document.id} className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="text-sm font-semibold text-slate-900">{document.label}</div>
                     <div className="mt-1 text-sm text-slate-600">{document.fileName}</div>
+                    {document.fileUrl ? (
+                      <div className="mt-1 text-xs text-slate-500">Preview available</div>
+                    ) : (
+                      <div className="mt-1 text-xs text-amber-600">No preview URL available</div>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenDocument(document)}
-                    className="rounded-2xl border border-gray-300 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    Open
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDocument(document)}
+                      disabled={!document.fileUrl}
+                      className={`rounded-2xl border px-4 py-2 text-sm font-medium transition ${document.fileUrl ? 'border-gray-300 bg-slate-50 text-slate-700 hover:bg-slate-100' : 'cursor-not-allowed border-gray-200 bg-slate-100 text-slate-400'}`}
+                    >
+                      Open
+                    </button>
+                    {document.fileUrl ? (
+                      <a
+                        href={document.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      >
+                        New tab
+                      </a>
+                    ) : null}
+                  </div>
                 </div>
               </li>
             ))}

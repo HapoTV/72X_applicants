@@ -1,25 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, Clock3, MapPin, Sparkles } from 'lucide-react';
 import LandingHeader from '../landing/components/LandingHeader';
 import { useLandingPage } from '../landing/hooks/useLandingPage';
-import { getProgrammeById } from '../../data/programmesStore';
 import { programmeService } from '../../services/ProgrammeService';
 import type { Programme } from './types';
 import type { ProgrammeListItem } from '../adminDashboard/programmes/types';
-
-const defaultPrograms: Programme[] = [
-  {
-    id: 'business-development-programme',
-    title: 'Business Development Programme',
-    partner: '72X',
-    description: 'A structured programme focused on business growth, mentorship and practical support for entrepreneurs and SMEs.',
-    duration: '12 Weeks',
-    location: 'Gauteng & Eastern Cape',
-    closingDate: '31 August 2026',
-    status: 'Applications Open',
-  },
-];
 
 const mapProgrammeItem = (programme: ProgrammeListItem): Programme => ({
   id: programme.id,
@@ -36,8 +22,10 @@ const mapProgrammeItem = (programme: ProgrammeListItem): Programme => ({
 const ProgrammeDetailsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [program, setProgram] = useState<Programme>(defaultPrograms[0]);
+  const [program, setProgram] = useState<Programme | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const isUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
   useEffect(() => {
     const loadProgramme = async () => {
@@ -50,21 +38,14 @@ const ProgrammeDetailsPage: React.FC = () => {
         const backendProgramme = await programmeService.getProgrammeById(slug);
         if (backendProgramme) {
           setProgram(mapProgrammeItem(backendProgramme));
-        } else {
-          const storedProgramme = getProgrammeById(slug);
-          if (storedProgramme) {
-            setProgram(mapProgrammeItem(storedProgramme));
-          }
+          setLoading(false);
+          return;
         }
       } catch (error) {
         console.error('Failed to load programme details from backend:', error);
-        const storedProgramme = getProgrammeById(slug);
-        if (storedProgramme) {
-          setProgram(mapProgrammeItem(storedProgramme));
-        }
-      } finally {
-        setLoading(false);
       }
+
+      setLoading(false);
     };
 
     loadProgramme();
@@ -77,8 +58,57 @@ const ProgrammeDetailsPage: React.FC = () => {
     handleProductItemClick,
   } = useLandingPage();
 
-  const programMemo = useMemo(() => program, [program]);
-  const programme = programMemo;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] text-slate-900">
+        <LandingHeader
+          navigate={navigate}
+          productDropdownOpen={productDropdownOpen}
+          setProductDropdownOpen={setProductDropdownOpen}
+          productDropdownRef={productDropdownRef}
+          productCategories={productCategories}
+          onProductItemClick={handleProductItemClick}
+        />
+
+        <main className="mx-auto max-w-6xl px-6 py-10 sm:px-8 lg:px-10">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <p className="text-lg font-semibold text-slate-900">Loading programme details...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!program) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] text-slate-900">
+        <LandingHeader
+          navigate={navigate}
+          productDropdownOpen={productDropdownOpen}
+          setProductDropdownOpen={setProductDropdownOpen}
+          productDropdownRef={productDropdownRef}
+          productCategories={productCategories}
+          onProductItemClick={handleProductItemClick}
+        />
+
+        <main className="mx-auto max-w-6xl px-6 py-10 sm:px-8 lg:px-10">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <h1 className="text-3xl font-semibold text-slate-900">Programme Not Found</h1>
+            <p className="mt-4 text-slate-600">We couldn't find the programme you are trying to view. Please create it in the admin portal and refresh this page.</p>
+            <button
+              type="button"
+              onClick={() => navigate('/programs')}
+              className="mt-8 inline-flex rounded-full bg-[#2563EB] px-6 py-3 text-sm font-semibold text-white hover:bg-[#1D4ED8]"
+            >
+              Back to Programmes
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] text-slate-900">
@@ -116,12 +146,19 @@ const ProgrammeDetailsPage: React.FC = () => {
               <p className="mt-3 text-base leading-8 text-slate-600">
                 This programme is designed for entrepreneurs and organisations looking for practical support, mentorship and development opportunities.
               </p>
-              <button
-                onClick={() => navigate(`/programs/${program.id}/apply`)}
-                className="mt-6 inline-flex items-center rounded-full bg-[#2563EB] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1D4ED8]"
-              >
-                Apply Now
-              </button>
+              {(() => {
+                const isProgrammeOpen = (program.status || '').toLowerCase().includes('open');
+                return (
+                  <button
+                    onClick={() => { if (isProgrammeOpen) navigate(`/programs/${program.id}/apply`); }}
+                    disabled={!isProgrammeOpen}
+                    title={isProgrammeOpen ? 'Apply for this programme' : 'Applications are closed for this programme'}
+                    className={`mt-6 inline-flex items-center rounded-full px-6 py-3 text-sm font-semibold transition ${isProgrammeOpen ? 'bg-[#2563EB] text-white hover:bg-[#1D4ED8]' : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
+                  >
+                    {isProgrammeOpen ? 'Apply Now' : 'Applications Closed'}
+                  </button>
+                );
+              })()}
             </div>
 
             <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-6">
