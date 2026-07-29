@@ -10,6 +10,8 @@ import {
   CreditCard,
   Building2,
   KeyRound,
+  Layers,
+  FileText,
 } from 'lucide-react';
 import type { AdminTab } from '../AdminSidebar';
 
@@ -33,6 +35,8 @@ export const getAdminMenuItems = ({ basePath, isSuperAdmin, isCocAdmin }: Params
     { id: 'learning', label: 'Learning Material', icon: BookOpen, path: `${basePath}/dashboard/learning` },
     { id: 'mentorship', label: 'Mentorship', icon: Handshake, path: `${basePath}/dashboard/mentorship` },
     { id: 'funding', label: 'Funding', icon: DollarSign, path: `${basePath}/dashboard/funding` },
+    { id: 'programmes', label: 'Programme Management', icon: Layers, path: `${basePath}/programmes` },
+    { id: 'programme-applications', label: 'Programme Applications', icon: FileText, path: `${basePath}/programme-applications` },
   ];
 
   if (isSuperAdmin) {

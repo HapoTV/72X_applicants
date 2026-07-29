@@ -7,11 +7,25 @@ import { useOrganisationLogo } from './hooks/useOrganisationLogo';
 import { AdminSidebarProfile } from './components/AdminSidebarProfile';
 import { AdminSidebarNav } from './components/AdminSidebarNav';
 
-export type AdminTab = 'applicants' | 'events' | 'learning' | 'mentorship' | 'funding' | 'ad' | 'profile' | 'payments' | 'monitoring' | 'organisation' | 'admins' | 'business-ref';
+export type AdminTab =
+  | 'applicants'
+  | 'events'
+  | 'learning'
+  | 'mentorship'
+  | 'funding'
+  | 'programmes'
+  | 'programme-applications'
+  | 'ad'
+  | 'profile'
+  | 'payments'
+  | 'monitoring'
+  | 'organisation'
+  | 'admins'
+  | 'business-ref';
 
 interface AdminSidebarProps {
     activeTab: AdminTab;
-    onTabChange: (tab: AdminTab) => void;
+    onTabChange: (tab: AdminTab, path: string) => void;
 }
 
 export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: AdminSidebarProps) {
@@ -38,7 +52,7 @@ export default function AdminSidebar({ activeTab: _activeTab, onTabChange }: Adm
     }, [basePath, isCocAdmin, isSuperAdmin]);
 
     const handleSelectTab = (tab: AdminTab, path: string) => {
-        onTabChange(tab);
+        onTabChange(tab, path);
         navigate(path);
     };
 

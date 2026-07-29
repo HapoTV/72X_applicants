@@ -1,0 +1,58 @@
+import type { ProgrammeApplicationItem } from '../pages/adminDashboard/programmes/types';
+
+export const mockProgrammeApplications: ProgrammeApplicationItem[] = [
+  {
+    id: 'app-001',
+    applicantName: 'Sibongile Ndlovu',
+    programme: 'Standard Bank Township Business Development Programme',
+    email: 'sibongile.ndlovu@example.com',
+    phoneNumber: '+27 71 123 4567',
+    submissionDate: '2026-07-10',
+    status: 'Under Review',
+    businessName: 'Ndlovu Trading',
+    registrationNumber: '2008/123456/07',
+    industry: 'Retail',
+    motivation: 'I want to scale my township retail business with support from established partners and gain practical sales training.',
+    documents: [
+      { id: 'id-doc', label: 'ID Document', fileName: 'id_document.pdf' },
+      { id: 'reg-doc', label: 'Company Registration', fileName: 'company_registration.pdf' },
+      { id: 'profile-doc', label: 'Business Profile', fileName: 'business_profile.pdf' },
+    ],
+  },
+  {
+    id: 'app-002',
+    applicantName: 'Thabo Mokoena',
+    programme: 'SME Development Programme',
+    email: 'thabo.mokoena@example.com',
+    phoneNumber: '+27 72 987 6543',
+    submissionDate: '2026-07-12',
+    status: 'Shortlisted',
+    businessName: 'Mokoena Construction',
+    registrationNumber: '2019/987654/21',
+    industry: 'Construction',
+    motivation: 'My business is ready to move from small contracts to larger municipal opportunities with mentorship and procurement guidance.',
+    documents: [
+      { id: 'id-doc', label: 'ID Document', fileName: 'id_document.pdf' },
+      { id: 'reg-doc', label: 'Company Registration', fileName: 'company_registration.pdf' },
+      { id: 'profile-doc', label: 'Business Profile', fileName: 'business_profile.pdf' },
+    ],
+  },
+  {
+    id: 'app-003',
+    applicantName: 'Lerato Khumalo',
+    programme: 'NGO Development Programme',
+    email: 'lerato.khumalo@example.com',
+    phoneNumber: '+27 76 555 3322',
+    submissionDate: '2026-07-15',
+    status: 'Not selected',
+    businessName: 'Khumalo Community Care',
+    registrationNumber: '2015/332211/08',
+    industry: 'Non-profit',
+    motivation: 'Our NGO needs stronger operational systems and better project management to support community empowerment initiatives.',
+    documents: [
+      { id: 'id-doc', label: 'ID Document', fileName: 'id_document.pdf' },
+      { id: 'reg-doc', label: 'Company Registration', fileName: 'company_registration.pdf' },
+      { id: 'profile-doc', label: 'Business Profile', fileName: 'business_profile.pdf' },
+    ],
+  },
+];

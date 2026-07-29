@@ -1,9 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, Clock3, MapPin, Sparkles } from 'lucide-react';
 import LandingHeader from '../landing/components/LandingHeader';
 import { useLandingPage } from '../landing/hooks/useLandingPage';
+import { getProgrammeById } from '../../data/programmesStore';
+import { programmeService } from '../../services/ProgrammeService';
 import type { Programme } from './types';
+import type { ProgrammeListItem } from '../adminDashboard/programmes/types';
 
 const defaultPrograms: Programme[] = [
   {
@@ -18,9 +21,54 @@ const defaultPrograms: Programme[] = [
   },
 ];
 
+const mapProgrammeItem = (programme: ProgrammeListItem): Programme => ({
+  id: programme.id,
+  title: programme.programmeName,
+  partner: programme.partner,
+  description:
+    programme.shortDescription || programme.fullDescription || 'Learn more about this programme and apply online today.',
+  duration: programme.duration,
+  location: [programme.cityRegion, programme.province].filter(Boolean).join(' • '),
+  closingDate: programme.applicationsCloseDate || programme.applicationsOpenDate || 'Closing date to be confirmed',
+  status: programme.status,
+});
+
 const ProgrammeDetailsPage: React.FC = () => {
-  const { slug } = useParams();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [program, setProgram] = useState<Programme>(defaultPrograms[0]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProgramme = async () => {
+      if (!slug) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const backendProgramme = await programmeService.getProgrammeById(slug);
+        if (backendProgramme) {
+          setProgram(mapProgrammeItem(backendProgramme));
+        } else {
+          const storedProgramme = getProgrammeById(slug);
+          if (storedProgramme) {
+            setProgram(mapProgrammeItem(storedProgramme));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load programme details from backend:', error);
+        const storedProgramme = getProgrammeById(slug);
+        if (storedProgramme) {
+          setProgram(mapProgrammeItem(storedProgramme));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProgramme();
+  }, [slug]);
   const {
     productDropdownOpen,
     setProductDropdownOpen,
@@ -29,9 +77,8 @@ const ProgrammeDetailsPage: React.FC = () => {
     handleProductItemClick,
   } = useLandingPage();
 
-  const program = useMemo(() => {
-    return defaultPrograms.find((item) => item.id === slug) ?? defaultPrograms[0];
-  }, [slug]);
+  const programMemo = useMemo(() => program, [program]);
+  const programme = programMemo;
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] text-slate-900">

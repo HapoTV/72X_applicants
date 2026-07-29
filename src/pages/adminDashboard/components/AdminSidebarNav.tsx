@@ -12,7 +12,7 @@ export function AdminSidebarNav({ menuItems, currentPath, onSelectTab }: AdminSi
     <nav className="space-y-1">
       {menuItems.map((item) => {
         const Icon = item.icon;
-        const active = currentPath === item.path;
+        const active = currentPath === item.path || currentPath.startsWith(`${item.path}/`);
         return (
           <button
             key={item.id}
