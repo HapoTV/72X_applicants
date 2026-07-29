@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, BookOpen, BriefcaseBusiness, Compass, Layers3, Sparkles, Users } from 'lucide-react';
-import LandingHeader from './landing/components/LandingHeader';
-import { useLandingPage } from './landing/hooks/useLandingPage';
+import LandingHeader from '../landing/components/LandingHeader';
+import { useLandingPage } from '../landing/hooks/useLandingPage';
+import { getProgrammes } from '../../data/programmesStore';
+import { programmeService } from '../../services/ProgrammeService';
 
 const whyApplyItems = [
   {
@@ -59,6 +61,26 @@ const ProgramsPage: React.FC = () => {
     productCategories,
     handleProductItemClick,
   } = useLandingPage();
+
+  const [availableProgrammes, setAvailableProgrammes] = useState(() => getProgrammes());
+  const [loadingProgrammes, setLoadingProgrammes] = useState(true);
+
+  useEffect(() => {
+    const loadProgrammes = async () => {
+      try {
+        const programmes = await programmeService.getProgrammes();
+        if (Array.isArray(programmes) && programmes.length > 0) {
+          setAvailableProgrammes(programmes);
+        }
+      } catch (error) {
+        console.error('Failed to load programmes from backend, using local cache:', error);
+      } finally {
+        setLoadingProgrammes(false);
+      }
+    };
+
+    loadProgrammes();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F5F7FA] text-slate-900">
@@ -175,28 +197,41 @@ const ProgramsPage: React.FC = () => {
             </div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm">
               <Sparkles className="h-4 w-4 text-[#2563EB]" />
-              Programmes will be added from the admin side later
+              Programmes update from the admin portal
             </div>
           </div>
 
-          <div className="mt-8 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-            <p className="text-lg font-semibold text-slate-900">Programmes will appear here once they are published.</p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">
-              This section is ready to display future programme data from the admin portal and Supabase.
-            </p>
-            <button
-              onClick={() => navigate('/programs/business-development-programme')}
-              className="mx-auto mt-6 block w-full max-w-md rounded-[20px] border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-[#93C5FD] hover:shadow-md"
-            >
-              <div className="h-28 rounded-[16px] bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE]" />
-              <div className="mt-4 h-3 w-24 rounded-full bg-slate-200" />
-              <div className="mt-3 h-3 w-32 rounded-full bg-slate-100" />
-              <div className="mt-4 h-3 w-full rounded-full bg-slate-100" />
-              <div className="mt-2 h-3 w-3/4 rounded-full bg-slate-100" />
-              <div className="mt-5 inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-500">
-                View Details
-              </div>
-            </button>
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            {availableProgrammes.map((programme) => (
+              <button
+                key={programme.id}
+                type="button"
+                onClick={() => navigate(`/programs/${programme.id}`)}
+                className="group overflow-hidden rounded-[28px] border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:border-[#93C5FD] hover:shadow-lg"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="rounded-2xl bg-[#EFF6FF] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#2563EB]">
+                    {programme.status}
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                    {programme.partner}
+                  </div>
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-slate-900">{programme.programmeName}</h3>
+                <p className="mt-4 text-sm leading-6 text-slate-600">
+                  {programme.shortDescription || programme.programmeCategory || 'View details for this programme and apply online.'}
+                </p>
+                <div className="mt-6 flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  <span>{programme.duration}</span>
+                  <span>{programme.province}{programme.cityRegion ? ` • ${programme.cityRegion}` : ''}</span>
+                  <span>{programme.applications} applications</span>
+                </div>
+                <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-[#2563EB] transition group-hover:bg-[#EFF6FF]">
+                  View Details
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </button>
+            ))}
           </div>
         </section>
 

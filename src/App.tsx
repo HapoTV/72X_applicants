@@ -41,7 +41,7 @@ const CreatePassword = React.lazy(() => import('./pages/CreatePassword'));
 const SelectPackage = React.lazy(() => import('./pages/SelectPackage'));
 const RequestDemo = React.lazy(() => import('./pages/RequestDemo'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
-const ProgramsPage = React.lazy(() => import('./pages/ProgramsPage'));
+const ProgramsPage = React.lazy(() => import('./pages/programmes/ProgramsPage'));
 const ProgrammeDetailsPage = React.lazy(() => import('./pages/programmes/ProgrammeDetailsPage'));
 const ApplicationForm = React.lazy(() => import('./pages/programmes/ApplicationForm'));
 const TenderlyAI = React.lazy(() => import('./pages/applications/TenderlyAI'));
@@ -61,6 +61,10 @@ const AIAnalystUpgrade = React.lazy(() => import('./pages/upgrades/AIAnalystUpgr
 const SetupAccount = React.lazy(() => import('./pages/SetupAccount'));
 const AdminRoutes = React.lazy(() => import('./routes/AdminRoutes'));
 const CocAdminRoutes = React.lazy(() => import('./routes/CocAdminRoutes'));
+const AdminPageWrapper = React.lazy(() => import('./pages/adminDashboard/AdminPageWrapper'));
+const AdminProgrammeManagementPage = React.lazy(() => import('./pages/adminDashboard/programmes/ProgrammeManagementPage'));
+const AdminCreateProgrammePage = React.lazy(() => import('./pages/adminDashboard/programmes/CreateProgrammePage'));
+const AdminProgrammeApplicationsPage = React.lazy(() => import('./pages/adminDashboard/programmes/ProgrammeApplicationsPage'));
 const PaymentRoutes = React.lazy(() => import('./routes/paymentRoutes'));
 
 const RedirectWithSearch: React.FC<{ to: string }> = ({ to }) => {
@@ -118,7 +122,7 @@ function App() {
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/programs" element={<ProgramsPage />} />
               <Route path="/programs/:slug" element={<ProgrammeDetailsPage />} />
-              <Route path="/programs/:slug/apply" element={<ApplicationForm program={{ id: 'business-development-programme', title: 'Business Development Programme', partner: '72X', description: 'A structured programme focused on business growth, mentorship and practical support for entrepreneurs and SMEs.', duration: '12 Weeks', location: 'Gauteng & Eastern Cape', closingDate: '31 August 2026' }} />} />
+              <Route path="/programs/:slug/apply" element={<ApplicationForm />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/signup/success" element={<SignupSuccessRouter />} />
               <Route path="/signup/success/provided" element={<SignupSuccessProvided />} />
@@ -128,8 +132,68 @@ function App() {
               <Route path="/create-password" element={<CreatePassword />} />
               <Route path="/select-package" element={<SelectPackage />} />
 
+              <Route
+                path="/admin/programmes"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminProgrammeManagementPage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/programmes/create"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminCreateProgrammePage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/programme-applications"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminProgrammeApplicationsPage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/admin/*" element={<ProtectedRoute requireAdmin={true}><AdminRoutes /></ProtectedRoute>} />
 
+              <Route
+                path="/cocadmin/programmes"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminProgrammeManagementPage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cocadmin/programmes/create"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminCreateProgrammePage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cocadmin/programme-applications"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminProgrammeApplicationsPage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/cocadmin/*"
                 element={

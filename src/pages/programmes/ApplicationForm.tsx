@@ -1,101 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import LandingHeader from '../landing/components/LandingHeader';
 import { useLandingPage } from '../landing/hooks/useLandingPage';
 import type { Programme } from './types';
+import { programmeService } from '../../services/ProgrammeService';
 import FormHeader from './components/FormHeader';
 
-interface ApplicationFormProps {
-  program: Programme;
-}
-
-const BBEE_LEVELS = [
-  'Level 1',
-  'Level 2',
-  'Level 3',
-  'Level 4',
-  'Level 5',
-  'Level 6',
-  'Level 7',
-  'Level 8',
-  'Non-Compliant',
-  'Exempt Micro Enterprise (EME)',
-];
-
-const YEARS_ESTABLISHED = Array.from({ length: 2024 - 2010 + 1 }, (_, i) => String(2010 + i));
-
-const ANNUAL_TURNOVER_OPTIONS = [
-  'R0 - R1 Million',
-  'R1 Million - R2.5 Million',
-  'R2.5 Million - R5 Million',
-];
-
-const BUSINESS_OWNERSHIP_OPTIONS = ['Woman-Owned', 'Youth-Owned', 'Other'];
-
-const APPLICATION_DOCUMENTS = [
-  'CIPC Registration Document',
-  'Valid B-BBEE Certificate/Affidavit',
-  'Proof of ID',
-  'Valid Tax Clearance Certificate (Optional)',
-  'Business Profile (Optional)',
-];
-
-// Matches the "Supporting Company Documents" upload section for the
-// documents confirmed above. Accepts PDF only, up to 100MB per file.
-const SUPPORTING_DOCUMENT_SLOTS = [
-  { key: 'cipcDocument', label: 'CIPC Registration Document' },
-  { key: 'bbeeDocument', label: 'Valid B-BBEE Certificate/Affidavit' },
-  { key: 'proofOfId', label: 'Proof of ID' },
-  { key: 'taxClearance', label: 'Valid Tax Clearance Certificate (Optional)' },
-  { key: 'businessProfile', label: 'Business Profile (Optional)' },
-] as const;
-
-const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
-
-interface FormState {
-  fullName: string;
-  gender: string;
-  email: string;
-  cellphone: string;
-  businessName: string;
-  cipcNumber: string;
-  businessAddress: string;
-  cityTownship: string;
-  businessIndustry: string;
-  bbeeLevel: string;
-  yearEstablished: string;
-  annualTurnover: string;
-  businessOwnership: string[];
-  businessDescription: string;
-  uniqueValueProposition: string;
-  applicationDocuments: string[];
-  acceptDeclaration: string;
-  supportingDocuments: Partial<Record<(typeof SUPPORTING_DOCUMENT_SLOTS)[number]['key'], File | null>>;
-}
-
-const initialFormState: FormState = {
-  fullName: '',
-  gender: '',
-  email: '',
-  cellphone: '',
-  businessName: '',
-  cipcNumber: '',
-  businessAddress: '',
-  cityTownship: '',
-  businessIndustry: '',
-  bbeeLevel: '',
-  yearEstablished: '',
-  annualTurnover: '',
-  businessOwnership: [],
-  businessDescription: '',
-  uniqueValueProposition: '',
-  applicationDocuments: [],
-  acceptDeclaration: '',
-  supportingDocuments: {},
-};
-
-const ApplicationForm: React.FC<ApplicationFormProps> = ({ program }) => {
+const ApplicationForm: React.FC = () => {
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const {
     productDropdownOpen,
@@ -106,44 +19,66 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ program }) => {
   } = useLandingPage();
 
   const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState<FormState>(initialFormState);
+  const [program, setProgram] = useState<Programme | null>(null);
+  const [isLoadingProgram, setIsLoadingProgram] = useState(true);
+  const [formData, setFormData] = useState({
+    businessName: '',
+    tradingName: '',
+    registrationNumber: '',
+    businessType: '',
+    industry: '',
+    yearsInBusiness: '',
+    employees: '',
+    annualTurnover: '',
+    firstName: '',
+    lastName: '',
+    idNumber: '',
+    email: '',
+    mobileNumber: '',
+    alternativeNumber: '',
+    gender: '',
+    age: '',
+    province: '',
+    town: '',
+    businessLocationProvince: '',
+    municipality: '',
+    businessTown: '',
+    address: '',
+    postalCode: '',
+    businessDescription: '',
+    productsServices: '',
+    targetMarket: '',
+    challenges: '',
+    motivation: '',
+  });
 
   const handleChange = (field: keyof FormState, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const toggleArrayValue = (field: keyof FormState, value: string) => {
-    setFormData((prev) => {
-      const current = prev[field] as string[];
-      const exists = current.includes(value);
-      return {
-        ...prev,
-        [field]: exists ? current.filter((item) => item !== value) : [...current, value],
-      };
-    });
-  };
-
-  const handleFileChange = (
-    key: (typeof SUPPORTING_DOCUMENT_SLOTS)[number]['key'],
-    file: File | null,
-  ) => {
-    if (file && file.type !== 'application/pdf') {
-      window.alert('Please upload a PDF file.');
-      return;
-    }
-    if (file && file.size > MAX_UPLOAD_SIZE_BYTES) {
-      window.alert('File is too large. Maximum upload size is 100MB.');
-      return;
-    }
-    setFormData((prev) => ({
-      ...prev,
-      supportingDocuments: { ...prev.supportingDocuments, [key]: file },
-    }));
-  };
-
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setSubmitted(true);
+
+    if (!program?.id) {
+      console.error('Cannot submit programme application without a valid programme id');
+      return;
+    }
+
+    try {
+      await programmeService.submitProgrammeApplication(program.id, {
+        applicantName: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: formData.email,
+        phoneNumber: formData.mobileNumber,
+        businessName: formData.businessName,
+        registrationNumber: formData.registrationNumber,
+        industry: formData.industry,
+        motivation: formData.motivation,
+      });
+      setSubmitted(true);
+    } catch (error) {
+      console.error('Failed to submit programme application:', error);
+      setSubmitted(true);
+    }
   };
 
   const isComplete = useMemo(() => {
@@ -166,6 +101,88 @@ const ApplicationForm: React.FC<ApplicationFormProps> = ({ program }) => {
       formData.acceptDeclaration.trim() !== ''
     );
   }, [formData]);
+
+  useEffect(() => {
+    const loadProgramme = async () => {
+      if (!slug) {
+        setIsLoadingProgram(false);
+        return;
+      }
+
+      try {
+        const backendProgramme = await programmeService.getProgrammeById(slug);
+        if (backendProgramme) {
+          setProgram({
+            id: backendProgramme.id,
+            title: backendProgramme.programmeName,
+            partner: backendProgramme.partner,
+            description: backendProgramme.shortDescription || backendProgramme.fullDescription || 'Learn more about this programme and apply online today.',
+            duration: backendProgramme.duration,
+            location: [backendProgramme.cityRegion, backendProgramme.province].filter(Boolean).join(' • '),
+            closingDate: backendProgramme.applicationsCloseDate || backendProgramme.applicationsOpenDate || 'Closing date to be confirmed',
+            status: backendProgramme.status,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load programme for application form:', error);
+      } finally {
+        setIsLoadingProgram(false);
+      }
+    };
+
+    loadProgramme();
+  }, [slug]);
+
+  if (isLoadingProgram) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] text-slate-900">
+        <LandingHeader
+          navigate={navigate}
+          productDropdownOpen={productDropdownOpen}
+          setProductDropdownOpen={setProductDropdownOpen}
+          productDropdownRef={productDropdownRef}
+          productCategories={productCategories}
+          onProductItemClick={handleProductItemClick}
+        />
+
+        <main className="mx-auto max-w-5xl px-6 py-10 sm:px-8 lg:px-10">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <p className="text-lg font-medium text-slate-700">Loading programme details...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!program) {
+    return (
+      <div className="min-h-screen bg-[#F5F7FA] text-slate-900">
+        <LandingHeader
+          navigate={navigate}
+          productDropdownOpen={productDropdownOpen}
+          setProductDropdownOpen={setProductDropdownOpen}
+          productDropdownRef={productDropdownRef}
+          productCategories={productCategories}
+          onProductItemClick={handleProductItemClick}
+        />
+
+        <main className="mx-auto max-w-5xl px-6 py-10 sm:px-8 lg:px-10">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <h1 className="text-2xl font-semibold text-slate-900">Programme Not Found</h1>
+            <p className="mt-4 text-base leading-7 text-slate-600">
+              We couldn't find the programme you are trying to apply for. Please choose a programme from the programmes page.
+            </p>
+            <button
+              onClick={() => navigate('/programs')}
+              className="mt-8 inline-flex items-center rounded-full bg-[#2563EB] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1D4ED8]"
+            >
+              Back to Programmes
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
