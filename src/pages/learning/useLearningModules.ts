@@ -109,7 +109,7 @@ export function useLearningModules() {
       if (modal) modal.scrollTop = parseInt(savedScroll, 10);
     });
     return () => cancelAnimationFrame(raf);
-  }, [openMaterial?.id]);
+  }, [openMaterial]);
 
   // ── Read timer ──────────────────────────────────────────────────────────────
   useEffect(() => {

@@ -44,8 +44,9 @@ const readCachedUsers = (): ConnectionUser[] => {
 };
 
 export function useConnections(authUserId?: string) {
-  const [users, setUsers] = useState<ConnectionUser[]>(() => readCachedUsers());
-  const [filteredUsers, setFilteredUsers] = useState<ConnectionUser[]>(() => readCachedUsers());
+  const cachedUsers = readCachedUsers();
+  const [users, setUsers] = useState<ConnectionUser[]>(() => cachedUsers);
+  const [filteredUsers, setFilteredUsers] = useState<ConnectionUser[]>(() => cachedUsers);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
@@ -100,11 +101,17 @@ export function useConnections(authUserId?: string) {
       setOrganisations(Array.from(new Set(mappedUsers.map((u) => u.organisation).filter(Boolean))) as string[]);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to load users. Please try again.');
+      const message = err instanceof Error ? err.message : 'Please try again.';
+      if (cachedUsers.length === 0 && users.length === 0) {
+        setError(`Failed to load users. ${message}`);
+      } else {
+        // Keep cached users available, but do not block the entire page.
+        setError(null);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cachedUsers.length, users.length]);
 
   // ─── Fetch conversations ────────────────────────────────────────────────────
 

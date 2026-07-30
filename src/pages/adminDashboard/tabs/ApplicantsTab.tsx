@@ -152,7 +152,7 @@ export default function ApplicantsTab() {
     } finally {
       setLoading(false);
     }
-  }, [calculateStats, checkUserOnlineStatus, cocAllowedOrganisations, isCocAdmin, isSuperAdmin, updateUserOrganisation, user?.email, user?.role, userOrganisation]);
+  }, [calculateStats, checkUserOnlineStatus, cocAllowedOrganisations, isCocAdmin, isSuperAdmin, user?.email, user?.role, userOrganisation]);
 
   useEffect(() => {
     const fetchCocAllowedOrganisations = async () => {

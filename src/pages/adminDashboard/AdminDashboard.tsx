@@ -43,8 +43,12 @@ export default function AdminDashboard({ dashboardBasePath }: AdminDashboardProp
         <div className="min-h-screen bg-gray-50">
             <AdminNavbar onLogout={handleLogout} />
             <div className="flex">
-                <AdminSidebar activeTab={activeTab} onTabChange={(tab) => {
+                <AdminSidebar activeTab={activeTab} onTabChange={(tab, path) => {
                     setActiveTab(tab);
+                    if (path) {
+                        navigate(path);
+                        return;
+                    }
                     const base = dashboardBasePath || (location.pathname.startsWith('/cocadmin') ? '/cocadmin' : '/admin');
                     navigate(`${base.replace(/\/$/, '')}/dashboard/${tab}`);
                 }} />

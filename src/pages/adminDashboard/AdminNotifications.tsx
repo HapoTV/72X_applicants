@@ -129,6 +129,11 @@ const AdminNotifications: React.FC = () => {
     setCreateSuccess(false);
   }, []);
 
+  const backToDashboardPath = useMemo(() => {
+    const isCocAdminPath = location.pathname.startsWith('/cocadmin/');
+    return isCocAdminPath ? '/cocadmin/dashboard/applicants' : '/admin/dashboard/applicants';
+  }, [location.pathname]);
+
   // Check if user has admin access
   const effectiveRole = (user?.role || localStorage.getItem('userRole') || '').toUpperCase();
   if (!effectiveRole || (effectiveRole !== 'ADMIN' && effectiveRole !== 'SUPER_ADMIN' && effectiveRole !== 'COC_ADMIN')) {
@@ -142,11 +147,6 @@ const AdminNotifications: React.FC = () => {
       </div>
     );
   }
-
-  const backToDashboardPath = useMemo(() => {
-    const isCocAdminPath = location.pathname.startsWith('/cocadmin/');
-    return isCocAdminPath ? '/cocadmin/dashboard/applicants' : '/admin/dashboard/applicants';
-  }, [location.pathname]);
 
   return (
     <div className="space-y-6 animate-fade-in">

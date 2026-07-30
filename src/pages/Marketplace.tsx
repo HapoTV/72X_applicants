@@ -229,8 +229,8 @@ const Marketplace: React.FC = () => {
   // Fetch data on component mount and when filters change
   useEffect(() => {
     if (activeView !== 'featured') return;
-    fetchMarketplaceData();
-  }, [activeView, featuredSearchTerm, featuredSelectedCategory, featuredSelectedLocation, token, storageAuthToken]);
+    void fetchMarketplaceData();
+  }, [activeView, featuredSearchTerm, featuredSelectedCategory, featuredSelectedLocation, token, storageAuthToken, fetchMarketplaceData]);
 
   useEffect(() => {
     if (activeView !== 'featured') return;
@@ -252,10 +252,10 @@ const Marketplace: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-    fetchMyProducts();
-  }, [user]);
+    void fetchMyProducts();
+  }, [fetchMyProducts, user]);
 
-  const fetchMyProducts = async () => {
+  const fetchMyProducts = useCallback(async () => {
     if (!user) return;
     try {
       setMyProductsLoading(true);
@@ -268,7 +268,7 @@ const Marketplace: React.FC = () => {
     } finally {
       setMyProductsLoading(false);
     }
-  };
+  }, [user]);
 
   const openEditModal = (product: UserProductItem) => {
     setEditingProduct(product);
@@ -372,7 +372,7 @@ const Marketplace: React.FC = () => {
     }
   };
 
-  const fetchMarketplaceData = async () => {
+  const fetchMarketplaceData = useCallback(async () => {
     const authToken = token || storageAuthToken || localStorage.getItem('authToken');
     if (!authToken) {
       setProducts([]);
@@ -452,7 +452,7 @@ const Marketplace: React.FC = () => {
           setProducts([]);
         }
       }
-      
+
       // Fetch categories and locations (with fallback)
       try {
         const [categoriesData, locationsData] = await Promise.all([
@@ -474,7 +474,7 @@ const Marketplace: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeView, featuredSearchTerm, featuredSelectedCategory, featuredSelectedLocation, storageAuthToken, token]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.title.toLowerCase().includes(featuredSearchTerm.toLowerCase()) ||

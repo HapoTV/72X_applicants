@@ -48,6 +48,7 @@ class UserSubscriptionService {
   async getCurrentUserPackage(): Promise<UserSubscriptionData | null> {
     try {
       const response = await axiosClient.get('/user-packages/my-package');
+      console.log('getCurrentUserPackage response:', response.data);
       
       if (typeof response.data === 'string') {
         return null;

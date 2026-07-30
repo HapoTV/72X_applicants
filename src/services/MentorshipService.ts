@@ -21,9 +21,9 @@ class MentorshipService {
     try {
       const response = await axiosClient.get('/mentors');
       return response.data.map((mentor: any) => this.transformToMentor(mentor));
-    } catch {
-      console.error('Error fetching all mentors:');
-      return [];
+    } catch (error) {
+      console.error('Error fetching all mentors:', error);
+      throw error;
     }
   }
 

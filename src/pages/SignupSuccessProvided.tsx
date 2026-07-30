@@ -88,7 +88,7 @@ const SignupSuccessProvided: React.FC = () => {
       if (intervalId) window.clearInterval(intervalId);
       if (timeoutId) window.clearTimeout(timeoutId);
     };
-  }, []);
+  }, [email]);
 
   React.useEffect(() => {
     const rateLimited = localStorage.getItem('supabaseEmailRateLimited') === 'true';

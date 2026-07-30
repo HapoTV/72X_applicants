@@ -90,7 +90,7 @@ export const useProfile = () => {
         }));
       }
     } catch (e) { console.error('Error loading notification preferences:', e); }
-  }, [activeTab, userKey]);
+  }, [activeTab, user]);
 
   const handleInputChange = (field: string, value: string) =>
     setProfileData((prev) => ({ ...prev, [field]: value }));

@@ -29,7 +29,8 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
             <img
               src={logoUrl}
               alt="72X Logo"
-              className="h-16 md:h-20 w-auto"
+              className="h-16 md:h-20 w-auto cursor-pointer"
+              onClick={() => navigate('/')}
               onError={(e) => {
                 (e.target as HTMLImageElement).onerror = null;
                 (e.target as HTMLImageElement).src = logoUrl;
@@ -37,18 +38,18 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
             />
 
             <nav className="hidden md:flex space-x-8 items-center">
-              <a
-                href="#features"
+              <button
+                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 120); }}
                 className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
               >
                 Features
-              </a>
-              <a
-                href="#industries"
+              </button>
+              <button
+                onClick={() => { navigate('/'); setTimeout(() => document.getElementById('industries')?.scrollIntoView({ behavior: 'smooth' }), 120); }}
                 className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
               >
                 Industries
-              </a>
+              </button>
 
               <div
                 className="relative"
@@ -120,6 +121,13 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
                   </div>
                 )}
               </div>
+
+              <button
+                onClick={() => navigate('/programs')}
+                className="text-gray-700 hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
+              >
+                Programs
+              </button>
 
               <button
                 onClick={() => navigate('/pricing')}

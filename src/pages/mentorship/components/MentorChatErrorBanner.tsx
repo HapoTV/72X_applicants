@@ -9,7 +9,7 @@ interface Props {
   onDismiss: () => void;
 }
 
-const MentorChatErrorBanner: React.FC<Props> = ({ error, mentorEmail, mentorName, onSendEmail, onDismiss }) => (
+const MentorChatErrorBanner: React.FC<Props> = ({ error, mentorEmail, onSendEmail, onDismiss }) => (
   <div className="bg-yellow-50 border border-yellow-200 p-3 m-4 rounded-lg">
     <div className="flex items-start space-x-2">
       <span className="text-yellow-600 mt-0.5">ℹ</span>

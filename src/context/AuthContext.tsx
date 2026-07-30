@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   login: (userData: User, authToken?: string) => void;
   logout: () => void;
+  logoutAppTab: () => void;
   updateUserStatus: (status: string) => void;
   updateUserOrganisation: (organisation: string) => void;
   isAuthenticated: boolean;
@@ -59,7 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (redirectTo = "/login") => {
     const itemsToKeep = ['language', 'theme'];
     Object.keys(localStorage).forEach(key => {
       if (!itemsToKeep.includes(key)) localStorage.removeItem(key);
@@ -69,7 +70,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setTempSessionToken(null);
     setTwoFactorEnabled(false);
     setUserOrganisation(null);
-    window.location.href = "/login";
+    window.location.href = redirectTo;
+  };
+
+  const logoutAppTab = () => {
+    window.location.href = '/';
   };
 
   const updateUserStatus = (status: string) => {
@@ -154,36 +159,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               trialStatus.message.toLowerCase().includes('expired') ||
               trialStatus.message.toLowerCase().includes('already been used')));
 
-        const currentPath = window.location.pathname;
         if (hasUsedTrial) {
+          // mark user as pending payment but do not force-nav; wait for hydration to complete
           localStorage.setItem('userStatus', 'PENDING_PAYMENT');
-          if (!currentPath.startsWith('/payments') && !currentPath.startsWith('/select-package')) {
-            window.location.href = `${import.meta.env.BASE_URL}select-package`;
-          }
+          localStorage.setItem('requiresPackageSelection', 'true');
         } else {
+          // mark user as pending package selection; do not force-nav here
           localStorage.setItem('userStatus', 'PENDING_PACKAGE');
-          if (!currentPath.startsWith('/select-package')) {
-            window.location.href = `${import.meta.env.BASE_URL}select-package`;
-          }
+          localStorage.setItem('requiresPackageSelection', 'true');
         }
       } catch {
-        const currentPath = window.location.pathname;
-        if (!currentPath.startsWith('/select-package') && !currentPath.startsWith('/payments')) {
-          window.location.href = `${import.meta.env.BASE_URL}select-package`;
-        }
+        // On error, conservatively mark that package selection may be required
+        localStorage.setItem('userStatus', 'PENDING_PACKAGE');
+        localStorage.setItem('requiresPackageSelection', 'true');
       }
     };
 
     const hydrateUserPackage = async () => {
-      if (!token) return;
+      // mark hydration as in-progress so UI router can wait before redirecting
+      localStorage.setItem('userPackageHydrated', 'false');
+      if (!token) {
+        localStorage.setItem('userPackageHydrated', 'true');
+        return;
+      }
       try {
         const storedUser = localStorage.getItem('user');
         const parsedUser = storedUser ? JSON.parse(storedUser) : null;
         const userRole = (parsedUser?.role || localStorage.getItem('userRole') || '').toUpperCase();
-        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN') return;
+        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN') {
+          localStorage.setItem('userPackageHydrated', 'true');
+          return;
+        }
 
         const subscription = await userSubscriptionService.getCurrentUserPackage();
         if (cancelled) return;
+
+        console.log('hydrateUserPackage - subscription:', subscription);
 
         const subscriptionType = subscription?.subscriptionType;
         const mapped =
@@ -191,9 +202,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           subscriptionType === 'PREMIUM' ? 'premium' :
           subscriptionType === 'START_UP' ? 'startup' : null;
 
-        if (mapped) {
-          localStorage.setItem('userPackage', mapped);
-          setUserPackage(mapped);
+        // Also support alternative backend value variants (e.g. STARTUP without underscore)
+        const mappedFallback = !mapped && subscriptionType === 'STARTUP' ? 'startup' : mapped;
+
+        const userOrg = localStorage.getItem('userOrganisation');
+        const isStandaloneOrg = !userOrg || userOrg.trim().toLowerCase() === 'hapo';
+
+        if (mappedFallback) {
+          localStorage.setItem('userPackage', mappedFallback);
+          setUserPackage(mappedFallback);
           window.dispatchEvent(new CustomEvent('user-package-updated'));
 
           const currentStatus = localStorage.getItem('userStatus');
@@ -202,16 +219,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
           localStorage.removeItem('requiresPackageSelection');
           localStorage.removeItem('selectedPackage');
-        } else {
-          const userOrg = localStorage.getItem('userOrganisation');
-          const isStandaloneOrg = !userOrg || userOrg.trim().toLowerCase() === 'hapo';
-          if (isStandaloneOrg) {
-            if (!cancelled) await handleNoSubscription();
-          }
+        } else if (isStandaloneOrg) {
+          if (!cancelled) await handleNoSubscription();
         }
       } catch {
-        if (cancelled) return;
-        await handleNoSubscription();
+        if (!cancelled) await handleNoSubscription();
+      } finally {
+        if (!cancelled) {
+          localStorage.setItem('userPackageHydrated', 'true');
+        }
       }
     };
 
@@ -226,7 +242,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{
-      user, login, logout, updateUserStatus, updateUserOrganisation,
+      user, login, logout, logoutAppTab, updateUserStatus, updateUserOrganisation,
       isAuthenticated, isAdmin, isSuperAdmin, isCocAdmin,
       token, tempSessionToken, setTempSessionToken,
       twoFactorEnabled, setTwoFactorEnabled,

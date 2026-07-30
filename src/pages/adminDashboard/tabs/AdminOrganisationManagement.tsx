@@ -96,6 +96,14 @@ const AdminOrganisationManagement: React.FC = () => {
     setShowCreateModal(true);
   }, []);
 
+  const filtered = useMemo(() => {
+    return organisations.filter((o) => doesOrganisationMatchSearchQuery(o, searchQuery));
+  }, [organisations, searchQuery]);
+
+  const totals = useMemo(() => {
+    return getOrganisationTotals(organisations);
+  }, [organisations]);
+
   if (!isSuperAdmin && !isCocAdmin) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
@@ -105,14 +113,6 @@ const AdminOrganisationManagement: React.FC = () => {
       </div>
     );
   }
-
-  const filtered = useMemo(() => {
-    return organisations.filter((o) => doesOrganisationMatchSearchQuery(o, searchQuery));
-  }, [organisations, searchQuery]);
-
-  const totals = useMemo(() => {
-    return getOrganisationTotals(organisations);
-  }, [organisations]);
 
   return (
     <AdminOrganisationManagementView

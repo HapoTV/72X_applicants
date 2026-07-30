@@ -1,6 +1,6 @@
 // src/App.tsx
 import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -15,20 +15,15 @@ const DashboardOverview = React.lazy(() => import('./pages/dashboard/Overview'))
 const DashboardMetrics = React.lazy(() => import('./pages/dashboard/Metrics'));
 const DashboardCommunityFeed = React.lazy(() => import('./pages/dashboard/CommunityFeed'));
 const Schedule = React.lazy(() => import('./pages/Schedule'));
-const ScheduleEvents = React.lazy(() => import('./pages/schedule/Events'));
-const ScheduleCalendar = React.lazy(() => import('./pages/schedule/Calendar'));
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const RoadmapGenerator = React.lazy(() => import('./pages/RoadmapGenerator'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const LearningModules = React.lazy(() => import('./pages/LearningModules'));
 const Community = React.lazy(() => import('./pages/Community'));
-const CommunityDiscussions = React.lazy(() => import('./pages/community/Discussion'));
 const DiscussionDetails = React.lazy(() => import('./pages/community/DiscussionDetails'));
-const CommunityNetworking = React.lazy(() => import('./pages/community/Networking'));
-const CommunityMentorship = React.lazy(() => import('./pages/community/Mentorship'));
 const FundingFinder = React.lazy(() => import('./pages/FundingFinder'));
 const Marketplace = React.lazy(() => import('./pages/Marketplace'));
-const MentorshipHub = React.lazy(() => import('./pages/MentorshipHub'));
+const AppStore = React.lazy(() => import('./pages/AppStore'));
 const AIBusinessAnalyst = React.lazy(() => import('./pages/AIBusinessAnalyst'));
 const Notifications = React.lazy(() => import('./pages/Notifications'));
 const UserLogin = React.lazy(() => import('./pages/login/UserLogin'));
@@ -46,22 +41,18 @@ const CreatePassword = React.lazy(() => import('./pages/CreatePassword'));
 const SelectPackage = React.lazy(() => import('./pages/SelectPackage'));
 const RequestDemo = React.lazy(() => import('./pages/RequestDemo'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
-const DataInput = React.lazy(() => import('./pages/DataInput'));
+const ProgramsPage = React.lazy(() => import('./pages/programmes/ProgramsPage'));
+const ProgrammeDetailsPage = React.lazy(() => import('./pages/programmes/ProgrammeDetailsPage'));
+const ApplicationForm = React.lazy(() => import('./pages/programmes/ApplicationForm'));
 const TenderlyAI = React.lazy(() => import('./pages/applications/TenderlyAI'));
 const ResetPasswordRequest = React.lazy(() => import('./pages/ResetPasswordRequest'));
 const ResetPasswordVerify = React.lazy(() => import('./pages/ResetPasswordVerify'));
 const CRM = React.lazy(() => import('./pages/applications/CRM'));
 const FinanceManager = React.lazy(() => import('./pages/applications/FinanceManager'));
-const BusinessPlanning = React.lazy(() => import('./pages/learning/BusinessPlanning'));
-const MarketingSales = React.lazy(() => import('./pages/learning/MarketingSales'));
-const FinancialManagement = React.lazy(() => import('./pages/learning/FinancialManagement'));
-const Operations = React.lazy(() => import('./pages/learning/Operations'));
-const Leadership = React.lazy(() => import('./pages/learning/Leadership'));
-const Technical = React.lazy(() => import('./pages/learning/Technical'));
 const MarketplaceUpgrade = React.lazy(() => import('./pages/upgrades/MarketplaceUpgrade'));
 const MentorshipUpgrade = React.lazy(() => import('./pages/upgrades/MentorshipUpgrade'));
 const FundingUpgrade = React.lazy(() => import('./pages/upgrades/FundingUpgrade'));
-const DataInputUpgrade = React.lazy(() => import('./pages/upgrades/DataInputUpgrade'));
+// Data Input feature removed
 const AppStoreUpgrade = React.lazy(() => import('./pages/upgrades/AppStoreUpgrade'));
 const ConnectionsUpgrade = React.lazy(() => import('./pages/upgrades/ConnectionsUpgrade'));
 const RoadmapUpgrade = React.lazy(() => import('./pages/upgrades/RoadmapUpgrade'));
@@ -70,8 +61,16 @@ const AIAnalystUpgrade = React.lazy(() => import('./pages/upgrades/AIAnalystUpgr
 const SetupAccount = React.lazy(() => import('./pages/SetupAccount'));
 const AdminRoutes = React.lazy(() => import('./routes/AdminRoutes'));
 const CocAdminRoutes = React.lazy(() => import('./routes/CocAdminRoutes'));
+const AdminPageWrapper = React.lazy(() => import('./pages/adminDashboard/AdminPageWrapper'));
+const AdminProgrammeManagementPage = React.lazy(() => import('./pages/adminDashboard/programmes/ProgrammeManagementPage'));
+const AdminCreateProgrammePage = React.lazy(() => import('./pages/adminDashboard/programmes/CreateProgrammePage'));
+const AdminProgrammeApplicationsPage = React.lazy(() => import('./pages/adminDashboard/programmes/ProgrammeApplicationsPage'));
 const PaymentRoutes = React.lazy(() => import('./routes/paymentRoutes'));
-const MyConnections = React.lazy(() => import('./pages/MyConnections'));
+
+const RedirectWithSearch: React.FC<{ to: string }> = ({ to }) => {
+  const location = useLocation();
+  return <Navigate to={`${to}${location.search}`} replace />;
+};
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -121,6 +120,9 @@ function App() {
               <Route path="/verify-otp" element={<VerifyOtp />} />
               <Route path="/request-demo" element={<RequestDemo />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/programs" element={<ProgramsPage />} />
+              <Route path="/programs/:slug" element={<ProgrammeDetailsPage />} />
+              <Route path="/programs/:slug/apply" element={<ApplicationForm />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/signup/success" element={<SignupSuccessRouter />} />
               <Route path="/signup/success/provided" element={<SignupSuccessProvided />} />
@@ -130,8 +132,68 @@ function App() {
               <Route path="/create-password" element={<CreatePassword />} />
               <Route path="/select-package" element={<SelectPackage />} />
 
+              <Route
+                path="/admin/programmes"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminProgrammeManagementPage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/programmes/create"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminCreateProgrammePage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/programme-applications"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminProgrammeApplicationsPage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/admin/*" element={<ProtectedRoute requireAdmin={true}><AdminRoutes /></ProtectedRoute>} />
 
+              <Route
+                path="/cocadmin/programmes"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminProgrammeManagementPage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cocadmin/programmes/create"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminCreateProgrammePage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cocadmin/programme-applications"
+                element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminPageWrapper>
+                      <AdminProgrammeApplicationsPage />
+                    </AdminPageWrapper>
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/cocadmin/*"
                 element={
@@ -159,31 +221,22 @@ function App() {
                             <Route path="/dashboard/metrics" element={<DashboardMetrics />} />
                             <Route path="/dashboard/community-feed" element={<DashboardCommunityFeed />} />
                             <Route path="/schedule" element={<Schedule />} />
-                            <Route path="/schedule/events" element={<ScheduleEvents />} />
-                            <Route path="/schedule/calendar" element={<ScheduleCalendar />} />
                             <Route path="/learning" element={<LearningModules />} />
-                            <Route path="/learning/business-planning" element={<BusinessPlanning />} />
-                            <Route path="/learning/marketing-sales" element={<MarketingSales />} />
-                            <Route path="/learning/financial-management" element={<FinancialManagement />} />
-                            <Route path="/learning/operations" element={<Operations />} />
-                            <Route path="/learning/leadership" element={<Leadership />} />
-                            <Route path="/learning/technical" element={<Technical />} />
                             <Route path="/community" element={<Community />} />
-                            <Route path="/community/discussions" element={<CommunityDiscussions />} />
+                            <Route path="/community/discussions" element={<Navigate to="/community" replace />} />
                             <Route path="/community/discussions/:id" element={<DiscussionDetails />} />
                             <Route path="/community/:id" element={<DiscussionDetails />} />
-                            <Route path="/community/networking" element={<CommunityNetworking />} />
-                            <Route path="/community/mentorship" element={<RequirePackage required="essential" upgradePath="/upgrade/mentorship"><CommunityMentorship /></RequirePackage>} />
-                            <Route path="/applications" element={<Navigate to="/applications/crm" replace />} />
+                            <Route path="/community/networking" element={<RedirectWithSearch to="/community?tab=connections" />} />
+                            <Route path="/community/mentorship" element={<RedirectWithSearch to="/community?tab=mentorship" />} />
+                            <Route path="/applications" element={<AppStore />} />
                             <Route path="/applications/crm/*" element={<RequirePackage required="essential" upgradePath="/upgrade/app-store"><CRM /></RequirePackage>} />
                             <Route path="/applications/finance-manager" element={<RequirePackage required="essential" upgradePath="/upgrade/app-store"><FinanceManager /></RequirePackage>} />
                             <Route path="/applications/tenderlyai" element={<RequirePackage required="essential" upgradePath="/upgrade/app-store"><TenderlyAI /></RequirePackage>} />
                             <Route path="/profile" element={<Profile />} />
                             <Route path="/notifications" element={<Notifications />} />
                             <Route path="/marketplace" element={<RequirePackage required="essential" upgradePath="/upgrade/marketplace"><Marketplace /></RequirePackage>} />
-                            <Route path="/mentorship" element={<RequirePackage required="essential" upgradePath="/upgrade/mentorship"><MentorshipHub /></RequirePackage>} />
+                            
                             <Route path="/funding" element={<RequirePackage required="essential" upgradePath="/upgrade/funding"><FundingFinder /></RequirePackage>} />
-                            <Route path="/data-input" element={<RequirePackage required="essential" upgradePath="/upgrade/data-input"><DataInput /></RequirePackage>} />
                             <Route path="/roadmap" element={<RequirePackage required="premium" upgradePath="/upgrade/roadmap"><RoadmapGenerator /></RequirePackage>} />
                             <Route path="/analytics" element={<RequirePackage required="premium" upgradePath="/upgrade/analytics"><Analytics /></RequirePackage>} />
                             <Route path="/ai-analyst" element={<RequirePackage required="premium" upgradePath="/upgrade/ai-analyst"><AIBusinessAnalyst /></RequirePackage>} />
@@ -191,14 +244,15 @@ function App() {
                             <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
                             <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
                             <Route path="/upgrade/funding" element={<FundingUpgrade />} />
-                            <Route path="/upgrade/data-input" element={<DataInputUpgrade />} />
+                            {/* Data Input routes removed */}
                             <Route path="/upgrade/app-store" element={<AppStoreUpgrade />} />
                             <Route path="/upgrade/connections" element={<ConnectionsUpgrade />} />
                             <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
                             <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
                             <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
                             <Route path="/upgrade/business-analyst" element={<AIAnalystUpgrade />} />
-                            <Route path="/connections" element={<RequirePackage required="essential" upgradePath="/upgrade/connections"><MyConnections /></RequirePackage>} />
+                            <Route path="/connections" element={<RedirectWithSearch to="/community?tab=connections" />} />
+                            <Route path="/mentorship" element={<RedirectWithSearch to="/community?tab=mentorship" />} />
                             <Route path="/payments/*" element={<ProtectedRoute><PaymentRoutes /></ProtectedRoute>} />
                           </Routes>
                         </Layout>

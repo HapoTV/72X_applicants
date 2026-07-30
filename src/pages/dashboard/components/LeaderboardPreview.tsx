@@ -1,55 +1,57 @@
 // src/components/dashboard/components/LeaderboardPreview.tsx
 import React from 'react';
+import { Briefcase, Sparkles, ShieldCheck, ShoppingBag } from 'lucide-react';
 
-interface LeaderboardPreviewProps {
-  engagementData: any;
-}
+const additionalApps = [
+  {
+    title: 'CRM',
+    description: 'Customer relationship management for leads and clients.',
+    icon: Briefcase,
+    color: 'from-sky-500 to-blue-600',
+  },
+  {
+    title: 'Tenderly AI',
+    description: 'AI tools for forecasting, insights, and smarter decisions.',
+    icon: Sparkles,
+    color: 'from-violet-500 to-fuchsia-600',
+  },
+  {
+    title: 'Funding Finder',
+    description: 'Search grants, loans and funding opportunities.',
+    icon: ShieldCheck,
+    color: 'from-emerald-500 to-teal-600',
+  },
+  {
+    title: 'Marketplace',
+    description: 'List products and get discovered by customers.',
+    icon: ShoppingBag,
+    color: 'from-amber-400 to-orange-500',
+  },
+];
 
-const LeaderboardPreview: React.FC<LeaderboardPreviewProps> = ({ engagementData }) => {
-  if (!engagementData?.leaderboard || engagementData.leaderboard.length === 0) {
-    return null;
-  }
-
+const LeaderboardPreview: React.FC = () => {
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="text-sm font-semibold text-gray-700">Top Engagers This Week</h3>
-        <div className="text-[11px] text-primary-700 bg-primary-50 border border-primary-100 px-2 py-1 rounded-full whitespace-nowrap">
-          Engage more to reach the Top 3
-        </div>
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-gray-700">Additional apps</h3>
+        <p className="text-xs text-gray-500 mt-1">Explore app store tools to grow your business.</p>
       </div>
-      <div className="space-y-2">
-        {engagementData.leaderboard.slice(0, 3).map((user: any, index: number) => (
-          <div key={user.userId || index} className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold
-                ${index === 0 ? 'bg-yellow-100 text-yellow-600' : 
-                  index === 1 ? 'bg-gray-100 text-gray-600' : 
-                  'bg-orange-100 text-orange-600'}`}>
-                {index + 1}
-              </span>
-              <span className="text-sm text-gray-600 truncate max-w-[120px]">
-                {user.userName || `User ${index + 1}`}
-              </span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {additionalApps.map((app) => {
+          const Icon = app.icon;
+          const iconClasses = `flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${app.color} text-white shadow-sm`;
+          return (
+            <div key={app.title} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-3">
+              <div className={iconClasses}>
+                <Icon className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-gray-800">{app.title}</h4>
+                <p className="text-xs text-gray-500">{app.description}</p>
+              </div>
             </div>
-            <span className="text-sm font-semibold text-gray-700">
-              {user.totalScore || 0} XP
-            </span>
-          </div>
-        ))}
-        {engagementData.rank > 3 && (
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <div className="flex items-center space-x-2">
-              <span className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-600 text-xs font-bold">
-                {engagementData.rank}
-              </span>
-              <span className="text-sm text-gray-600">You</span>
-            </div>
-            <span className="text-sm font-semibold text-gray-700">
-              {engagementData.totalScore || 0} XP
-            </span>
-          </div>
-        )}
+          );
+        })}
       </div>
     </div>
   );

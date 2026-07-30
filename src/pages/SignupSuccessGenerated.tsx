@@ -29,7 +29,7 @@ const SignupSuccessGenerated: React.FC = () => {
       setMessage('We could not send the verification email right now due to email rate limits. Please wait a few minutes, then click “Resend verification email”.');
       localStorage.removeItem('supabaseEmailRateLimited');
     }
-  }, []);
+  }, [email]);
 
   React.useEffect(() => {
     const failed = localStorage.getItem('supabaseVerificationEmailFailed') === 'true';
@@ -37,7 +37,7 @@ const SignupSuccessGenerated: React.FC = () => {
       setMessage('We could not confirm that the verification email was sent. Please click “Resend verification email”.');
       localStorage.removeItem('supabaseVerificationEmailFailed');
     }
-  }, []);
+  }, [email]);
 
   React.useEffect(() => {
     const exchangeSessionIfPresent = async () => {
@@ -102,7 +102,7 @@ const SignupSuccessGenerated: React.FC = () => {
       if (intervalId) window.clearInterval(intervalId);
       if (timeoutId) window.clearTimeout(timeoutId);
     };
-  }, []);
+  }, [email]);
 
   const resendVerification = async () => {
     if (!supabase) {

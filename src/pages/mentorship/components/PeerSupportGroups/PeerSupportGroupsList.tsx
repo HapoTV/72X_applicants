@@ -15,7 +15,6 @@ interface PeerSupportGroupsListProps {
 }
 
 const PeerSupportGroupsList: React.FC<PeerSupportGroupsListProps> = ({
-  groups,
   filteredGroups,
   searchQuery,
   selectedCategory,

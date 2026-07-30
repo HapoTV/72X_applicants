@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Banknote, Users, TrendingUp, Target, Flame } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import MetricCard from '../../components/MetricCard';
-import { dataInputService } from '../../services/DataInputService';
+// DataInputService removed; rely on backend metrics or localStorage fallbacks
 import { adService } from '../../services/AdService';
 import { EngagementPeriod } from '../../interfaces/AdData';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +10,24 @@ import { useAuth } from '../../context/AuthContext';
 type PackageType = 'startup' | 'essential' | 'premium';
 
 type Language = 'en' | 'af' | 'zu';
+
+type Challenge = { id: string; title: string; description: string; reward: string; total: number; requiredPackage: PackageType };
+
+const packageOrder: Record<PackageType, number> = { startup: 0, essential: 1, premium: 2 };
+
+const challenges: Challenge[] = [
+  { id: 'marketplace_post', title: 'Post 3 products on the marketplace', description: 'Increase visibility by showcasing your best products.', reward: '50 XP + Visibility Badge', total: 3, requiredPackage: 'essential' },
+  { id: 'learning_module', title: 'Complete 1 learning module', description: 'Boost your skills in Business Planning, Marketing, Finance, Ops or Leadership.', reward: '100 XP + Knowledge Badge', total: 1, requiredPackage: 'startup' },
+  { id: 'funding_apply', title: 'Shortlist 2 funding opportunities', description: 'Use Funding Finder to bookmark suitable grants/loans/investors.', reward: '40 XP + Funding Ready', total: 2, requiredPackage: 'essential' },
+  { id: 'mentorship_message', title: 'Send 1 question to a mentor', description: 'Start a conversation in Mentorship Hub to get advice.', reward: '60 XP + Networker Badge', total: 1, requiredPackage: 'essential' },
+  { id: 'data_input_update', title: "Update today's sales/customers", description: 'Record your daily numbers in Data Input so analytics can track growth.', reward: '35 XP + Consistency Streak', total: 1, requiredPackage: 'essential' },
+  { id: 'analytics_review', title: 'Review your analytics', description: 'Open the Analytics page to review trends and insights.', reward: '25 XP + Insightful', total: 1, requiredPackage: 'premium' },
+  { id: 'roadmap_task', title: 'Complete 1 roadmap task', description: 'Tick off a task in your AI roadmap to move your business forward.', reward: '80 XP + Momentum', total: 1, requiredPackage: 'premium' },
+  { id: 'community_post', title: 'Post 1 update in the community', description: 'Share a win, question, or update with other founders.', reward: '40 XP + Community Builder', total: 1, requiredPackage: 'startup' },
+  { id: 'profile_complete', title: 'Complete your profile', description: 'Add/update business info so recommendations are more accurate.', reward: '30 XP + Profile Pro', total: 1, requiredPackage: 'startup' },
+  { id: 'quiz_pass', title: 'Pass 1 learning quiz', description: 'Complete a module quiz to reinforce what you learned.', reward: '30 XP + Learner', total: 1, requiredPackage: 'startup' },
+  { id: 'funding_apply_draft', title: 'Draft 1 funding application answer', description: 'Prepare your company overview for a funding application.', reward: '50 XP + Funding Ready', total: 1, requiredPackage: 'essential' },
+];
 
 interface TranslationKeys {
   monthlyRevenue: string;
@@ -51,16 +69,15 @@ const Metrics: React.FC = () => {
   const [backendMetrics, setBackendMetrics] = useState<Record<string, string> | null>(null);
 
   const effectivePackage = (userPackage || (localStorage.getItem('userPackage') as PackageType) || 'startup') as PackageType;
-  const packageOrder: Record<PackageType, number> = { startup: 0, essential: 1, premium: 2 };
-  const canAccess = (required: PackageType) => packageOrder[effectivePackage] >= packageOrder[required];
+  const canAccess = useCallback((required: PackageType) => packageOrder[effectivePackage] >= packageOrder[required], [effectivePackage]);
 
   const t = useMemo(() => translations[selectedLanguage], [selectedLanguage]);
 
-  const readMetric = (key: string) => {
+  const readMetric = useCallback((key: string) => {
     const backendValue = backendMetrics?.[key];
     if (backendValue != null && String(backendValue).trim() !== '') return backendValue;
     return (localStorage.getItem(key) || '').trim() || '--';
-  };
+  }, [backendMetrics]);
 
   useEffect(() => {
     let mounted = true;
@@ -83,10 +100,9 @@ const Metrics: React.FC = () => {
 
     const load = async () => {
       try {
-        const [metricsRes, engagementSummary] = await Promise.all([
-          dataInputService.getMetrics(),
-          adService.getUserEngagementSummary(EngagementPeriod.ALL_TIME),
-        ]);
+        const engagementSummary = await adService.getUserEngagementSummary(EngagementPeriod.ALL_TIME);
+        // metricsRes removed; read monthlyRevenue from localStorage if present
+        const metricsRes = { totalRevenue: localStorage.getItem('monthlyRevenue') ? Number(localStorage.getItem('monthlyRevenue')) : undefined, totalCustomers: localStorage.getItem('activeCustomers') };
 
         const goalsAchieved =
           (engagementSummary as any)?.engagementByType?.ACHIEVEMENT_UNLOCKED ??
@@ -150,26 +166,11 @@ const Metrics: React.FC = () => {
       changeType: 'increase' as const,
       link: '#'
     },
-  ], [t, backendMetrics]);
-
-  type Challenge = { id: string; title: string; description: string; reward: string; total: number; requiredPackage: PackageType };
-  const challenges: Challenge[] = [
-    { id: 'marketplace_post', title: 'Post 3 products on the marketplace', description: 'Increase visibility by showcasing your best products.', reward: '50 XP + Visibility Badge', total: 3, requiredPackage: 'essential' },
-    { id: 'learning_module', title: 'Complete 1 learning module', description: 'Boost your skills in Business Planning, Marketing, Finance, Ops or Leadership.', reward: '100 XP + Knowledge Badge', total: 1, requiredPackage: 'startup' },
-    { id: 'funding_apply', title: 'Shortlist 2 funding opportunities', description: 'Use Funding Finder to bookmark suitable grants/loans/investors.', reward: '40 XP + Funding Ready', total: 2, requiredPackage: 'essential' },
-    { id: 'mentorship_message', title: 'Send 1 question to a mentor', description: 'Start a conversation in Mentorship Hub to get advice.', reward: '60 XP + Networker Badge', total: 1, requiredPackage: 'essential' },
-    { id: 'data_input_update', title: "Update today's sales/customers", description: 'Record your daily numbers in Data Input so analytics can track growth.', reward: '35 XP + Consistency Streak', total: 1, requiredPackage: 'essential' },
-    { id: 'analytics_review', title: 'Review your analytics', description: 'Open the Analytics page to review trends and insights.', reward: '25 XP + Insightful', total: 1, requiredPackage: 'premium' },
-    { id: 'roadmap_task', title: 'Complete 1 roadmap task', description: 'Tick off a task in your AI roadmap to move your business forward.', reward: '80 XP + Momentum', total: 1, requiredPackage: 'premium' },
-    { id: 'community_post', title: 'Post 1 update in the community', description: 'Share a win, question, or update with other founders.', reward: '40 XP + Community Builder', total: 1, requiredPackage: 'startup' },
-    { id: 'profile_complete', title: 'Complete your profile', description: 'Add/update business info so recommendations are more accurate.', reward: '30 XP + Profile Pro', total: 1, requiredPackage: 'startup' },
-    { id: 'quiz_pass', title: 'Pass 1 learning quiz', description: 'Complete a module quiz to reinforce what you learned.', reward: '30 XP + Learner', total: 1, requiredPackage: 'startup' },
-    { id: 'funding_apply_draft', title: 'Draft 1 funding application answer', description: 'Prepare your company overview for a funding application.', reward: '50 XP + Funding Ready', total: 1, requiredPackage: 'essential' },
-  ];
+  ], [readMetric, t]);
 
   const eligibleChallenges = useMemo(
     () => challenges.filter((c) => canAccess(c.requiredPackage)),
-    [effectivePackage]
+    [canAccess]
   );
 
   return (

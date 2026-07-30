@@ -4,7 +4,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   BarChart3, 
-  MessageCircle,
   AppWindow,
   Brain,
   Lock,
@@ -13,12 +12,8 @@ import {
   ChevronRight,
   X,
   User,
-  DollarSign,
   BookOpen,
-  Upload,
-  ShoppingBag,
   Users,
-  UserPlus,
   Calendar,
   Gift,
   LogOut
@@ -33,24 +28,15 @@ type PackageType = 'startup' | 'essential' | 'premium';
 
 interface NavigationProps {
   onClose?: () => void;
-  onDashboardToggle?: (isOpen: boolean) => void;
-  onScheduleToggle?: (isOpen: boolean) => void;
-  onLearningToggle?: (isOpen: boolean) => void;
   onCommunityToggle?: (isOpen: boolean) => void;
-  onAppStoreToggle?: (isOpen: boolean) => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onScheduleToggle, onLearningToggle, onCommunityToggle, onAppStoreToggle }) => {
+const Navigation: React.FC<NavigationProps> = ({ onClose, onCommunityToggle }) => {
   const navigate = useNavigate();
   const { userPackage } = useAuth();
   const upgradesDisabled = false;
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
-  const [isDashboardSubNavOpen, setIsDashboardSubNavOpen] = useState(false);
-  const [isScheduleSubNavOpen, setIsScheduleSubNavOpen] = useState(false);
-  const [isLearningSubNavOpen, setIsLearningSubNavOpen] = useState(false);
-  const [isAppStoreSubNavOpen, setIsAppStoreSubNavOpen] = useState(false);
-  
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
   const userEmail = localStorage.getItem('userEmail') || 'user@example.com';
@@ -182,22 +168,14 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
     
     { path: '/schedule', icon: Calendar, label: 'Schedule', package: 'startup' as PackageType },
     
-    { path: '/connections', icon: UserPlus, label: 'Connections', package: 'essential' as PackageType },
-    
     { path: '/learning', icon: BookOpen, label: 'Learning', package: 'startup' as PackageType },
     
-    { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace', package: 'essential' as PackageType },
-    
-    { path: '/community/discussions', icon: Users, label: 'Community', package: 'startup' as PackageType },
-    
-    { path: '/mentorship', icon: MessageCircle, label: 'Mentorship', package: 'essential' as PackageType },
-    
-    { path: '/funding', icon: DollarSign, label: 'Funding', package: 'essential' },
+    // Marketplace and Funding moved into App Store
+    { path: '/community', icon: Users, label: 'Community', package: 'startup' as PackageType },
     { path: '/applications', icon: AppWindow, label: 'App Store', package: 'essential' as PackageType },
     
-    { path: '/data-input', icon: Upload, label: 'Data Input', package: 'essential' },
+    // Data Input removed
     
-    { path: '/analytics', icon: BarChart3, label: 'Analytics', package: 'premium' },
     { path: '/business-analyst', icon: Brain, label: 'Business Analyst', package: 'premium' },
     
     { path: '/profile', icon: User, label: 'Profile', package: 'startup' },
@@ -217,15 +195,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
   };
 
   const closeAllSecondaryNavs = () => {
-    setIsDashboardSubNavOpen(false);
-    setIsScheduleSubNavOpen(false);
-    setIsLearningSubNavOpen(false);
-    setIsAppStoreSubNavOpen(false);
-    onDashboardToggle?.(false);
-    onScheduleToggle?.(false);
-    onLearningToggle?.(false);
     onCommunityToggle?.(false);
-    onAppStoreToggle?.(false);
   };
 
   const toggleCollapsed = () => {
@@ -298,12 +268,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                     to="/dashboard/overview"
                     onClick={() => {
                       onClose?.();
-                      setIsScheduleSubNavOpen(false);
-                      setIsLearningSubNavOpen(false);
-                      setIsAppStoreSubNavOpen(false);
-                      onScheduleToggle?.(false);
-                      onLearningToggle?.(false);
-                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -317,40 +281,23 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       {React.createElement(item.icon, { className: 'w-4 h-4 flex-shrink-0' }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newState = !isDashboardSubNavOpen;
-                        setIsDashboardSubNavOpen(newState);
-                        onDashboardToggle?.(newState);
-                      }}
-                      className="p-1 hover:bg-white/20 rounded transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    {/* chevron removed - no secondary dashboard subnav */}
                   </NavLink>
                 </li>
               );
             }
 
-            // Special handling for Schedule - add arrow button with click
+            // Normal handling for Schedule
             if (item.path === '/schedule') {
               return (
                 <li key={item.path} className="relative group">
                   <NavLink
-                    to="/schedule/events"
+                    to="/schedule"
                     onClick={() => {
                       onClose?.();
-                      setIsDashboardSubNavOpen(false);
-                      setIsLearningSubNavOpen(false);
-                      setIsAppStoreSubNavOpen(false);
-                      onDashboardToggle?.(false);
-                      onLearningToggle?.(false);
-                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
-                      `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                      `flex items-center px-3 py-2 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-primary-50 text-primary-700'
                           : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -361,40 +308,22 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       {React.createElement(item.icon, { className: 'w-4 h-4 flex-shrink-0' }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newState = !isScheduleSubNavOpen;
-                        setIsScheduleSubNavOpen(newState);
-                        onScheduleToggle?.(newState);
-                      }}
-                      className="p-1 hover:bg-white/20 rounded transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
                   </NavLink>
                 </li>
               );
             }
 
-            // Special handling for Learning - add arrow button with click
+            // Normal handling for Learning
             if (item.path === '/learning') {
               return (
                 <li key={item.path} className="relative group">
                   <NavLink
-                    to="/learning?category=business-plan"
+                    to="/learning"
                     onClick={() => {
                       onClose?.();
-                      setIsDashboardSubNavOpen(false);
-                      setIsScheduleSubNavOpen(false);
-                      setIsAppStoreSubNavOpen(false);
-                      onDashboardToggle?.(false);
-                      onScheduleToggle?.(false);
-                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
-                      `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                      `flex items-center px-3 py-2 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-primary-50 text-primary-700'
                           : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -405,18 +334,6 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                       {React.createElement(item.icon, { className: 'w-4 h-4 flex-shrink-0' }, null)}
                       {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const newState = !isLearningSubNavOpen;
-                        setIsLearningSubNavOpen(newState);
-                        onLearningToggle?.(newState);
-                      }}
-                      className="p-1 hover:bg-white/20 rounded transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
                   </NavLink>
                 </li>
               );
@@ -427,17 +344,9 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
               return (
                 <li key={item.path} className="relative group">
                   <NavLink
-                    to={locked ? upgradePath : '/applications/crm'}
+                    to={locked ? upgradePath : '/applications'}
                     onClick={() => {
                       onClose?.();
-                      setIsDashboardSubNavOpen(false);
-                      setIsScheduleSubNavOpen(false);
-                      setIsLearningSubNavOpen(false);
-                      setIsAppStoreSubNavOpen(false);
-                      onDashboardToggle?.(false);
-                      onScheduleToggle?.(false);
-                      onLearningToggle?.(false);
-                      onAppStoreToggle?.(false);
                     }}
                     className={({ isActive }) =>
                       `flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
@@ -463,22 +372,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onDashboardToggle, onS
                         {locked && <Lock className="w-3 h-3" />}
                       </div>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (locked) {
-                          navigate(upgradePath);
-                          return;
-                        }
-                        const newState = !isAppStoreSubNavOpen;
-                        setIsAppStoreSubNavOpen(newState);
-                        onAppStoreToggle?.(newState);
-                      }}
-                      className="p-1 hover:bg-white/20 rounded transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    {/* Chevron removed for App Store — apps open from App Store page in new tabs */}
                   </NavLink>
                 </li>
               );

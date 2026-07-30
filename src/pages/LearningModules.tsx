@@ -1,6 +1,7 @@
 // src/pages/LearningModules.tsx
 import React from 'react';
 import { BookOpen, Brain } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Spinner from '../components/Spinner';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, useLearningModules } from './learning/useLearningModules';
@@ -9,10 +10,21 @@ import LearningModuleCard from './learning/LearningModuleCard';
 import LearningMaterialViewer from './learning/LearningMaterialViewer';
 import FlipCardQuizModal from '../components/learning/FlipCardQuizModal';
 
+// Map category IDs to URL parameters
+const CATEGORY_URL_MAP: Record<string, string> = {
+  'BUSINESS_PLANNING': 'business-plan',
+  'MARKETING_SALES': 'marketing',
+  'FINANCIAL_MANAGEMENT': 'finance',
+  'OPERATIONS': 'operations',
+  'LEADERSHIP': 'leadership',
+  'TECHNICAL': 'technical',
+};
+
 const LearningModules: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const {
-    selectedCategory, setSelectedCategory,
+    selectedCategory,
     modules, openMaterial, quizQuestions, quizLoading, showQuiz, quizMaterial,
     quizPassedMaterialIds, materialReadyForQuiz, setMaterialReadyForQuiz,
     readTimerDone, setReadTimerDone,
@@ -60,13 +72,25 @@ const LearningModules: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in px-2 sm:px-0">
+      {/* Header */}
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Learning</h1>
+          <p className="text-gray-600 mt-2">
+            Master essential skills with curated courses and materials
+          </p>
+        </div>
+      </div>
 
       {/* Category tabs */}
       <div className="flex flex-wrap gap-2">
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
+            onClick={() => {
+              const urlParam = CATEGORY_URL_MAP[cat.id];
+              navigate(`/learning?category=${urlParam}`);
+            }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
               selectedCategory === cat.id
                 ? 'bg-primary-600 text-white shadow-sm'

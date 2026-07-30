@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Bell,
   Filter,
   Home,
@@ -10,6 +9,7 @@ import {
   Bookmark,
   TrendingUp,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 // Hooks
 import { useTenders } from '../../hooks/tenderlyai';

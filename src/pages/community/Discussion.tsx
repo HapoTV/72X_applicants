@@ -191,20 +191,12 @@ const Discussions: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Community Forum
-        </h1>
-        <p className="text-gray-600">
-          Share business advice and experiences with other entrepreneurs in the
-          community
-        </p>
-      </div>
+      <div />
 
       <CommunityStats stats={communityStats} />
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <CategoryFilter
             categories={categories}
             selectedCategory={selectedCategory}
@@ -214,14 +206,14 @@ const Discussions: React.FC = () => {
           <button
             type="button"
             onClick={() => setShowNewDiscussion(true)}
-            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+            className="px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2 text-sm"
           >
             <Plus className="w-4 h-4" />
             <span>Post Business Advice</span>
           </button>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <DiscussionsList
             discussions={filteredDiscussions}
             categories={categories}

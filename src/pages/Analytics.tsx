@@ -28,7 +28,7 @@ const Analytics: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = React.useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
@@ -63,11 +63,11 @@ const Analytics: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [timeRange]);
 
   useEffect(() => {
-    fetchAnalyticsData();
-  }, [timeRange]);
+    void fetchAnalyticsData();
+  }, [fetchAnalyticsData, timeRange]);
 
   if (isLoading) {
     return <AnalyticsLoadingState />;

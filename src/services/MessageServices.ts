@@ -23,6 +23,26 @@ class MessageServices {
     return '';
   }
 
+  private parseUsersResponse(data: unknown): User[] {
+    if (Array.isArray(data)) return data;
+
+    if (data && typeof data === 'object') {
+      const payload = data as Record<string, unknown>;
+
+      if (Array.isArray(payload.data)) return payload.data as User[];
+      if (Array.isArray(payload.users)) return payload.users as User[];
+      if (Array.isArray(payload.result)) return payload.result as User[];
+      if (Array.isArray(payload.payload)) return payload.payload as User[];
+      if (payload.data && typeof payload.data === 'object') {
+        const nested = payload.data as Record<string, unknown>;
+        if (Array.isArray(nested.users)) return nested.users as User[];
+        if (Array.isArray(nested.result)) return nested.result as User[];
+      }
+    }
+
+    return [];
+  }
+
   // Send a message
   async sendMessage(messageData: MessageSendRequest): Promise<Message> {
     try {
@@ -124,15 +144,52 @@ class MessageServices {
 
   // Get all users for chat
   async getChatUsers(): Promise<User[]> {
-    try {
-      const response = await axiosClient.get('/users/role/USER', {
-        headers: this.getAuthHeader()
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching chat users:', error);
-      return [];
+    const endpoints = [
+      '/users/role/USER',
+      '/users/role/user',
+      '/users?role=USER',
+      '/users?role=user',
+    ];
+
+    let lastError: unknown = null;
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await axiosClient.get(endpoint, {
+          headers: this.getAuthHeader(),
+        });
+
+        const parsedUsers = this.parseUsersResponse(response.data);
+        const isWrappedResponse =
+          response.data &&
+          typeof response.data === 'object' &&
+          (Array.isArray((response.data as any).data) ||
+            Array.isArray((response.data as any).users) ||
+            Array.isArray((response.data as any).result) ||
+            Array.isArray((response.data as any).payload));
+
+        if (Array.isArray(response.data) || isWrappedResponse) {
+          return parsedUsers;
+        }
+
+        if (parsedUsers.length > 0) {
+          return parsedUsers;
+        }
+
+        // If the endpoint returned an object with no user array, keep trying alternates.
+      } catch (error: unknown) {
+        lastError = error;
+        const status = (error as any)?.response?.status;
+        if (status === 404 || status === 400) {
+          continue;
+        }
+        console.error(`Error fetching chat users from ${endpoint}:`, error);
+        throw error;
+      }
     }
+
+    console.error('Error fetching chat users after fallback attempts:', lastError);
+    throw lastError ?? new Error('Failed to fetch chat users.');
   }
 
   // Search users for chat 

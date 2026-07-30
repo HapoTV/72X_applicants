@@ -63,16 +63,6 @@ const AdminManagement: React.FC = () => {
     }
   }, [fetchAdmins, isSuperAdmin]);
 
-  if (!isSuperAdmin) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <Shield className="w-12 h-12 text-red-400 mx-auto mb-3" />
-        <h3 className="text-lg font-medium text-red-800 mb-2">Access Denied</h3>
-        <p className="text-red-600">Only Super Admins can manage admin users.</p>
-      </div>
-    );
-  }
-
   const filteredAdmins = useMemo(() => {
     return admins.filter((admin) => {
       const matchesSearch = doesAdminMatchSearchQuery(admin, searchQuery);
@@ -89,6 +79,16 @@ const AdminManagement: React.FC = () => {
     const superAdmins = admins.filter(a => a.role === 'SUPER_ADMIN').length;
     return { superAdmins };
   }, [admins]);
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <Shield className="w-12 h-12 text-red-400 mx-auto mb-3" />
+        <h3 className="text-lg font-medium text-red-800 mb-2">Access Denied</h3>
+        <p className="text-red-600">Only Super Admins can manage admin users.</p>
+      </div>
+    );
+  }
 
   return (
     <AdminManagementView

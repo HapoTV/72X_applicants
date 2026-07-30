@@ -4,7 +4,7 @@ import { User, Edit, Save, Bell, Shield, Trash2, Mail, Phone, MapPin, Building2 
 import { authService } from '../../../services/AuthService';
 import axiosClient from '../../../api/axiosClient';
 import { useAuth } from '../../../context/AuthContext';
-import type { User, UserFormData } from '../../../interfaces/UserData';
+import type { User as UserType, UserFormData } from '../../../interfaces/UserData';
 import { AdminProfilePasswordModal } from './components/AdminProfilePasswordModal';
 import { calculateYearsInBusiness, syncUserInLocalStorage, getNotificationStorageKey } from '../../../utils/userHelpers';
 import { checkPasswordRequirements, validatePasswordChange, EMPTY_PASSWORD_REQUIREMENTS } from '../../../utils/passwordHelpers';
@@ -265,8 +265,8 @@ const AdminProfile: React.FC = () => {
     const [passwordRequirements, setPasswordRequirements] = useState<PasswordRequirements>(EMPTY_PASSWORD_REQUIREMENTS);
 
     useEffect(() => {
-        fetchUserProfile();
-    }, []);
+        void fetchUserProfile();
+    }, [user?.userId]);
 
     useEffect(() => {
         if (activeTab !== 'notifications') return;
@@ -287,7 +287,7 @@ const AdminProfile: React.FC = () => {
         } catch (error) {
             console.error('Error loading notification preferences:', error);
         }
-    }, [activeTab, user?.userId, user?.email]);
+    }, [activeTab, user]);
 
     const fetchUserProfile = async () => {
         try {
@@ -307,7 +307,7 @@ const AdminProfile: React.FC = () => {
             });
 
             setProfileImageUrl(userData.profileImageUrl || '');
-            syncUserInLocalStorage(userData as User);
+            syncUserInLocalStorage(userData as UserType);
         } catch {
             alert('Failed to load profile data');
         } finally {

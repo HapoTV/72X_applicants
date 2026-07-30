@@ -1,5 +1,5 @@
 // pages/adminDashboard/tabs/EventsTab.tsx
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { eventService } from '../../../services/EventService';
 import { useAuth } from '../../../context/AuthContext';
 import type { AdminEventItem, EventFormData} from '../../../interfaces/EventData';
@@ -29,11 +29,7 @@ export default function EventsTab() {
 
   const adminEmail = user?.email || '';
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -49,7 +45,11 @@ export default function EventsTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isSuperAdmin, userOrganisation]);
+
+  useEffect(() => {
+    void fetchEvents();
+  }, [fetchEvents, isSuperAdmin, userOrganisation]);
 
   const handleAddOrUpdateEvent = async () => {
     // Validate form data
