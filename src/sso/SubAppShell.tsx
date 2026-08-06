@@ -1,6 +1,6 @@
 // src/sso/SubAppShell.tsx
-// Top bar shell wrapper for all sub-apps.
-// Shows app name, user email, link back to main 72X app, and logout.
+// Shell wrapper for all sub-apps.
+// Handles SSO exchange, two-step sign-in, and the authenticated app layout.
 
 import React, { useEffect } from 'react'
 import { ExternalLink, LogOut } from 'lucide-react'
@@ -15,8 +15,19 @@ interface Props {
   children: (user: NonNullable<ReturnType<typeof useSsoAuth>['user']>) => React.ReactNode
 }
 
-export function SubAppShell({ appName, appColor, children }: Props) {
-  const { authState, user, error, exchangeSsoToken, signIn, logout } = useSsoAuth()
+export function SubAppShell({ appName, appColor = 'from-sky-500 to-blue-600', children }: Props) {
+  const {
+    authState,
+    user,
+    pendingEmail,
+    error,
+    exchangeSsoToken,
+    submitCredentials,
+    submitOtp,
+    resendOtp,
+    backToSignIn,
+    logout,
+  } = useSsoAuth()
 
   // Trigger SSO exchange when state is 'sso'
   useEffect(() => {
@@ -34,22 +45,28 @@ export function SubAppShell({ appName, appColor, children }: Props) {
     )
   }
 
-  // Not authenticated — show sign-in page
-  if (authState === 'signin' || !user) {
+  // Sign-in or OTP step
+  if (authState === 'signin' || authState === 'otp') {
     return (
       <SignInPage
         appName={appName}
         appColor={appColor}
-        onSignIn={signIn}
-        errorMessage={error}
+        pendingEmail={pendingEmail}
+        authState={authState}
+        error={error}
+        onCredentials={submitCredentials}
+        onOtp={submitOtp}
+        onResendOtp={resendOtp}
+        onBackToSignIn={backToSignIn}
       />
     )
   }
 
   // Authenticated — show app with top bar
+  if (!user) return null
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top bar */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -64,8 +81,7 @@ export function SubAppShell({ appName, appColor, children }: Props) {
               href={`${MAIN_APP_URL}/dashboard`}
               className="hidden sm:flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 hover:underline"
             >
-              72X Dashboard
-              <ExternalLink className="w-3 h-3" />
+              72X Dashboard <ExternalLink className="w-3 h-3" />
             </a>
             <span className="text-sm text-gray-500 hidden sm:block truncate max-w-[160px]">
               {user.email}
@@ -81,7 +97,6 @@ export function SubAppShell({ appName, appColor, children }: Props) {
         </div>
       </header>
 
-      {/* App content */}
       <main className="p-4 sm:p-6">
         {children(user)}
       </main>
