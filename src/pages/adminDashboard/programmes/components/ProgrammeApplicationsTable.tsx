@@ -13,6 +13,18 @@ const statusStyles: Record<string, string> = {
   'Not selected': 'bg-red-100 text-red-700',
 };
 
+
+// Helper function to format date
+const formatDate = (dateString: string) => {
+  if (!dateString) return '-';
+  try {
+    // Extract just the date part (YYYY-MM-DD)
+    return dateString.split('T')[0];
+  } catch {
+    return dateString;
+  }
+};
+
 export function ProgrammeApplicationsTable({ applications, loading, onView }: ProgrammeApplicationsTableProps) {
   if (loading) {
     return (
@@ -52,7 +64,7 @@ export function ProgrammeApplicationsTable({ applications, loading, onView }: Pr
                 <td className="px-6 py-4 text-slate-600">{application.programme}</td>
                 <td className="px-6 py-4 text-slate-600">{application.email}</td>
                 <td className="px-6 py-4 text-slate-600">{application.phoneNumber}</td>
-                <td className="px-6 py-4 text-slate-600">{application.submissionDate}</td>
+                <td className="px-6 py-4 text-slate-600">{formatDate(application.submittedAt)}</td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[application.status]}`}>
                     {application.status}

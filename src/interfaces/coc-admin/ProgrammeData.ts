@@ -66,7 +66,7 @@ export interface ProgrammeApplicationItem {
   programme: string;
   email: string;
   phoneNumber: string;
-  submissionDate: string;
+  submittedAt: string;
   status: ApplicationStatus;
   businessName: string;
   registrationNumber: string;
