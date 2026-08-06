@@ -1,54 +1,181 @@
 import React from 'react';
-import { Briefcase, Sparkles, Shield, ShieldCheck, ShoppingBag, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Briefcase,
+  Sparkles,
+  Shield,
+  ShoppingBag,
+  ShieldCheck,
+  Clock,
+  CheckCircle,
+  ExternalLink,
+} from 'lucide-react';
+
+type AppStatus = 'active' | 'coming-soon';
+
+interface AppDef {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  href: string;
+  status: AppStatus;
+}
+
+const APPS: AppDef[] = [
+  {
+    title: 'CRM',
+    description: 'Manage customer relationships, track leads, and streamline your sales process.',
+    icon: Briefcase,
+    color: 'from-sky-500 to-blue-600',
+    href: '/applications/crm',
+    status: 'active',
+  },
+  {
+    title: 'Finance Manager',
+    description: 'Track expenses, manage budgets, and monitor financial performance.',
+    icon: Shield,
+    color: 'from-emerald-400 to-emerald-600',
+    href: '/applications/finance-manager',
+    status: 'active',
+  },
+  {
+    title: 'TenderlyAI',
+    description: 'AI-powered tender management — create, manage, and track applications.',
+    icon: Sparkles,
+    color: 'from-violet-500 to-fuchsia-600',
+    href: '/applications/tenderlyai',
+    status: 'active',
+  },
+  {
+    title: 'Marketplace',
+    description: 'List products and get discovered by customers in your community.',
+    icon: ShoppingBag,
+    color: 'from-amber-400 to-orange-500',
+    href: '/marketplace',
+    status: 'active',
+  },
+  {
+    title: 'Funding Finder',
+    description: 'Search and shortlist grants, loans, and investor opportunities.',
+    icon: ShieldCheck,
+    color: 'from-emerald-500 to-teal-600',
+    href: '/funding',
+    status: 'active',
+  },
+  {
+    title: 'Helpdesk',
+    description: 'Manage support tickets, track issues, and provide great customer service.',
+    icon: Shield,
+    color: 'from-blue-400 to-blue-600',
+    href: '#',
+    status: 'coming-soon',
+  },
+  {
+    title: 'Point of Sale',
+    description: 'Process sales, manage inventory, and accept payments at your counter.',
+    icon: ShoppingBag,
+    color: 'from-rose-400 to-red-600',
+    href: '#',
+    status: 'coming-soon',
+  },
+  {
+    title: 'Inventory',
+    description: 'Track stock levels, manage suppliers, and automate reorder alerts.',
+    icon: Briefcase,
+    color: 'from-cyan-400 to-cyan-600',
+    href: '#',
+    status: 'coming-soon',
+  },
+];
 
 const AppStore: React.FC = () => {
-  return (
-    <div className="flex-1 p-6 bg-gray-50 overflow-auto">
-      <div className="space-y-6 animate-fade-in px-2 sm:px-0">
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-          <h1 className="text-3xl font-bold text-gray-900">App Store</h1>
-          <p className="text-gray-700 mt-2">
-            Welcome to the App Store! Here you can access powerful business applications designed to help you manage and grow your business.
-          </p>
-        </div>
+  const navigate = useNavigate();
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            { title: 'CRM', description: 'Manage customer relationships, track leads, and streamline your sales process with our comprehensive CRM system.', icon: Briefcase, color: 'from-sky-500 to-blue-600', href: '/applications/crm' },
-            { title: 'Finance Manager', description: 'Track expenses, manage budgets, and monitor your financial performance with advanced reporting tools.', icon: Shield, color: 'from-emerald-400 to-emerald-600', href: '/applications/finance-manager' },
-            { title: 'TenderlyAI', description: 'AI-powered tender management system that helps you create, manage, and track tender applications efficiently.', icon: Sparkles, color: 'from-violet-500 to-fuchsia-600', href: '/applications/tenderlyai' },
-            { title: 'Marketplace', description: 'List products and get discovered by customers on the Marketplace.', icon: ShoppingBag, color: 'from-amber-400 to-orange-500', href: '/marketplace' },
-            { title: 'Funding Finder', description: 'Search and shortlist grants, loans and investor opportunities.', icon: ShieldCheck, color: 'from-emerald-500 to-teal-600', href: '/funding' },
-          ].map((app) => {
-            const Icon = app.icon as any;
+  const active = APPS.filter((a) => a.status === 'active');
+  const comingSoon = APPS.filter((a) => a.status === 'coming-soon');
+
+  return (
+    <div className="space-y-6 animate-fade-in px-2 sm:px-0">
+      {/* Header */}
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-900">Apps</h1>
+        <p className="text-gray-600 mt-1 text-sm">Access your business tools in one place.</p>
+      </div>
+
+      {/* Active apps */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <CheckCircle className="w-4 h-4 text-green-500" />
+          <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Active</h2>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {active.map((app) => {
+            const Icon = app.icon;
             return (
-              <div key={app.title} className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${app.color} text-white shadow-sm`}>
-                  <Icon className="w-5 h-5" />
+              <button
+                key={app.title}
+                onClick={() => navigate(app.href)}
+                className="flex flex-col items-center gap-3 rounded-2xl border border-gray-100 bg-white p-5 hover:shadow-md hover:border-primary-200 transition-all text-center group"
+              >
+                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${app.color} text-white shadow-sm group-hover:scale-105 transition-transform`}>
+                  <Icon className="w-6 h-6" />
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-gray-800">{app.title}</h4>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{app.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{app.description}</p>
+                </div>
+                <span className="flex items-center gap-1 text-xs text-primary-600 font-medium">
+                  Open <ExternalLink className="w-3 h-3" />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Coming soon apps */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Clock className="w-4 h-4 text-amber-500" />
+          <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Coming Soon</h2>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {comingSoon.map((app) => {
+            const Icon = app.icon;
+            return (
+              <div
+                key={app.title}
+                className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5 text-center opacity-70"
+              >
+                <div className="relative">
+                  <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${app.color} text-white shadow-sm opacity-60`}>
+                    <Icon className="w-6 h-6" />
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">{app.description}</p>
-                  <a href={app.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center mt-3 text-blue-600 hover:text-blue-700 text-sm">
-                    Open {app.title} <TrendingUp className="w-4 h-4 ml-2" />
-                  </a>
+                  <span className="absolute -top-1 -right-1 bg-amber-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    Soon
+                  </span>
                 </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">{app.title}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{app.description}</p>
+                </div>
+                <span className="text-xs text-amber-600 font-medium">In development</span>
               </div>
             );
           })}
         </div>
+      </div>
 
-        <div className="mt-8 bg-blue-50 rounded-lg p-6 border border-blue-200">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">Need Help?</h3>
-          <p className="text-blue-700 mb-1">
-            If you need support, please contact our team at:
-          </p>
-          <a href="mailto:support@seventytwox.co.za" className="text-blue-600 hover:text-blue-700 font-medium">
+      {/* Support */}
+      <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
+        <h3 className="text-sm font-semibold text-blue-900 mb-1">Need help with an app?</h3>
+        <p className="text-blue-700 text-sm">
+          Contact us at{' '}
+          <a href="mailto:support@seventytwox.co.za" className="font-medium hover:underline">
             support@seventytwox.co.za
           </a>
-        </div>
+        </p>
       </div>
     </div>
   );
