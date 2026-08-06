@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Bell,
   Filter,
@@ -8,6 +8,7 @@ import {
   Search,
   Bookmark,
   TrendingUp,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 

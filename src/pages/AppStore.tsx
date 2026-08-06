@@ -10,6 +10,14 @@ import {
   CheckCircle,
   ExternalLink,
 } from 'lucide-react';
+import axiosClient from '../api/axiosClient';
+
+// Sub-app URLs — port-based for local dev, subdomain-based in production
+const SUB_APP_URLS: Record<string, string> = {
+  'CRM': import.meta.env.VITE_CRM_URL || 'http://localhost:5174',
+  'Finance Manager': import.meta.env.VITE_FINANCE_URL || 'http://localhost:5175',
+  'TenderlyAI': import.meta.env.VITE_TENDERLYAI_URL || 'http://localhost:5176',
+};
 
 type AppStatus = 'active' | 'coming-soon';
 
@@ -95,6 +103,25 @@ const AppStore: React.FC = () => {
   const active = APPS.filter((a) => a.status === 'active');
   const comingSoon = APPS.filter((a) => a.status === 'coming-soon');
 
+  const handleOpen = async (app: AppDef) => {
+    if (app.status === 'coming-soon') return;
+
+    const subAppUrl = SUB_APP_URLS[app.title];
+    if (subAppUrl) {
+      // Try to generate an SSO token for seamless sign-in
+      try {
+        const res = await axiosClient.post('/auth/sso/generate');
+        const { ssoToken } = res.data;
+        window.open(`${subAppUrl}?sso=${ssoToken}`, '_blank', 'noopener');
+      } catch {
+        // SSO not yet available — open sub-app directly (user will sign in manually)
+        window.open(subAppUrl, '_blank', 'noopener');
+      }
+    } else {
+      navigate(app.href);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in px-2 sm:px-0">
       {/* Header */}
@@ -115,7 +142,7 @@ const AppStore: React.FC = () => {
             return (
               <button
                 key={app.title}
-                onClick={() => navigate(app.href)}
+                onClick={() => handleOpen(app)}
                 className="flex flex-col items-center gap-3 rounded-2xl border border-gray-100 bg-white p-5 hover:shadow-md hover:border-primary-200 transition-all text-center group"
               >
                 <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${app.color} text-white shadow-sm group-hover:scale-105 transition-transform`}>
