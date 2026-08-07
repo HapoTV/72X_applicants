@@ -6,10 +6,6 @@ import { copyFileSync } from 'fs'
 import { resolve } from 'path'
 
 export default defineConfig(({ mode }) => {
-  const isProduction = mode === 'production'
-  const isGitHubPages = process.env.GITHUB_PAGES === 'true' || process.env.VITE_GITHUB_PAGES === 'true'
-  
-  // For custom domain, use root path
   const base = '/'
 
   return {
@@ -36,12 +32,14 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      // Ensure the entry point is correctly resolved
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
         },
         output: {
+          entryFileNames: 'assets/[name].[hash].js',
+          chunkFileNames: 'assets/[name].[hash].js',
+          assetFileNames: 'assets/[name].[hash].[ext]',
           manualChunks: {
             'vendor-mui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
