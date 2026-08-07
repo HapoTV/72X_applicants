@@ -1,6 +1,6 @@
 // src/hooks/crm/useContacts.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { Contact, CreateContactRequest, UpdateContactRequest } from '../../interfaces/crm/contact.interface';
 import { contactService } from '../../services/crm/contact.service';
 import { useCRM } from './useCRM';
@@ -155,10 +155,6 @@ export const useContacts = () => {
             return { success: false, data: [], count: 0 };
         }
     }, [withLoading]);
-
-    useEffect(() => {
-        fetchContacts();
-    }, [fetchContacts]);
 
     return {
         contacts,

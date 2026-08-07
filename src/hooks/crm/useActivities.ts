@@ -1,6 +1,6 @@
 // src/hooks/crm/useActivities.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { Activity } from '../../interfaces/crm/activity.interface';
 import { activityService } from '../../services/crm/activity.service';
 import { useCRM } from './useCRM';
@@ -101,10 +101,6 @@ export const useActivities = () => {
         }
         return response;
     }, [withLoading, fetchActivities]);
-
-    useEffect(() => {
-        fetchRecentActivities(10);
-    }, []);
 
     return {
         activities,

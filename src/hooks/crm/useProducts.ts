@@ -1,6 +1,6 @@
 // src/hooks/crm/useProducts.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { Product, CreateProductRequest, UpdateProductRequest } from '../../interfaces/crm/product.interface';
 import { productService } from '../../services/crm/product.service';
 import { useCRM } from './useCRM';
@@ -115,10 +115,6 @@ export const useProducts = () => {
             return { success: false, data: [], count: 0 };
         }
     }, [withLoading]);
-
-    useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts]);
 
     return {
         products,

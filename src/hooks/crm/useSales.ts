@@ -1,6 +1,6 @@
 // src/hooks/crm/useSales.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { Sale, CreateSaleRequest, UpdateSaleRequest } from '../../interfaces/crm/sale.interface';
 import { saleService } from '../../services/crm/sale.service';
 import { useCRM } from './useCRM';
@@ -159,9 +159,6 @@ export const useSales = () => {
         }
     }, [withLoading]);
 
-    useEffect(() => {
-        fetchSales();
-    }, [fetchSales]);
 
     return {
         sales,

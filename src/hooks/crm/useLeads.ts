@@ -1,6 +1,6 @@
 // src/hooks/crm/useLeads.ts
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { Lead, CreateLeadRequest, UpdateLeadRequest, LeadStage } from '../../interfaces/crm/lead.interface';
 import { leadService } from '../../services/crm/lead.service';
 import { useCRM } from './useCRM';
@@ -164,9 +164,6 @@ export const useLeads = () => {
         }
     }, [withLoading]);
 
-    useEffect(() => {
-        fetchLeads();
-    }, [fetchLeads]);
 
     return {
         leads,
