@@ -99,8 +99,9 @@ export function useSsoAuth() {
       // Show a specific message based on what actually failed
       if (status === 401) {
         setError('Session link expired or already used. Please sign in.')
-      } else if (status === 404 || !status) {
-        setError(`SSO endpoint not available (${status || 'network error'}): ${msg}. Sign in manually below.`)
+      } else if (status === 500) {
+        const detail = err?.response?.data?.error || msg
+        setError(`Server error: ${detail}. Please sign in manually.`)
       } else {
         setError(`SSO failed (${status}): ${msg}. Please sign in manually.`)
       }
