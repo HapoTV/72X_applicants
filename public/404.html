@@ -70,6 +70,115 @@
       window.location.replace(redirectUrl);
     } else {
       // If we're at the root with a path parameter, load the main app
+      // Find the main JavaScript file in the assets folder
+      fetch('/assets/')
+        .then(function(response) {
+          return response.text();
+        })
+        .then(function(html) {
+          // Parse the HTML to find the main JS file
+          var parser = new DOMParser();
+          var doc = parser.parseFromString(html, 'text/html');
+          var links = doc.querySelectorAll('a');
+          var mainScript = null;
+          
+          for (var i = 0; i < links.length; i++) {
+            var href = links[i].getAttribute('href');
+            if (href && href.startsWith('main-') && href.endsWith('.js')) {
+              mainScript = href;
+              break;
+            }
+          }
+          
+          if (mainScript) {
+            var script = document.createElement('script');
+            script.type = 'module';
+            script.src = '/assets/' + mainScript;
+            document.body.appendChild(script);
+          } else {
+            // Fallback: try to load index.html directly
+            window.location.href = '/';
+          }
+        })
+        .catch(function() {
+          // Fallback: redirect to root
+          window.location.href = '/';
+        });
+    }
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>72X - Loading...</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+      padding: 2rem;
+    }
+    .spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    h2 {
+      font-size: 1.25rem;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h2>Loading 72X...</h2>
+    <p>Please wait while we redirect you to the app.</p>
+  </div>
+  <script>
+    // Get the current path
+    var path = window.location.pathname;
+    var search = window.location.search;
+    var hash = window.location.hash;
+    
+    // Check if we're already at the root with a path parameter
+    var hasPathParam = search.includes('path=');
+    
+    // If not at root and not already redirected
+    if (path !== '/' && !hasPathParam) {
+      // Redirect to root with the path as a query parameter
+      var redirectUrl = '/?path=' + encodeURIComponent(path) + search + hash;
+      window.location.replace(redirectUrl);
+    } else {
+      // If we're at the root with a path parameter, load the main app
       var mainScript = document.createElement('script');
       mainScript.type = 'module';
       // Use the actual main.js file from your build
