@@ -218,116 +218,559 @@ function App() {
                     }
                   />
 
-                  {/* Protected Routes with Layout */}
+                  {/* Protected Routes with Layout - Using Route nesting correctly */}
                   <Route
-                    path="/*"
+                    path="/dashboard"
                     element={
                       <ProtectedRoute>
                         <PaymentRedirect>
                           <PackageSelectionRedirect>
                             <Layout>
                               <BizBoostChatbot />
-                              <Routes>
-                                <Route path="/dashboard" element={<DashboardOverview />} />
-                                <Route path="/dashboard/overview" element={<DashboardOverview />} />
-                                <Route path="/dashboard/metrics" element={<DashboardMetrics />} />
-                                <Route path="/dashboard/community-feed" element={<DashboardCommunityFeed />} />
-                                <Route path="/schedule" element={<Schedule />} />
-                                <Route path="/learning" element={<LearningModules />} />
-                                <Route path="/community" element={<Community />} />
-                                <Route path="/community/discussions" element={<Navigate to="/community" replace />} />
-                                <Route path="/community/discussions/:id" element={<DiscussionDetails />} />
-                                <Route path="/community/:id" element={<DiscussionDetails />} />
-                                <Route path="/community/networking" element={<RedirectWithSearch to="/community?tab=connections" />} />
-                                <Route path="/community/mentorship" element={<RedirectWithSearch to="/community?tab=mentorship" />} />
-                                <Route path="/applications" element={<AppStore />} />
-                                <Route 
-                                  path="/applications/crm/*" 
-                                  element={
-                                    <RequirePackage required="essential" upgradePath="/upgrade/app-store">
-                                      <CRM />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route 
-                                  path="/applications/finance-manager" 
-                                  element={
-                                    <RequirePackage required="essential" upgradePath="/upgrade/app-store">
-                                      <FinanceManager />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route 
-                                  path="/applications/tenderlyai" 
-                                  element={
-                                    <RequirePackage required="essential" upgradePath="/upgrade/app-store">
-                                      <TenderlyAI />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route path="/profile" element={<Profile />} />
-                                <Route path="/notifications" element={<Notifications />} />
-                                <Route 
-                                  path="/marketplace" 
-                                  element={
-                                    <RequirePackage required="essential" upgradePath="/upgrade/marketplace">
-                                      <Marketplace />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route 
-                                  path="/funding" 
-                                  element={
-                                    <RequirePackage required="essential" upgradePath="/upgrade/funding">
-                                      <FundingFinder />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route 
-                                  path="/roadmap" 
-                                  element={
-                                    <RequirePackage required="premium" upgradePath="/upgrade/roadmap">
-                                      <RoadmapGenerator />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route 
-                                  path="/analytics" 
-                                  element={
-                                    <RequirePackage required="premium" upgradePath="/upgrade/analytics">
-                                      <Analytics />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route 
-                                  path="/ai-analyst" 
-                                  element={
-                                    <RequirePackage required="premium" upgradePath="/upgrade/ai-analyst">
-                                      <AIBusinessAnalyst />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route 
-                                  path="/business-analyst" 
-                                  element={
-                                    <RequirePackage required="premium" upgradePath="/upgrade/business-analyst">
-                                      <AIBusinessAnalyst />
-                                    </RequirePackage>
-                                  } 
-                                />
-                                <Route path="/upgrade/marketplace" element={<MarketplaceUpgrade />} />
-                                <Route path="/upgrade/mentorship" element={<MentorshipUpgrade />} />
-                                <Route path="/upgrade/funding" element={<FundingUpgrade />} />
-                                <Route path="/upgrade/app-store" element={<AppStoreUpgrade />} />
-                                <Route path="/upgrade/connections" element={<ConnectionsUpgrade />} />
-                                <Route path="/upgrade/roadmap" element={<RoadmapUpgrade />} />
-                                <Route path="/upgrade/analytics" element={<AnalyticsUpgrade />} />
-                                <Route path="/upgrade/ai-analyst" element={<AIAnalystUpgrade />} />
-                                <Route path="/upgrade/business-analyst" element={<AIAnalystUpgrade />} />
-                                <Route path="/connections" element={<RedirectWithSearch to="/community?tab=connections" />} />
-                                <Route path="/mentorship" element={<RedirectWithSearch to="/community?tab=mentorship" />} />
-                                <Route path="/payments/*" element={<ProtectedRoute><PaymentRoutes /></ProtectedRoute>} />
-                              </Routes>
+                              <DashboardOverview />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/overview"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <DashboardOverview />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/metrics"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <DashboardMetrics />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/community-feed"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <DashboardCommunityFeed />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/schedule"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <Schedule />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/learning"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <LearningModules />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/community"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <Community />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/community/discussions"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <Navigate to="/community" replace />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/community/discussions/:id"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <DiscussionDetails />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/community/:id"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <DiscussionDetails />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/community/networking"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RedirectWithSearch to="/community?tab=connections" />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/community/mentorship"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RedirectWithSearch to="/community?tab=mentorship" />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/applications"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <AppStore />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/applications/crm/*"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
+                                <CRM />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/applications/finance-manager"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
+                                <FinanceManager />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/applications/tenderlyai"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="essential" upgradePath="/upgrade/app-store">
+                                <TenderlyAI />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <Profile />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/notifications"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <Notifications />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/marketplace"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="essential" upgradePath="/upgrade/marketplace">
+                                <Marketplace />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/funding"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="essential" upgradePath="/upgrade/funding">
+                                <FundingFinder />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/roadmap"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="premium" upgradePath="/upgrade/roadmap">
+                                <RoadmapGenerator />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/analytics"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="premium" upgradePath="/upgrade/analytics">
+                                <Analytics />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/ai-analyst"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="premium" upgradePath="/upgrade/ai-analyst">
+                                <AIBusinessAnalyst />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/business-analyst"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RequirePackage required="premium" upgradePath="/upgrade/business-analyst">
+                                <AIBusinessAnalyst />
+                              </RequirePackage>
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/marketplace"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <MarketplaceUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/mentorship"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <MentorshipUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/funding"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <FundingUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/app-store"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <AppStoreUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/connections"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <ConnectionsUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/roadmap"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RoadmapUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/analytics"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <AnalyticsUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/ai-analyst"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <AIAnalystUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/upgrade/business-analyst"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <AIAnalystUpgrade />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/connections"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RedirectWithSearch to="/community?tab=connections" />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/mentorship"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <RedirectWithSearch to="/community?tab=mentorship" />
+                            </Layout>
+                          </PackageSelectionRedirect>
+                        </PaymentRedirect>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/payments/*"
+                    element={
+                      <ProtectedRoute>
+                        <PaymentRedirect>
+                          <PackageSelectionRedirect>
+                            <Layout>
+                              <BizBoostChatbot />
+                              <PaymentRoutes />
                             </Layout>
                           </PackageSelectionRedirect>
                         </PaymentRedirect>

@@ -9,8 +9,11 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- This will be replaced by Vite during build -->
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Use a dynamic import instead of hardcoded path -->
+    <script type="module">
+      // This will load the actual entry point
+      import('/src/main.tsx');
+    </script>
     <script type="text/javascript">
       // Handle SPA routing for GitHub Pages
       (function (l) {
