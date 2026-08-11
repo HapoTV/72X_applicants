@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" sizes="any" href="/branding.svg?v=1" />
+    <link rel="shortcut icon" type="image/svg+xml" href="/branding.svg?v=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>72X</title>
+    <script type="module" crossorigin src="/assets/main.DymQABLq.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react.Cqe51QFI.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-radix.jfjPtLl-.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-utils.BvmKQJXq.js">
+    <link rel="stylesheet" crossorigin href="/assets/main.8I5GwiIB.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Vite will replace this with the correct bundled file during build -->
+    <script type="text/javascript">
+      // Handle SPA routing for GitHub Pages with HashRouter
+      (function (l) {
+        if (l.search && l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) {
+              return s.replace(/~and~/g, '&');
+            })
+            .join('?');
+          var basePath = (l.pathname || '/').replace(/\/+$/, '');
+          var nextPath = String(decoded || '').replace(/^\/+/, '');
+          window.history.replaceState(null, null, (basePath ? basePath : '') + '/' + nextPath + l.hash);
+        }
+      })(window.location);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1 @@
+import{u as s,r}from"./vendor-react.Cqe51QFI.js";const c=()=>{const e=s();return r.useEffect(()=>{localStorage.getItem("userProvidedBusinessReference")==="true"?e("/signup/success/provided",{replace:!0}):e("/signup/success/generated",{replace:!0})},[e]),null};export{c as default};
