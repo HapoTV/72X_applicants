@@ -32,8 +32,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      // Fix: Ensure assets are properly compressed
-      assetsInlineLimit: 0, // Don't inline any assets
+      assetsInlineLimit: 0,
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
@@ -65,7 +64,6 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
     },
-    // Fix: Ensure boxicons are copied correctly
     publicDir: 'public',
   }
 })
