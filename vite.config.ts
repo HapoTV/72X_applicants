@@ -72,5 +72,6 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
     },
+    cacheDir: 'node_modules/.vite-main',
   }
 })

@@ -142,7 +142,7 @@ const Schedule: React.FC = () => {
         eventType: DEFAULT_EVENT_TYPE,
       });
       // Trigger refetch for server lists if present
-      queryClient.invalidateQueries(['events', user?.email]);
+      queryClient.invalidateQueries({ queryKey: ['events', user?.email] });
     } catch (err) {
       console.error('Failed to save event locally', err);
     }

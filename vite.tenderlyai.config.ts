@@ -16,6 +16,7 @@ export default defineConfig({
     port: 5176,
     strictPort: true,
   },
+  cacheDir: resolve(__dirname, 'node_modules/.vite-tenderlyai'),
   build: {
     outDir: resolve(__dirname, 'dist-tenderlyai'),
     emptyOutDir: true,

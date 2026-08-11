@@ -17,6 +17,7 @@ export default defineConfig({
     port: 5174,
     strictPort: true,
   },
+  cacheDir: resolve(__dirname, 'node_modules/.vite-crm'),
   build: {
     outDir: resolve(__dirname, 'dist-crm'),
     emptyOutDir: true,
