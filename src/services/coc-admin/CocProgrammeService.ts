@@ -1,3 +1,5 @@
+// src/services/coc-admin/CocProgrammeService.ts
+
 import axiosClient from '../../api/axiosClient';
 import type {
   ProgrammeListItem,
@@ -13,19 +15,21 @@ class CocProgrammeService {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
+  // ===== PUBLIC ENDPOINTS (No auth required) =====
+  
   async getProgrammes(): Promise<ProgrammeListItem[]> {
-    const response = await axiosClient.get(`${this.baseURL}`, {
-      headers: this.getAuthHeader(),
-    });
+    // Public endpoint - no auth needed
+    const response = await axiosClient.get(`${this.baseURL}`);
     return response.data;
   }
 
   async getProgrammeById(programmeId: string): Promise<ProgrammeListItem> {
-    const response = await axiosClient.get(`${this.baseURL}/${programmeId}`, {
-      headers: this.getAuthHeader(),
-    });
+    // Public endpoint - no auth needed
+    const response = await axiosClient.get(`${this.baseURL}/${programmeId}`);
     return response.data;
   }
+
+  // ===== ADMIN PROTECTED ENDPOINTS =====
 
   async createProgramme(programmeData: ProgrammeFormData): Promise<ProgrammeListItem> {
     const response = await axiosClient.post(`${this.baseURL}`, programmeData, {
