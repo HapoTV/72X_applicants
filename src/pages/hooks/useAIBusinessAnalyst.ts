@@ -7,7 +7,8 @@ import type { AnalysisTypeId, UsageStats } from '../../services/aiBusinessAnalys
 export function useAIBusinessAnalyst() {
   const [query, setQuery] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<string | null>(null);
+  type Message = { role: 'user' | 'assistant'; text: string };
+  const [messages, setMessages] = useState<Message[]>([]);
   const [analysisType, setAnalysisType] = useState<AnalysisTypeId>('REQUIREMENT_ANALYSIS');
   const [tokensUsed, setTokensUsed] = useState(0);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
@@ -25,15 +26,26 @@ export function useAIBusinessAnalyst() {
     }
   };
 
-  const runAnalysis = async () => {
-    if (!query.trim()) return;
+  const runAnalysis = async (overrideQuery?: string) => {
+    const q = (overrideQuery ?? query) || '';
+    if (!q.trim()) return;
 
     setIsAnalyzing(true);
     setError(null);
 
+    // Append user message to history
+    const userMessage: Message = { role: 'user', text: q.trim() };
+    setMessages((m) => [...m, userMessage]);
+
     try {
-      const data = await aiBusinessAnalystService.analyze(query, analysisType);
-      setAnalysis(data.analysis);
+      const data = await aiBusinessAnalystService.analyze(q, analysisType);
+      const assistantText = data.analysis;
+
+      // Append assistant response to history
+      const assistantMessage: Message = { role: 'assistant', text: assistantText };
+      setMessages((m) => [...m, assistantMessage]);
+      setQuery('');
+
       setTokensUsed(data.totalTokensUsed || data.tokensUsed || 0);
       await fetchUsageStats();
     } catch (err: any) {
@@ -54,19 +66,29 @@ export function useAIBusinessAnalyst() {
       setError(message);
     } finally {
       setIsAnalyzing(false);
+      // leave query in input for quick edits / follow-ups — caller may clear if desired
     }
+  };
+
+  const clearConversation = () => {
+    setMessages([]);
+    setQuery('');
+    setTokensUsed(0);
   };
 
   return {
     query,
     setQuery,
     isAnalyzing,
-    analysis,
+    // backward-compatible single analysis string (latest assistant message)
+    analysis: messages.length ? messages.filter((m) => m.role === 'assistant').map(m => m.text).join('\n\n') : null,
     analysisType,
     setAnalysisType,
+    messages,
     tokensUsed,
     usageStats,
     error,
     runAnalysis,
+    clearConversation,
   };
 }

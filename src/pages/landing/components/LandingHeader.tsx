@@ -1,5 +1,5 @@
-import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown, Menu } from 'lucide-react';
 import type { ProductCategory, ProductCategoryItem } from '../hooks/useLandingPage';
 
 const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
@@ -21,6 +21,7 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
   productCategories,
   onProductItemClick,
 }) => {
+  const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <header className="bg-[#F5F7FA] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-0">
@@ -136,6 +137,16 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
                 Pricing
               </button>
             </nav>
+            {/* Mobile menu toggle - visible on small screens */}
+            <div className="md:hidden pl-3">
+              <button
+                aria-label="Toggle menu"
+                onClick={() => setMobileOpen((v) => !v)}
+                className="p-2 rounded-md hover:bg-gray-100"
+              >
+                <Menu className="w-6 h-6 text-gray-700" />
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center space-x-1">
@@ -153,6 +164,45 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
             </button>
           </div>
         </div>
+        {/* Mobile navigation panel */}
+        {mobileOpen && (
+          <div className="md:hidden bg-[#F5F7FA] border-t border-gray-200 z-40">
+            <div className="px-4 py-4 space-y-2">
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/'); setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 120); }}
+                className="w-full text-left text-gray-700 px-2 py-2 rounded font-semibold"
+              >
+                Features
+              </button>
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/'); setTimeout(() => document.getElementById('industries')?.scrollIntoView({ behavior: 'smooth' }), 120); }}
+                className="w-full text-left text-gray-700 px-2 py-2 rounded font-semibold"
+              >
+                Industries
+              </button>
+              <button
+                onClick={() => { setMobileOpen(false); setProductDropdownOpen(true); }}
+                className="w-full text-left text-gray-700 px-2 py-2 rounded font-semibold"
+              >
+                Product
+              </button>
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/programs'); }}
+                className="w-full text-left text-gray-700 px-2 py-2 rounded font-semibold"
+              >
+                Programs
+              </button>
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/pricing'); }}
+                className="w-full text-left text-gray-700 px-2 py-2 rounded font-semibold"
+              >
+                Pricing
+              </button>
+
+              {/* Primary CTAs already visible in header on mobile, removed duplicate buttons here */}
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
