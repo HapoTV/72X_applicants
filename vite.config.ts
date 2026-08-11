@@ -1,11 +1,14 @@
 // vite.config.ts
-
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { copyFileSync } from 'fs'
 import { resolve } from 'path'
 
 export default defineConfig(({ mode }) => {
+  const isProduction = mode === 'production'
+  const isGitHubPages = process.env.GITHUB_PAGES === 'true' || process.env.VITE_GITHUB_PAGES === 'true'
+  
+  // For custom domain, use root path
   const base = '/'
 
   return {
@@ -32,7 +35,6 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      assetsInlineLimit: 0,
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
@@ -64,6 +66,5 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
     },
-    publicDir: 'public',
   }
 })

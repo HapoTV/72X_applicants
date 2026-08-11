@@ -1,0 +1,29 @@
+<!-- public/index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/branding.svg" />
+    <link rel="shortcut icon" type="image/svg+xml" href="/branding.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>72X</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Handle SPA routing for GitHub Pages with HashRouter
+      (function() {
+        var path = window.location.pathname;
+        var search = window.location.search;
+        var hash = window.location.hash;
+        
+        // If not at root and doesn't have a file extension, redirect to hash version
+        if (path !== '/' && !path.match(/\.[a-zA-Z]+$/)) {
+          var redirectUrl = '/#' + path + search + hash;
+          window.location.replace(redirectUrl);
+        }
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
