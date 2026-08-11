@@ -35,6 +35,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
+      // Ensure HTML is processed
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
