@@ -7,27 +7,48 @@ import type { ProgrammeApplicationRequest } from '../interfaces/ApplicantData';
 class ProgrammeService {
   private baseURL = '/coc/programmes';
 
-  private getAuthHeader() {
-    const token = localStorage.getItem('authToken');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-
   /**
    * Get all programmes - PUBLIC endpoint (no auth required)
+   * Increased timeout to 30 seconds for Cloud Run
    */
   async getProgrammes(): Promise<ProgrammeListItem[]> {
-    // No auth header needed for public endpoint
-    const response = await axiosClient.get(`${this.baseURL}`);
-    return response.data;
+    try {
+      console.log('📡 Fetching programmes from:', this.baseURL);
+      const response = await axiosClient.get(`${this.baseURL}`, {
+        timeout: 30000, // 30 second timeout for Cloud Run
+      });
+      console.log('✅ Programmes fetched successfully:', response.data?.length || 0, 'items');
+      return response.data || [];
+    } catch (error: any) {
+      console.error('❌ Error fetching programmes:', error.message);
+      
+      // Handle timeout specifically
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        console.warn('⏱️ Request timed out. Backend may be slow or down.');
+      }
+      
+      // Handle network errors
+      if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+        console.warn('🌐 Network error. Backend may be unreachable.');
+      }
+      
+      throw error;
+    }
   }
 
   /**
    * Get programme by ID - PUBLIC endpoint (no auth required)
    */
   async getProgrammeById(programmeId: string): Promise<ProgrammeListItem> {
-    // No auth header needed for public endpoint
-    const response = await axiosClient.get(`${this.baseURL}/${programmeId}`);
-    return response.data;
+    try {
+      const response = await axiosClient.get(`${this.baseURL}/${programmeId}`, {
+        timeout: 30000,
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error fetching programme:', error.message);
+      throw error;
+    }
   }
 
   /**
@@ -37,12 +58,19 @@ class ProgrammeService {
     programmeId: string,
     applicationData: ProgrammeApplicationRequest,
   ): Promise<{ id: string }> {
-    // No auth header needed for public submission
-    const response = await axiosClient.post(
-      `${this.baseURL}/${programmeId}/applications`,
-      applicationData,
-    );
-    return response.data;
+    try {
+      const response = await axiosClient.post(
+        `${this.baseURL}/${programmeId}/applications`,
+        applicationData,
+        {
+          timeout: 30000,
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error submitting application:', error.message);
+      throw error;
+    }
   }
 
   /**
@@ -53,16 +81,26 @@ class ProgrammeService {
     label: string,
     file: File,
   ): Promise<unknown> {
-    const formData = new FormData();
-    formData.append('label', label);
-    formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('label', label);
+      formData.append('file', file);
 
-    // No auth header needed for public document upload
-    const response = await axiosClient.post(
-      `${this.baseURL}/applications/${applicationId}/documents`,
-      formData,
-    );
-    return response.data;
+      const response = await axiosClient.post(
+        `${this.baseURL}/applications/${applicationId}/documents`,
+        formData,
+        {
+          timeout: 60000, // 60 seconds for file upload
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Error uploading document:', error.message);
+      throw error;
+    }
   }
 }
 

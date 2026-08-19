@@ -9,9 +9,6 @@ const API_URL =
 
 const normalizedApiUrl = API_URL.replace(/\/+$/, '');
 
-// For Production
-// const API_URL = import.meta.env.VITE_BACKEND_URL;
-
 export const publicAxios = axios.create({
   baseURL: `${normalizedApiUrl}/api`,
   headers: {
@@ -21,10 +18,7 @@ export const publicAxios = axios.create({
 
 const axiosClient = axios.create({
   baseURL: `${normalizedApiUrl}/api`,
-  timeout: 15000,
-  // 🚫 DO NOT set Content-Type globally
-  // Let axios automatically set it depending on request type
-  // withCredentials: false (default)
+  timeout: 30000, // Increased from 15000 to 30000
 });
 
 axiosClient.interceptors.request.use(
@@ -34,7 +28,7 @@ axiosClient.interceptors.request.use(
     const organisation = localStorage.getItem("userOrganisation");
     const userRole = localStorage.getItem("userRole");
 
-    // Add token ONLY if it exists
+    // Only add token if it exists (for public endpoints, this will be skipped)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -45,15 +39,13 @@ axiosClient.interceptors.request.use(
       url.startsWith('/marketplace/') ||
       url.startsWith('/users/role') ||
       url.startsWith('/users?role=') ||
-      url.startsWith('/authentication');
+      url.startsWith('/authentication') ||
+      url.startsWith('/coc/programmes'); // Skip for public programme endpoints
 
     if (!shouldSkipOrganisationHeader && organisation && userRole !== 'SUPER_ADMIN') {
       config.headers['X-Organisation'] = organisation;
     }
 
-    // ✅ IMPORTANT:
-    // If sending FormData, DO NOT manually set Content-Type
-    // Browser will automatically set multipart/form-data with boundary
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
     }
@@ -70,6 +62,7 @@ axiosClient.interceptors.response.use(
     const method = (error.config?.method as string | undefined)?.toLowerCase();
     const status = error.response?.status as number | undefined;
 
+    // Don't log errors for expected 404s on quiz endpoints
     const isExpectedMissingQuiz =
       method === 'get' &&
       status === 404 &&
