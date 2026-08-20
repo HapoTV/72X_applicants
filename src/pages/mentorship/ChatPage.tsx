@@ -1,5 +1,5 @@
 // src/pages/mentorship/ChatPage.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, X, Paperclip, Image, User } from 'lucide-react';
 import { mentorshipService } from '../../services/MentorshipService';
 import type { Message } from '../../interfaces/MentorshipData';
@@ -28,22 +28,7 @@ const ChatPage: React.FC<ChatInterfaceProps> = ({
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!currentUserId || !otherUserId) {
-      setError('User information is missing');
-      return;
-    }
-    
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
-  }, [conversationId, currentUserId, otherUserId]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!currentUserId || !otherUserId || otherUserId === 'undefined') {
       console.error('Cannot fetch messages: missing user IDs', { currentUserId, otherUserId });
       return;
@@ -55,7 +40,7 @@ const ChatPage: React.FC<ChatInterfaceProps> = ({
       console.log('Fetching messages between:', currentUserId, 'and', otherUserId);
       const messagesData = await mentorshipService.getMessagesBetweenUsers(currentUserId, otherUserId);
       setMessages(messagesData);
-      
+
       // Mark messages as read
       if (messagesData.length > 0) {
         try {
@@ -64,10 +49,10 @@ const ChatPage: React.FC<ChatInterfaceProps> = ({
           console.log('Could not mark messages as read:', markError);
         }
       }
-    } catch (error: any) {
-      console.error('Error fetching messages:', error);
-      
-      if (error.response?.status === 404) {
+    } catch (_error: any) {
+      console.error('Error fetching messages:', _error);
+
+      if (_error.response?.status === 404) {
         setError('No conversation found. Send a message to start one!');
       } else {
         setError('Failed to load messages. Please try again.');
@@ -75,7 +60,22 @@ const ChatPage: React.FC<ChatInterfaceProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUserId, otherUserId]);
+
+  useEffect(() => {
+    if (!currentUserId || !otherUserId) {
+      setError('User information is missing');
+      return;
+    }
+    
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
+  }, [conversationId, currentUserId, otherUserId, fetchMessages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -122,17 +122,17 @@ const ChatPage: React.FC<ChatInterfaceProps> = ({
         )
       );
       
-    } catch (error: any) {
-      console.error('Error sending message:', error);
+    } catch (_error: any) {
+      console.error('Error sending message:', _error);
       
       // Remove optimistic message on error
       setMessages(prev => prev.filter(msg => msg.messageId !== messageData.messageId));
       
       // Show appropriate error message
-      if (error.message?.includes('Receiver not found')) {
+      if (_error.message?.includes('Receiver not found')) {
         setError('Cannot send message: The recipient user account was not found. This might be a mentor profile without a user account.');
       } else {
-        setError(`Failed to send message: ${error.message || 'Please try again.'}`);
+        setError(`Failed to send message: ${_error.message || 'Please try again.'}`);
       }
     } finally {
       setSending(false);
@@ -143,7 +143,7 @@ const ChatPage: React.FC<ChatInterfaceProps> = ({
     try {
       const date = new Date(timestamp);
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
+    } catch {
       return 'Invalid time';
     }
   };

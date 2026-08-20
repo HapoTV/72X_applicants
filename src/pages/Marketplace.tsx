@@ -1,32 +1,127 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Star, Heart, Share2, Plus, Camera, Tag } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Tag } from 'lucide-react';
 import { marketplaceService } from '../services/MarketplaceService';
 import { useAuth } from '../context/AuthContext';
 import type { UserProductItem, MarketplaceCategory, MarketplaceLocation } from '../interfaces/MarketplaceData';
+import {
+  getPrimaryProductImage,
+  DEFAULT_CATEGORIES,
+  DEFAULT_LOCATIONS,
+  readFeaturedCache,
+  writeFeaturedCache,
+  removeFromFeaturedCache
+} from './marketplaceHelpers';
+import ProductCard from './components/ProductCard';
+import ProductFormModal from './components/ProductFormModal';
+import ProductPreviewModal from './components/ProductPreviewModal';
+import MarketplaceFilters from './components/MarketplaceFilters';
+import type { ProductFormData } from './components/ProductFormModal';
 
 const Marketplace: React.FC = () => {
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedLocation, setSelectedLocation] = useState('all');
+  const { user, token } = useAuth();
+  const navigate = useNavigate();
+  const isFreeTrialUser = localStorage.getItem('userStatus') === 'FREE_TRIAL';
+  const currentUserId = String((user as any)?.id || (user as any)?.userId || '');
+  const [activeView, setActiveView] = useState<'featured' | 'my'>('featured');
+  const [storageAuthToken, setStorageAuthToken] = useState<string | null>(() => localStorage.getItem('authToken'));
+  const [featuredSearchTerm, setFeaturedSearchTerm] = useState('');
+  const [featuredSelectedCategory, setFeaturedSelectedCategory] = useState('all');
+  const [featuredSelectedLocation, setFeaturedSelectedLocation] = useState('all');
+  const [mySearchTerm, setMySearchTerm] = useState('');
+  const [mySelectedCategory, setMySelectedCategory] = useState('all');
+  const [mySelectedLocation, setMySelectedLocation] = useState('all');
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const openProductPreview = async (product: UserProductItem) => {
+    try {
+      setShowProductPreview(true);
+      setPreviewError(null);
+      setPreviewLoading(true);
+      setActivePreviewImageIndex(0);
+
+      const details = await marketplaceService.getProductById(product.id);
+      setPreviewProduct(details);
+    } catch {
+      setPreviewProduct(product as any);
+      setPreviewError('Could not load full product details. Showing a basic preview.');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closeProductPreview = () => {
+    setShowProductPreview(false);
+    setPreviewProduct(null);
+    setPreviewError(null);
+    setPreviewLoading(false);
+    setActivePreviewImageIndex(0);
+  };
+
+  const handleContactSellerFromPreview = () => {
+    const sellerId = previewProduct?.sellerId;
+    if (!sellerId) {
+      alert('Seller information is not available for this product.');
+      return;
+    }
+
+    if (currentUserId && String(sellerId) === currentUserId) {
+      alert("You can't contact yourself about your own product.");
+      return;
+    }
+
+    const title = typeof previewProduct?.title === 'string' ? previewProduct.title : 'this product';
+    const message = `Hello, I would like to purchase the product: ${title}.`;
+    const params = new URLSearchParams();
+    params.set('userId', String(sellerId));
+    params.set('message', message);
+    params.set('autoSend', '1');
+    navigate(`/community?tab=connections&${params.toString()}`);
+    closeProductPreview();
+  };
+
   // Form state for new product
-  const [newProduct, setNewProduct] = useState({
+  const [newProduct, setNewProduct] = useState<ProductFormData>({
     title: '',
     description: '',
     price: '',
     businessName: '',
     category: 'food',
     location: 'soweto',
-    image: ''
+    condition: 'new' as 'new' | 'used',
+    negotiable: false
   });
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [myProducts, setMyProducts] = useState<UserProductItem[]>([]);
+  const [myProductsLoading, setMyProductsLoading] = useState(false);
+  const [myProductsError, setMyProductsError] = useState<string | null>(null);
+  const [myStatusFilter, setMyStatusFilter] = useState<'available' | 'sold' | 'all'>('available');
+  const [showEditProduct, setShowEditProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<UserProductItem | null>(null);
+  const [editProduct, setEditProduct] = useState<ProductFormData>({
+    title: '',
+    description: '',
+    price: '',
+    category: 'food',
+    location: 'soweto',
+    condition: 'new' as 'new' | 'used',
+    negotiable: false
+  });
+  const [editUploadedImage, setEditUploadedImage] = useState<string | null>(null);
+
   const [products, setProducts] = useState<UserProductItem[]>([]);
   const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
   const [locations, setLocations] = useState<MarketplaceLocation[]>([]);
+
+  const [showProductPreview, setShowProductPreview] = useState(false);
+  const [previewProduct, setPreviewProduct] = useState<any | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [activePreviewImageIndex, setActivePreviewImageIndex] = useState(0);
+
+  const isOwnPreviewProduct = Boolean(currentUserId) && String(previewProduct?.sellerId || '') === currentUserId;
 
   // Handle image upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,9 +135,26 @@ const Marketplace: React.FC = () => {
     }
   };
 
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditUploadedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Handle form submission
   const handleListProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isFreeTrialUser) {
+      alert('Users on Free Trial cannot list products. Please subscribe to a plan to continue.');
+      navigate('/select-package');
+      return;
+    }
     
     if (!user?.email) {
       alert('Please login to list a product');
@@ -64,12 +176,12 @@ const Marketplace: React.FC = () => {
         price: newProduct.price,
         category: newProduct.category,
         location: newProduct.location,
-        condition: 'new' as const,
+        condition: newProduct.condition,
         tags: '',
         specifications: '',
         shippingInfo: '',
         returnPolicy: '',
-        negotiable: false,
+        negotiable: Boolean(newProduct.negotiable),
         images: uploadedImage ? [uploadedImage] : []
       };
       
@@ -98,7 +210,8 @@ const Marketplace: React.FC = () => {
         businessName: '',
         category: 'food',
         location: 'soweto',
-        image: ''
+        condition: 'new' as 'new' | 'used',
+        negotiable: false
       });
       setUploadedImage(null);
       setShowAddProduct(false);
@@ -114,11 +227,154 @@ const Marketplace: React.FC = () => {
 
   // Fetch data on component mount and when filters change
   useEffect(() => {
-    fetchMarketplaceData();
-  }, [searchTerm, selectedCategory, selectedLocation]);
+    if (activeView !== 'featured') return;
+    void fetchMarketplaceData();
+  }, [activeView, featuredSearchTerm, featuredSelectedCategory, featuredSelectedLocation, token, storageAuthToken, fetchMarketplaceData]);
 
-  const fetchMarketplaceData = async () => {
-    if (!user) {
+  useEffect(() => {
+    if (activeView !== 'featured') return;
+    setFeaturedSearchTerm('');
+    setFeaturedSelectedCategory('all');
+    setFeaturedSelectedLocation('all');
+  }, [activeView]);
+
+  useEffect(() => {
+    const sync = () => setStorageAuthToken(localStorage.getItem('authToken'));
+    const interval = window.setInterval(sync, 500);
+    window.addEventListener('storage', sync);
+    sync();
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    void fetchMyProducts();
+  }, [fetchMyProducts, user]);
+
+  const fetchMyProducts = useCallback(async () => {
+    if (!user) return;
+    try {
+      setMyProductsLoading(true);
+      setMyProductsError(null);
+      const sellerProducts = await marketplaceService.getSellerProducts();
+      setMyProducts(sellerProducts);
+    } catch (e: any) {
+      setMyProductsError(e?.message || 'Failed to fetch my products');
+      setMyProducts([]);
+    } finally {
+      setMyProductsLoading(false);
+    }
+  }, [user]);
+
+  const openEditModal = (product: UserProductItem) => {
+    setEditingProduct(product);
+    setEditProduct({
+      title: product.title || '',
+      description: product.description || '',
+      price: product.price || '',
+      category: product.category || 'food',
+      location: product.location || 'soweto',
+      condition: (product.condition as any) || 'new',
+      negotiable: Boolean((product as any).negotiable)
+    });
+    setEditUploadedImage(getPrimaryProductImage(product));
+    setShowEditProduct(true);
+  };
+
+  const handleUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.email || !editingProduct) return;
+
+    try {
+      setLoading(true);
+      await marketplaceService.updateProduct(
+        editingProduct.id,
+        {
+          title: editProduct.title,
+          description: editProduct.description,
+          price: editProduct.price,
+          category: editProduct.category,
+          location: editProduct.location,
+          condition: editProduct.condition,
+          tags: '',
+          specifications: '',
+          shippingInfo: '',
+          returnPolicy: '',
+          negotiable: Boolean(editProduct.negotiable),
+          images: editUploadedImage ? [editUploadedImage] : []
+        },
+        user.email
+      );
+
+      setShowEditProduct(false);
+      setEditingProduct(null);
+      await fetchMarketplaceData();
+      await fetchMyProducts();
+      alert('Product updated successfully!');
+    } catch (err: any) {
+      console.error('Error updating product:', err);
+      alert(err?.message || 'Failed to update product. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteMyProduct = async (productId: string) => {
+    const confirmed = window.confirm('Delete this product? This will remove it for all users.');
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+      await marketplaceService.deleteProduct(productId);
+
+      setMyProducts((prev) => prev.filter((p) => p.id !== productId));
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+
+      try {
+        removeFromFeaturedCache(productId);
+      } catch {
+        // ignore
+      }
+
+      await fetchMarketplaceData();
+      await fetchMyProducts();
+      alert('Product deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting product:', err);
+      const messageFromBackend =
+        typeof err?.response?.data === 'string'
+          ? err.response.data
+          : typeof err?.response?.data?.message === 'string'
+            ? err.response.data.message
+            : undefined;
+      alert(messageFromBackend || err?.message || 'Failed to delete product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleMyProductStatus = async (product: UserProductItem) => {
+    try {
+      setLoading(true);
+      const nextStatus = product.status === 'sold' ? 'active' : 'sold';
+      await marketplaceService.updateProductStatus(product.id, nextStatus);
+      await fetchMarketplaceData();
+      await fetchMyProducts();
+    } catch (err) {
+      console.error('Error updating product status:', err);
+      alert('Failed to update product status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMarketplaceData = useCallback(async () => {
+    const authToken = token || storageAuthToken || localStorage.getItem('authToken');
+    if (!authToken) {
+      setProducts([]);
       setLoading(false);
       return;
     }
@@ -129,19 +385,73 @@ const Marketplace: React.FC = () => {
       
       // Try to fetch products with filters
       try {
-        const searchParams: any = {};
-        if (searchTerm) searchParams.query = searchTerm;
-        if (selectedCategory !== 'all') searchParams.category = selectedCategory;
-        if (selectedLocation !== 'all') searchParams.location = selectedLocation;
-        
-        const productsResponse = await marketplaceService.getActiveProducts(searchParams);
-        setProducts(productsResponse.products);
-      } catch (apiError) {
-        console.log('Backend API not available, using fallback data');
-        // Fallback to empty state when backend is not available
-        setProducts([]);
+        if (activeView === 'featured') {
+          const featured = await marketplaceService.getFeaturedProducts();
+          const featuredActive = Array.isArray(featured) ? featured.filter((p) => p?.status !== 'sold') : [];
+          if (featuredActive.length > 0) {
+            setProducts(featuredActive);
+            writeFeaturedCache(featuredActive);
+          } else {
+            const productsResponse = await marketplaceService.getActiveProducts({});
+            const derived = productsResponse.products
+              .filter((p) => p?.status !== 'sold')
+              .filter((p) => Boolean((p as any).featured));
+            if (derived.length > 0) {
+              setProducts(derived);
+              writeFeaturedCache(derived);
+            } else {
+              const cached = readFeaturedCache();
+              const cachedSafe = Array.isArray(cached) ? cached.filter((p) => p?.status !== 'sold') : [];
+              setProducts(cachedSafe);
+            }
+          }
+        } else {
+          const searchParams: any = {};
+          if (featuredSearchTerm) searchParams.query = featuredSearchTerm;
+          if (featuredSelectedCategory !== 'all') searchParams.category = featuredSelectedCategory;
+          if (featuredSelectedLocation !== 'all') searchParams.location = featuredSelectedLocation;
+          
+          const productsResponse = await marketplaceService.getActiveProducts(searchParams);
+          setProducts(productsResponse.products.filter((p) => p?.status !== 'sold'));
+        }
+      } catch {
+        try {
+          if (activeView === 'featured') {
+            const featured = await marketplaceService.getFeaturedProducts();
+            const featuredActive = Array.isArray(featured) ? featured.filter((p) => p?.status !== 'sold') : [];
+            if (featuredActive.length > 0) {
+              setProducts(featuredActive);
+              writeFeaturedCache(featuredActive);
+            } else {
+              const productsResponse = await marketplaceService.getActiveProducts({});
+              const derived = productsResponse.products
+                .filter((p) => p?.status !== 'sold')
+                .filter((p) => Boolean((p as any).featured));
+              if (derived.length > 0) {
+                setProducts(derived);
+                writeFeaturedCache(derived);
+              } else {
+                const cached = readFeaturedCache();
+                const cachedSafe = Array.isArray(cached) ? cached.filter((p) => p?.status !== 'sold') : [];
+                setProducts(cachedSafe);
+              }
+            }
+          } else {
+            const searchParams: any = {};
+            if (featuredSearchTerm) searchParams.query = featuredSearchTerm;
+            if (featuredSelectedCategory !== 'all') searchParams.category = featuredSelectedCategory;
+            if (featuredSelectedLocation !== 'all') searchParams.location = featuredSelectedLocation;
+
+            const productsResponse = await marketplaceService.getActiveProducts(searchParams);
+            setProducts(productsResponse.products.filter((p) => p?.status !== 'sold'));
+          }
+        } catch (apiError2) {
+          console.error('Marketplace API error:', apiError2);
+          setError('Failed to load marketplace products');
+          setProducts([]);
+        }
       }
-      
+
       // Fetch categories and locations (with fallback)
       try {
         const [categoriesData, locationsData] = await Promise.all([
@@ -151,33 +461,11 @@ const Marketplace: React.FC = () => {
         
         setCategories(categoriesData);
         setLocations(locationsData);
-      } catch (fallbackError) {
+      } catch {
         console.log('Categories/Locations API not available, using fallback data');
         // Fallback data when backend is not available
-        setCategories([
-          { id: 'all', name: 'All Categories' },
-          { id: 'food', name: 'Food & Beverages' },
-          { id: 'crafts', name: 'Arts & Crafts' },
-          { id: 'clothing', name: 'Clothing & Fashion' },
-          { id: 'services', name: 'Services' },
-          { id: 'agriculture', name: 'Agriculture' },
-          { id: 'beauty', name: 'Beauty & Personal Care' },
-          { id: 'electronics', name: 'Electronics & Repairs' },
-          { id: 'home', name: 'Home & Garden' },
-          { id: 'other', name: 'Other' }
-        ]);
-        
-        setLocations([
-          { id: 'all', name: 'All Locations' },
-          { id: 'soweto', name: 'Soweto' },
-          { id: 'alexandra', name: 'Alexandra' },
-          { id: 'khayelitsha', name: 'Khayelitsha' },
-          { id: 'mitchells-plain', name: 'Mitchells Plain' },
-          { id: 'mamelodi', name: 'Mamelodi' },
-          { id: 'umlazi', name: 'Umlazi' },
-          { id: 'mdantsane', name: 'Mdantsane' },
-          { id: 'other', name: 'Other' }
-        ]);
+        setCategories(DEFAULT_CATEGORIES);
+        setLocations(DEFAULT_LOCATIONS);
       }
     } catch (err) {
       console.error('Error fetching marketplace data:', err);
@@ -185,23 +473,38 @@ const Marketplace: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeView, featuredSearchTerm, featuredSelectedCategory, featuredSelectedLocation, storageAuthToken, token]);
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesLocation = selectedLocation === 'all' || product.location.toLowerCase().includes(selectedLocation.toLowerCase());
+    const matchesSearch = product.title.toLowerCase().includes(featuredSearchTerm.toLowerCase()) ||
+                         product.description.toLowerCase().includes(featuredSearchTerm.toLowerCase());
+    const matchesCategory = featuredSelectedCategory === 'all' || product.category === featuredSelectedCategory;
+    const matchesLocation = featuredSelectedLocation === 'all' || product.location.toLowerCase().includes(featuredSelectedLocation.toLowerCase());
     return matchesSearch && matchesCategory && matchesLocation;
   });
 
-  const featuredProducts = products.filter(product => product.featured);
+  const featuredProducts = activeView === 'featured'
+    ? filteredProducts
+    : filteredProducts.filter(product => product.featured);
 
-  // Loading state
+  const filteredMyProducts = myProducts.filter((product) => {
+    const matchesSearch = product.title.toLowerCase().includes(mySearchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(mySearchTerm.toLowerCase());
+    const matchesCategory = mySelectedCategory === 'all' || product.category === mySelectedCategory;
+    const matchesLocation = mySelectedLocation === 'all' || product.location.toLowerCase().includes(mySelectedLocation.toLowerCase());
+    const matchesStatus =
+      myStatusFilter === 'all'
+        ? true
+        : myStatusFilter === 'sold'
+          ? product.status === 'sold'
+          : product.status !== 'sold';
+    return matchesSearch && matchesCategory && matchesLocation && matchesStatus;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
       </div>
     );
   }
@@ -236,325 +539,203 @@ const Marketplace: React.FC = () => {
           <p className="text-gray-600 text-sm">Discover and support local businesses in your community</p>
         </div>
         
-        {user && (
-          <button
-            onClick={() => setShowAddProduct(true)}
-            className="mt-4 sm:mt-0 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span>List Product</span>
-          </button>
-        )}
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products and services..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-            >
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-            
-            <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-            >
-              {locations.map(location => (
-                <option key={location.id} value={location.id}>{location.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Featured Products */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Featured Products</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {featuredProducts.map(product => (
-            <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-              <div className="relative">
-                <img 
-                  src={product.images?.[0] || 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400'} 
-                  alt={product.title}
-                  className="w-full h-40 object-cover"
-                />
-                <div className="absolute top-2 left-2">
-                  <span className="px-2 py-1 bg-yellow-500 text-white text-xs rounded-full font-medium">
-                    Featured
-                  </span>
-                </div>
-                <div className="absolute top-2 right-2 flex space-x-1">
-                  <button className="p-1 bg-white bg-opacity-80 rounded-full hover:bg-opacity-100">
-                    <Heart className="w-4 h-4 text-gray-600" />
-                  </button>
-                  <button className="p-1 bg-white bg-opacity-80 rounded-full hover:bg-opacity-100">
-                    <Share2 className="w-4 h-4 text-gray-600" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="p-4">
-                <h3 className="font-semibold text-gray-900 mb-1 text-sm">{product.title}</h3>
-                <p className="text-gray-600 text-xs mb-2 line-clamp-2">{product.description}</p>
-                
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-primary-600">{product.price}</span>
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                    <span className="text-xs text-gray-600">{product.rating} ({product.reviews})</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                  <span>{product.seller}</span>
-                  <div className="flex items-center space-x-1">
-                    <MapPin className="w-3 h-3" />
-                    <span>{product.location}</span>
-                  </div>
-                </div>
-                
-                <button className="w-full py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm">
-                  Contact Seller
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* All Products */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          All Products & Services {products.length > 0 && `(${products.length})`}
-        </h2>
-        {products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredProducts.map(product => (
-              <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="relative">
-                  <img 
-                    src={product.images?.[0] || 'https://images.pexels.com/photos/1300972/pexels-photo-1300972.jpeg?auto=compress&cs=tinysrgb&w=400'} 
-                    alt={product.title}
-                    className="w-full h-32 object-cover"
-                  />
-                  {product.featured && (
-                    <div className="absolute top-2 left-2">
-                      <span className="px-2 py-1 bg-yellow-500 text-white text-xs rounded-full font-medium">
-                        Featured
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="p-3">
-                  <h3 className="font-semibold text-gray-900 mb-1 text-sm line-clamp-1">{product.title}</h3>
-                  <p className="text-gray-600 text-xs mb-2 line-clamp-2">{product.description}</p>
-                  
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-primary-600 text-sm">{product.price}</span>
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                      <span className="text-xs text-gray-600">{product.rating}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                    <span className="truncate">{product.seller}</span>
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="w-3 h-3" />
-                      <span>{product.location}</span>
-                    </div>
-                  </div>
-                  
-                  <button className="w-full py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-xs">
-                    Contact Seller
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <Tag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Available</h3>
-            <p className="text-gray-600 mb-4">
-              {user ? 'Be the first to list a product in your community!' : 'Login to start buying and selling in your community!'}
-            </p>
+        <div className="mt-4 sm:mt-0 flex items-center gap-3">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
             {user && (
               <button
-                onClick={() => setShowAddProduct(true)}
-                className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                onClick={() => setActiveView('my')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  activeView === 'my'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                List First Product
+                My Products
               </button>
             )}
+            <button
+              onClick={() => setActiveView('featured')}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                activeView === 'featured'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Featured
+            </button>
           </div>
-        )}
+
+          {user && (
+            <div className="relative group">
+              <button
+                onClick={isFreeTrialUser ? undefined : () => setShowAddProduct(true)}
+                disabled={isFreeTrialUser}
+                className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-medium shadow-sm ${
+                  isFreeTrialUser
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-primary-600 text-white hover:bg-primary-700'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>List Product</span>
+              </button>
+              {isFreeTrialUser && (
+                <div className="pointer-events-none absolute -top-10 right-0 hidden group-hover:block">
+                  <div className="max-w-xs rounded-md bg-gray-900 text-white text-xs px-3 py-2 shadow-lg">
+                    Users on Free Trial cannot list products. Subscribe to a plan to continue.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Add Product Modal */}
-      {showAddProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">List Your Product</h3>
-              <button
-                onClick={() => setShowAddProduct(false)}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                ×
-              </button>
-            </div>
-            
-            <form onSubmit={handleListProduct} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                <input
-                  type="text"
-                  value={newProduct.title}
-                  onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  placeholder="Enter product name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                <input
-                  type="text"
-                  value={newProduct.businessName}
-                  onChange={(e) => setNewProduct({...newProduct, businessName: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  placeholder="Enter your business name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  placeholder="Describe your product"
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                  <input
-                    type="text"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                    placeholder="R 0.00"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select 
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                  >
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>{category.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <select 
-                  value={newProduct.location}
-                  onChange={(e) => setNewProduct({...newProduct, location: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                >
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>{location.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Photos</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center relative">
-                  {uploadedImage ? (
-                    <div className="relative">
-                      <img 
-                        src={uploadedImage} 
-                        alt="Product preview" 
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setUploadedImage(null)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600 mb-2">Click to upload photos</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddProduct(false)}
-                  className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm"
-                >
-                  List Product
-                </button>
-              </div>
-            </form>
+      {activeView === 'my' && user ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-gray-900">My Products</h2>
+            <button
+              onClick={fetchMyProducts}
+              disabled={myProductsLoading}
+              className="text-sm text-primary-600 hover:underline disabled:text-gray-400"
+            >
+              Refresh
+            </button>
           </div>
+
+          <div className="space-y-4 mb-4">
+            <MarketplaceFilters
+              searchTerm={mySearchTerm}
+              selectedCategory={mySelectedCategory}
+              selectedLocation={mySelectedLocation}
+              categories={categories}
+              locations={locations}
+              statusFilter={myStatusFilter}
+              onSearchChange={setMySearchTerm}
+              onCategoryChange={setMySelectedCategory}
+              onLocationChange={setMySelectedLocation}
+              onStatusChange={setMyStatusFilter}
+              showStatusFilter={true}
+            />
+          </div>
+
+          {myProductsError && (
+            <div className="text-sm text-red-600 mb-3">{myProductsError}</div>
+          )}
+
+          {myProductsLoading ? (
+            <div className="text-sm text-gray-600">Loading...</div>
+          ) : filteredMyProducts.length === 0 ? (
+            <div className="text-sm text-gray-600">You haven’t listed any products yet.</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredMyProducts.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  variant="my"
+                  onEdit={openEditModal}
+                  onDelete={handleDeleteMyProduct}
+                  onToggleStatus={handleToggleMyProductStatus}
+                />
+              ))}
+            </div>
+          )}
         </div>
+      ) : (
+        <>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <MarketplaceFilters
+              searchTerm={featuredSearchTerm}
+              selectedCategory={featuredSelectedCategory}
+              selectedLocation={featuredSelectedLocation}
+              categories={categories}
+              locations={locations}
+              onSearchChange={setFeaturedSearchTerm}
+              onCategoryChange={setFeaturedSelectedCategory}
+              onLocationChange={setFeaturedSelectedLocation}
+            />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Featured Products {featuredProducts.length > 0 && `(${featuredProducts.length})`}
+            </h2>
+            {featuredProducts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {featuredProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    variant="featured"
+                    onPreview={openProductPreview}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Tag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Featured Products Available</h3>
+                <p className="text-gray-600">
+                  {filteredProducts.length > 0
+                    ? 'No products are marked as featured for the current filters.'
+                    : 'Try adjusting your search or filters.'}
+                </p>
+              </div>
+            )}
+          </div>
+        </>
       )}
+
+      {/* Product Preview Modal */}
+      <ProductPreviewModal
+        isOpen={showProductPreview}
+        previewProduct={previewProduct}
+        previewLoading={previewLoading}
+        previewError={previewError}
+        activePreviewImageIndex={activePreviewImageIndex}
+        isFreeTrialUser={isFreeTrialUser}
+        isOwnPreviewProduct={isOwnPreviewProduct}
+        onClose={closeProductPreview}
+        onContactSeller={handleContactSellerFromPreview}
+        onImageIndexChange={setActivePreviewImageIndex}
+      />
+
+      {/* Add Product Modal */}
+      <ProductFormModal
+        isOpen={showAddProduct}
+        mode="add"
+        formData={newProduct}
+        uploadedImage={uploadedImage}
+        categories={categories}
+        locations={locations}
+        loading={loading}
+        onClose={() => setShowAddProduct(false)}
+        onFormChange={(field, value) => setNewProduct(prev => ({ ...prev, [field]: value }))}
+        onImageUpload={handleImageUpload}
+        onImageRemove={() => setUploadedImage(null)}
+        onSubmit={handleListProduct}
+      />
+
+      {/* Edit Product Modal */}
+      <ProductFormModal
+        isOpen={showEditProduct}
+        mode="edit"
+        formData={editProduct}
+        uploadedImage={editUploadedImage}
+        categories={categories}
+        locations={locations}
+        loading={loading}
+        onClose={() => {
+          setShowEditProduct(false);
+          setEditingProduct(null);
+        }}
+        onFormChange={(field, value) => setEditProduct(prev => ({ ...prev, [field]: value }))}
+        onImageUpload={handleEditImageUpload}
+        onImageRemove={() => setEditUploadedImage(null)}
+        onSubmit={handleUpdateProduct}
+      />
     </div>
   );
 };

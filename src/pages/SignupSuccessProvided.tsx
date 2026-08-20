@@ -6,7 +6,12 @@ import { supabase } from '../lib/supabaseClient';
 const getPublicSiteUrl = (): string => {
   const fromEnv = (import.meta as any)?.env?.VITE_PUBLIC_SITE_URL as string | undefined;
   const trimmed = (fromEnv || '').trim();
-  return trimmed ? trimmed.replace(/\/$/, '') : window.location.origin;
+  if (trimmed) return trimmed.replace(/\/$/, '');
+  const base = ((import.meta as any)?.env?.BASE_URL as string | undefined) || '/';
+  const normalizedBase = String(base).trim() || '/';
+  const baseNoTrailingSlash = normalizedBase.replace(/\/$/, '');
+  const origin = window.location.origin.replace(/\/$/, '');
+  return baseNoTrailingSlash && baseNoTrailingSlash !== '/' ? `${origin}${baseNoTrailingSlash}` : origin;
 };
 
 const SignupSuccessProvided: React.FC = () => {
@@ -53,6 +58,11 @@ const SignupSuccessProvided: React.FC = () => {
         if (!supabase) return;
         const { data, error } = await supabase.auth.getUser();
         if (error) return;
+
+        const currentUserEmail = data.user?.email?.trim().toLowerCase() || '';
+        const expectedEmail = email.trim().toLowerCase();
+        if (expectedEmail && currentUserEmail !== expectedEmail) return;
+
         const confirmed = !!data.user?.email_confirmed_at;
 
         if (confirmed) {
@@ -78,13 +88,21 @@ const SignupSuccessProvided: React.FC = () => {
       if (intervalId) window.clearInterval(intervalId);
       if (timeoutId) window.clearTimeout(timeoutId);
     };
-  }, []);
+  }, [email]);
 
   React.useEffect(() => {
     const rateLimited = localStorage.getItem('supabaseEmailRateLimited') === 'true';
     if (rateLimited) {
       setMessage('We could not send the verification email right now due to email rate limits. Please wait a few minutes, then click “Resend verification email”.');
       localStorage.removeItem('supabaseEmailRateLimited');
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const failed = localStorage.getItem('supabaseVerificationEmailFailed') === 'true';
+    if (failed) {
+      setMessage('We could not confirm that the verification email was sent. Please click “Resend verification email”.');
+      localStorage.removeItem('supabaseVerificationEmailFailed');
     }
   }, []);
 
@@ -96,12 +114,18 @@ const SignupSuccessProvided: React.FC = () => {
     setSending(true);
     setMessage(null);
     try {
-      let effectiveEmail = email;
+      let effectiveEmail = email.trim();
       if (!effectiveEmail) {
         const { data, error } = await supabase.auth.getUser();
         if (!error) {
-          effectiveEmail = data.user?.email || '';
+          effectiveEmail = data.user?.email?.trim() || '';
         }
+      }
+
+      const expectedEmail = email.trim().toLowerCase();
+      if (expectedEmail && effectiveEmail && effectiveEmail.toLowerCase() !== expectedEmail) {
+        setMessage('Unable to resend verification email because the current authenticated session does not match the signup email.');
+        return;
       }
 
       if (!effectiveEmail) {
@@ -116,7 +140,7 @@ const SignupSuccessProvided: React.FC = () => {
         options: { emailRedirectTo }
       });
       if (error) throw error;
-      setMessage('Verification email sent. Please check your inbox (and spam).');
+      setMessage('Verification email request submitted. Please check your inbox (and spam).');
     } catch (err: any) {
       setMessage(err?.message || 'Failed to send verification email. Please try again.');
     } finally {
@@ -178,18 +202,15 @@ const SignupSuccessProvided: React.FC = () => {
         <div className="mt-2 flex justify-center">
           <div className="relative inline-block group">
             <button
-              onClick={() => {
-                if (!isVerified) return;
-                navigate('/login');
-              }}
-              disabled={!isVerified}
+              onClick={() => navigate('/login')}
+              disabled={!isVerified || sending}
               className={`px-5 py-2.5 rounded-lg transition-colors ${
                 isVerified
-                  ? 'bg-primary-500 text-white hover:bg-primary-600'
+                  ? 'bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50'
                   : 'bg-gray-200 text-gray-500 cursor-not-allowed'
               }`}
             >
-              Continue to login
+              {sending ? 'Processing...' : 'Continue to login'}
             </button>
 
             {!isVerified && (

@@ -1,6 +1,6 @@
 // src/pages/mentorship/GroupChatPage.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, X, Paperclip, Image, Users, Menu } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Send, X, Paperclip, Image, Users } from 'lucide-react';
 import { mentorshipService } from '../../services/MentorshipService';
 import type { GroupMessage, GroupMember } from '../../interfaces/MentorshipData';
 
@@ -25,17 +25,29 @@ const GroupChatPage: React.FC<GroupChatPageProps> = ({
   const [showMembers, setShowMembers] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
+  const fetchMessages = useCallback(async () => {
+    try {
+      const messagesData = await mentorshipService.getGroupMessages(groupId);
+      setMessages(messagesData);
+
+      if (messagesData.length > 0) {
+        await mentorshipService.markGroupMessagesAsRead(groupId, currentUserId);
+      }
+    } catch (error) {
+      console.error('Error fetching group messages:', error);
+    }
+  }, [groupId, currentUserId]);
+
+  const fetchMembers = useCallback(async () => {
+    try {
+      const membersData = await mentorshipService.getGroupMembers(groupId);
+      setMembers(membersData);
+    } catch (error) {
+      console.error('Error fetching group members:', error);
+    }
   }, [groupId]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       await Promise.all([fetchMessages(), fetchMembers()]);
@@ -44,33 +56,21 @@ const GroupChatPage: React.FC<GroupChatPageProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchMembers, fetchMessages]);
 
-  const fetchMessages = async () => {
-    try {
-      const messagesData = await mentorshipService.getGroupMessages(groupId);
-      setMessages(messagesData);
-      
-      if (messagesData.length > 0) {
-        await mentorshipService.markGroupMessagesAsRead(groupId, currentUserId);
-      }
-    } catch (error) {
-      console.error('Error fetching group messages:', error);
-    }
-  };
-
-  const fetchMembers = async () => {
-    try {
-      const membersData = await mentorshipService.getGroupMembers(groupId);
-      setMembers(membersData);
-    } catch (error) {
-      console.error('Error fetching group members:', error);
-    }
-  };
-
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
+  }, [fetchData, fetchMessages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;

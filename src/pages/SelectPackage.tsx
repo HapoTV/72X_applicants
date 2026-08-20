@@ -19,7 +19,7 @@ const SelectPackage: React.FC = () => {
     userStatus,
     freeTrialStatus,
     showPaymentOptions,
-    eligibilityCheck,
+    eligibilityCheck: _eligibilityCheck,
     packageConfigs,
     getIconComponent,
     handlePackageSelect,
@@ -39,7 +39,6 @@ const SelectPackage: React.FC = () => {
           <PageHeader
             userStatus={userStatus}
             currentSubscription={currentSubscription}
-            eligibilityCheck={eligibilityCheck}
             shouldShowFreeTrial={shouldShowFreeTrial}
             freeTrialStatus={freeTrialStatus}
             isMandatorySelection={isMandatorySelection}

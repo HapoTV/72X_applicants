@@ -6,7 +6,7 @@ type Language = 'en' | 'af' | 'zu';
 interface AdRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { businessName: string; email: string; phone: string; description: string; infoLink: string }) => void;
+  onSubmit: (data: { businessName: string; email: string; phone: string; adLink: string; message: string }) => void;
   language: Language;
 }
 
@@ -14,8 +14,8 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [description, setDescription] = useState('');
-  const [infoLink, setInfoLink] = useState('');
+  const [adLink, setAdLink] = useState('');
+  const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const translations = {
@@ -24,9 +24,11 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
       businessName: "Business Name",
       email: "Email Address",
       phone: "Phone Number",
-      description: "Ad description / anything we should know",
-      infoLink: "Link with more information (optional)",
-      recommendedSize: "Note: Recommended banner size: 768 x 250 (Width 768, Height 250)",
+      adLink: "Ad Link (More information)",
+      noteLabel: "Note:",
+      bannerSizeNoteBefore: "Recommended ad banner size:",
+      bannerSizeNoteAfter: "(width x height)",
+      message: "Tell us about your advertising needs",
       submit: "Send Request",
       cancel: "Cancel",
       required: "This field is required",
@@ -38,9 +40,11 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
       businessName: "Besigheidsnaam",
       email: "E-posadres",
       phone: "Telefoonnommer",
-      description: "Advertensie beskrywing / enigiets wat ons moet weet",
-      infoLink: "Skakel met meer inligting (opsioneel)",
-      recommendedSize: "Nota: Aanbevole baniergrootte: 768 x 250 (Wydte 768, Hoogte 250)",
+      adLink: "Advertensie-skakel (Meer inligting)",
+      noteLabel: "Note:",
+      bannerSizeNoteBefore: "Aanbevole advertensiebanier-grootte:",
+      bannerSizeNoteAfter: "(breedte x hoogte)",
+      message: "Vertel ons van u advertensiebehoeftes",
       submit: "Stuur Versoek",
       cancel: "Kanselleer",
       required: "Hierdie veld is verpligtend",
@@ -52,9 +56,11 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
       businessName: "Igama Lebhizinisi",
       email: "Ikheli Le-imeyili",
       phone: "Inombolo Yocingo",
-      description: "Incazelo yesikhangiso / okunye okufanele sikwazi",
-      infoLink: "Isixhumanisi solwazi olwengeziwe (kuyazikhethela)",
-      recommendedSize: "Qaphela: Usayizi onconyiwe webhena: 768 x 250 (Ububanzi 768, Ukuphakama 250)",
+      adLink: "Isixhumanisi Sesikhangiso (Ulwazi olwengeziwe)",
+      noteLabel: "Note:",
+      bannerSizeNoteBefore: "Usayizi oceliwe we-banner yesikhangiso:",
+      bannerSizeNoteAfter: "(ububanzi x ukuphakama)",
+      message: "Sitshele ngemfuno yakho yokukhangisa",
       submit: "Thumela Isicelo",
       cancel: "Khansela",
       required: "Le nsimu iyadingeka",
@@ -68,7 +74,23 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
     if (isOpen) {
       const userEmail = localStorage.getItem('userEmail') || '';
       const fullName = localStorage.getItem('fullName') || '';
-      const companyName = localStorage.getItem('companyName') || fullName.split(' ')[0];
+      const registrationDataRaw = localStorage.getItem('registrationData') || '';
+      const registrationData = (() => {
+        try {
+          return registrationDataRaw ? JSON.parse(registrationDataRaw) : null;
+        } catch {
+          return null;
+        }
+      })();
+
+      const companyNameFromStorage =
+        localStorage.getItem('companyName') ||
+        localStorage.getItem('businessName') ||
+        registrationData?.step2?.businessName ||
+        registrationData?.businessName ||
+        '';
+
+      const companyName = companyNameFromStorage || fullName.split(' ')[0];
       
       setEmail(userEmail);
       setBusinessName(companyName);
@@ -82,13 +104,13 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!businessName || !email || !description) {
+    if (!businessName || !email || !adLink || !message) {
       alert(t.required);
       return;
     }
     
     setIsSubmitting(true);
-    onSubmit({ businessName, email, phone, description, infoLink });
+    onSubmit({ businessName, email, phone, adLink, message });
   };
 
   return (
@@ -99,6 +121,12 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
           
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
+              <div className="text-xs text-gray-600">
+                <span className="font-semibold">{t.noteLabel}</span>{' '}
+                <span>{t.bannerSizeNoteBefore}</span>{' '}
+                <span className="font-semibold">768 x 250</span>{' '}
+                <span>{t.bannerSizeNoteAfter}</span>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t.businessName} *
@@ -135,6 +163,20 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Optional"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.adLink} *
+                </label>
+                <input
+                  type="url"
+                  value={adLink}
+                  onChange={(e) => setAdLink(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                  placeholder="https://..."
                 />
               </div>
               

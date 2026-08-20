@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Users, Calendar, MapPin } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 
 // Temporary mock service to get the app working
@@ -24,49 +25,35 @@ interface NetworkingEvent {
 
 const Networking: React.FC = () => {
   const { user } = useAuth();
-  const [events, setEvents] = useState<NetworkingEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState('all');
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        let eventsData: NetworkingEvent[] = [];
-        
-        switch (selectedFilter) {
-          case 'upcoming':
-            eventsData = await mockNetworkingService.getUpcomingEvents();
-            break;
-          case 'past':
-            eventsData = await mockNetworkingService.getPastEvents();
-            break;
-          default:
-            eventsData = await mockNetworkingService.getAllEvents();
-        }
-        
-        setEvents(eventsData);
-      } catch (error: any) {
-        console.error('Error fetching networking events:', error);
-        
-        // Handle 500 errors gracefully - show empty state instead of error
-        if (error.response?.status === 500) {
-          console.log('Backend 500 error - showing empty events state');
-          setEvents([]);
-          setError(null);
-        } else {
-          setError('Failed to load networking events');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchEvents = async (): Promise<NetworkingEvent[]> => {
+    switch (selectedFilter) {
+      case 'upcoming':
+        return mockNetworkingService.getUpcomingEvents();
+      case 'past':
+        return mockNetworkingService.getPastEvents();
+      default:
+        return mockNetworkingService.getAllEvents();
+    }
+  };
 
-    fetchEvents();
-  }, [selectedFilter]);
+  const {
+    data: events = [],
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery<NetworkingEvent[]>({
+    queryKey: ['networking-events', selectedFilter],
+    queryFn: fetchEvents,
+    staleTime: 3 * 60 * 1000,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 500) return false;
+      return failureCount < 1;
+    },
+  });
+
+  const error = isError ? 'Failed to load networking events' : null;
 
   const handleJoinEvent = async (eventId: string) => {
     if (!user?.email) {
@@ -79,8 +66,7 @@ const Networking: React.FC = () => {
       alert('Successfully joined the event!');
       
       // Refresh events to update attendee count
-      const updatedEvents = await mockNetworkingService.getAllEvents();
-      setEvents(updatedEvents);
+      refetch();
     } catch (error: any) {
       console.error('Error joining event:', error);
       if (error.response?.status === 500) {
@@ -124,7 +110,7 @@ const Networking: React.FC = () => {
         <div className="text-center py-8">
           <p className="text-red-600 mb-4">{error}</p>
           <button 
-            onClick={() => window.location.reload()}
+            onClick={() => refetch()}
             className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             Try Again

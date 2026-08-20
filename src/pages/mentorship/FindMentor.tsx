@@ -1,13 +1,16 @@
 // src/pages/mentorship/FindMentor.tsx
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, X, Star, MessageSquare, Users, Clock, Globe } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Users, X } from 'lucide-react';
 import { mentorshipService } from '../../services/MentorshipService';
+import MentorSearchBar from './components/MentorSearchBar';
+import MentorFilterChips from './components/MentorFilterChips';
+import MentorCard from './components/MentorCard';
 import type { Mentor } from '../../interfaces/MentorshipData';
 
 interface FindMentorProps {
     onStartChat: (mentorId: string, mentorName: string, mentorEmail: string) => void;
     onConnect: (mentorId: string) => void;
-  }
+}
 
 const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -29,15 +32,7 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     { id: 'Food', name: 'Food & Hospitality' }
   ];
 
-  useEffect(() => {
-    fetchMentors();
-  }, []);
-
-  useEffect(() => {
-    filterMentors();
-  }, [selectedCategory, searchQuery, mentors]);
-
-  const fetchMentors = async () => {
+  const fetchMentors = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -49,9 +44,9 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterMentors = () => {
+  const filterMentors = useCallback(() => {
     let filtered = mentors;
 
     if (selectedCategory !== 'all') {
@@ -75,7 +70,15 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     }
 
     setFilteredMentors(filtered);
-  };
+  }, [mentors, searchQuery, selectedCategory]);
+
+  useEffect(() => {
+    fetchMentors();
+  }, [fetchMentors]);
+
+  useEffect(() => {
+    filterMentors();
+  }, [filterMentors]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -109,7 +112,7 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     }
   };
 
-  const handleChatWithMentor = (mentor: Mentor) => {
+  const handleChatWithMentor = async (mentor: Mentor) => {
     if (!mentor.contactInfo) {
       alert('This mentor has no contact information available.');
       return;
@@ -119,53 +122,23 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
     
     // We'll use mentorId for mentor-specific chat
     // Pass the mentor's own contact info, not the creator's
-    onStartChat(mentor.mentorId, mentor.name, mentor.contactInfo);
+    setChatLoading(mentor.mentorId);
+    try {
+      await Promise.resolve(onStartChat(mentor.mentorId, mentor.name, mentor.contactInfo));
+    } finally {
+      setChatLoading(null);
+    }
   };
-
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Search mentors by name, expertise, or experience..."
-              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-            {searchQuery && (
-              <button
-                onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-          <button
-            onClick={handleSearch}
-            disabled={isSearching}
-            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isSearching ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Searching...</span>
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4" />
-                <span>Search</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+      <MentorSearchBar
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        onSearch={handleSearch}
+        onClearSearch={handleClearSearch}
+        isSearching={isSearching}
+      />
 
       {/* Error Message */}
       {error && (
@@ -177,26 +150,11 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
         </div>
       )}
 
-      {/* Category Filter */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Filter by Expertise</h3>
-        <Filter className="w-5 h-5 text-gray-500" />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {categories.map(category => (
-          <button
-            key={category.id}
-            onClick={() => setSelectedCategory(category.id)}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              selectedCategory === category.id
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {category.name}
-          </button>
-        ))}
-      </div>
+      <MentorFilterChips
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+      />
 
       {/* Loading State */}
       {loading ? (
@@ -233,111 +191,15 @@ const FindMentor: React.FC<FindMentorProps> = ({ onStartChat, onConnect }) => {
 
           {/* Mentors Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredMentors.map(mentor => {
-              const availability = mentorshipService.isMentorAvailable(mentor.availability);
-              const ratingText = mentorshipService.formatRating(mentor.rating);
-              const sessionsText = mentorshipService.formatSessionsCount(mentor.sessionsCompleted);
-              const isChatLoading = chatLoading === mentor.mentorId;
-              
-              return (
-                <div key={mentor.mentorId} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <img 
-                      src={mentor.imageUrl || mentorshipService.getUserImageUrl(mentor.name)}
-                      alt={mentor.name}
-                      className="w-12 h-12 object-cover rounded-full"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 text-sm">{mentor.name}</h3>
-                      <p className="text-gray-600 text-xs">{mentor.expertise}</p>
-                      {mentor.experience && (
-                        <p className="text-gray-500 text-xs">{mentor.experience}</p>
-                      )}
-                    </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      availability
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {availability ? 'Available' : 'Not Available'}
-                    </span>
-                  </div>
-                  
-                  {mentor.bio && (
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{mentor.bio}</p>
-                  )}
-                  
-                  <div className="space-y-3 mb-4">
-                    <div>
-                      <p className="text-xs text-gray-600 mb-1">Expertise:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {mentor.expertise && (
-                        <>
-                          {mentor.expertise.split(',').slice(0, 2).map((skill: string, index: number) => (
-                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                              {skill.trim()}
-                            </span>
-                          ))}
-                          {mentor.expertise.split(',').length > 2 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                              +{mentor.expertise.split(',').length - 2} more
-                            </span>
-                          )}
-                        </>
-                      )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-600">
-                      {mentor.languages && (
-                        <div className="flex items-center space-x-1">
-                          <Globe className="w-3 h-3" />
-                          <span>{mentor.languages.split(',')[0].trim()}</span>
-                        </div>
-                      )}
-                      {mentor.availability && (
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-3 h-3" />
-                          <span>{mentor.availability.split(',')[0]}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        <span className="text-gray-600 text-xs">{ratingText}</span>
-                      </div>
-                      <span className="text-gray-600 text-xs">{sessionsText}</span>
-                      {mentor.sessionPrice && (
-                        <span className="text-gray-600 text-xs">{mentor.sessionPrice}</span>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <button 
-                      onClick={() => handleConnectRequest(mentor.mentorId)}
-                      className="flex-1 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-xs"
-                    >
-                      Connect
-                    </button>
-                    <button 
-                      onClick={() => handleChatWithMentor(mentor)}
-                      disabled={isChatLoading}
-                      className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                      title="Message"
-                    >
-                      {isChatLoading ? (
-                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <MessageSquare className="w-4 h-4 text-gray-600" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredMentors.map((mentor) => (
+              <MentorCard
+                key={mentor.mentorId}
+                mentor={mentor}
+                onConnect={handleConnectRequest}
+                onChat={handleChatWithMentor}
+                chatLoading={chatLoading}
+              />
+            ))}
           </div>
         </>
       )}

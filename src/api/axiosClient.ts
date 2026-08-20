@@ -1,10 +1,30 @@
 // src/api/axiosClient.ts
-import axios, { AxiosError } from "axios";
+import axios, { type AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
+
+// Get API URL from environment variable with fallback
+const API_URL =
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.VITE_PRODUCTION_URL ||
+  'http://localhost:8080';
+
+const normalizedApiUrl = API_URL.replace(/\/+$/, '');
+
+// For Production
+// const API_URL = import.meta.env.VITE_BACKEND_URL;
+
+export const publicAxios = axios.create({
+  baseURL: `${normalizedApiUrl}/api`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 const axiosClient = axios.create({
-  baseURL: "http://localhost:8080/api",
-  // Do NOT set global Content-Type
-  // Let axios handle it automatically
+  baseURL: `${normalizedApiUrl}/api`,
+  timeout: 15000,
+  // 🚫 DO NOT set Content-Type globally
+  // Let axios automatically set it depending on request type
+  // withCredentials: false (default)
 });
 
 /**
@@ -13,29 +33,27 @@ const axiosClient = axios.create({
  * ============================
  */
 axiosClient.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
+    config.headers = config.headers ?? {};
     const token = localStorage.getItem("authToken");
     const organisation = localStorage.getItem("userOrganisation");
     const userRole = localStorage.getItem("userRole");
 
-    console.log("🔧 Axios Request:", {
-      url: config.url,
-      method: config.method,
-      hasToken: !!token,
-      token: token ? token.substring(0, 20) + "..." : "Missing",
-      isFormData: config.data instanceof FormData
-    });
-
-    // ✅ Attach JWT if it exists
+    // Add token ONLY if it exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // ✅ Add organisation header for non-super-admins
-    // Super admins see all data, so don't add organisation header
-    if (organisation && userRole !== 'SUPER_ADMIN') {
+    const url = typeof config.url === 'string' ? config.url : '';
+    const shouldSkipOrganisationHeader =
+      url.startsWith('/users/me') ||
+      url.startsWith('/marketplace/') ||
+      url.startsWith('/users/role') ||
+      url.startsWith('/users?role=') ||
+      url.startsWith('/authentication');
+
+    if (!shouldSkipOrganisationHeader && organisation && userRole !== 'SUPER_ADMIN') {
       config.headers['X-Organisation'] = organisation;
-      console.log("🏢 Added organisation header:", organisation);
     }
 
     // ✅ Let browser handle multipart boundary
@@ -45,10 +63,7 @@ axiosClient.interceptors.request.use(
 
     return config;
   },
-  (error) => {
-    console.error("❌ Request Interceptor Error:", error);
-    return Promise.reject(error);
-  }
+  (error: unknown) => Promise.reject(error)
 );
 
 /**
@@ -57,46 +72,64 @@ axiosClient.interceptors.request.use(
  * ============================
  */
 axiosClient.interceptors.response.use(
-  (response) => {
-    console.log("✅ Axios Success:", {
-      url: response.config.url,
-      status: response.status,
-    });
-    return response;
-  },
-  (error: AxiosError<any>) => {
-    const status = error.response?.status;
-    const responseData = error.response?.data;
-    const backendMessage =
-      typeof responseData === "string"
-        ? responseData
-        : responseData?.message || "";
+  (response: AxiosResponse) => response,
+  (error: AxiosError) => {
+    const url = error.config?.url as string | undefined;
+    const method = (error.config?.method as string | undefined)?.toLowerCase();
+    const status = error.response?.status as number | undefined;
 
-    console.error("❌ Axios Error:", {
-      url: error.config?.url,
-      status,
-      message: backendMessage || error.message,
-    });
+    const isExpectedMissingQuiz =
+      method === 'get' &&
+      status === 404 &&
+      typeof url === 'string' &&
+      /^\/learning-materials\/[^/]+\/quiz$/.test(url);
+
+    if (!isExpectedMissingQuiz) {
+      console.error("❌ Axios Response Error:", {
+        url,
+        status,
+        message: error.message,
+        data: error.response?.data
+      });
+    }
 
     /**
      * 🌐 Network error (backend down / CORS issue)
      */
     if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
-      return Promise.reject(
-        new Error(
-          "Cannot connect to server. Please check if the backend is running."
-        )
-      );
+      throw new Error("Cannot connect to server. Please check if the backend is running.");
     }
 
     if (error.response?.status === 401) {
-      console.warn("🔐 Unauthorized - Token invalid/expired");
       localStorage.removeItem("authToken");
-      window.location.href = "/login";
+      localStorage.removeItem("user");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("userOrganisation");
+
+      const currentPath = window.location.pathname || '';
+      const publicAuthPaths = [
+        '/login',
+        '/login/asadmin',
+        '/login/cocadmin',
+        '/login/haposuperadmin',
+        '/signup',
+        '/verify-otp',
+        '/reset-password',
+        '/setup-account',
+        '/create-password',
+      ];
+
+      const isOnPublicAuthPage = publicAuthPaths.some(
+        (p) => currentPath === p || currentPath.startsWith(`${p}/`)
+      );
+
+      if (!isOnPublicAuthPage) {
+        window.location.href = "/login";
+      }
     }
 
     if (error.response?.status === 403) {
-      console.error("🚫 Forbidden - No permission");
+      // No permission — caller handles this
     }
 
     return Promise.reject(error);

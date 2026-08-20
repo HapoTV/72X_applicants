@@ -3,7 +3,7 @@ import { Quote, RefreshCw } from 'lucide-react';
 
 const MotivationQuote: React.FC = () => {
   const [currentQuote, setCurrentQuote] = useState(0);
-  
+
   const quotes = [
     {
       text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
@@ -35,7 +35,7 @@ const MotivationQuote: React.FC = () => {
     // Change quote daily
     const today = new Date().getDate();
     setCurrentQuote(today % quotes.length);
-  }, []);
+  }, [quotes.length]);
 
   const nextQuote = () => {
     setCurrentQuote((prev) => (prev + 1) % quotes.length);

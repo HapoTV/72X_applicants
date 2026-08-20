@@ -35,6 +35,9 @@ const AdTab: React.FC = () => {
   // Fetch ads
   const fetchAds = useCallback(async () => {
     if (!isSuperAdmin) {
+      setAds([]);
+      setTotalAds(0);
+      setLoading(false);
       return;
     }
     try {
@@ -73,7 +76,7 @@ const AdTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, isSuperAdmin]);
+  }, [currentPage, isSuperAdmin, itemsPerPage]);
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -102,10 +105,31 @@ const AdTab: React.FC = () => {
     );
   }
 
+  // Check if user is super admin
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
+          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600 mb-4">
+            Only Super Admins can manage advertisements.
+          </p>
+          <div className="bg-red-100 p-4 rounded-lg">
+            <p className="text-sm text-red-700">
+              If you need to manage ads, please contact your system administrator.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Handle edit ad
   const handleEdit = (ad: AdDTO) => {
     setEditingAd(ad);
     setShowForm(true);
+
     setError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -161,15 +185,11 @@ const AdTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header with Super Admin Badge */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-2xl font-bold text-gray-800">Ad Management</h2>
-            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium flex items-center gap-1">
-              <Crown className="w-4 h-4" />
-              Super Admin Only
-            </span>
           </div>
           <p className="text-gray-600">Create, manage, and track advertisements</p>
         </div>

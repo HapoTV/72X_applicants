@@ -2,22 +2,26 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { User } from "../interfaces/UserData";
+import userSubscriptionService from "../services/UserSubscriptionService";
 
 interface AuthContextType {
   user: User | null;
-  login: (userData: User) => void;
+  login: (userData: User, authToken?: string) => void;
   logout: () => void;
+  logoutAppTab: () => void;
   updateUserStatus: (status: string) => void;
-  updateUserOrganisation: (organisation: string) => void; // NEW
+  updateUserOrganisation: (organisation: string) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  isSuperAdmin: boolean; // NEW
+  isSuperAdmin: boolean;
+  isCocAdmin: boolean;
   token: string | null;
   tempSessionToken: string | null;
   setTempSessionToken: (token: string | null) => void;
   twoFactorEnabled: boolean;
   setTwoFactorEnabled: (enabled: boolean) => void;
-  userOrganisation: string | null; // NEW
+  userOrganisation: string | null;
+  userPackage: 'startup' | 'essential' | 'premium' | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,46 +32,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return storedUser ? JSON.parse(storedUser) : null;
   });
 
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("authToken");
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("authToken"));
+
+  const [userOrganisation, setUserOrganisation] = useState<string | null>(() =>
+    localStorage.getItem("userOrganisation")
+  );
+
+  const [userPackage, setUserPackage] = useState<'startup' | 'essential' | 'premium' | null>(() => {
+    const stored = localStorage.getItem('userPackage');
+    if (stored === 'essential' || stored === 'premium' || stored === 'startup') return stored;
+    return null;
   });
 
-  const [userOrganisation, setUserOrganisation] = useState<string | null>(() => {
-    return localStorage.getItem("userOrganisation");
-  });
-
-  // Used for OTP / temporary sessions
   const [tempSessionToken, setTempSessionToken] = useState<string | null>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
-  const login = (userData: User) => {
+  const login = (userData: User, authToken?: string) => {
     localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+    if (authToken) {
+      localStorage.setItem("authToken", authToken);
+      setToken(authToken);
+    }
     if (userData.organisation) {
       localStorage.setItem("userOrganisation", userData.organisation);
       setUserOrganisation(userData.organisation);
     }
-    setUser(userData);
   };
 
-  const logout = () => {
-    // Clear all auth-related localStorage items
-    const itemsToKeep = ['language', 'theme']; // Items to preserve
-    const allItems = Object.keys(localStorage);
-    
-    allItems.forEach(key => {
-      if (!itemsToKeep.includes(key)) {
-        localStorage.removeItem(key);
-      }
+  const logout = (redirectTo = "/login") => {
+    const itemsToKeep = ['language', 'theme'];
+    Object.keys(localStorage).forEach(key => {
+      if (!itemsToKeep.includes(key)) localStorage.removeItem(key);
     });
-    
     setUser(null);
     setToken(null);
     setTempSessionToken(null);
     setTwoFactorEnabled(false);
     setUserOrganisation(null);
-    
-    // Redirect to login
-    window.location.href = "/login";
+    window.location.href = redirectTo;
+  };
+
+  const logoutAppTab = () => {
+    window.location.href = '/';
   };
 
   const updateUserStatus = (status: string) => {
@@ -75,14 +82,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const updatedUser = { ...user, status };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       localStorage.setItem('userStatus', status);
-      
-      // Update requiresPackageSelection flag
       if (status === 'PENDING_PACKAGE') {
         localStorage.setItem('requiresPackageSelection', 'true');
       } else {
         localStorage.removeItem('requiresPackageSelection');
       }
-      
       setUser(updatedUser);
     }
   };
@@ -100,53 +104,150 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Update token when localStorage changes
   useEffect(() => {
     const handleStorageChange = () => {
-      const newToken = localStorage.getItem("authToken");
-      setToken(newToken);
-      
+      setToken(localStorage.getItem("authToken"));
       const storedUser = localStorage.getItem("user");
       setUser(storedUser ? JSON.parse(storedUser) : null);
-      
-      const storedOrg = localStorage.getItem("userOrganisation");
-      setUserOrganisation(storedOrg);
+      setUserOrganisation(localStorage.getItem("userOrganisation"));
+      const storedPkg = localStorage.getItem('userPackage');
+      if (storedPkg === 'essential' || storedPkg === 'premium' || storedPkg === 'startup') {
+        setUserPackage(storedPkg);
+      } else {
+        setUserPackage(null);
+      }
     };
 
-    // Listen for storage changes
     window.addEventListener('storage', handleStorageChange);
-    
-    // Also check on mount
     handleStorageChange();
 
+    const handlePackageUpdated = () => {
+      const storedPkg = localStorage.getItem('userPackage');
+      if (storedPkg === 'essential' || storedPkg === 'premium' || storedPkg === 'startup') {
+        setUserPackage(storedPkg);
+      } else {
+        setUserPackage(null);
+      }
+    };
+
+    window.addEventListener('user-package-updated', handlePackageUpdated as EventListener);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('user-package-updated', handlePackageUpdated as EventListener);
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleNoSubscription = async () => {
+      const storedUser = localStorage.getItem('user');
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const userRole = (parsedUser?.role || localStorage.getItem('userRole') || '').toUpperCase();
+      if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN') return;
+      const userOrg = localStorage.getItem('userOrganisation');
+      const isStandaloneOrg = !userOrg || userOrg.trim().toLowerCase() === 'hapo';
+      if (!isStandaloneOrg) return;
+
+      try {
+        const trialStatus = await userSubscriptionService.getFreeTrialStatus();
+        const hasUsedTrial =
+          trialStatus?.success === false ||
+          trialStatus?.remainingDays === 0 ||
+          (typeof trialStatus?.message === 'string' &&
+            (trialStatus.message.toLowerCase().includes('already used') ||
+              trialStatus.message.toLowerCase().includes('expired') ||
+              trialStatus.message.toLowerCase().includes('already been used')));
+
+        if (hasUsedTrial) {
+          // mark user as pending payment but do not force-nav; wait for hydration to complete
+          localStorage.setItem('userStatus', 'PENDING_PAYMENT');
+          localStorage.setItem('requiresPackageSelection', 'true');
+        } else {
+          // mark user as pending package selection; do not force-nav here
+          localStorage.setItem('userStatus', 'PENDING_PACKAGE');
+          localStorage.setItem('requiresPackageSelection', 'true');
+        }
+      } catch {
+        // On error, conservatively mark that package selection may be required
+        localStorage.setItem('userStatus', 'PENDING_PACKAGE');
+        localStorage.setItem('requiresPackageSelection', 'true');
+      }
+    };
+
+    const hydrateUserPackage = async () => {
+      // mark hydration as in-progress so UI router can wait before redirecting
+      localStorage.setItem('userPackageHydrated', 'false');
+      if (!token) {
+        localStorage.setItem('userPackageHydrated', 'true');
+        return;
+      }
+      try {
+        const storedUser = localStorage.getItem('user');
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+        const userRole = (parsedUser?.role || localStorage.getItem('userRole') || '').toUpperCase();
+        if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'COC_ADMIN') {
+          localStorage.setItem('userPackageHydrated', 'true');
+          return;
+        }
+
+        const subscription = await userSubscriptionService.getCurrentUserPackage();
+        if (cancelled) return;
+
+        console.log('hydrateUserPackage - subscription:', subscription);
+
+        const subscriptionType = subscription?.subscriptionType;
+        const mapped =
+          subscriptionType === 'ESSENTIAL' ? 'essential' :
+          subscriptionType === 'PREMIUM' ? 'premium' :
+          subscriptionType === 'START_UP' ? 'startup' : null;
+
+        // Also support alternative backend value variants (e.g. STARTUP without underscore)
+        const mappedFallback = !mapped && subscriptionType === 'STARTUP' ? 'startup' : mapped;
+
+        const userOrg = localStorage.getItem('userOrganisation');
+        const isStandaloneOrg = !userOrg || userOrg.trim().toLowerCase() === 'hapo';
+
+        if (mappedFallback) {
+          localStorage.setItem('userPackage', mappedFallback);
+          setUserPackage(mappedFallback);
+          window.dispatchEvent(new CustomEvent('user-package-updated'));
+
+          const currentStatus = localStorage.getItem('userStatus');
+          if (currentStatus !== 'ACTIVE') {
+            localStorage.setItem('userStatus', 'ACTIVE');
+          }
+          localStorage.removeItem('requiresPackageSelection');
+          localStorage.removeItem('selectedPackage');
+        } else if (isStandaloneOrg) {
+          if (!cancelled) await handleNoSubscription();
+        }
+      } catch {
+        if (!cancelled) await handleNoSubscription();
+      } finally {
+        if (!cancelled) {
+          localStorage.setItem('userPackageHydrated', 'true');
+        }
+      }
+    };
+
+    void hydrateUserPackage();
+    return () => { cancelled = true; };
+  }, [token]);
+
   const isAuthenticated = !!token && !!user;
-  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'COC_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isCocAdmin = user?.role === 'COC_ADMIN';
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        updateUserStatus,
-        updateUserOrganisation,
-        isAuthenticated,
-        isAdmin,
-        isSuperAdmin,
-        token,
-        tempSessionToken,
-        setTempSessionToken,
-        twoFactorEnabled,
-        setTwoFactorEnabled,
-        userOrganisation,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user, login, logout, logoutAppTab, updateUserStatus, updateUserOrganisation,
+      isAuthenticated, isAdmin, isSuperAdmin, isCocAdmin,
+      token, tempSessionToken, setTempSessionToken,
+      twoFactorEnabled, setTwoFactorEnabled,
+      userOrganisation, userPackage,
+    }}>
       {children}
     </AuthContext.Provider>
   );

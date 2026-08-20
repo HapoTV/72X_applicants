@@ -2,26 +2,26 @@ export const buildAdRequestMailto = (params: {
   businessName: string;
   email: string;
   phone: string;
-  description: string;
-  infoLink: string;
+  adLink: string;
+  message: string;
 }) => {
   const userEmail = localStorage.getItem('userEmail') || params.email;
   const userPhone = localStorage.getItem('mobileNumber') || params.phone;
 
-  const subject = `Advertising Space Request - ${params.businessName}`;
-  const body = `BUSINESS DETAILS
+  const subject = 'Request Ad space';
+  const body = `
+Advertising Request
+
 Business Name: ${params.businessName}
 Email: ${userEmail}
 Phone: ${params.phone || userPhone}
+Ad Link: ${params.adLink}
 
-AD DETAILS
-Description: ${params.description}
-More info link: ${params.infoLink || ''}
+Recommended ad banner size: 768 x 250 (width x height)
 
-ATTACHMENT
-Please attach your banner image.
-Recommended size: 768 x 250 (Width 768, Height 250)
-`;
+Message:
+${params.message}
+  `;
 
   const supportEmail = 'admin@hapogroup.co.za';
   return `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

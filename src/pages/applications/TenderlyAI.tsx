@@ -1,338 +1,319 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Loader2, TrendingUp, Calendar, Building, MapPin } from 'lucide-react'
-import { Header } from '../../components/tenderly/Header'
-import { Sidebar } from '../../components/tenderly/Sidebar'
-import { TenderCard } from '../../components/tenderly/TenderCard'
-import { Button } from '../../components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import { Badge } from '../../components/ui/badge'
-import { tenderService } from '../../services/tenderly/tenders'
-import type { Tender } from '../../types/tenderly'
+import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Bell,
+  Filter,
+  Home,
+  Moon,
+  Search,
+  Bookmark,
+  TrendingUp,
+  ArrowLeft,
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
-export default function TenderlyAI() {
-  const [loading, setLoading] = useState(true)
-  const [tenders, setTenders] = useState<Tender[]>([])
-  const [allTenders, setAllTenders] = useState<Tender[]>([])
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
-  const [savedTenders, setSavedTenders] = useState<string[]>([])
-  const [showUrgentOnly, setShowUrgentOnly] = useState(false)
-  const [showSavedOnly, setShowSavedOnly] = useState(false)
-  
-  // Filter states
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
-  const [selectedProvince, setSelectedProvince] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
+// Hooks
+import { useTenders } from '../../hooks/tenderlyai';
 
-  useEffect(() => {
-    // Load saved tenders from localStorage
-    const saved = localStorage.getItem('savedTenders')
-    if (saved) {
-      setSavedTenders(JSON.parse(saved))
-    }
-  }, [])
+// Components
+import {
+  OverviewTab,
+  TenderListTab,
+  SavedTendersTab,
+} from '../../components/tenderlyai';
 
-  const itemsPerPage = 20
+// Types
+import type { TenderSearchFilters } from '../../interfaces/TenderlyAIData';
 
-  const loadTenders = useCallback(async () => {
-    setLoading(true)
-    
+const SIGNUP_INDUSTRIES = [
+  'Technology',
+  'Finance & Banking',
+  'Healthcare',
+  'Retail & E-commerce',
+  'Manufacturing',
+  'Construction',
+  'Education',
+  'Hospitality & Tourism',
+  'Transportation & Logistics',
+  'Media & Entertainment',
+  'Agriculture',
+  'Real Estate',
+  'Energy & Utilities',
+  'Professional Services',
+  'Non-profit',
+  'Other',
+];
+
+const PROVINCES = [
+  'All Provinces',
+  'Eastern Cape',
+  'Free State',
+  'Gauteng',
+  'KwaZulu-Natal',
+  'Limpopo',
+  'Mpumalanga',
+  'Northern Cape',
+  'North West',
+  'Western Cape',
+];
+
+type TenderlyAITab = 'overview' | 'tenders' | 'saved';
+
+const navItems: Array<{ id: TenderlyAITab; label: string; icon: React.ElementType }> = [
+  { id: 'overview', label: 'Overview', icon: Home },
+  { id: 'tenders', label: 'Browse Tenders', icon: TrendingUp },
+  { id: 'saved', label: 'Saved', icon: Bookmark },
+];
+
+export const TenderlyAI: React.FC = () => {
+  const navigate = useNavigate();
+
+  // Hooks
+  const {
+    tenders,
+    savedTenderIds,
+    toggleSavedTender,
+    getSavedTenders,
+    getAllIndustries,
+    loading,
+  } = useTenders();
+
+  // State
+  const [activeTab, setActiveTab] = useState<TenderlyAITab>('overview');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>(() => {
     try {
-      const tendersResult = await tenderService.getTenders(
-        currentPage,
-        itemsPerPage,
-        selectedIndustries.length > 0 ? selectedIndustries : undefined,
-        selectedProvince !== 'all' ? selectedProvince : undefined,
-        searchQuery
-      )
-
-      if (tendersResult.tenders) {
-        // Store all tenders for stats calculation
-        setAllTenders(tendersResult.tenders)
-        
-        let filteredTenders = tendersResult.tenders
-
-        // Apply urgent filter if active
-        if (showUrgentOnly) {
-          const today = new Date()
-          filteredTenders = filteredTenders.filter(t => 
-            new Date(t.closing_date) <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
-          )
-        }
-
-        // Apply saved filter if active
-        if (showSavedOnly) {
-          filteredTenders = filteredTenders.filter(t => savedTenders.includes(t.tender_id))
-        }
-
-        setTenders(filteredTenders)
-        setTotalCount(tendersResult.count || 0)
-      }
-    } catch (error) {
-      console.error('Error loading tenders:', error)
-    } finally {
-      setLoading(false)
+      const raw = localStorage.getItem('user');
+      const parsed = raw ? (JSON.parse(raw) as { industry?: string }) : null;
+      const industry = (parsed?.industry || '').trim();
+      return industry ? [industry] : [];
+    } catch {
+      return [];
     }
-  }, [currentPage, itemsPerPage, searchQuery, selectedIndustries, selectedProvince, showSavedOnly, showUrgentOnly, savedTenders])
+  });
+  const [province, setProvince] = useState('All Provinces');
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
-  useEffect(() => {
-    loadTenders()
-  }, [loadTenders])
+  // Get industries
+  const industries = useMemo(() => {
+    const fromTenders = getAllIndustries();
+    const combined = [...SIGNUP_INDUSTRIES, ...fromTenders];
+    const unique = Array.from(new Set(combined.map((s) => s.trim()).filter(Boolean)));
+    const withoutOther = unique.filter((s) => s.toLowerCase() !== 'other');
+    return [...withoutOther, 'Other'];
+  }, [getAllIndustries]);
 
-  const handleSignOut = () => {
-    // No auth needed, just redirect to dashboard
-    window.location.href = '/dashboard'
-  }
+  // Create filters object
+  const filters: TenderSearchFilters = useMemo(
+    () => ({
+      searchTerm,
+      province: province !== 'All Provinces' ? province : undefined,
+      industry: selectedIndustries.length === 1 ? selectedIndustries[0] : undefined,
+    }),
+    [searchTerm, province, selectedIndustries]
+  );
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query)
-    setCurrentPage(1)
-  }
+  // Handlers
+  const handleFilterChange = (newFilters: Partial<TenderSearchFilters>) => {
+    if ('searchTerm' in newFilters) {
+      setSearchTerm(newFilters.searchTerm || '');
+    }
+  };
 
-  const handleClearFilters = () => {
-    setSelectedIndustries([])
-    setSelectedProvince('all')
-    setSearchQuery('')
-    setShowUrgentOnly(false)
-    setShowSavedOnly(false)
-    setCurrentPage(1)
-  }
-
-  const handleViewDetails = (tenderId: string) => {
-    // In a real app, this would navigate to a detail page
-    console.log('View tender details:', tenderId)
-  }
+  const toggleIndustry = (industry: string) => {
+    setSelectedIndustries((prev) =>
+      prev.includes(industry)
+        ? prev.filter((i) => i !== industry)
+        : [...prev, industry]
+    );
+  };
 
   const handleSaveTender = (tenderId: string) => {
-    let updatedSavedTenders: string[]
-    if (savedTenders.includes(tenderId)) {
-      updatedSavedTenders = savedTenders.filter(id => id !== tenderId)
-    } else {
-      updatedSavedTenders = [...savedTenders, tenderId]
+    toggleSavedTender(tenderId);
+  };
+
+  const handleRemoveSavedTender = (tenderId: string) => {
+    toggleSavedTender(tenderId);
+  };
+
+  // Render active tab
+  const renderTab = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <OverviewTab
+            tenders={tenders}
+            savedTenderIds={savedTenderIds}
+          />
+        );
+      case 'tenders':
+        return (
+          <TenderListTab
+            tenders={tenders}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onSave={handleSaveTender}
+            savedIds={savedTenderIds}
+            loading={loading}
+          />
+        );
+      case 'saved':
+        return (
+          <SavedTendersTab
+            tenders={getSavedTenders()}
+            onRemove={handleRemoveSavedTender}
+            loading={loading}
+          />
+        );
+      default:
+        return null;
     }
-    
-    setSavedTenders(updatedSavedTenders)
-    localStorage.setItem('savedTenders', JSON.stringify(updatedSavedTenders))
-  }
-
-  const handleShowUrgentOnly = () => {
-    setShowUrgentOnly(!showUrgentOnly)
-    setShowSavedOnly(false)
-    setCurrentPage(1)
-  }
-
-  const handleShowSavedOnly = () => {
-    setShowSavedOnly(!showSavedOnly)
-    setShowUrgentOnly(false)
-    setCurrentPage(1)
-  }
-
-  const handleShowAllTenders = () => {
-    setShowUrgentOnly(false)
-    setShowSavedOnly(false)
-    setCurrentPage(1)
-  }
-
-  const totalPages = Math.ceil(totalCount / itemsPerPage)
-
-  const getStats = () => {
-    const today = new Date()
-    const thisWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-    const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-
-    // Calculate stats from allTenders (unfiltered)
-    const totalTenders = allTenders.length
-    const thisWeekTenders = allTenders.filter(t => new Date(t.published_date) >= thisWeek).length
-    const thisMonthTenders = allTenders.filter(t => new Date(t.published_date) >= thisMonth).length
-    const urgentTenders = allTenders.filter(t => new Date(t.closing_date) <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)).length
-    const savedCount = savedTenders.length
-
-    return { totalTenders, thisWeekTenders, thisMonthTenders, urgentTenders, savedCount }
-  }
-
-  const stats = getStats()
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header 
-        user={null}
-        onSearch={handleSearch}
-        onSignOut={handleSignOut}
-        notificationCount={0}
-      />
-
-      <div className="flex">
-        <Sidebar
-          selectedIndustries={selectedIndustries}
-          selectedProvince={selectedProvince}
-          searchQuery={searchQuery}
-          onIndustriesChange={setSelectedIndustries}
-          onProvinceChange={setSelectedProvince}
-          onSearchChange={handleSearch}
-          onClearFilters={handleClearFilters}
-          isCollapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-
-        <main className={`flex-1 p-6 transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-80'}`}>
-          <div className="max-w-7xl mx-auto space-y-6">
-            {/* Welcome Section */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome to TenderlyAI!
-              </h1>
-              <p className="text-gray-600">
-                Here's what's happening in the tender marketplace today
-              </p>
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/overview')}
+              className="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 hover:text-gray-900"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Main Dashboard
+            </button>
+            <div className="flex items-center gap-2 sm:ml-4">
+              <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center text-white text-xs font-bold">
+                72X
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">TenderlyAI</h1>
             </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleShowAllTenders}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Tenders</CardTitle>
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalTenders}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {!showUrgentOnly && !showSavedOnly ? 'Showing all' : 'Click to show all'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleShowSavedOnly}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Saved Tenders</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.savedCount}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {showSavedOnly ? 'Showing saved' : 'Click to view saved'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={handleShowUrgentOnly}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Urgent</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">{stats.urgentTenders}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {showUrgentOnly ? 'Showing urgent' : 'Closing within 7 days'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Categories</CardTitle>
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">14</div>
-                  <p className="text-xs text-muted-foreground">
-                    Industry categories
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Tender Feed */}
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>Tender Feed</CardTitle>
-                    <CardDescription>
-                      Latest opportunities matching your criteria
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {totalCount > 0 && (
-                      <Badge variant="secondary">
-                        {totalCount} total tenders
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {loading ? (
-                    <div className="flex justify-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin" />
-                    </div>
-                  ) : tenders.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No tenders found</h3>
-                      <p className="text-gray-500 mb-4">
-                        Try adjusting your filters or check back later for new opportunities.
-                      </p>
-                      <Button onClick={handleClearFilters} variant="outline">
-                        Clear Filters
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid gap-4">
-                        {tenders.map((tender) => (
-                          <TenderCard
-                            key={tender.tender_id}
-                            tender={tender}
-                            onViewDetails={handleViewDetails}
-                            onSaveTender={handleSaveTender}
-                            isSaved={savedTenders.includes(tender.tender_id)}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Pagination */}
-                      {totalPages > 1 && (
-                        <div className="flex justify-center items-center space-x-2 mt-6">
-                          <Button
-                            variant="outline"
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                          >
-                            Previous
-                          </Button>
-                          <span className="text-sm text-gray-600">
-                            Page {currentPage} of {totalPages}
-                          </span>
-                          <Button
-                            variant="outline"
-                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                            disabled={currentPage === totalPages}
-                          >
-                            Next
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
           </div>
-        </main>
+          <p className="text-gray-600 mt-2">Discover and manage government tenders and business opportunities.</p>
+        </div>
+
+        <div className="relative w-full lg:w-80">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search tenders..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+          />
+        </div>
       </div>
+
+      {/* Filter Controls */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button type="button" className="p-2 rounded-lg hover:bg-gray-100" aria-label="Theme">
+            <Moon className="w-5 h-5 text-gray-600" />
+          </button>
+          <button type="button" className="p-2 rounded-lg hover:bg-gray-100" aria-label="Notifications">
+            <Bell className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+      </div>
+
+      {/* Filters Panel */}
+      {filtersOpen && (
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">
+                Industries
+              </label>
+              <div className="max-h-48 overflow-auto space-y-2 pr-1">
+                {industries.map((industry) => (
+                  <label key={industry} className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedIndustries.includes(industry)}
+                      onChange={() => toggleIndustry(industry)}
+                      className="rounded border-gray-300"
+                    />
+                    <span>{industry}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-2">
+                Province
+              </label>
+              <select
+                value={province}
+                onChange={(e) => setProvince(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                {PROVINCES.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedIndustries([]);
+                  setProvince('All Provinces');
+                }}
+                className="px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-lg border border-primary-200"
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-2">
+        <nav className="flex flex-wrap items-center gap-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.label}
+                onClick={() => setActiveTab(item.id)}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${
+                  activeTab === item.id
+                    ? 'bg-primary-500 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Content */}
+      {renderTab()}
     </div>
-  )
-}
+  );
+};
+
+export default TenderlyAI;
+ 

@@ -1,6 +1,5 @@
 // src/services/AuthService.ts
-import axios from "axios";
-import axiosClient from '../api/axiosClient';
+import axiosClient, { publicAxios } from '../api/axiosClient';
 import type { 
   User, 
   LoginRequest, 
@@ -8,18 +7,7 @@ import type {
   LoginResponse,
   CreateUserRequest,
   CreateUserResponse,
-  OrganisationUserRequest,
-  UserAvailability
 } from '../interfaces/UserData';
-
-const API_URL = 'http://localhost:8080/api';
-
-const publicAxios = axios.create({
-  baseURL: API_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
 
 class AuthService {
 
@@ -83,8 +71,21 @@ class AuthService {
         loginType: loginData.loginType,
         hasBusinessRef: !!loginData.businessReference 
       });
-      const response = await axiosClient.post('/authentication/login', loginData);
-      return response.data;
+      
+      const response = await publicAxios.post('/authentication/login', loginData);
+
+      const loginResponse: LoginResponse = response.data;
+      console.log("✅ Login response received:", {
+        ...loginResponse,
+        token: loginResponse.token ? "***MASKED***" : undefined,
+        role: loginResponse.role,
+        organisation: loginResponse.organisation,
+        status: loginResponse.status,
+        requiresPackageSelection: loginResponse.requiresPackageSelection,
+        requiresOtpVerification: loginResponse.requiresOtpVerification
+      });
+
+      return loginResponse;
     } catch (error: any) {
       let errorMessage = 'Login failed. Please check your credentials.';
       if (error.response?.data) {
@@ -139,7 +140,24 @@ class AuthService {
 
   async updateUserProfile(userData: Partial<User>): Promise<User> {
     try {
-      const response = await axiosClient.put('/users/me', userData);
+      const userId =
+        userData.userId ||
+        (() => {
+          try {
+            const raw = localStorage.getItem('user');
+            const parsed = raw ? JSON.parse(raw) : null;
+            return parsed?.userId || localStorage.getItem('userId') || undefined;
+          } catch {
+            return localStorage.getItem('userId') || undefined;
+          }
+        })();
+
+      const response = await axiosClient.put('/users/me', {
+        ...userData,
+        userId,
+      });
+      
+      // Update stored user data
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const updatedUser = { ...currentUser, ...response.data };
       localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -165,6 +183,21 @@ class AuthService {
       return response.data;
     } catch (error) {
       throw new Error('Failed to update profile image.');
+    }
+  }
+
+  async removeProfileImage(): Promise<User> {
+    try {
+      const response = await axiosClient.delete('/users/me/profile-image');
+
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = { ...currentUser, ...response.data };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+
+      return response.data;
+    } catch (error) {
+      console.error('Remove profile image error:', error);
+      throw new Error('Failed to remove profile image.');
     }
   }
 
@@ -194,27 +227,15 @@ class AuthService {
    * Works exactly like changePassword on the Profile page,
    * but uses email instead of userId and requires no old password.
    */
-  async resetPasswordVerify(token: string, newPassword: string): Promise<void> {
-  try {
-    console.log("🔐 Verifying password reset...");
-
-    await publicAxios.post('/authentication/reset-password/verify', {
-      token,
-      newPassword
-    });
-
-    console.log("✅ Password reset successful");
-
-  } catch (error: any) {
-
-    let errorMessage = 'Failed to reset password.';
-
-    if (error.response?.data) {
-      errorMessage = typeof error.response.data === 'string'
-        ? error.response.data
-        : error.response.data.message || errorMessage;
-    } else if (error.message) {
-      errorMessage = error.message;
+  async resetPasswordWithToken(token: string, newPassword: string): Promise<void> {
+    try {
+      await axiosClient.put('/authentication/reset-password', {
+        token,
+        newPassword
+      });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw new Error('Failed to reset password.');
     }
 
     if (error.response?.status === 400) {
@@ -231,37 +252,120 @@ class AuthService {
   
 
   /**
-   * Change password (Profile page) — PUT /authentication/change-password/{userId}
+   * Reset password verify
    */
-  async changePassword(passwords: ChangePasswordRequest): Promise<void> {
+  async resetPasswordVerify(token: string, newPassword: string): Promise<void> {
     try {
-      console.log("🔐 Changing password...");
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const userId = user.userId;
-      if (!userId) {
-        throw new Error('User ID not found. Please log in again.');
-      }
-      await axiosClient.put(`/authentication/change-password/${userId}`, {
-        oldPassword: passwords.currentPassword,
-        newPassword: passwords.newPassword
+      console.log("🔐 Verifying password reset...");
+
+      await publicAxios.put('/authentication/reset-password', {
+        token,
+        newPassword
       });
-      console.log("✅ Password changed successfully");
+
+      console.log("✅ Password reset successful");
+
     } catch (error: any) {
-      let errorMessage = 'Failed to change password.';
+
+      let errorMessage = 'Failed to reset password.';
+
       if (error.response?.data) {
-        errorMessage = typeof error.response.data === 'string' 
-          ? error.response.data 
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
           : error.response.data.message || errorMessage;
       } else if (error.message) {
         errorMessage = error.message;
       }
+
+      if (error.response?.status === 400) {
+        errorMessage = 'Invalid or expired reset link.';
+      }
+
+      if (error.response?.status === 404) {
+        errorMessage = 'Reset request not found.';
+      }
+
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Set up account using setup token (initial password)
+   */
+  async setupAccountWithToken(token: string, newPassword: string): Promise<{ role?: string | null } | undefined> {
+    try {
+      console.log("🔐 Setting up account with token...");
+
+      const res = await publicAxios.post('/authentication/setup-account', {
+        token,
+        newPassword,
+      });
+
+      console.log("✅ Account setup successful");
+      return res?.data;
+    } catch (error: any) {
+      let errorMessage = 'Failed to set up account.';
+
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      if (error.response?.status === 400) {
+        errorMessage = errorMessage || 'Invalid or expired setup link.';
+      }
+
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Change password - Matches backend API: PUT /authentication/change-password
+   */
+  async changePassword(passwords: ChangePasswordRequest): Promise<void> {
+    try {
+      console.log("🔐 Changing password...");
+
+      // Backend expects "oldPassword" and "newPassword" keys
+      const requestBody = {
+        oldPassword: passwords.currentPassword,
+        newPassword: passwords.newPassword
+      };
+
+      // REMOVED: ${userId} from the URL - just use the base endpoint
+      await axiosClient.put(`/authentication/change-password`, requestBody);
+      
+      console.log("✅ Password changed successfully");
+    } catch (error: any) {
+      console.error('❌ Change password error:', error);
+      console.error('Error response:', error.response);
+
+      let errorMessage = 'Failed to change password.';
+
+      // Extract error message from response
+      if (error.response?.data) {
+        errorMessage = typeof error.response.data === 'string'
+          ? error.response.data
+          : error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Handle specific HTTP status codes
       if (error.response?.status === 401) {
         errorMessage = 'Current password is incorrect. Please try again.';
-      } else if (error.response?.status === 400 && !error.response.data?.message) {
-        errorMessage = 'Invalid password format. Please check the requirements.';
+      } else if (error.response?.status === 400) {
+        // Keep the backend's validation message if available
+        if (!error.response.data?.message) {
+          errorMessage = 'Invalid password format. Please check the requirements.';
+        }
       } else if (error.response?.status === 404) {
         errorMessage = 'User not found. Please log in again.';
       }
+
       throw new Error(errorMessage);
     }
   }
@@ -286,7 +390,7 @@ class AuthService {
 
   async verifyOtp(verifyOtpRequest: any): Promise<LoginResponse> {
     try {
-      const response = await axios.post(`${API_URL}/authentication/verify-otp`, verifyOtpRequest);
+      const response = await publicAxios.post(`/authentication/verify-otp`, verifyOtpRequest);
       return response.data;
     } catch (error) {
       throw error;
@@ -295,7 +399,7 @@ class AuthService {
 
   async resendOtp(resendOtpRequest: any): Promise<LoginResponse> {
     try {
-      const response = await axios.post(`${API_URL}/authentication/resend-otp`, resendOtpRequest);
+      const response = await publicAxios.post(`/authentication/resend-otp`, resendOtpRequest);
       return response.data;
     } catch (error) {
       throw error;
@@ -303,7 +407,7 @@ class AuthService {
   }
 
   setAxiosAuthHeader(token: string): void {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    axiosClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
 
   logout(): void {

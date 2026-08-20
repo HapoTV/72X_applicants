@@ -15,7 +15,7 @@ const AdminRoutes: React.FC = () => {
   // Protection is already handled by ProtectedRoute in App.tsx
   // But we keep this as a fallback
   if (!isAdmin && !isSuperAdmin) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login/asadmin" replace />;
   }
 
   return (

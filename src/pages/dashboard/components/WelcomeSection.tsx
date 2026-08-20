@@ -1,5 +1,6 @@
 // src/components/dashboard/components/WelcomeSection.tsx
 import React, { useMemo, useCallback } from 'react';
+import { Crown } from 'lucide-react';
 
 type Language = 'en' | 'af' | 'zu';
 
@@ -28,6 +29,12 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   selectedLanguage 
 }) => {
   const t = useMemo(() => translations[selectedLanguage], [selectedLanguage]);
+
+  const isPaidPremium = useMemo(() => {
+    const pkg = localStorage.getItem('userPackage');
+    const status = localStorage.getItem('userStatus');
+    return pkg === 'premium' && status !== 'FREE_TRIAL';
+  }, []);
 
   const getGreeting = useCallback((): string => {
     const hour = currentTime.getHours();
@@ -61,7 +68,16 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   return (
     <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg p-3 sm:p-4 text-white shadow-md">
       <h1 className="text-lg sm:text-xl font-bold mb-1">
-        {getGreeting()}, {getFirstName()}! 🚀
+        {getGreeting()},
+        <span className="inline-flex items-center gap-2">
+          <span>{getFirstName()}!</span>
+          {isPaidPremium && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 border border-white/20 text-xs font-semibold">
+              <Crown className="w-3.5 h-3.5" />
+              Premium
+            </span>
+          )}
+        </span>{' '}
       </h1>
       <h2 className="text-base sm:text-lg font-semibold mb-1">{t.welcome}</h2>
       <p className="text-primary-100 mb-2 text-xs sm:text-sm">

@@ -1,24 +1,28 @@
 // src/pages/Login.tsx
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Users, Shield, Building2, Crown } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Users, Shield, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLogin } from './hooks/useLogin';
 import Logo from '../assets/Logo.svg';
 
 const Login: React.FC = () => {
+
+    const VITE_PRODUCTION_URL = import.meta.env.VITE_PRODUCTION_URL;
     const navigate = useNavigate();
+    const [loginType, setLoginType] = useState<'user' | 'admin' | 'superadmin'>('user');
     const {
-        loginType,
-        setLoginType,
         isLoading,
         errorMessage,
         setErrorMessage,
-        handleLogin,
-        fillDemoCredentials,
+        handleUserLogin,
+        handleAdminLogin,
+        handleSuperAdminLogin,
+        fillUserCredentials,
+        fillAdminCredentials,
+        fillSuperAdminCredentials,
     } = useLogin();
     const [formData, setFormData] = useState({
         email: '',
-        businessReference: '',
         password: '',
         rememberMe: false
     });
@@ -31,7 +35,23 @@ const Login: React.FC = () => {
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        await handleLogin(formData);
+        if (loginType === 'user') {
+            await handleUserLogin(formData);
+            return;
+        }
+
+        const adminFormData = {
+            email: formData.email,
+            password: formData.password,
+            rememberMe: formData.rememberMe,
+        };
+
+        if (loginType === 'admin') {
+            await handleAdminLogin(adminFormData);
+            return;
+        }
+
+        await handleSuperAdminLogin(adminFormData);
     };
 
     const getLoginTypeLabel = () => {
@@ -99,7 +119,7 @@ const Login: React.FC = () => {
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                             <p className="text-red-700 text-sm">{errorMessage}</p>
                             <p className="text-red-600 text-xs mt-1">
-                                Backend URL: http://localhost:8080/api/authentication/login
+                                Backend URL: {VITE_PRODUCTION_URL}/api/authentication/login
                             </p>
                         </div>
                     )}
@@ -123,26 +143,6 @@ const Login: React.FC = () => {
                                 />
                             </div>
                         </div>
-
-                        {loginType === 'user' && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Business Reference
-                                </label>
-                                <div className="relative">
-                                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        value={formData.businessReference}
-                                        onChange={(e) => handleInputChange('businessReference', e.target.value)}
-                                        placeholder="Enter your business reference"
-                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                        required={loginType === 'user'}
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                            </div>
-                        )}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -213,7 +213,6 @@ const Login: React.FC = () => {
                         <div className="text-sm text-gray-600 space-y-1">
                             <p><strong>User:</strong></p>
                             <p className="ml-4">Email: asandile.nkala@example.com</p>
-                            <p className="ml-4">Business Ref: 7272002</p>
                             <p className="ml-4">Password: @TesterAsandile123</p>
                             <p className="mt-2"><strong>Admin:</strong></p>
                             <p className="ml-4">Email: asavela.mbengashe@example.com</p>
@@ -224,7 +223,30 @@ const Login: React.FC = () => {
                         </div>
                         <button
                             type="button"
-                            onClick={() => fillDemoCredentials(setFormData)}
+                            onClick={() => {
+                                if (loginType === 'user') {
+                                    fillUserCredentials(setFormData);
+                                    return;
+                                }
+
+                                const setAdminFormData = (updater: (prev: any) => any) => {
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        ...updater({
+                                            email: prev.email,
+                                            password: prev.password,
+                                            rememberMe: prev.rememberMe,
+                                        }),
+                                    }));
+                                };
+
+                                if (loginType === 'admin') {
+                                    fillAdminCredentials(setAdminFormData);
+                                    return;
+                                }
+
+                                fillSuperAdminCredentials(setAdminFormData);
+                            }}
                             className="mt-2 text-sm text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
                             disabled={isLoading}
                         >

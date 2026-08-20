@@ -1,27 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { communityService } from '../../services/CommunityService';
 import { useAuth } from '../../context/AuthContext';
-import type { UserDiscussionItem, CommunityStats as CommunityStatsType } from '../../interfaces/CommunityData';
+import type {
+  UserDiscussionItem,
+  CommunityStats as CommunityStatsType,
+} from '../../interfaces/CommunityData';
 import CommunityStats from './CommunityStats';
 import CategoryFilter from './CategoryFilter';
 import DiscussionsList from './DiscussionsList';
 import NewDiscussionModal from './NewDiscussionModal';
 import { useLocalDiscussions } from './useLocalDiscussions';
+import { getCommunityEngagementCounts } from './communityEngagementStorage';
 
 const Discussions: React.FC = () => {
   const { user } = useAuth();
-  const { readLocalDiscussions, writeLocalDiscussions, mergeDiscussions } = useLocalDiscussions();
-  
+  const { readLocalDiscussions, writeLocalDiscussions, mergeDiscussions } =
+    useLocalDiscussions();
+
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showNewDiscussion, setShowNewDiscussion] = useState(false);
-  const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() => readLocalDiscussions());
-  const [loading, setLoading] = useState(true);
+  const [discussions, setDiscussions] = useState<UserDiscussionItem[]>(() =>
+    readLocalDiscussions().map((discussion) => {
+      const engagementCounts = getCommunityEngagementCounts(discussion.id);
+
+      return {
+        ...discussion,
+        ...engagementCounts,
+      };
+    })
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [communityStats, setCommunityStats] = useState<CommunityStatsType>({
     totalMembers: 0,
     activeDiscussions: 0,
-    totalMentors: 0
+    totalMentors: 0,
   });
 
   const categories = [
@@ -31,57 +46,55 @@ const Discussions: React.FC = () => {
     { id: 'finance', name: 'Finance & Funding' },
     { id: 'operations', name: 'Operations' },
     { id: 'tech', name: 'Technology' },
-    { id: 'legal', name: 'Legal & Compliance' }
+    { id: 'legal', name: 'Legal & Compliance' },
   ];
 
+  const {
+    data: remoteDiscussions,
+    isLoading: loading,
+    refetch,
+  } = useQuery<UserDiscussionItem[]>({
+    queryKey: ['discussions', selectedCategory],
+    queryFn: () => communityService.getActiveDiscussions(selectedCategory),
+    staleTime: 3 * 60 * 1000,
+    retry: (failureCount, queryError: any) => {
+      if (queryError?.response?.status === 500) return false;
+      return failureCount < 1;
+    },
+  });
+
   useEffect(() => {
-    const fetchCommunityData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    if (!remoteDiscussions) return;
 
-        console.log('Fetching community data...');
+    const local = readLocalDiscussions();
+    const merged = mergeDiscussions(remoteDiscussions, local).map((discussion) => {
+      const engagementCounts = getCommunityEngagementCounts(discussion.id);
 
-        try {
-          const discussionsData = await communityService.getActiveDiscussions(selectedCategory);
-          console.log('Discussions fetched successfully:', discussionsData);
-          const local = readLocalDiscussions();
-          const merged = mergeDiscussions(discussionsData, local);
-          setDiscussions(merged);
-          writeLocalDiscussions(merged);
-        } catch (discussionsError: any) {
-          console.error('Error fetching discussions:', discussionsError);
+      return {
+        ...discussion,
+        ...engagementCounts,
+      };
+    });
 
-          if (discussionsError.response?.status === 500) {
-            console.log('Backend 500 error - showing empty discussions state');
-            const local = readLocalDiscussions();
-            setDiscussions(local);
-            setError(null);
-          } else {
-            setError('Failed to load community discussions');
-          }
-          return;
-        }
+    setDiscussions(merged);
+    writeLocalDiscussions(merged);
+    setError(null);
+  }, [remoteDiscussions, readLocalDiscussions, writeLocalDiscussions, mergeDiscussions]);
 
-        try {
-          const statsData = await communityService.getCommunityStats();
-          console.log('Stats fetched successfully:', statsData);
-          setCommunityStats(statsData);
-        } catch (statsError) {
-          console.error('Error fetching stats:', statsError);
-        }
-      } catch (error) {
-        console.error('Unexpected error in fetchCommunityData:', error);
-        setError('Failed to load community discussions');
-      } finally {
-        setLoading(false);
-      }
-    };
+  useEffect(() => {
+    communityService
+      .getCommunityStats()
+      .then(setCommunityStats)
+      .catch((statsError) => {
+        console.error('Error fetching stats:', statsError);
+      });
+  }, []);
 
-    fetchCommunityData();
-  }, [selectedCategory]);
-
-  const handleNewDiscussion = async (formData: { title: string; category: string; content: string }) => {
+  const handleNewDiscussion = async (formData: {
+    title: string;
+    category: string;
+    content: string;
+  }) => {
     if (!user?.email) {
       alert('Please login to create a discussion');
       return;
@@ -93,18 +106,24 @@ const Discussions: React.FC = () => {
     }
 
     try {
-      setLoading(true);
+      setIsSubmitting(true);
 
       const discussionToAdd = {
         title: formData.title,
         category: formData.category,
         content: formData.content,
-        tags: ''
+        tags: '',
       };
 
-      console.log('Creating discussion:', discussionToAdd);
-      const createdDiscussion = await communityService.createDiscussion(discussionToAdd, user.email);
-      const nextDiscussions = [createdDiscussion, ...discussions];
+      const createdDiscussion = await communityService.createDiscussion(
+        discussionToAdd,
+        user.email
+      );
+
+      const nextDiscussions = [
+        { ...createdDiscussion, ...getCommunityEngagementCounts(createdDiscussion.id) },
+        ...discussions,
+      ];
       setDiscussions(nextDiscussions);
       writeLocalDiscussions(nextDiscussions);
       setShowNewDiscussion(false);
@@ -117,11 +136,12 @@ const Discussions: React.FC = () => {
       }
 
       alert('Discussion created successfully!');
-    } catch (error: any) {
-      console.error('Error creating discussion:', error);
+    } catch (createError: any) {
+      console.error('Error creating discussion:', createError);
 
-      if (error.response?.status === 500) {
-        alert('Discussion created successfully! (Backend temporarily unavailable for listing)');
+      if (createError.response?.status === 500) {
+        alert('Discussion created successfully! Backend listing is temporarily unavailable.');
+
         const localDiscussion: UserDiscussionItem = {
           id: Date.now().toString(),
           title: formData.title,
@@ -135,8 +155,9 @@ const Discussions: React.FC = () => {
           isHot: false,
           isPinned: false,
           isLocked: false,
-          tags: []
+          tags: [],
         };
+
         const nextDiscussions = [localDiscussion, ...discussions];
         setDiscussions(nextDiscussions);
         writeLocalDiscussions(nextDiscussions);
@@ -145,25 +166,37 @@ const Discussions: React.FC = () => {
         alert('Failed to create discussion. Please try again.');
       }
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const filteredDiscussions = discussions.filter(discussion =>
-    selectedCategory === 'all' || discussion.category === selectedCategory
+  const filteredDiscussions = discussions.filter(
+    (discussion) =>
+      selectedCategory === 'all' || discussion.category === selectedCategory
   );
+
+  const handleEngagementChange = useCallback((
+    discussionId: string,
+    changes: Partial<Pick<UserDiscussionItem, 'likes' | 'replies'>>
+  ) => {
+    setDiscussions((currentDiscussions) => {
+      const nextDiscussions = currentDiscussions.map((discussion) =>
+        discussion.id === discussionId ? { ...discussion, ...changes } : discussion
+      );
+
+      writeLocalDiscussions(nextDiscussions);
+      return nextDiscussions;
+    });
+  }, [writeLocalDiscussions]);
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Community Forum</h1>
-        <p className="text-gray-600">Connect with fellow entrepreneurs, share experiences, and grow together</p>
-      </div>
+      <div />
 
       <CommunityStats stats={communityStats} />
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <CategoryFilter
             categories={categories}
             selectedCategory={selectedCategory}
@@ -171,15 +204,16 @@ const Discussions: React.FC = () => {
           />
 
           <button
+            type="button"
             onClick={() => setShowNewDiscussion(true)}
-            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+            className="px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2 text-sm"
           >
             <Plus className="w-4 h-4" />
-            <span>New Discussion</span>
+            <span>Post Business Advice</span>
           </button>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <DiscussionsList
             discussions={filteredDiscussions}
             categories={categories}
@@ -187,8 +221,9 @@ const Discussions: React.FC = () => {
             error={error}
             onRetry={() => {
               setError(null);
-              window.location.reload();
+              refetch();
             }}
+            onEngagementChange={handleEngagementChange}
           />
         </div>
       </div>
@@ -198,7 +233,7 @@ const Discussions: React.FC = () => {
         categories={categories}
         onSubmit={handleNewDiscussion}
         onCancel={() => setShowNewDiscussion(false)}
-        isLoading={loading}
+        isLoading={isSubmitting}
       />
     </div>
   );

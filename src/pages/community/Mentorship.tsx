@@ -1,37 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Star, Loader2, AlertCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { mentorshipService } from '../../services/MentorshipService';
 import type { UserMentorshipItem } from '../../interfaces/MentorshipData';
 
 const Mentorship: React.FC = () => {
-  const [mentors, setMentors] = useState<UserMentorshipItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: mentors = [],
+    isLoading: loading,
+    isError,
+  } = useQuery<UserMentorshipItem[]>({
+    queryKey: ['mentorship-mentors'],
+    queryFn: () => mentorshipService.getActiveMentorship(),
+    staleTime: 3 * 60 * 1000,
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 500) return false;
+      return failureCount < 1;
+    },
+  });
 
-  useEffect(() => {
-    const fetchMentors = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const mentorsData = await mentorshipService.getActiveMentorship();
-        setMentors(mentorsData);
-      } catch (error: any) {
-        console.error('Error fetching mentors:', error);
-        
-        // Handle 500 errors gracefully - show empty state instead of error
-        if (error.response?.status === 500) {
-          console.log('Backend 500 error - showing empty mentors state');
-          setMentors([]);
-        } else {
-          setError('Failed to load mentors. Please try again later.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMentors();
-  }, []);
+  const error = isError ? 'Failed to load mentors. Please try again later.' : null;
 
   const getInitials = (name: string) => {
     return name

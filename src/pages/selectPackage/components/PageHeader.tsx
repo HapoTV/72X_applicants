@@ -1,11 +1,11 @@
 import React from 'react';
-import { AlertCircle, Clock, Gift, Check, Sparkles } from 'lucide-react';
-import Logo from '../../../assets/Logo.svg';
+import { AlertCircle, Clock, Gift } from 'lucide-react';
+
+const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
 
 interface PageHeaderProps {
   userStatus: string;
   currentSubscription: any;
-  eligibilityCheck: any;
   shouldShowFreeTrial: boolean;
   freeTrialStatus: any;
   isMandatorySelection: boolean;
@@ -17,7 +17,6 @@ interface PageHeaderProps {
 const PageHeader: React.FC<PageHeaderProps> = ({
   userStatus,
   currentSubscription,
-  eligibilityCheck,
   shouldShowFreeTrial,
   freeTrialStatus,
   isMandatorySelection,
@@ -28,7 +27,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <div className="text-center mb-10">
       <div className="flex justify-center mb-4">
-        <img src={Logo} alt="SeventyTwoX Logo" className="w-16 h-16" />
+        <img src={logoUrl} alt="SeventyTwoX Logo" className="w-16 h-16" />
       </div>
 
       <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -40,7 +39,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             <div className="flex items-center justify-center gap-3">
               <Gift className="h-5 w-5 text-green-600" />
               <div>
-                <p className="text-sm font-medium text-green-800">🎁 Start with a 14-day free trial!</p>
+                <p className="text-sm font-medium text-green-800">Start with a 14-day free trial!</p>
                 <p className="text-xs text-green-600 mt-1">
                   Try all features for free. No credit card required until trial ends.
                 </p>
@@ -57,7 +56,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
               <Clock className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium text-blue-800">
-                  ⏳ Free Trial Active: {freeTrialStatus.remainingDays} days remaining
+                  Free Trial Active: {freeTrialStatus.remainingDays} days remaining
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
                   Your free trial ends in {freeTrialStatus.remainingDays} days
@@ -76,7 +75,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
                 <AlertCircle className="h-5 w-5 text-yellow-400" />
               </div>
               <div className="ml-3">
-                <p className="text-sm text-yellow-700 font-medium">⚠️ Package Selection Required</p>
+                <p className="text-sm text-yellow-700 font-medium">Package Selection Required</p>
                 <p className="text-sm text-yellow-600 mt-1">
                   You need to select a package to continue using the platform. This is a one-time selection that
                   will unlock all features.
@@ -136,10 +135,6 @@ const PageHeader: React.FC<PageHeaderProps> = ({
         </div>
       )}
 
-      <div className="hidden">
-        <Check className="h-4 w-4" />
-        <Sparkles className="h-4 w-4" />
-      </div>
     </div>
   );
 };

@@ -2,7 +2,6 @@
 import React from 'react';
 
 import {
-  Brain,
   Send,
   Sparkles,
   TrendingUp,
@@ -33,34 +32,19 @@ const AIBusinessAnalyst: React.FC = () => {
 
   const quickPrompts: Array<{ text: string; type: AnalysisTypeId; icon: React.ComponentType<any> }> = [
     {
-      text: "Analyze requirements for a mobile banking app",
-      type: "REQUIREMENT_ANALYSIS",
-      icon: Lightbulb,
-    },
-    {
-      text: "Generate user stories for an e-commerce checkout",
-      type: "USER_STORY",
-      icon: Database,
-    },
-    {
-      text: "SWOT analysis for a food delivery startup",
-      type: "SWOT_ANALYSIS",
-      icon: TrendingUp,
-    },
-    {
-      text: "Market research for fitness tech products",
+      text: "Identify the top three growth opportunities for a township retail business",
       type: "MARKET_RESEARCH",
       icon: Globe,
     },
     {
-      text: "Financial projections for SaaS business",
-      type: "FINANCIAL_PROJECTION",
-      icon: BarChart,
+      text: "Create a clear user story map for a small vendor onboarding process",
+      type: "USER_STORY",
+      icon: Database,
     },
     {
-      text: "Risk assessment for cloud migration",
-      type: "RISK_ASSESSMENT",
-      icon: Shield,
+      text: "Outline a SWOT and local risk plan for launching a community services startup",
+      type: "SWOT_ANALYSIS",
+      icon: TrendingUp,
     },
   ];
 
@@ -123,40 +107,34 @@ const AIBusinessAnalyst: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 max-w-6xl mx-auto">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Brain className="w-10 h-10" />
-            <div>
-              <h1 className="text-3xl font-bold">AI Business Analyst</h1>
-              <p className="text-blue-100 mt-1">
-                Powered by Google Flan-T5-Base • Spring Boot Backend
-              </p>
-            </div>
+      <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-200">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">AI Business Analyst</h1>
+            <p className="text-gray-600 mt-2 max-w-2xl">
+              Generate fast business insights, user stories, market analysis, and risk assessments with a simple prompt.
+            </p>
           </div>
           {usageStats && (
-            <div className="text-right bg-white/20 backdrop-blur-sm rounded-lg p-3">
-              <div className="text-2xl font-bold">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-center min-w-[180px]">
+              <div className="text-sm text-gray-500">Tokens used</div>
+              <div className="text-2xl font-bold text-gray-900">
                 {usageStats.tokensUsed?.toLocaleString() || 0}
               </div>
-              <div className="text-sm opacity-90">tokens used</div>
-              <div className="text-xs mt-1">
+              <div className="text-xs text-gray-500 mt-1">
                 {usageStats.tokensRemaining?.toLocaleString() || 30000} remaining
               </div>
             </div>
           )}
         </div>
-        <div className="mt-4 text-blue-100 text-sm">
-          Get intelligent business insights powered by AI. 30,000 free tokens/month.
-        </div>
       </div>
 
       {/* Analysis Type Selector */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Analysis Type</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">Select Analysis Type</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
           {analysisTypes.map((type) => {
             const Icon = type.icon;
             const isSelected = analysisType === type.id;
@@ -164,13 +142,13 @@ const AIBusinessAnalyst: React.FC = () => {
               <button
                 key={type.id}
                 onClick={() => setAnalysisType(type.id)}
-                className={`p-4 rounded-lg transition-all transform hover:scale-105 ${
+                className={`p-2 rounded-lg transition-colors ${
                   isSelected
-                    ? `bg-gradient-to-r ${type.color} text-white shadow-md`
+                    ? `bg-gradient-to-r ${type.color} text-white`
                     : 'border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700'
                 }`}
               >
-                <Icon className="w-6 h-6 mb-2 mx-auto" />
+                <Icon className="w-5 h-5 mb-1 mx-auto" />
                 <span className="text-sm font-medium">{type.label}</span>
               </button>
             );
@@ -182,26 +160,24 @@ const AIBusinessAnalyst: React.FC = () => {
       </div>
 
       {/* Quick Prompts */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-2 mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center space-x-2 mb-3">
           <Sparkles className="w-5 h-5 text-blue-500" />
           <h2 className="text-lg font-semibold text-gray-900">Quick Prompts</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
           {quickPrompts.map((prompt, index) => {
             const Icon = prompt.icon;
             return (
               <button
                 key={index}
                 onClick={() => handleQuickPrompt(prompt.text, prompt.type)}
-                className="text-left p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all hover:bg-blue-50 group"
+                className="text-left p-2 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
               >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100">
-                    <Icon className="w-5 h-5 text-blue-600" />
-                  </div>
+                <div className="flex items-start gap-3">
+                  <Icon className="w-5 h-5 text-blue-600 mt-1" />
                   <div>
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">
+                    <span className="text-sm font-medium text-gray-700">
                       {prompt.text}
                     </span>
                     <div className="mt-1">
@@ -218,8 +194,8 @@ const AIBusinessAnalyst: React.FC = () => {
       </div>
 
       {/* Query Input */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-2 mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center space-x-2 mb-3">
           <Target className="w-5 h-5 text-blue-500" />
           <h2 className="text-lg font-semibold text-gray-900">Ask the AI Analyst</h2>
         </div>
@@ -233,7 +209,7 @@ const AIBusinessAnalyst: React.FC = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Describe your business scenario for ${getTypeLabel(analysisType).toLowerCase()}...`}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-700"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-700"
             rows={4}
           />
 
@@ -279,89 +255,27 @@ const AIBusinessAnalyst: React.FC = () => {
 
       {/* Analysis Results */}
       {analysis && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">AI Analysis Results</h2>
-                <p className="text-sm text-gray-500">
-                  Generated with {getTypeLabel(analysisType)}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                {getTypeLabel(analysisType)}
-              </span>
-              {tokensUsed > 0 && (
-                <span className="text-sm text-gray-500">
-                  {tokensUsed} tokens
-                </span>
-              )}
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">AI Analysis Results</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Generated with {getTypeLabel(analysisType)}
+            </p>
           </div>
 
-          <div className="bg-gradient-to-br from-gray-50 to-white rounded-lg p-6 border border-gray-200">
-            <div className="whitespace-pre-line text-gray-700 leading-relaxed font-medium">
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="whitespace-pre-line text-gray-700 leading-relaxed">
               {analysis}
             </div>
           </div>
+          {tokensUsed > 0 && (
+            <div className="mt-4 text-sm text-gray-500">
+              {tokensUsed} tokens used
+            </div>
+          )}
 
-          <div className="mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500 flex flex-wrap justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Generated by Flan-T5-Base AI Model</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span>Spring Boot Backend</span>
-              <span>•</span>
-              <span>Hugging Face API</span>
-            </div>
-          </div>
         </div>
       )}
-
-      {/* Info Banner */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
-        <div className="flex items-start space-x-4">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <AlertCircle className="w-6 h-6 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="font-bold text-blue-900 mb-2 text-lg">How It Works</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="text-sm text-blue-800">
-                <div className="font-semibold mb-1">Backend Technology</div>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Spring Boot REST API</li>
-                  <li>Google Flan-T5-Base AI Model</li>
-                  <li>Hugging Face Inference API</li>
-                  <li>30,000 free tokens/month</li>
-                </ul>
-              </div>
-              <div className="text-sm text-blue-800">
-                <div className="font-semibold mb-1">Capabilities</div>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Business requirement analysis</li>
-                  <li>User story generation</li>
-                  <li>SWOT & market analysis</li>
-                  <li>Financial projections</li>
-                  <li>Risk assessment</li>
-                </ul>
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-blue-600 bg-white/50 rounded-lg p-3">
-              <strong>Note:</strong> The AI uses your Hugging Face API key (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). 
-              Token usage is tracked automatically. Reset occurs monthly.
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   );
 };

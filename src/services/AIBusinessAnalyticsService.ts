@@ -16,7 +16,7 @@ class AIBusinessAnalyticsService {
 
 async analyzeUploadedFile(request: FileAnalysisRequest): Promise<AIAnalysisResponse> {
   try {
-    const userId = this.getCurrentUserId();
+    this.getCurrentUserId();
     
     const formData = new FormData();
     if (request.documentId) formData.append('documentId', request.documentId);

@@ -61,6 +61,9 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
   // Use refs to store the async callbacks
   const successCallbackRef = useRef<((reference: string) => Promise<void>) | null>(null);
   const closeCallbackRef = useRef<(() => void) | null>(null);
+  // Store retry attempts
+  const retryCountRef = useRef<number>(0);
+  const maxRetries = 10;
 
   useEffect(() => {
     // Check if script is already loaded
@@ -95,6 +98,40 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
     };
   }, []);
 
+  // Retry verification if payment not found
+  const retryVerification = useCallback(async (reference: string, attempt: number = 1): Promise<void> => {
+    if (!successCallbackRef.current) return;
+
+    try {
+      console.log(`🔄 Retry verification attempt ${attempt}/${maxRetries} for reference: ${reference}`);
+      await successCallbackRef.current(reference);
+      retryCountRef.current = 0; // Reset on success
+    } catch (error: any) {
+      if (error.response?.status === 400 && error.response?.data?.failureMessage?.includes('not found') && attempt < maxRetries) {
+        // Exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000); // Max 30 seconds
+        console.log(`⏳ Payment not yet processed, retrying in ${delay}ms...`);
+        
+        setTimeout(() => {
+          retryVerification(reference, attempt + 1);
+        }, delay);
+      } else if (attempt >= maxRetries) {
+        console.error('❌ Max retries reached for payment verification');
+        retryCountRef.current = 0;
+        // Still call onClose to handle failure gracefully
+        if (closeCallbackRef.current) {
+          closeCallbackRef.current();
+        }
+      } else {
+        console.error('❌ Verification failed with non-retryable error:', error);
+        retryCountRef.current = 0;
+        if (closeCallbackRef.current) {
+          closeCallbackRef.current();
+        }
+      }
+    }
+  }, [maxRetries]);
+
   // Create a regular function that Paystack can call
   const handlePaystackCallback = useCallback((response: PaystackResponse) => {
     console.log('🔄 Paystack callback received:', response);
@@ -102,27 +139,29 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
     // Paystack callback must be a regular function, not async
     if (response.status === 'success' && successCallbackRef.current) {
       setIsProcessing(true);
+      retryCountRef.current = 1;
       
-      // Call the async success callback but don't await here
-      successCallbackRef.current(response.reference)
-        .catch(error => {
-          console.error('❌ Error in payment success callback:', error);
-        })
-        .finally(() => {
-          setIsProcessing(false);
-        });
+      // Start the verification process with retry logic
+      retryVerification(response.reference, 1);
     } else if (response.status === 'error') {
       console.error('Payment error:', response.message);
       setIsProcessing(false);
+      if (closeCallbackRef.current) {
+        closeCallbackRef.current();
+      }
     } else {
       console.log('Payment status:', response.status);
       setIsProcessing(false);
+      if (closeCallbackRef.current) {
+        closeCallbackRef.current();
+      }
     }
-  }, []);
+  }, [retryVerification]);
 
   const handlePaystackClose = useCallback(() => {
     console.log('⚠️ Paystack payment modal closed');
     setIsProcessing(false);
+    retryCountRef.current = 0;
     if (closeCallbackRef.current) {
       closeCallbackRef.current();
     }
@@ -149,6 +188,7 @@ export const usePaystackPayment = (): UsePaystackPaymentReturn => {
     }
 
     setIsProcessing(true);
+    retryCountRef.current = 0;
 
     try {
       const reference = `72X_${Date.now()}_${Math.random().toString(36).substr(2, 6).toUpperCase()}`;

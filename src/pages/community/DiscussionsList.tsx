@@ -13,6 +13,7 @@ interface DiscussionsListProps {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  onEngagementChange?: (discussionId: string, changes: Partial<Pick<UserDiscussionItem, 'likes' | 'replies'>>) => void;
 }
 
 const getCategoryColor = (category: string) => {
@@ -32,7 +33,8 @@ const DiscussionsList: React.FC<DiscussionsListProps> = ({
   categories,
   loading,
   error,
-  onRetry
+  onRetry,
+  onEngagementChange
 }) => {
   if (loading) {
     return (
@@ -74,6 +76,7 @@ const DiscussionsList: React.FC<DiscussionsListProps> = ({
             discussion={discussion}
             categoryColor={getCategoryColor(discussion.category)}
             categoryName={category?.name}
+            onEngagementChange={onEngagementChange}
           />
         );
       })}

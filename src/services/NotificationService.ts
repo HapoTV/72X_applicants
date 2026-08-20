@@ -9,52 +9,32 @@ export interface Notification {
   status: 'DRAFT' | 'SCHEDULED' | 'SENT' | 'FAILED';
   read: boolean;
   actionUrl?: string;
-  targetOrganisation?: string; // NEW
+  targetOrganisation?: string;
   timestamp: string;
   createdAt: string;
   userId?: string;
+  userEmail?: string;
+  userFullName?: string;
+  organisation?: string;
+  createdByUserId?: string;
+  createdByUserEmail?: string;
+  createdByUserName?: string;
+  isBroadcast?: boolean;
   sentAt?: string;
   scheduledFor?: string;
+  readAt?: string;
 }
 
 export interface CreateNotificationRequest {
   title: string;
   message: string;
   type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR' | 'ANNOUNCEMENT' | 'UPDATE' | 'ALERT' | 'MAINTENANCE';
-  status?: 'DRAFT' | 'SCHEDULED' | 'SENT';
-  actionUrl?: string;
-  scheduledFor?: string;
-  broadcast?: boolean;
-  targetOrganisation?: string; // NEW: Target specific organisation
-  userIds?: string[];
-  subscriptionTypes?: Array<'START_UP' | 'ESSENTIAL' | 'PREMIUM'>;
-  userRoles?: string[];
-  targetAdmins?: boolean;
-  targetAllUsers?: boolean;
-}
-
-export interface NotificationResponse {
-  notifications: Notification[];
-  unreadCount: number;
-  organisation?: string; // NEW
-  isSuperAdmin?: boolean; // NEW
+  targetOrganisation?: string;
 }
 
 export interface MarkAsReadRequest {
   ids: string[];
   read: boolean;
-}
-
-export interface NotificationStats {
-  totalNotifications: number;
-  totalUnread: number;
-  notificationsByType: Record<string, number>;
-  notificationsByStatus: Record<string, number>;
-  broadcastNotifications: number;
-  userSpecificNotifications: number;
-  recentNotificationsCount: number;
-  organisation?: string; // NEW
-  isSuperAdmin?: boolean; // NEW
 }
 
 class NotificationService {
@@ -65,27 +45,70 @@ class NotificationService {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
+  private normalizeNotification(raw: any): Notification {
+    const id = String(raw?.id ?? raw?.notificationId ?? raw?.notificationID ?? '');
+
+    return {
+      id,
+      title: raw?.title ?? '',
+      message: raw?.message ?? '',
+      type: raw?.type ?? 'INFO',
+      status: raw?.status ?? 'SENT',
+      read: Boolean(raw?.read ?? raw?.isRead ?? false),
+      actionUrl: raw?.actionUrl ?? undefined,
+      targetOrganisation: raw?.targetOrganisation ?? raw?.organisation ?? undefined,
+      timestamp: raw?.timestamp ?? raw?.createdAt ?? raw?.sentAt ?? '',
+      createdAt: raw?.createdAt ?? raw?.timestamp ?? raw?.sentAt ?? '',
+      userId: raw?.userId ?? undefined,
+      userEmail: raw?.userEmail ?? undefined,
+      userFullName: raw?.userFullName ?? undefined,
+      organisation: raw?.organisation ?? undefined,
+      createdByUserId: raw?.createdByUserId ?? undefined,
+      createdByUserEmail: raw?.createdByUserEmail ?? undefined,
+      createdByUserName: raw?.createdByUserName ?? undefined,
+      isBroadcast: raw?.isBroadcast ?? undefined,
+      sentAt: raw?.sentAt ?? undefined,
+      scheduledFor: raw?.scheduledFor ?? undefined,
+      readAt: raw?.readAt ?? undefined,
+    };
+  }
+
   // ==================== USER METHODS ====================
-  
-  async getUserNotifications(unreadOnly: boolean = false): Promise<NotificationResponse> {
+
+  async getUserNotifications(unreadOnly: boolean = false): Promise<Notification[]> {
     try {
       const response = await axiosClient.get(`${this.baseURL}`, {
         params: { unreadOnly },
         headers: this.getAuthHeader()
       });
-      return response.data;
+      // The backend returns a list directly
+      const rawList = Array.isArray(response.data)
+        ? response.data
+        : (Array.isArray(response.data?.data) ? response.data.data : []);
+
+      return rawList.map((n: any) => this.normalizeNotification(n));
     } catch (error) {
       console.error('Error fetching notifications:', error);
-      throw error;
+      return []; // Return empty array on error to prevent crashes
     }
   }
 
   async markAsRead(ids: string[], read: boolean = true): Promise<void> {
     try {
-      const request: MarkAsReadRequest = { ids, read };
-      await axiosClient.put(`${this.baseURL}/mark-read`, request, {
-        headers: this.getAuthHeader()
-      });
+      if (!read) {
+        console.warn('markAsRead called with read=false; backend may not support marking unread.');
+        return;
+      }
+
+      // Use the correct endpoint for marking individual notifications as read
+      // Since the backend expects a single notification ID per request
+      for (const id of ids) {
+        await axiosClient.put(`${this.baseURL}/${id}/read`, {}, {
+          headers: this.getAuthHeader()
+        });
+      }
+
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (error) {
       console.error('Error marking notifications as read:', error);
       throw error;
@@ -94,9 +117,11 @@ class NotificationService {
 
   async markAllAsRead(): Promise<void> {
     try {
-      await axiosClient.put(`${this.baseURL}/mark-all-read`, {}, {
+      await axiosClient.put(`${this.baseURL}/read-all`, {}, {
         headers: this.getAuthHeader()
       });
+
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       throw error;
@@ -108,58 +133,66 @@ class NotificationService {
       await axiosClient.delete(`${this.baseURL}/${id}`, {
         headers: this.getAuthHeader()
       });
+
+      window.dispatchEvent(new CustomEvent('notifications-updated'));
     } catch (error) {
       console.error('Error deleting notification:', error);
       throw error;
     }
   }
 
-  // ==================== ADMIN METHODS ====================
-  
-  async createNotification(request: CreateNotificationRequest): Promise<Notification[]> {
+  async getUnreadCount(): Promise<number> {
     try {
-      console.log('Sending create notification request:', request);
-      const response = await axiosClient.post(`${this.baseURL}/admin/create`, request, {
+      const response = await axiosClient.get(`${this.baseURL}/unread/count`, {
         headers: this.getAuthHeader()
       });
-      console.log('Create notification response:', response.data);
-      return response.data.notifications || [];
+      return response.data?.count || 0;
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      return 0;
+    }
+  }
+
+  // ==================== ADMIN METHODS ====================
+  
+  async createNotification(request: CreateNotificationRequest): Promise<void> {
+    try {
+      console.log('Sending create notification request:', request);
+      
+      // Determine which endpoint to use based on targetOrganisation
+      if (request.targetOrganisation) {
+        // Use the organisation endpoint (works for ADMIN and SUPER_ADMIN)
+        const orgRequest = {
+          organisation: request.targetOrganisation,
+          title: request.title,
+          message: request.message,
+          type: request.type
+        };
+        
+        console.log('Using organisation endpoint with data:', orgRequest);
+        await axiosClient.post(`${this.baseURL}/organisation`, orgRequest, {
+          headers: this.getAuthHeader()
+        });
+      } else {
+        // Use the all-users endpoint (SUPER_ADMIN only)
+        const globalRequest = {
+          title: request.title,
+          message: request.message,
+          type: request.type
+        };
+        
+        console.log('Using global endpoint with data:', globalRequest);
+        await axiosClient.post(`${this.baseURL}/all-users`, globalRequest, {
+          headers: this.getAuthHeader()
+        });
+      }
+      
+      console.log('Notification created successfully');
     } catch (error: any) {
       console.error('Error creating notification:', error);
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      throw error;
-    }
-  }
-
-  async getAllNotifications(status?: string): Promise<{ notifications: Notification[], organisation?: string, isSuperAdmin?: boolean }> {
-    try {
-      const url = status 
-        ? `${this.baseURL}/admin/all?status=${status}`
-        : `${this.baseURL}/admin/all`;
-      const response = await axiosClient.get(url, {
-        headers: this.getAuthHeader()
-      });
-      return {
-        notifications: response.data.notifications || [],
-        organisation: response.data.organisation,
-        isSuperAdmin: response.data.isSuperAdmin
-      };
-    } catch (error) {
-      console.error('Error fetching all notifications:', error);
-      throw error;
-    }
-  }
-
-  async getNotificationStats(): Promise<NotificationStats> {
-    try {
-      const response = await axiosClient.get(`${this.baseURL}/admin/stats`, {
-        headers: this.getAuthHeader()
-      });
-      return response.data.stats || {};
-    } catch (error) {
-      console.error('Error fetching notification stats:', error);
       throw error;
     }
   }
@@ -188,7 +221,7 @@ class NotificationService {
     }
   }
 
-  getTypeIcon(type: string): React.ReactNode {
+  getTypeIcon(type: string): string {
     switch (type) {
       case 'SUCCESS':
         return '✓';
@@ -211,6 +244,8 @@ class NotificationService {
   }
 
   formatTimestamp(timestamp: string): string {
+    if (!timestamp) return '';
+    
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();

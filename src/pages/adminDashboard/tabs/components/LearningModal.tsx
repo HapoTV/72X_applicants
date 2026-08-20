@@ -1,0 +1,269 @@
+import React from 'react';
+import type { SignupOrganisationGroups } from '../../../../services/OrganisationService';
+
+interface NewLearningData {
+    title: string;
+    type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT';
+    resourceUrl: string;
+    description: string;
+    file?: File;
+    thumbnailFile?: File;
+    thumbnailPreview?: string;
+    targetOrganisation?: string;
+    isPublic?: boolean;
+    showAllOrganisations?: boolean;
+}
+
+interface LearningModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSubmit: () => void;
+    uploading: boolean;
+    uploadProgress: number;
+    newLearning: NewLearningData;
+    onNewLearningChange: (updates: Partial<NewLearningData>) => void;
+    onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    sectionTitle: string;
+    isSuperAdmin: boolean;
+    isCocAdmin?: boolean;
+    organisationGroups?: SignupOrganisationGroups;
+    organisations: string[];
+    getFileSize: (bytes: number) => string;
+}
+
+export const LearningModal: React.FC<LearningModalProps> = ({
+    isOpen,
+    onClose,
+    onSubmit,
+    uploading,
+    uploadProgress,
+    newLearning,
+    onNewLearningChange,
+    onFileChange,
+    sectionTitle,
+    isSuperAdmin,
+    isCocAdmin = false,
+    organisationGroups,
+    organisations,
+    getFileSize
+}) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+                <h3 className="text-lg font-semibold mb-4">Add Content to {sectionTitle}</h3>
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                        <input 
+                            value={newLearning.title} 
+                            onChange={e => onNewLearningChange({ title: e.target.value })} 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            placeholder="Enter title"
+                            disabled={uploading}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                        <select 
+                            value={newLearning.type} 
+                            onChange={e => onNewLearningChange({ 
+                                type: e.target.value as 'ARTICLE' | 'VIDEO' | 'DOCUMENT', 
+                                file: undefined
+                            })} 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            disabled={uploading}
+                        >
+                            <option value="ARTICLE">Article</option>
+                            <option value="VIDEO">Video</option>
+                            <option value="DOCUMENT">Document</option>
+                        </select>
+                    </div>
+                    
+                    {/* Organisation targeting for super admin / COC admin */}
+                    {(isSuperAdmin || isCocAdmin) && (
+                        <div className="space-y-3 border-t border-gray-200 pt-3">
+                            <label className="block text-sm font-medium text-gray-700">Target Audience</label>
+                            
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="showAllOrganisations"
+                                    checked={newLearning.showAllOrganisations}
+                                    onChange={(e) => onNewLearningChange({
+                                        showAllOrganisations: e.target.checked,
+                                        targetOrganisation: e.target.checked ? '' : newLearning.targetOrganisation,
+                                        isPublic: e.target.checked ? true : false
+                                    })}
+                                    className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                                    disabled={uploading}
+                                />
+                                <label htmlFor="showAllOrganisations" className="text-sm text-gray-700">
+                                    {isCocAdmin
+                                        ? 'Make this material visible to all organisations under COC'
+                                        : 'Make this material public (visible to all organisations)'}
+                                </label>
+                            </div>
+
+                            {!newLearning.showAllOrganisations && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        {isCocAdmin ? 'Target a specific organisation under COC' : 'Target Specific Organisation'}
+                                    </label>
+                                    <select
+                                        value={newLearning.targetOrganisation || ''}
+                                        onChange={(e) => onNewLearningChange({
+                                            targetOrganisation: e.target.value,
+                                            isPublic: false
+                                        })}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                        disabled={uploading}
+                                    >
+                                        <option value="">Select an organisation (optional)</option>
+                                        {organisationGroups && organisationGroups.organisations.length > 0 && (
+                                            <optgroup label="-- Organisations --">
+                                                {organisationGroups.organisations.map((org) => (
+                                                    <option key={org} value={org}>{org}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+                                        {organisationGroups && organisationGroups.cocSubOrganisations.length > 0 && (
+                                            <optgroup label="-- COC Organisations --">
+                                                {organisationGroups.cocSubOrganisations.map((org) => (
+                                                    <option key={org} value={org}>{org}</option>
+                                                ))}
+                                            </optgroup>
+                                        )}
+                                        {!organisationGroups && organisations.map((org) => (
+                                            <option key={org} value={org}>{org}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {isCocAdmin
+                                            ? 'Leave empty to make it visible only to your organisation'
+                                            : 'Leave empty to make it visible only to your organisation'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* File Upload Section - Always show since we removed Resource URL */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload File *</label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-500 transition-colors">
+                            <input 
+                                type="file" 
+                                onChange={onFileChange}
+                                className="w-full"
+                                accept={newLearning.type === 'VIDEO' ? '.mp4,.avi,.mov,.wmv,.flv,.webm,.mkv' : '.pdf,.doc,.docx,.txt,.ppt,.pptx,.xls,.xlsx'}
+                                disabled={uploading}
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                                Max size: {newLearning.type === 'VIDEO' ? '500MB' : '50MB'}
+                            </p>
+                        </div>
+                        {newLearning.file && (
+                            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                                <p className="text-xs text-green-800 truncate" title={newLearning.file.name}>
+                                    <strong>Selected:</strong> {newLearning.file.name} ({getFileSize(newLearning.file.size)})
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Thumbnail Upload Section */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cover Image <span className="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                            Shown on the learning card. If not provided, a gradient placeholder is used.
+                        </p>
+                        <div className="flex gap-3 items-start">
+                            {/* Preview */}
+                            <div className="flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center">
+                                {newLearning.thumbnailPreview ? (
+                                    <img src={newLearning.thumbnailPreview} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-xs text-gray-400 text-center px-1">No image</span>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    disabled={uploading}
+                                    onChange={(e) => {
+                                        const f = e.target.files?.[0];
+                                        if (!f) return;
+                                        const preview = URL.createObjectURL(f);
+                                        onNewLearningChange({ thumbnailFile: f, thumbnailPreview: preview });
+                                    }}
+                                    className="w-full text-sm"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP — max 5MB</p>
+                                {newLearning.thumbnailFile && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onNewLearningChange({ thumbnailFile: undefined, thumbnailPreview: undefined })}
+                                        className="mt-1 text-xs text-red-500 hover:text-red-700"
+                                        disabled={uploading}
+                                    >
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea 
+                            value={newLearning.description} 
+                            onChange={e => onNewLearningChange({ description: e.target.value })} 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            rows={3}
+                            placeholder="Brief description of the learning material..."
+                            disabled={uploading}
+                        />
+                    </div>
+
+                    {/* Upload Progress */}
+                    {uploading && uploadProgress > 0 && (
+                        <div className="mt-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-gray-700">Uploading...</span>
+                                <span className="text-sm font-medium text-gray-700">{uploadProgress}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                    className="bg-primary-600 h-2 rounded-full transition-all duration-300" 
+                                    style={{width: `${uploadProgress}%`}}
+                                ></div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex gap-2 pt-4 border-t border-gray-200">
+                        <button 
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                            disabled={uploading}
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            onClick={onSubmit}
+                            className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50"
+                            disabled={uploading}
+                        >
+                            {uploading ? `Uploading (${uploadProgress}%)...` : 'Add Material'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};

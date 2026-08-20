@@ -1,7 +1,10 @@
 // src/pages/hooks/useConnections.ts
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import MessageServices from '../../services/MessageServices';
+import ConnectionRequestService from '../../services/ConnectionRequestService';
 import type { Conversation } from '../../interfaces/MessageData';
+import type { ConnectionStatusDTO, ConnectionRequestDTO } from '../../services/ConnectionRequestService';
+import { messagingPollingService } from '../../services/MessagingPollingService';
 
 export interface ConnectionUser {
   userId: string;
@@ -16,6 +19,7 @@ export interface ConnectionUser {
   profileImage?: string;
   isOnline?: boolean;
   lastSeen?: string;
+  subscriptionType?: string;
 }
 
 interface ConversationMeta {
@@ -26,10 +30,23 @@ interface ConversationMeta {
 }
 
 export const DEFAULT_VISIBLE_CONNECTIONS = 10;
+const USERS_CACHE_KEY = 'connections_users_cache';
+
+const readCachedUsers = (): ConnectionUser[] => {
+  try {
+    const raw = localStorage.getItem(USERS_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
 
 export function useConnections(authUserId?: string) {
-  const [users, setUsers] = useState<ConnectionUser[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<ConnectionUser[]>([]);
+  const cachedUsers = readCachedUsers();
+  const [users, setUsers] = useState<ConnectionUser[]>(() => cachedUsers);
+  const [filteredUsers, setFilteredUsers] = useState<ConnectionUser[]>(() => cachedUsers);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
@@ -39,52 +56,19 @@ export function useConnections(authUserId?: string) {
   const [organisations, setOrganisations] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_CONNECTIONS);
   const [conversationMetaByUserId, setConversationMetaByUserId] = useState<Record<string, ConversationMeta>>({});
+  const [connectionStatusByUserId, setConnectionStatusByUserId] = useState<Record<string, ConnectionStatusDTO>>({});
+  const [pendingRequests, setPendingRequests] = useState<ConnectionRequestDTO[]>([]);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  // ─── Fetch all users ────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    setVisibleCount(DEFAULT_VISIBLE_CONNECTIONS);
-  }, [searchTerm, selectedIndustry, selectedLocation, selectedOrganisation]);
-
-  useEffect(() => {
-    if (!authUserId) return;
-
-    const loadConversations = async () => {
-      try {
-        const conversations: Conversation[] = await MessageServices.getUserConversations();
-        const meta: Record<string, ConversationMeta> = {};
-        
-        for (const c of conversations) {
-          // Determine which user is the other participant
-          const otherUserId = c.user1Id === authUserId ? c.user2Id : c.user1Id;
-          const otherUserName = c.user1Id === authUserId ? c.user2Name : c.user1Name;
-          const otherUserEmail = c.user1Id === authUserId ? c.user2Email : c.user1Email;
-          
-          meta[otherUserId] = {
-            unread: c.unreadCount || 0,
-            lastMessageAt: c.lastMessageAt,
-            conversationId: c.conversationId,
-            lastMessage: c.lastMessage || ''
-          };
-        }
-        setConversationMetaByUserId(meta);
-      } catch {
-        // ignore; list still works without conversation ordering
-      }
-    };
-
-    loadConversations();
-    const interval = window.setInterval(loadConversations, 15000);
-    return () => window.clearInterval(interval);
-  }, [authUserId]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const response = await MessageServices.getChatUsers();
       const mappedUsers: ConnectionUser[] = (response as any[]).map((u) => {
         const fullName = (u.fullName || '').trim();
@@ -102,107 +86,187 @@ export function useConnections(authUserId?: string) {
           industry: u.industry,
           organisation: u.organisation,
           profileImage: u.profileImageUrl,
-          isOnline: Math.random() > 0.5, // This should come from a real online status service
-          lastSeen: new Date(Date.now() - Math.random() * 3600000).toISOString()
+          isOnline: u.availabilityStatus === 'ONLINE',
+          lastSeen: u.lastSeenAt || null,
+          subscriptionType: u.subscriptionType || null,
         };
       });
 
       setUsers(mappedUsers);
       setFilteredUsers(mappedUsers);
+      localStorage.setItem(USERS_CACHE_KEY, JSON.stringify(mappedUsers));
 
-      const uniqueIndustries = Array.from(
-        new Set(mappedUsers.map((user) => user.industry).filter(Boolean)),
-      ) as string[];
-
-      const uniqueLocations = Array.from(
-        new Set(mappedUsers.map((user) => user.location).filter(Boolean)),
-      ) as string[];
-
-      const uniqueOrganisations = Array.from(
-        new Set(mappedUsers.map((user) => user.organisation).filter(Boolean)),
-      ) as string[];
-
-      setIndustries(uniqueIndustries);
-      setLocations(uniqueLocations);
-      setOrganisations(uniqueOrganisations);
+      setIndustries(Array.from(new Set(mappedUsers.map((u) => u.industry).filter(Boolean))) as string[]);
+      setLocations(Array.from(new Set(mappedUsers.map((u) => u.location).filter(Boolean))) as string[]);
+      setOrganisations(Array.from(new Set(mappedUsers.map((u) => u.organisation).filter(Boolean))) as string[]);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to load users. Please try again.');
+      const message = err instanceof Error ? err.message : 'Please try again.';
+      if (cachedUsers.length === 0 && users.length === 0) {
+        setError(`Failed to load users. ${message}`);
+      } else {
+        // Keep cached users available, but do not block the entire page.
+        setError(null);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [cachedUsers.length, users.length]);
+
+  // ─── Fetch conversations ────────────────────────────────────────────────────
+
+  const loadConversations = useCallback(async () => {
+    if (!authUserId) return;
+    try {
+      const conversations: Conversation[] = await MessageServices.getUserConversations();
+      const meta: Record<string, ConversationMeta> = {};
+      for (const c of conversations) {
+        const otherUserId = c.user1Id === authUserId ? c.user2Id : c.user1Id;
+        meta[otherUserId] = {
+          unread: c.unreadCount || 0,
+          lastMessageAt: c.lastMessageAt,
+          conversationId: c.conversationId,
+          lastMessage: c.lastMessage || '',
+        };
+      }
+      setConversationMetaByUserId(meta);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  }, [authUserId]);
+
+  // ─── Fetch connection statuses ──────────────────────────────────────────────
+
+  const loadConnectionStatuses = useCallback(async () => {
+    if (!authUserId) return;
+    try {
+      const statusMap = await ConnectionRequestService.getBulkStatus();
+      setConnectionStatusByUserId(statusMap);
+    } catch (error) {
+      console.error('Error loading connection statuses:', error);
+    }
+  }, [authUserId]);
+
+  // ─── Fetch pending requests ─────────────────────────────────────────────────
+
+  const loadPendingRequests = useCallback(async () => {
+    if (!authUserId) return;
+    try {
+      const [received, count] = await Promise.all([
+        ConnectionRequestService.getPendingReceived(),
+        ConnectionRequestService.countPendingReceived(),
+      ]);
+      setPendingRequests(received);
+      setPendingRequestsCount(count);
+    } catch (error) {
+      console.error('Error loading pending requests:', error);
+    }
+  }, [authUserId]);
+
+  // ─── Initial load ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    if (!authUserId || users.length === 0) return;
+
+    // Subscribe to shared polling service for conversations (avoids duplicate polling with Header)
+    const unsubscribeConversations = messagingPollingService.subscribeToConversations((conversations: Conversation[]) => {
+      const meta: Record<string, ConversationMeta> = {};
+      for (const c of conversations) {
+        const otherUserId = c.user1Id === authUserId ? c.user2Id : c.user1Id;
+        meta[otherUserId] = {
+          unread: c.unreadCount || 0,
+          lastMessageAt: c.lastMessageAt,
+          conversationId: c.conversationId,
+          lastMessage: c.lastMessage || '',
+        };
+      }
+      setConversationMetaByUserId(meta);
+    });
+
+    // Connection statuses and pending requests still poll independently (not messaging data)
+    loadConnectionStatuses();
+    loadPendingRequests();
+    const interval = window.setInterval(() => {
+      loadConnectionStatuses();
+      loadPendingRequests();
+    }, 15000);
+
+    return () => {
+      unsubscribeConversations();
+      window.clearInterval(interval);
+    };
+  }, [authUserId, users.length, loadConnectionStatuses, loadPendingRequests]);
+
+  // ─── Reset visible count on filter change ──────────────────────────────────
+
+  useEffect(() => {
+    setVisibleCount(DEFAULT_VISIBLE_CONNECTIONS);
+  }, [searchTerm, selectedIndustry, selectedLocation, selectedOrganisation]);
+
+  // ─── Filter users ───────────────────────────────────────────────────────────
 
   useEffect(() => {
     let filtered = [...users];
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter((user) =>
-        user.firstName?.toLowerCase().includes(term) ||
-        user.lastName?.toLowerCase().includes(term) ||
-        user.email?.toLowerCase().includes(term) ||
-        user.industry?.toLowerCase().includes(term) ||
-        user.location?.toLowerCase().includes(term) ||
-        user.organisation?.toLowerCase().includes(term)
+      filtered = filtered.filter(
+        (user) =>
+          user.firstName?.toLowerCase().includes(term) ||
+          user.lastName?.toLowerCase().includes(term) ||
+          user.email?.toLowerCase().includes(term) ||
+          user.industry?.toLowerCase().includes(term) ||
+          user.location?.toLowerCase().includes(term) ||
+          user.organisation?.toLowerCase().includes(term)
       );
     }
 
-    if (selectedIndustry !== 'all') {
-      filtered = filtered.filter((user) => user.industry === selectedIndustry);
-    }
-
-    if (selectedLocation !== 'all') {
-      filtered = filtered.filter((user) => user.location === selectedLocation);
-    }
-
-    if (selectedOrganisation !== 'all') {
-      filtered = filtered.filter((user) => user.organisation === selectedOrganisation);
-    }
+    if (selectedIndustry !== 'all') filtered = filtered.filter((u) => u.industry === selectedIndustry);
+    if (selectedLocation !== 'all') filtered = filtered.filter((u) => u.location === selectedLocation);
+    if (selectedOrganisation !== 'all') filtered = filtered.filter((u) => u.organisation === selectedOrganisation);
 
     setFilteredUsers(filtered);
   }, [searchTerm, selectedIndustry, selectedLocation, selectedOrganisation, users]);
 
+  // ─── Sort: connected first, then pending received, then pending sent, then others ──
+
   const sortedFilteredUsers = useMemo(() => {
-    const copy = [...filteredUsers];
-    
-    // Split users into those with conversations and those without
-    const withConversations: ConnectionUser[] = [];
-    const withoutConversations: ConnectionUser[] = [];
-    
-    copy.forEach(user => {
-      if (conversationMetaByUserId[user.userId]) {
-        withConversations.push(user);
-      } else {
-        withoutConversations.push(user);
-      }
+    const connected: ConnectionUser[] = [];
+    const pendingSent: ConnectionUser[] = [];
+    const pendingReceived: ConnectionUser[] = [];
+    const others: ConnectionUser[] = [];
+
+    filteredUsers.forEach((user) => {
+      const status = connectionStatusByUserId[user.userId]?.status;
+      if (status === 'ACCEPTED') connected.push(user);
+      else if (status === 'PENDING_SENT') pendingSent.push(user);
+      else if (status === 'PENDING_RECEIVED') pendingReceived.push(user);
+      else others.push(user);
     });
-    
-    // Sort users with conversations by lastMessageAt (most recent first)
-    withConversations.sort((a, b) => {
-      const ma = conversationMetaByUserId[a.userId];
-      const mb = conversationMetaByUserId[b.userId];
-      
-      const ta = ma?.lastMessageAt ? new Date(ma.lastMessageAt).getTime() : 0;
-      const tb = mb?.lastMessageAt ? new Date(mb.lastMessageAt).getTime() : 0;
-      
-      return tb - ta; // Descending (most recent first)
+
+    connected.sort((a, b) => {
+      const ta = conversationMetaByUserId[a.userId]?.lastMessageAt
+        ? new Date(conversationMetaByUserId[a.userId].lastMessageAt).getTime() : 0;
+      const tb = conversationMetaByUserId[b.userId]?.lastMessageAt
+        ? new Date(conversationMetaByUserId[b.userId].lastMessageAt).getTime() : 0;
+      return tb - ta;
     });
-    
-    // Sort users without conversations alphabetically
-    withoutConversations.sort((a, b) => {
-      const an = `${a.firstName || ''} ${a.lastName || ''}`.trim();
-      const bn = `${b.firstName || ''} ${b.lastName || ''}`.trim();
-      return an.localeCompare(bn);
-    });
-    
-    // Return combined array: users with conversations first, then users without
-    return [...withConversations, ...withoutConversations];
-  }, [filteredUsers, conversationMetaByUserId]);
+
+    const alpha = (u: ConnectionUser) => `${u.firstName || ''} ${u.lastName || ''}`.trim().toLowerCase();
+    pendingSent.sort((a, b) => alpha(a).localeCompare(alpha(b)));
+    pendingReceived.sort((a, b) => alpha(a).localeCompare(alpha(b)));
+    others.sort((a, b) => alpha(a).localeCompare(alpha(b)));
+
+    return [...connected, ...pendingReceived, ...pendingSent, ...others];
+  }, [filteredUsers, connectionStatusByUserId, conversationMetaByUserId]);
 
   const visibleUsers = useMemo(
     () => sortedFilteredUsers.slice(0, visibleCount),
-    [sortedFilteredUsers, visibleCount],
+    [sortedFilteredUsers, visibleCount]
   );
 
   const clearFilters = () => {
@@ -210,6 +274,11 @@ export function useConnections(authUserId?: string) {
     setSelectedIndustry('all');
     setSelectedLocation('all');
     setSelectedOrganisation('all');
+  };
+
+  const refreshConversations = async () => { await loadConversations(); };
+  const refreshConnectionStatuses = async () => {
+    await Promise.all([loadConnectionStatuses(), loadPendingRequests()]);
   };
 
   return {
@@ -226,6 +295,9 @@ export function useConnections(authUserId?: string) {
     loading,
     error,
     conversationMetaByUserId,
+    connectionStatusByUserId,
+    pendingRequests,
+    pendingRequestsCount,
     visibleCount,
     setVisibleCount,
     setSearchTerm,
@@ -234,5 +306,7 @@ export function useConnections(authUserId?: string) {
     setSelectedOrganisation,
     clearFilters,
     refetch: fetchUsers,
+    refreshConversations,
+    refreshConnectionStatuses,
   };
 }

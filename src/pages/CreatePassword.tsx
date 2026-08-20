@@ -4,97 +4,60 @@ import { useNavigate } from 'react-router-dom';
 import Logo from '../assets/Logo.svg';
 import { authService } from '../services/AuthService';
 import { supabase } from '../lib/supabaseClient';
+import { checkPasswordRequirements, validateNewPassword, EMPTY_PASSWORD_REQUIREMENTS } from '../utils/passwordHelpers';
+import PasswordRequirementsBox from '../components/PasswordRequirementsBox';
 
 const getPublicSiteUrl = (): string => {
   const fromEnv = (import.meta as any)?.env?.VITE_PUBLIC_SITE_URL as string | undefined;
   const trimmed = (fromEnv || '').trim();
-  return trimmed ? trimmed.replace(/\/$/, '') : window.location.origin;
+  if (trimmed) return trimmed.replace(/\/$/, '');
+  const base = ((import.meta as any)?.env?.BASE_URL as string | undefined) || '/';
+  const normalizedBase = String(base).trim() || '/';
+  const baseNoTrailingSlash = normalizedBase.replace(/\/$/, '');
+  const origin = window.location.origin.replace(/\/$/, '');
+  return baseNoTrailingSlash && baseNoTrailingSlash !== '/' ? `${origin}${baseNoTrailingSlash}` : origin;
 };
 
 const CreatePassword: React.FC = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    password: '',
-    confirmPassword: '',
-  });
-
+  const [form, setForm] = useState({ password: '', confirmPassword: '' });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>('');
-  const [passwordRequirements, setPasswordRequirements] = useState({
-    minLength: false,
-    hasNumber: false,
-    hasUppercase: false,
-    hasLowercase: false,
-    hasSpecialChar: false,
-  });
+  const [passwordRequirements, setPasswordRequirements] = useState(EMPTY_PASSWORD_REQUIREMENTS);
 
   useEffect(() => {
     const email = localStorage.getItem('userEmail');
     const tempUserData = localStorage.getItem('tempUserData');
-    if (!email || !tempUserData) {
-      navigate('/signup');
-      return;
-    }
+    if (!email || !tempUserData) { navigate('/signup'); return; }
     setUserEmail(email);
   }, [navigate]);
 
-  const checkPasswordRequirements = (password: string) => {
-    setPasswordRequirements({
-      minLength: password.length >= 8,
-      hasNumber: /\d/.test(password),
-      hasUppercase: /[A-Z]/.test(password),
-      hasLowercase: /[a-z]/.test(password),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-    });
-  };
-
   const handlePasswordChange = (value: string) => {
     setForm(prev => ({ ...prev, password: value }));
-    checkPasswordRequirements(value);
+    setPasswordRequirements(checkPasswordRequirements(value));
   };
 
   const validatePassword = (): boolean => {
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    if (form.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return false;
-    }
-    const requirements = passwordRequirements;
-    if (!requirements.hasNumber || !requirements.hasUppercase || 
-        !requirements.hasLowercase || !requirements.hasSpecialChar) {
-      setError('Password does not meet all requirements');
-      return false;
-    }
+    const err = validateNewPassword(form.password, form.confirmPassword, passwordRequirements);
+    if (err) { setError(err); return false; }
     return true;
   };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (!validatePassword()) {
-      return;
-    }
+    if (!validatePassword()) return;
 
     setIsLoading(true);
     try {
       const tempUserDataStr = localStorage.getItem('tempUserData');
-      if (!tempUserDataStr) {
-        throw new Error('User data not found');
-      }
+      if (!tempUserDataStr) throw new Error('User data not found');
 
       const tempUserData = JSON.parse(tempUserDataStr);
       const businessReference = tempUserData.businessReference;
 
-      await authService.createPassword(
-        userEmail,
-        form.password,
-        businessReference
-      );
+      await authService.createPassword(userEmail, form.password, businessReference);
 
       if (businessReference) {
         localStorage.setItem('businessReference', businessReference);
@@ -102,7 +65,6 @@ const CreatePassword: React.FC = () => {
       } else {
         localStorage.setItem('userProvidedBusinessReference', 'false');
       }
-
       localStorage.removeItem('tempUserData');
 
       try {
@@ -110,26 +72,31 @@ const CreatePassword: React.FC = () => {
           console.warn('Supabase client not initialized; skipping Supabase signUp.');
         } else {
           const emailRedirectTo = `${getPublicSiteUrl()}/signup/success/provided`;
-          const { error } = await supabase.auth.signUp({
+          localStorage.removeItem('supabaseVerificationEmailFailed');
+
+          const { error: signUpError } = await supabase.auth.signUp({
             email: userEmail,
             password: form.password,
-            options: { emailRedirectTo }
+            options: { emailRedirectTo },
           });
-          if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('rate limit')) {
+          if (signUpError && typeof signUpError.message === 'string' && signUpError.message.toLowerCase().includes('rate limit')) {
             localStorage.setItem('supabaseEmailRateLimited', 'true');
           }
-          if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('user already registered')) {
-            const { error: resendErr } = await supabase.auth.resend({
-              type: 'signup',
-              email: userEmail,
-              options: { emailRedirectTo }
-            });
-            if (resendErr) console.error('Supabase resend error:', resendErr);
-          } else if (error) {
-            console.error('Supabase signUp error:', error);
+
+          const shouldAttemptResend = !signUpError || (typeof signUpError.message === 'string' && signUpError.message.toLowerCase().includes('user already registered'));
+          if (shouldAttemptResend) {
+            const { error: resendErr } = await supabase.auth.resend({ type: 'signup', email: userEmail, options: { emailRedirectTo } });
+            if (resendErr) {
+              localStorage.setItem('supabaseVerificationEmailFailed', 'true');
+              console.error('Supabase resend error:', resendErr);
+            }
+          } else if (signUpError) {
+            localStorage.setItem('supabaseVerificationEmailFailed', 'true');
+            console.error('Supabase signUp error:', signUpError);
           }
         }
       } catch (supabaseErr) {
+        localStorage.setItem('supabaseVerificationEmailFailed', 'true');
         console.error('Supabase signUp unexpected error:', supabaseErr);
       }
 
@@ -140,19 +107,6 @@ const CreatePassword: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-  const RequirementItem = ({ met, text }: { met: boolean; text: string }) => (
-    <div className="flex items-center gap-2">
-      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${met ? 'bg-green-100' : 'bg-gray-100'}`}>
-        <span className={`text-xs ${met ? 'text-green-600' : 'text-gray-400'}`}>
-          {met ? '✓' : '○'}
-        </span>
-      </div>
-      <span className={`text-sm ${met ? 'text-green-700' : 'text-gray-500'}`}>
-        {text}
-      </span>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
@@ -173,9 +127,7 @@ const CreatePassword: React.FC = () => {
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              New Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
             <input
               type="password"
               value={form.password}
@@ -185,11 +137,8 @@ const CreatePassword: React.FC = () => {
               required
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm Password
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
             <input
               type="password"
               value={form.confirmPassword}
@@ -200,14 +149,7 @@ const CreatePassword: React.FC = () => {
             />
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Password Requirements</h3>
-            <RequirementItem met={passwordRequirements.minLength} text="At least 8 characters long" />
-            <RequirementItem met={passwordRequirements.hasUppercase} text="One uppercase letter" />
-            <RequirementItem met={passwordRequirements.hasLowercase} text="One lowercase letter" />
-            <RequirementItem met={passwordRequirements.hasNumber} text="One number" />
-            <RequirementItem met={passwordRequirements.hasSpecialChar} text="One special character" />
-          </div>
+          <PasswordRequirementsBox requirements={passwordRequirements} />
 
           <button
             type="submit"
@@ -218,11 +160,7 @@ const CreatePassword: React.FC = () => {
           </button>
 
           <div className="text-center">
-            <button
-              type="button"
-              onClick={() => navigate('/signup')}
-              className="text-sm text-gray-600 hover:text-gray-800"
-            >
+            <button type="button" onClick={() => navigate('/signup')} className="text-sm text-gray-600 hover:text-gray-800">
               ← Back to signup
             </button>
           </div>

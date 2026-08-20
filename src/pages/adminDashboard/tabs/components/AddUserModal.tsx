@@ -1,0 +1,199 @@
+// src/pages/adminDashboard/tabs/components/AddUserModal.tsx
+import React from 'react';
+import type { NewUserData } from './types';
+
+interface AddUserModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: () => void;
+  newUserData: NewUserData;
+  setNewUserData: (data: NewUserData) => void;
+  isSuperAdmin: boolean;
+  userOrganisation: string | null;
+  organisationGroups?: { organisations: string[]; cocSubOrganisations: string[] };
+  adding: boolean;
+}
+
+export const AddUserModal: React.FC<AddUserModalProps> = ({
+  isOpen,
+  onClose,
+  onAdd,
+  newUserData,
+  setNewUserData,
+  isSuperAdmin,
+  userOrganisation,
+  organisationGroups,
+  adding
+}) => {
+  if (!isOpen) return null;
+
+  const isCocAdminRole = isSuperAdmin && newUserData.role === 'COC_ADMIN';
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Add New {isSuperAdmin ? 'Admin/User' : 'User'}
+        </h2>
+        
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name *
+              </label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newUserData.fullName}
+                onChange={(e) => setNewUserData({...newUserData, fullName: e.target.value})}
+                placeholder="Enter full name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newUserData.email}
+                onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+                placeholder="Enter email"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mobile Number
+              </label>
+              <input
+                type="tel"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newUserData.mobileNumber}
+                onChange={(e) => setNewUserData({...newUserData, mobileNumber: e.target.value})}
+                placeholder="Enter mobile number"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Organisation
+              </label>
+              {isSuperAdmin ? (
+                isCocAdminRole ? (
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value="COC"
+                    readOnly
+                  />
+                ) : (
+                  <select
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    value={newUserData.organisation}
+                    onChange={(e) => setNewUserData({ ...newUserData, organisation: e.target.value })}
+                  >
+                    <option value="" disabled>Select organisation</option>
+                    {(organisationGroups?.organisations || []).length > 0 && (
+                      <optgroup label="-- Organisations --">
+                        {(organisationGroups?.organisations || []).map((org) => (
+                          <option key={org} value={org}>{org}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {(organisationGroups?.cocSubOrganisations || []).length > 0 && (
+                      <optgroup label="-- COC Organisations --">
+                        {(organisationGroups?.cocSubOrganisations || []).map((org) => (
+                          <option key={org} value={org}>{org}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                )
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={newUserData.organisation}
+                    onChange={(e) => setNewUserData({ ...newUserData, organisation: e.target.value })}
+                    placeholder={userOrganisation || "Enter organisation"}
+                    readOnly={!isSuperAdmin && !!userOrganisation}
+                  />
+                  {!isSuperAdmin && userOrganisation && (
+                    <p className="text-xs text-gray-500 mt-1">Organisation is fixed to your organisation</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {isSuperAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Role
+              </label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={newUserData.role}
+                onChange={(e) => {
+                  const role = e.target.value as 'ADMIN' | 'COC_ADMIN' | 'SUPER_ADMIN' | 'USER';
+                  setNewUserData({
+                    ...newUserData,
+                    role,
+                    organisation:
+                      role === 'COC_ADMIN'
+                        ? 'COC'
+                        : newUserData.organisation === 'COC'
+                          ? ''
+                          : newUserData.organisation,
+                  });
+                }}
+              >
+                <option value="ADMIN">Admin</option>
+                <option value="COC_ADMIN">COC Admin</option>
+                <option value="SUPER_ADMIN">Super Admin</option>
+                <option value="USER">Regular User</option>
+              </select>
+            </div>
+          )}
+
+          {!isSuperAdmin && (
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-700">
+                User will be added to <strong>{userOrganisation}</strong> with role <strong>ADMIN</strong>
+              </p>
+            </div>
+          )}
+
+          <div className="bg-yellow-50 p-3 rounded-lg">
+            <p className="text-xs text-yellow-700">
+              The user will receive an email with instructions to set up their account.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onAdd}
+            disabled={adding || !newUserData.email || !newUserData.fullName}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {adding ? 'Creating...' : 'Create User'}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

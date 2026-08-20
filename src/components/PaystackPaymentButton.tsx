@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './ui/button';
-import { Loader2, CreditCard, Shield } from 'lucide-react';
+import { Loader2, CreditCard } from 'lucide-react';
 import { Currency } from '../interfaces/PaymentData';
 import { usePaystackPayment } from '../hooks/usePaystackPayment';
 

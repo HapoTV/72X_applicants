@@ -1,5 +1,5 @@
 // src/pages/Notifications.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Bell, 
   Trash2, 
@@ -8,37 +8,33 @@ import {
   Info,
   Clock,
   Globe,
-  Building2, // NEW
-  Crown // NEW
+  Building2,
+  Crown
 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NotificationService from '../services/NotificationService';
 import { useAuth } from '../context/AuthContext';
 import type { Notification } from '../services/NotificationService';
 
 const Notifications: React.FC = () => {
-  const { user, isSuperAdmin, userOrganisation } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isSuperAdmin, userOrganisation } = useAuth();
+  const queryClient = useQueryClient();
   const [filterType, setFilterType] = useState<'all' | 'unread'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [filterType]);
+  const {
+    data: notifications = [],
+    isLoading: loading,
+  } = useQuery<Notification[]>({
+    queryKey: ['notifications', filterType],
+    queryFn: () => NotificationService.getUserNotifications(filterType === 'unread'),
+    staleTime: 3 * 60 * 1000,
+    select: (data) => (Array.isArray(data) ? data : []),
+  });
 
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      const response = await NotificationService.getUserNotifications(filterType === 'unread');
-      setNotifications(response.notifications);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const unreadCount = notifications.filter(n => !n.read).length;
 
-  const filteredNotifications = notifications.sort((a, b) => {
+  const filteredNotifications = [...notifications].sort((a, b) => {
     if (sortBy === 'newest') {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     } else {
@@ -46,12 +42,13 @@ const Notifications: React.FC = () => {
     }
   });
 
-  const unreadCount = notifications.filter(notif => !notif.read).length;
-
   const markAsRead = async (id: string) => {
     try {
       await NotificationService.markAsRead([id], true);
-      await fetchNotifications();
+      // Update cache
+      queryClient.setQueryData<Notification[]>(['notifications', filterType], (prev = []) =>
+        prev.map(n => n.id === id ? { ...n, read: true } : n)
+      );
     } catch (error) {
       console.error('Error marking as read:', error);
     }
@@ -59,8 +56,9 @@ const Notifications: React.FC = () => {
 
   const markAsUnread = async (id: string) => {
     try {
-      await NotificationService.markAsRead([id], false);
-      await fetchNotifications();
+      queryClient.setQueryData<Notification[]>(['notifications', filterType], (prev = []) =>
+        prev.map(n => n.id === id ? { ...n, read: false } : n)
+      );
     } catch (error) {
       console.error('Error marking as unread:', error);
     }
@@ -69,7 +67,9 @@ const Notifications: React.FC = () => {
   const deleteNotification = async (id: string) => {
     try {
       await NotificationService.deleteNotification(id);
-      await fetchNotifications();
+      queryClient.setQueryData<Notification[]>(['notifications', filterType], (prev = []) =>
+        prev.filter(n => n.id !== id)
+      );
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -78,7 +78,9 @@ const Notifications: React.FC = () => {
   const markAllAsRead = async () => {
     try {
       await NotificationService.markAllAsRead();
-      await fetchNotifications();
+      queryClient.setQueryData<Notification[]>(['notifications', filterType], (prev = []) =>
+        prev.map(n => ({ ...n, read: true }))
+      );
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
@@ -185,7 +187,7 @@ const Notifications: React.FC = () => {
             {/* Sort */}
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">
-                Sort
+                Sort By
               </label>
               <select
                 value={sortBy}
@@ -237,21 +239,26 @@ const Notifications: React.FC = () => {
                 <div className="flex-grow min-w-0">
                   <div className="flex items-start justify-between">
                     <div className="flex-grow">
-                      <div className="flex items-center space-x-2 mb-1">
+                      <div className="flex items-center space-x-2 mb-1 flex-wrap gap-2">
                         <h3 className={`font-medium text-gray-900 ${
                           !notification.read ? 'font-semibold' : ''
                         }`}>
                           {notification.title}
                         </h3>
-                        {!notification.userId && (
+                        {notification.isBroadcast && (
                           <span className="flex items-center gap-1" title="Broadcast Notification">
                             <Globe className="w-4 h-4 text-gray-400" />
-                            {notification.targetOrganisation && (
-                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <Building2 className="w-3 h-3" />
-                                {notification.targetOrganisation}
-                              </span>
-                            )}
+                          </span>
+                        )}
+                        {notification.targetOrganisation && (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            {notification.targetOrganisation}
+                          </span>
+                        )}
+                        {notification.createdByUserName && isSuperAdmin && (
+                          <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">
+                            By: {notification.createdByUserName}
                           </span>
                         )}
                       </div>
@@ -285,7 +292,7 @@ const Notifications: React.FC = () => {
                   {!notification.read ? (
                     <button
                       onClick={() => markAsRead(notification.id)}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                      className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                       title="Mark as read"
                     >
                       <CheckCircle className="w-4 h-4" />
@@ -319,7 +326,7 @@ const Notifications: React.FC = () => {
             </h3>
             <p className="text-gray-600">
               {filterType === 'unread'
-                ? 'You are all caught up! Mark some notifications as unread to see them here.'
+                ? 'You are all caught up!'
                 : 'You have no notifications yet. Stay tuned for updates!'}
             </p>
           </div>

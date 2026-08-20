@@ -1,51 +1,38 @@
 // src/components/Events/Events.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Clock, MapPin, Calendar as CalendarIcon } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { eventService } from '../../services/EventService';
 import { useAuth } from '../../context/AuthContext';
 import type { UserEventItem } from '../../interfaces/EventData';
 
 const Events: React.FC = () => {
   const { user } = useAuth();
-  const [todayEvents, setTodayEvents] = useState<UserEventItem[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<UserEventItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user?.email) {
-      fetchEvents();
-    }
-  }, [user?.email]);
-
-  const fetchEvents = async () => {
-    if (!user?.email) {
-      setError('User email not found');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery<{ today: UserEventItem[]; upcoming: UserEventItem[] }>({
+    queryKey: ['events', user?.email],
+    queryFn: async () => {
       const [today, upcoming] = await Promise.all([
-        eventService.getTodayEvents(user.email),
-        eventService.getUpcomingEvents(user.email)
+        eventService.getTodayEvents(user!.email),
+        eventService.getUpcomingEvents(user!.email),
       ]);
-      
-      setTodayEvents(today);
-      setUpcomingEvents(upcoming);
-    } catch (err) {
-      setError('Failed to load events');
-      console.error('Error fetching events:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { today, upcoming };
+    },
+    staleTime: 3 * 60 * 1000,
+    enabled: !!user?.email,
+  });
+
+  const todayEvents = data?.today ?? [];
+  const upcomingEvents = data?.upcoming ?? [];
+  const error = isError ? 'Failed to load events' : null;
 
   const refreshEvents = () => {
-    fetchEvents();
+    refetch();
   };
 
   if (!user?.email) {

@@ -4,7 +4,6 @@ import type {
   FundingFormData, 
   AdminFundingItem, 
   UserFundingItem, 
-  FundingApiResponse, 
   FundingRequest
 } from '../interfaces/FundingData';
 

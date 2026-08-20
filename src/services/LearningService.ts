@@ -11,6 +11,28 @@ import type {
 class LearningService {
   private baseUrl = '/learning-materials';
 
+  private parseBackendTimestamp(ts?: string): number {
+    if (!ts) return Number.NaN;
+    const direct = Date.parse(ts);
+    if (Number.isFinite(direct)) return direct;
+
+    const microMatch = ts.match(/^(.+\.\d{3})\d+(Z|[+-]\d{2}:?\d{2})?$/);
+    if (microMatch) {
+      const trimmed = `${microMatch[1]}${microMatch[2] || ''}`;
+      const trimmedParsed = Date.parse(trimmed);
+      if (Number.isFinite(trimmedParsed)) return trimmedParsed;
+    }
+
+    const noFractionMatch = ts.match(/^(.+?)\.\d+(Z|[+-]\d{2}:?\d{2})?$/);
+    if (noFractionMatch) {
+      const noFraction = `${noFractionMatch[1]}${noFractionMatch[2] || ''}`;
+      const noFractionParsed = Date.parse(noFraction);
+      if (Number.isFinite(noFractionParsed)) return noFractionParsed;
+    }
+
+    return Number.NaN;
+  }
+
   private normalizeCategory(category: string): string {
     const normalized = (category || '')
       .trim()
@@ -113,7 +135,7 @@ class LearningService {
         
         if (progress && Array.isArray(progress) && progress.length > 0) {
           const progressById = new Map(progress.map((p) => [p.materialId, p] as const));
-          allModules = allModules.map((m) => {
+          allModules = allModules.map((m: UserLearningModule) => {
             const p = progressById.get(m.id);
             if (!p) return m;
             const mergedProgress = typeof p.progress === 'number' ? p.progress : m.progress;
@@ -142,17 +164,26 @@ class LearningService {
       // Apply category filter
       if (filter?.category && filter.category !== 'all') {
         const target = this.normalizeCategory(filter.category);
-        allModules = allModules.filter(module => this.normalizeCategory(module.category) === target);
+        allModules = allModules.filter((module: UserLearningModule) => this.normalizeCategory(module.category) === target);
       }
 
-      allModules.sort((a, b) => {
-        const aRaw = a.createdAt || a.updatedAt;
-        const bRaw = b.createdAt || b.updatedAt;
-        const aTime = aRaw ? new Date(aRaw).getTime() : 0;
-        const bTime = bRaw ? new Date(bRaw).getTime() : 0;
-        return aTime - bTime;
-      });
-      
+      allModules = allModules
+        .map((m, idx) => ({ m, idx }))
+        .sort((a, b) => {
+          const aTime = this.parseBackendTimestamp(a.m.createdAt) || this.parseBackendTimestamp(a.m.updatedAt);
+          const bTime = this.parseBackendTimestamp(b.m.createdAt) || this.parseBackendTimestamp(b.m.updatedAt);
+
+          const aValid = Number.isFinite(aTime);
+          const bValid = Number.isFinite(bTime);
+
+          if (aValid && bValid && aTime !== bTime) return aTime - bTime;
+          if (aValid && !bValid) return -1;
+          if (!aValid && bValid) return 1;
+
+          return a.idx - b.idx;
+        })
+        .map(({ m }) => m);
+
       if (allModules.length === 0) {
         console.warn(`⚠️ No modules found for filter:`, filter);
       }
@@ -290,24 +321,25 @@ class LearningService {
    */
   async getQuiz(materialId: string): Promise<any> {
     try {
-      const response = await axiosClient.get(`${this.baseUrl}/${materialId}/quiz`);
-      
-      if (!response.data) {
-        return null; // No quiz exists yet - this is expected
+      const response = await axiosClient.get(`${this.baseUrl}/${materialId}/quiz`, {
+        validateStatus: (status) => (status >= 200 && status < 300) || status === 404,
+      });
+
+      if (response.status === 404) {
+        return null;
       }
-      
+
+      if (!response.data) {
+        return null;
+      }
+
       if (!response.data.questions || !Array.isArray(response.data.questions)) {
         throw new Error('Invalid quiz data format from server');
       }
-      
+
       console.log(`✅ Quiz retrieved successfully with ${response.data.questions.length} questions`);
       return response.data;
     } catch (error) {
-      // 404 is expected (no quiz yet), other errors are problems
-      const axiosError = error as AxiosError;
-      if (axiosError.response?.status === 404) {
-        return null;
-      }
       console.error('❌ Failed to fetch quiz:', error);
       throw new Error('Failed to load quiz from server');
     }
@@ -319,14 +351,14 @@ class LearningService {
   async submitQuiz(quizId: string, answers: Record<string, any>, timeSpentSeconds: number): Promise<any> {
     try {
       const response = await axiosClient.post(
-        `${this.baseUrl}/quiz/${quizId}/submit?timeSpentSeconds=${timeSpentSeconds}`, 
+        `${this.baseUrl}/quiz/${quizId}/submit?timeSpentSeconds=${timeSpentSeconds}`,
         answers
       );
-      
+
       if (!response.data) {
         throw new Error('No submission result received from server');
       }
-      
+
       console.log(`✅ Quiz submitted successfully, score: ${response.data.score}/${response.data.totalPoints}`);
       return response.data;
     } catch (error) {
@@ -341,15 +373,15 @@ class LearningService {
   async getQuizAttempts(materialId: string): Promise<any[]> {
     try {
       const response = await axiosClient.get(`${this.baseUrl}/${materialId}/quiz/attempts`);
-      
+
       if (!response.data) {
         return [];
       }
-      
+
       if (!Array.isArray(response.data)) {
         throw new Error('Invalid attempts data format from server');
       }
-      
+
       return response.data;
     } catch (error) {
       console.error('❌ Failed to fetch quiz attempts:', error);
@@ -359,19 +391,16 @@ class LearningService {
 
   // ============== TRANSFORM METHODS ==============
 
-  /**
-   * Transform backend DTO response to UserLearningModule format
-   */
   private transformBackendToUserModules(backendData: any[]): UserLearningModule[] {
     if (!backendData || !Array.isArray(backendData)) {
       throw new Error('Invalid backend data format');
     }
-    
-    return backendData.map(item => {
+
+    return backendData.map((item: any): UserLearningModule => {
       if (!item.materialId && !item.id) {
         throw new Error('Learning material missing ID');
       }
-      
+
       return {
         id: item.materialId || item.id,
         title: item.title,
@@ -382,48 +411,41 @@ class LearningService {
         difficulty: this.mapDifficulty(item.difficulty || 'Beginner'),
         rating: item.rating || 0,
         students: item.students || 0,
-        isPremium: item.isPremium || false,
-        progress: item.progress || 0,
-        thumbnail: item.thumbnailUrl,
-        isCompleted: false,
-        isLocked: false,
+        isPremium: Boolean(item.isPremium),
+        progress: typeof item.progress === 'number' ? item.progress : 0,
+        isCompleted: Boolean(item.isCompleted),
+        isLocked: Boolean(item.isLocked),
+        lastAccessed: item.lastAccessed,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        createdByOrganisation: item.createdByOrganisation,
+        targetOrganisation: item.targetOrganisation,
+        isPublic: item.isPublic,
         resourceUrl: item.resourceUrl,
         fileName: item.fileName,
         type: item.type,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        organisation: item.createdByOrganisation, // NEW
-        targetOrganisation: item.targetOrganisation, // NEW
-        isPublic: item.isPublic, // NEW
+        thumbnailUrl: item.thumbnailUrl || item.thumbnail,
+        openedAt: item.openedAt,
+        finishedAt: item.finishedAt,
         quizStartedAt: item.quizStartedAt,
         quizPassedAt: item.quizPassedAt,
         quizAttempts: item.quizAttempts || 0,
         lastQuizScore: item.lastQuizScore,
         lastQuizTotalQuestions: item.lastQuizTotalQuestions,
-        lastQuizPercentage: item.lastQuizPercentage
+        lastQuizPercentage: item.lastQuizPercentage,
       };
     });
   }
 
-  /**
-   * Map difficulty string
-   */
   private mapDifficulty(difficulty: string): string {
     const map: Record<string, string> = {
-      'BEGINNER': 'Beginner',
-      'INTERMEDIATE': 'Intermediate',
-      'ADVANCED': 'Advanced'
+      BEGINNER: 'Beginner',
+      INTERMEDIATE: 'Intermediate',
+      ADVANCED: 'Advanced',
     };
-    const mapped = map[difficulty?.toUpperCase()];
-    if (!mapped) {
-      throw new Error(`Invalid difficulty level: ${difficulty}`);
-    }
-    return mapped;
+    return map[(difficulty || '').toUpperCase()] || 'Beginner';
   }
 
-  /**
-   * Transform backend category to frontend category
-   */
   private transformCategory(backendCategory: string): string {
     if (!backendCategory) {
       throw new Error('Learning material missing category');
@@ -431,18 +453,15 @@ class LearningService {
     return this.normalizeCategory(backendCategory);
   }
 
-  /**
-   * Upload a new learning material (Admin/Super Admin only)
-   */
   async uploadLearningMaterial(
-    file: File, 
-    metadata: { 
-      title: string; 
-      description?: string; 
-      category?: string; 
+    file: File,
+    metadata: {
+      title: string;
+      description?: string;
+      category?: string;
       creatorEmail?: string;
-      targetOrganisation?: string; // NEW
-      isPublic?: boolean; // NEW
+      targetOrganisation?: string;
+      isPublic?: boolean;
     }
   ): Promise<any> {
     try {
@@ -458,11 +477,11 @@ class LearningService {
       const res = await axiosClient.post(`${this.baseUrl}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       if (!res.data) {
         throw new Error('No upload confirmation received');
       }
-      
+
       return res.data;
     } catch (error) {
       console.error('❌ Failed to upload learning material:', error);
@@ -470,17 +489,6 @@ class LearningService {
     }
   }
 
-  /**
-   * Upload a new learning material (admin FormData flow, allows onUploadProgress)
-   */
-  async uploadLearningMaterialFormData(formData: FormData, config?: any): Promise<any> {
-    const res = await axiosClient.post(`${this.baseUrl}`, formData, config);
-    return res;
-  }
-
-  /**
-   * Create URL-based learning material (Admin/Super Admin only)
-   */
   async createUrlMaterial(materialData: any): Promise<any> {
     try {
       const response = await axiosClient.post(`${this.baseUrl}`, materialData);
@@ -491,9 +499,6 @@ class LearningService {
     }
   }
 
-  /**
-   * Delete a learning material
-   */
   async deleteLearningMaterial(materialId: string): Promise<boolean> {
     try {
       const res = await axiosClient.delete(`${this.baseUrl}/${encodeURIComponent(materialId)}`);
@@ -505,9 +510,6 @@ class LearningService {
     }
   }
 
-  /**
-   * Get materials by organisation (Super Admin only)
-   */
   async getMaterialsByOrganisation(organisation: string): Promise<UserLearningModule[]> {
     try {
       const response = await axiosClient.get(`${this.baseUrl}/admin/organisation/${organisation}`);
@@ -518,9 +520,6 @@ class LearningService {
     }
   }
 
-  /**
-   * Get public materials
-   */
   async getPublicMaterials(): Promise<UserLearningModule[]> {
     try {
       const response = await axiosClient.get(`${this.baseUrl}/public`);

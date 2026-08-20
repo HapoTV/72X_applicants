@@ -1,6 +1,7 @@
 // src/components/dashboard/Overview.tsx
 import React, { useState } from 'react';
 import DailyTip from '../../components/DailyTip';
+import MetricCard from '../../components/MetricCard';
 import QuickActions from '../../components/QuickActions';
 import { adService } from '../../services/AdService';
 import AdCarousel from './components/AdCarousel';
@@ -11,12 +12,15 @@ import LanguageSelector from './components/LanguageSelector';
 import LeaderboardPreview from './components/LeaderboardPreview';
 import { useCurrentTime } from './hooks/useCurrentTime';
 import { useDashboardAds } from './hooks/useDashboardAds';
+import { Banknote, AlertTriangle, Users, Target } from 'lucide-react';
 import { useDashboardEngagement } from './hooks/useDashboardEngagement';
 import { buildAdRequestMailto } from './utils/buildAdRequestMailto';
+import { useNavigate } from 'react-router-dom';
 
 type Language = 'en' | 'af' | 'zu';
 
 const Overview: React.FC = () => {
+  const navigate = useNavigate();
   const currentTime = useCurrentTime(1000);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const [showAdRequestModal, setShowAdRequestModal] = useState<boolean>(false);
@@ -28,8 +32,8 @@ const Overview: React.FC = () => {
     businessName: string; 
     email: string; 
     phone: string; 
-    description: string;
-    infoLink: string;
+    adLink: string;
+    message: string 
   }) => {
     try {
       const mailtoLink = buildAdRequestMailto(requestData);
@@ -57,7 +61,7 @@ const Overview: React.FC = () => {
       
     } catch (error) {
       console.error('Error submitting ad request:', error);
-      alert('Failed to open email client. Please contact admin@seventytwox.com directly with your advertising request.');
+      alert('Failed to open email client. Please contact admin@hapogroup.co.za directly with your advertising request.');
     }
   };
 
@@ -73,6 +77,34 @@ const Overview: React.FC = () => {
     refreshEngagementData();
   };
 
+  const readStat = (key: string, defaultValue = '--') => {
+    const value = localStorage.getItem(key);
+    return value && value.trim() !== '' ? value : defaultValue;
+  };
+
+  const dashboardStats = [
+    {
+      title: 'Revenue this month',
+      value: `R ${readStat('monthlyRevenue')}`,
+      icon: Banknote,
+    },
+    {
+      title: 'Outstanding',
+      value: readStat('outstanding'),
+      icon: AlertTriangle,
+    },
+    {
+      title: 'Active leads',
+      value: readStat('activeLeads'),
+      icon: Users,
+    },
+    {
+      title: 'Goals achieved',
+      value: readStat('goalsAchieved'),
+      icon: Target,
+    },
+  ];
+
   return (
     <>
       <div className="space-y-3 animate-fade-in px-2 sm:px-0">
@@ -87,6 +119,41 @@ const Overview: React.FC = () => {
           currentTime={currentTime}
           selectedLanguage={selectedLanguage}
         />
+
+        {/* Revenue Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          {dashboardStats.map((stat) => (
+            <MetricCard
+              key={stat.title}
+              title={stat.title}
+              value={stat.value}
+              change=""
+              trend="up"
+              icon={stat.icon}
+            />
+          ))}
+        </div>
+
+        {/* Assistant CTA */}
+        <div className="bg-indigo-50 rounded-2xl p-4 shadow-sm border border-indigo-100">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-indigo-700 mb-1">
+                Ask your 72X AI
+              </div>
+              <p className="text-sm text-slate-600">
+                "How is my business doing this month?" — your AI reads across every app you have active.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/business-analyst')}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 transition"
+            >
+              Open assistant
+            </button>
+          </div>
+        </div>
 
         {/* Engagement Section */}
         <EngagementSection 
@@ -113,7 +180,7 @@ const Overview: React.FC = () => {
         </div>
 
         {/* Leaderboard Preview */}
-        <LeaderboardPreview engagementData={engagementData} />
+          <LeaderboardPreview />
       </div>
 
       {/* Ad Request Modal */}

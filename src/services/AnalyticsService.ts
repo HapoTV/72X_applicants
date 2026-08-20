@@ -4,7 +4,6 @@ import type {
   AnalyticsTimeRange,
   RevenueData,
   RevenueMetrics,
-  CustomerData,
   CustomerMetrics,
   ExpenseCategory,
   ExpenseMetrics,

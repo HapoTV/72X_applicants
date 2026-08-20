@@ -1,10 +1,11 @@
 // src/pages/VerifyOtp.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield, User } from 'lucide-react';
+import { Crown, Shield, User } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { useAuth } from '../context/AuthContext';
-import Logo from '../assets/Logo.svg';
+
+const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
 
 const VerifyOtp: React.FC = () => {
     const navigate = useNavigate();
@@ -19,12 +20,16 @@ const VerifyOtp: React.FC = () => {
     
     const { 
         email, 
-        loginType, 
+        loginType,
+        apiLoginType,
         businessReference, 
         userId,
         requiresOtpVerification,
         otpCode: generatedOtp
     } = location.state || {};
+
+    // Use apiLoginType for backend calls (cocadmin -> admin), loginType for UI display
+    const backendLoginType = apiLoginType || loginType;
     
     useEffect(() => {
         if (!email || requiresOtpVerification === false) {
@@ -58,7 +63,7 @@ const VerifyOtp: React.FC = () => {
                 email,
                 otpCode: otp,
                 businessReference,
-                loginType
+                loginType: backendLoginType
             });
             
             console.log('✅ OTP verification response:', response);
@@ -68,7 +73,6 @@ const VerifyOtp: React.FC = () => {
                 localStorage.setItem('authToken', response.token);
                 authService.setAxiosAuthHeader(response.token);
                 
-                // Store user role from response - this is the source of truth
                 const userRole = response.role || '';
                 console.log('📝 Storing user role:', userRole);
                 
@@ -76,12 +80,15 @@ const VerifyOtp: React.FC = () => {
                 localStorage.setItem('userEmail', email);
                 localStorage.setItem('userId', response.userId || userId || '');
                 localStorage.setItem('fullName', response.fullName || '');
-
                 localStorage.setItem('emailVerified', 'true');
 
                 if (response.status) {
                     localStorage.setItem('userStatus', response.status);
                     console.log('📋 Backend user status:', response.status);
+                }
+
+                if (response.organisation) {
+                    localStorage.setItem('userOrganisation', response.organisation);
                 }
 
                 if (response.businessReference) {
@@ -99,57 +106,45 @@ const VerifyOtp: React.FC = () => {
                 const userData = {
                     userId: response.userId || userId || '',
                     email: response.email || email,
-                    role: userRole, // Use role from response
+                    role: userRole,
                     fullName: response.fullName,
                     businessReference: response.businessReference,
+                    organisation: response.organisation,
                     status: response.status,
                     token: response.token,
                     requiresTwoFactor: response.requiresTwoFactor
                 };
                 
-                login(userData);
+                login(userData, response.token);
                 
-                // Use setTimeout to ensure state updates are complete
                 setTimeout(() => {
-                    // Determine redirect based on role from response
+                    const baseUrl = import.meta.env.BASE_URL;
                     const role = userRole.toUpperCase();
-                    console.log('🔍 Determining redirect based on role:', role);
-                    
-                    if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-                        console.log('👑 Redirecting to admin dashboard for role:', role);
-                        window.location.href = '/admin/dashboard/overview';
-                        return; // Important: return to prevent further execution
-                    }
-                    
-                    // If we get here, it's a regular user
-                    console.log('👤 Processing regular user redirect with role:', role);
-                    
-                    if (response.requiresPackageSelection === true) {
-                        console.log('📦 User needs package selection, redirecting to /select-package');
-                        window.location.href = '/select-package';
-                    } else {
-                        const userStatus = response.status || localStorage.getItem('userStatus');
-                        const selectedPackage = localStorage.getItem('selectedPackage');
-                        
-                        console.log('🔍 User dashboard redirection check:', {
-                            userStatus,
-                            selectedPackage,
-                            role,
-                        });
 
-                        if (userStatus === 'PENDING_PACKAGE') {
-                            console.log('📦 User needs package selection, redirecting to /select-package');
-                            window.location.href = '/select-package';
-                        } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
-                            console.log('💳 User needs payment for selected package, redirecting to /payments/new');
-                            window.location.href = '/payments/new';
-                        } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
-                            console.log('⚠️ User PENDING_PAYMENT but no package selected, redirecting to package selection');
-                            window.location.href = '/select-package';
-                        } else {
-                            console.log('🏠 User is active, going to dashboard');
-                            window.location.href = '/dashboard/overview';
-                        }
+                    if (role === 'COC_ADMIN') {
+                        window.location.href = `${baseUrl}cocadmin/dashboard/applicants`;
+                        return;
+                    }
+
+                    if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+                        window.location.href = `${baseUrl}admin/dashboard/overview`;
+                        return;
+                    }
+
+                    // Backend is authoritative: requiresPackageSelection=false + ACTIVE = real org employee or paid user
+                    const userStatus = response.status || localStorage.getItem('userStatus');
+                    const selectedPackage = localStorage.getItem('selectedPackage');
+
+                    if (response.requiresPackageSelection === false && userStatus === 'ACTIVE') {
+                        window.location.href = `${baseUrl}dashboard/overview`;
+                    } else if (response.requiresPackageSelection === true || userStatus === 'PENDING_PACKAGE') {
+                        window.location.href = `${baseUrl}select-package`;
+                    } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
+                        window.location.href = `${baseUrl}payments/new`;
+                    } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
+                        window.location.href = `${baseUrl}select-package`;
+                    } else {
+                        window.location.href = `${baseUrl}dashboard/overview`;
                     }
                 }, 300);
             } else {
@@ -184,7 +179,7 @@ const VerifyOtp: React.FC = () => {
             const response = await authService.resendOtp({
                 email,
                 businessReference,
-                loginType
+                loginType: backendLoginType
             });
 
             if (response?.otpCode) {
@@ -212,7 +207,7 @@ const VerifyOtp: React.FC = () => {
         <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <div className="flex justify-center mb-4">
-                    <img src={Logo} alt="SeventyTwoX Logo" className="w-16 h-16" />
+                    <img src={logoUrl} alt="SeventyTwoX Logo" className="w-16 h-16" />
                 </div>
                 <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
                     Verify OTP
@@ -229,17 +224,17 @@ const VerifyOtp: React.FC = () => {
                             {loginType === 'admin' ? (
                                 <>
                                     <Shield className="w-4 h-4" />
-                                    <span>Admin Login</span>
+                                    Admin Login
                                 </>
                             ) : loginType === 'superadmin' ? (
                                 <>
-                                    <Shield className="w-4 h-4" />
-                                    <span>Super Admin Login</span>
+                                    <Crown className="w-4 h-4" />
+                                    Super Admin Login
                                 </>
                             ) : (
                                 <>
                                     <User className="w-4 h-4" />
-                                    <span>User Login</span>
+                                    User Login
                                 </>
                             )}
                         </span>

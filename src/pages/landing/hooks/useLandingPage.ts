@@ -380,7 +380,7 @@ export function useLandingPage() {
   const [additionalFlipped, setAdditionalFlipped] = useState<boolean[]>(Array(6).fill(false));
 
   const handleAdRequestSubmit = useCallback(
-    async (requestData: { businessName: string; email: string; phone: string; description: string; infoLink: string }) => {
+    async (requestData: { businessName: string; email: string; phone: string; adLink: string; message: string }) => {
       try {
         const mailtoLink = buildAdRequestMailto(requestData);
         window.location.href = mailtoLink;
@@ -394,7 +394,7 @@ export function useLandingPage() {
       } catch (error) {
         console.error('Error submitting ad request:', error);
         alert(
-          'Failed to open email client. Please contact admin@seventytwox.com directly with your advertising request.',
+          'Failed to open email client. Please contact admin@hapogroup.co.za directly with your advertising request.',
         );
       }
     },

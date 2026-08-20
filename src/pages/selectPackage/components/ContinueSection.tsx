@@ -31,6 +31,13 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
 }) => {
   if (!show) return null;
 
+  const handleContactSales = () => {
+    const to = 'admin@hapogroup.co.za';
+    const subject = 'Package enquiry';
+    const body = `Hi Support Team,\n\nI need help choosing a package.\n\nThank you.`;
+    window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
   return (
     <div className="max-w-6xl mx-auto mt-10">
       <div className="bg-white rounded-2xl border border-gray-200 p-8">
@@ -65,9 +72,32 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            {!isMandatorySelection && !shouldShowFreeTrial && (
+            {isAuthenticated && (
               <button
-                onClick={() => onNavigate(isAuthenticated ? '/dashboard' : '/create-password')}
+                type="button"
+                onClick={() => {
+                  if (isAuthenticated) {
+                    // Clear any in-progress package/payment state so the user is not bounced back
+                    // by ProtectedRoute / PackageSelectionRedirect.
+                    localStorage.removeItem('selectedPackage');
+                    localStorage.removeItem('userPackage');
+                    localStorage.removeItem('requiresPackageSelection');
+
+                    // Treat "skip" as a temporary free-trial-like access window.
+                    // This is frontend-only gating; backend still remains source of truth.
+                    localStorage.setItem('userStatus', 'FREE_TRIAL');
+                    if (!localStorage.getItem('freeTrialStartDate')) {
+                      localStorage.setItem('freeTrialStartDate', new Date().toISOString());
+                    }
+
+                    localStorage.setItem('skipPackageSelectionUntil', String(Date.now() + 24 * 60 * 60 * 1000));
+                  }
+                  if (isAuthenticated) {
+                    onNavigate('/dashboard/overview');
+                    return;
+                  }
+                  onNavigate('/create-password');
+                }}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
               >
                 {isAuthenticated ? 'Skip for now' : 'Back'}
@@ -114,7 +144,7 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
               <Clock className="h-4 w-4 text-blue-500" />
               <span className="text-sm font-medium text-gray-900">14-Day Free Trial</span>
             </div>
-            <p className="text-xs text-gray-600">Full access to all features</p>
+            <p className="text-xs text-gray-600">Access depends on the package you choose (Premium unlocks everything)</p>
           </div>
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <div className="flex items-center justify-center gap-2 mb-2">
@@ -134,11 +164,13 @@ const ContinueSection: React.FC<ContinueSectionProps> = ({
 
         <p className="text-gray-500 text-sm">
           Need help choosing?{' '}
-          <button className="text-primary-600 hover:text-primary-700 font-medium">Contact our sales team</button>
+          <button type="button" onClick={handleContactSales} className="text-primary-600 hover:text-primary-700 font-medium">
+            Contact our sales team
+          </button>
         </p>
         <p className="text-gray-400 text-sm mt-2">
           {shouldShowFreeTrial
-            ? 'Choose between starting with a free trial or immediate payment. Both options give you full access.'
+            ? 'Choose between starting with a free trial or immediate payment. Your access depends on the package you choose (Premium unlocks everything).'
             : isMandatorySelection
               ? 'You must select a package to continue. No credit card required during 14-day trial.'
               : currentSubscription
