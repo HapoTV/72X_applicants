@@ -1,5 +1,6 @@
 // src/services/LearningService.ts
 import axiosClient from '../api/axiosClient';
+import type { AxiosError } from 'axios';
 import type { 
   UserLearningModule, 
   LearningStats,
@@ -38,7 +39,25 @@ class LearningService {
       .toLowerCase()
       .replace(/[_\s]+/g, '-');
     if (normalized === 'business-planning' || normalized === 'businessplanning') return 'business-plan';
+    if (normalized === 'marketing-sales' || normalized === 'marketingsales') return 'marketing';
+    if (normalized === 'financial-management' || normalized === 'financialmanagement') return 'finance';
+    if (normalized === 'standard-bank' || normalized === 'standardbank') return 'standardbank';
     return normalized;
+  }
+
+  /**
+   * Create a new learning material WITHOUT file (URL-based)
+   */
+  async createLearningMaterial(payload: {
+    title: string;
+    type: string;
+    category: string;
+    resourceUrl: string;
+    description?: string;
+    createdBy?: string;
+  }): Promise<any> {
+    const res = await axiosClient.post(`${this.baseUrl}`, payload);
+    return res.data;
   }
 
   /**
@@ -486,7 +505,8 @@ class LearningService {
       return res.status === 204 || res.status === 200;
     } catch (error) {
       console.error('❌ Failed to delete learning material:', error);
-      throw new Error('Failed to delete learning material');
+
+      throw error;
     }
   }
 

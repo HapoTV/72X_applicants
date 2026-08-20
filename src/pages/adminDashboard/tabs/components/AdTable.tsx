@@ -90,7 +90,12 @@ const AdTable: React.FC<AdTableProps> = ({ ads, onEdit, onDelete, onStatusChange
                           alt={ad.title || 'Ad banner'}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=Ad+Image';
+                            const placeholderSvg =
+                              '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150">' +
+                              '<rect width="100%" height="100%" fill="#E5E7EB"/>' +
+                              '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#6B7280" font-family="Arial, Helvetica, sans-serif" font-size="14">Ad Image</text>' +
+                              '</svg>';
+                            (e.target as HTMLImageElement).src = `data:image/svg+xml;utf8,${encodeURIComponent(placeholderSvg)}`;
                             (e.target as HTMLImageElement).className = 'w-full h-full object-cover bg-gray-100';
                           }}
                         />

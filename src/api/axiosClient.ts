@@ -27,6 +27,11 @@ const axiosClient = axios.create({
   // withCredentials: false (default)
 });
 
+/**
+ * ============================
+ * REQUEST INTERCEPTOR
+ * ============================
+ */
 axiosClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     config.headers = config.headers ?? {};
@@ -51,9 +56,7 @@ axiosClient.interceptors.request.use(
       config.headers['X-Organisation'] = organisation;
     }
 
-    // ✅ IMPORTANT:
-    // If sending FormData, DO NOT manually set Content-Type
-    // Browser will automatically set multipart/form-data with boundary
+    // ✅ Let browser handle multipart boundary
     if (config.data instanceof FormData) {
       delete config.headers["Content-Type"];
     }
@@ -63,6 +66,11 @@ axiosClient.interceptors.request.use(
   (error: unknown) => Promise.reject(error)
 );
 
+/**
+ * ============================
+ * RESPONSE INTERCEPTOR
+ * ============================
+ */
 axiosClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
@@ -85,6 +93,9 @@ axiosClient.interceptors.response.use(
       });
     }
 
+    /**
+     * 🌐 Network error (backend down / CORS issue)
+     */
     if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
       throw new Error("Cannot connect to server. Please check if the backend is running.");
     }

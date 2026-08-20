@@ -48,7 +48,7 @@ export function useSelectPackage() {
     () => [
       {
         id: 'startup',
-        name: 'Start-Up',
+        name: 'Start-up',
         description: 'Perfect for new businesses getting started',
         price: 99,
         currency: 'ZAR',

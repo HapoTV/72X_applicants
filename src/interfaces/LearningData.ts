@@ -111,6 +111,10 @@ export interface UserLearningModule {
   fileName?: string;
   type?: string;
 
+  // Backend timestamps (optional)
+  createdAt?: string;
+  updatedAt?: string;
+
   // Backend-tracked per-user progress (optional)
   openedAt?: string;
   finishedAt?: string;

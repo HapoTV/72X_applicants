@@ -107,6 +107,8 @@ export interface UserFormData {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+
+  
 }
 
 // NEW: Interface for organisation-based user operations
