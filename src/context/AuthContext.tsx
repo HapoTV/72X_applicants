@@ -1,8 +1,9 @@
 // src/context/AuthContext.tsx
-import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useState, useContext, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import type { User } from "../interfaces/UserData";
 import userSubscriptionService from "../services/UserSubscriptionService";
+import { authService } from "../services/AuthService";
 
 interface AuthContextType {
   user: User | null;
@@ -46,6 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const [tempSessionToken, setTempSessionToken] = useState<string | null>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const accessRefreshInProgress = useRef(false);
 
   const login = (userData: User, authToken?: string) => {
     localStorage.setItem("user", JSON.stringify(userData));
@@ -196,7 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         console.log('hydrateUserPackage - subscription:', subscription);
 
-        const subscriptionType = subscription?.subscriptionType;
+        const subscriptionType: string | undefined = subscription?.subscriptionType;
         const mapped =
           subscriptionType === 'ESSENTIAL' ? 'essential' :
           subscriptionType === 'PREMIUM' ? 'premium' :
@@ -233,6 +235,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     void hydrateUserPackage();
     return () => { cancelled = true; };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    let cancelled = false;
+
+    const refreshAccessState = async () => {
+      if (cancelled || accessRefreshInProgress.current) return;
+      accessRefreshInProgress.current = true;
+
+      try {
+        const [currentUser, subscription] = await Promise.all([
+          authService.getCurrentUser(),
+          userSubscriptionService.getCurrentUserPackage(),
+        ]);
+
+        if (cancelled) return;
+
+        const nextStatus = currentUser.status || '';
+        const storedUser = localStorage.getItem('user');
+        const parsedUser = storedUser ? JSON.parse(storedUser) : {};
+        const nextUser = { ...parsedUser, ...currentUser };
+        localStorage.setItem('user', JSON.stringify(nextUser));
+        localStorage.setItem('userStatus', nextStatus);
+        setUser(nextUser);
+        window.dispatchEvent(new CustomEvent('user-status-updated'));
+
+        const subscriptionType = subscription?.subscriptionType;
+        const mappedPackage =
+          subscriptionType === 'ESSENTIAL' ? 'essential' :
+          subscriptionType === 'PREMIUM' ? 'premium' :
+          subscriptionType === 'START_UP' || subscriptionType === 'STARTUP' ? 'startup' :
+          null;
+
+        if (mappedPackage) {
+          localStorage.setItem('userPackage', mappedPackage);
+          setUserPackage(mappedPackage);
+          window.dispatchEvent(new CustomEvent('user-package-updated'));
+        } else {
+          localStorage.removeItem('userPackage');
+          setUserPackage(null);
+          window.dispatchEvent(new CustomEvent('user-package-updated'));
+        }
+
+        if (nextStatus === 'PENDING_PACKAGE') {
+          localStorage.setItem('requiresPackageSelection', 'true');
+        } else if (nextStatus === 'ACTIVE' || nextStatus === 'FREE_TRIAL') {
+          localStorage.removeItem('requiresPackageSelection');
+        }
+      } catch (error) {
+        console.warn('Unable to refresh user access state:', error);
+      } finally {
+        accessRefreshInProgress.current = false;
+      }
+    };
+
+    void refreshAccessState();
+    const interval = window.setInterval(() => void refreshAccessState(), 30000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void refreshAccessState();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [token]);
 
   const isAuthenticated = !!token && !!user;

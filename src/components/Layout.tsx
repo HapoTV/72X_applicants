@@ -18,6 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Dashboard subnav removed — features consolidated into main pages
   const [showLayout, setShowLayout] = useState(true);
   const [userStatus, setUserStatus] = useState<string>('');
+  const [accessStateVersion, setAccessStateVersion] = useState(0);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -77,7 +78,20 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         navigate('/login');
       }
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, accessStateVersion]);
+
+  useEffect(() => {
+    const handleAccessStateUpdated = () => {
+      setAccessStateVersion((version) => version + 1);
+    };
+
+    window.addEventListener('user-status-updated', handleAccessStateUpdated);
+    window.addEventListener('user-package-updated', handleAccessStateUpdated);
+    return () => {
+      window.removeEventListener('user-status-updated', handleAccessStateUpdated);
+      window.removeEventListener('user-package-updated', handleAccessStateUpdated);
+    };
+  }, []);
 
   // Listen for sidebar collapse toggle and update margin
   useEffect(() => {
