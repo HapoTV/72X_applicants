@@ -13,14 +13,14 @@ const MobileNav: React.FC = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
-      <div className="flex justify-around py-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)]">
+      <div className="flex justify-around gap-1 px-1 py-2">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
+              `flex min-w-0 flex-1 flex-col items-center rounded-lg px-1 py-2 transition-colors ${
                 isActive
                   ? 'text-primary-600'
                   : 'text-gray-500 hover:text-gray-700'

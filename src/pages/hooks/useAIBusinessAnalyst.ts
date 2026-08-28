@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { aiBusinessAnalystService } from '../../services/AiBusinessAnalystService';
 
-import type { AnalysisTypeId, UsageStats } from '../../services/aiBusinessAnalystTypes';
+import type { AnalysisTypeId, ConversationMessage, UsageStats } from '../../services/aiBusinessAnalystTypes';
 
 export function useAIBusinessAnalyst() {
   const [query, setQuery] = useState('');
@@ -26,9 +26,10 @@ export function useAIBusinessAnalyst() {
     }
   };
 
-  const runAnalysis = async (overrideQuery?: string) => {
+  const runAnalysis = async (overrideQuery?: string, overrideAnalysisType?: AnalysisTypeId) => {
     const q = (overrideQuery ?? query) || '';
     if (!q.trim()) return;
+    const requestAnalysisType = overrideAnalysisType ?? analysisType;
 
     setIsAnalyzing(true);
     setError(null);
@@ -36,9 +37,13 @@ export function useAIBusinessAnalyst() {
     // Append user message to history
     const userMessage: Message = { role: 'user', text: q.trim() };
     setMessages((m) => [...m, userMessage]);
+    setQuery(''); // Clear immediately after sending
 
     try {
-      const data = await aiBusinessAnalystService.analyze(q, analysisType);
+      const conversationHistory: ConversationMessage[] = messages
+        .slice(-10)
+        .map((message) => ({ role: message.role, content: message.text }));
+      const data = await aiBusinessAnalystService.analyze(q, requestAnalysisType, conversationHistory);
       const assistantText = data.analysis;
 
       // Append assistant response to history
@@ -47,6 +52,7 @@ export function useAIBusinessAnalyst() {
       setQuery('');
 
       setTokensUsed(data.totalTokensUsed || data.tokensUsed || 0);
+      setIsAnalyzing(false);
       await fetchUsageStats();
     } catch (err: any) {
       console.error('💥 Analysis error:', err);

@@ -581,7 +581,7 @@ export default function BizBoostChatbot() {
           <div className="flex flex-col h-[560px] md:h-[620px]">
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {history.length === 0 && (
-                <div className="text-xs text-gray-500">Hi — ask me anything about SeventyTwoX. Try quick suggestions below.</div>
+                <div className="text-xs text-gray-500">Hey — ask me anything about your business. I can help you explore ideas, understand your business, solve problems, and make better decisions. Try a quick suggestion below.</div>
               )}
 
               {history.map((m, i) => (
