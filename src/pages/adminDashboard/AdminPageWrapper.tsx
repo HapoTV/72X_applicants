@@ -1,33 +1,50 @@
-import { useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import AdminNavbar from './AdminNavbar';
 import AdminSidebar from './AdminSidebar';
-import { useAuth } from '../../context/AuthContext';
-import { getActiveTabFromPathname } from './utils/adminTabRouting';
+import type { AdminTab } from './AdminSidebar';
 
-interface AdminPageWrapperProps {
+interface Props {
   children: React.ReactNode;
 }
 
-const AdminPageWrapper: React.FC<AdminPageWrapperProps> = ({ children }) => {
+const AdminPageWrapper: React.FC<Props> = ({ children }) => {
   const location = useLocation();
-  const navigate = useNavigate();
-  useAuth();
 
-  const activeTab = useMemo(() => getActiveTabFromPathname(location.pathname) ?? 'applicants', [location.pathname]);
+  const activeTab = useMemo<AdminTab>(() => {
+    const p = location.pathname;
+    if (p.includes('programme-applications')) return 'programme-applications';
+    if (p.includes('/programmes') && p.includes('/create')) return 'programmes';
+    if (p.includes('/programmes')) return 'programmes';
+    if (p.includes('/events')) return 'events';
+    if (p.includes('/learning')) return 'learning';
+    if (p.includes('/mentorship')) return 'mentorship';
+    if (p.includes('/funding')) return 'funding';
+    if (p.includes('/ad')) return 'ad';
+    if (p.includes('/payments')) return 'payments';
+    if (p.includes('/monitor')) return 'monitoring';
+    if (p.includes('/organisation')) return 'organisation';
+    return 'programmes';
+  }, [location.pathname]);
+
+  const handleTabChange = (_tab: AdminTab, path: string) => {
+    // navigation is handled inside AdminSidebar -> useNavigate there
+    // keep this callback to satisfy prop contract
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminNavbar onLogout={() => { localStorage.removeItem('authToken'); localStorage.removeItem('userType'); localStorage.removeItem('userEmail'); localStorage.removeItem('userOrganisation'); localStorage.removeItem('userRole'); navigate('/'); }} />
+      <AdminNavbar onLogout={() => { /* handled elsewhere */ }} />
+
       <div className="flex">
-        <AdminSidebar
-          activeTab={activeTab}
-          onTabChange={(_, path) => {
-            navigate(path);
-          }}
-        />
+        {/* Sidebar stays full-bleed at the left */}
+        <AdminSidebar activeTab={activeTab} onTabChange={handleTabChange} />
+
+        {/* Main content area should match AdminDashboard layout */}
         <main className="flex-1 p-6">
-          {children}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>

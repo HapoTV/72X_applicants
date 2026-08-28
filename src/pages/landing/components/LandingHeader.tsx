@@ -23,14 +23,14 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
-    <header className="bg-[#F5F7FA] sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-0">
-        <div className="flex justify-between items-center h-20">
-          <div className="flex items-center space-x-0">
+    <header className="sticky top-0 z-50 bg-[#F5F7FA]">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex min-h-20 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center">
             <img
               src={logoUrl}
               alt="72X Logo"
-              className="h-16 md:h-20 w-auto cursor-pointer"
+              className="h-14 w-auto max-w-[8rem] cursor-pointer sm:h-16 md:h-20"
               onClick={() => navigate('/')}
               onError={(e) => {
                 (e.target as HTMLImageElement).onerror = null;
@@ -138,27 +138,28 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
               </button>
             </nav>
             {/* Mobile menu toggle - visible on small screens */}
-            <div className="md:hidden pl-3">
+            <div className="pl-2 md:hidden">
               <button
                 aria-label="Toggle menu"
+                aria-expanded={mobileOpen}
                 onClick={() => setMobileOpen((v) => !v)}
-                className="p-2 rounded-md hover:bg-gray-100"
+                className="rounded-md p-2 hover:bg-gray-100"
               >
                 <Menu className="w-6 h-6 text-gray-700" />
               </button>
             </div>
           </div>
 
-          <div className="flex items-center space-x-1">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={() => navigate('/request-demo')}
-              className="text-gray-700  hover:bg-[#3B82F6] px-0.5 py-0.1 rounded-lg font-semibold text-lg transition-all duration-100  hover:text-gray-900 px-1 py-2 text-lg font-semibold transition-colors"
+              className="hidden rounded-lg px-1 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-[#3B82F6] hover:text-gray-900 sm:inline-flex sm:text-base"
             >
               Request demo
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="text-black bg-[#60A5FA] hover:bg-[#3B82F6] px-2 py-1.5 rounded-lg font-semibold text-lg transition-all duration-200 shadow-sm hover:shadow-md"
+              className="rounded-lg bg-[#60A5FA] px-3 py-2 text-sm font-semibold text-black shadow-sm transition-all duration-200 hover:bg-[#3B82F6] hover:shadow-md sm:px-4 sm:text-base"
             >
               Log in
             </button>
@@ -166,8 +167,8 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
         </div>
         {/* Mobile navigation panel */}
         {mobileOpen && (
-          <div className="md:hidden bg-[#F5F7FA] border-t border-gray-200 z-40">
-            <div className="px-4 py-4 space-y-2">
+          <div className="absolute left-0 right-0 top-full border-t border-gray-200 bg-[#F5F7FA] shadow-md md:hidden">
+            <div className="space-y-2 px-4 py-4 sm:px-6">
               <button
                 onClick={() => { setMobileOpen(false); navigate('/'); setTimeout(() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }), 120); }}
                 className="w-full text-left text-gray-700 px-2 py-2 rounded font-semibold"

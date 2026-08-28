@@ -78,7 +78,7 @@ const ProgramsPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-[#F5F7FA] text-slate-900">
       <LandingHeader
         navigate={navigate}
         productDropdownOpen={productDropdownOpen}
@@ -88,42 +88,42 @@ const ProgramsPage: React.FC = () => {
         onProductItemClick={handleProductItemClick}
       />
 
-      <main className="mx-auto max-w-7xl px-6 py-10 sm:px-8 lg:px-10">
-        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-gradient-to-br from-[#EFF6FF] via-white to-[#F8FAFC] shadow-sm">
-          <div className="grid items-center gap-10 px-6 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:px-12 lg:py-20">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
+        <section className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-[#EFF6FF] via-white to-[#F8FAFC] shadow-sm">
+          <div className="grid items-center gap-8 px-4 py-10 sm:gap-10 sm:px-8 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:px-12 lg:py-20">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-[#BFDBFE] bg-white/80 px-3 py-1 text-sm font-medium text-[#2563EB]">
                 <Sparkles className="h-4 w-4" />
                 Development Programmes
               </div>
-              <h1 className="mt-6 text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl">
+              <h1 className="mt-6 break-words text-3xl font-semibold leading-tight text-slate-900 sm:text-5xl">
                 Business Development Programmes
               </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
+              <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
                 Discover entrepreneurship, business development and skills programmes offered through 72X and our trusted partners. Browse available opportunities and apply online without creating a 72X account.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={() => document.getElementById('available-programmes')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="inline-flex items-center justify-center rounded-full bg-[#2563EB] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#1D4ED8]"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#2563EB] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1D4ED8] sm:w-auto sm:px-6"
                 >
                   View Available Programmes
                 </button>
                 <button
                   onClick={() => document.getElementById('about-programmes')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#93C5FD] hover:text-[#2563EB]"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#93C5FD] hover:text-[#2563EB] sm:w-auto sm:px-6"
                 >
                   Learn More
                 </button>
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-lg">
-              <div className="rounded-[24px] bg-gradient-to-br from-[#2563EB] to-[#60A5FA] p-6 text-white">
-                <div className="flex items-center justify-between">
+            <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-lg sm:p-6">
+              <div className="rounded-3xl bg-gradient-to-br from-[#2563EB] to-[#60A5FA] p-5 text-white sm:p-6">
+                <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-100">Programme Support</p>
-                    <h2 className="mt-2 text-2xl font-semibold">Business growth, mentorship and opportunity</h2>
+                    <h2 className="mt-2 text-xl font-semibold sm:text-2xl">Business growth, mentorship and opportunity</h2>
                   </div>
                   <div className="rounded-2xl bg-white/20 p-3">
                     <Compass className="h-8 w-8" />
@@ -144,11 +144,11 @@ const ProgramsPage: React.FC = () => {
           </div>
         </section>
 
-        <section id="about-programmes" className="mx-auto mt-20 max-w-5xl rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
+        <section id="about-programmes" className="mx-auto mt-14 max-w-5xl rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:mt-20 sm:p-10">
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#2563EB]">About Our Programmes</p>
-              <h2 className="mt-3 text-3xl font-semibold text-slate-900">Supporting entrepreneurs, SMMEs, NGOs and communities</h2>
+              <h2 className="mt-3 text-2xl font-semibold text-slate-900 sm:text-3xl">Supporting entrepreneurs, SMMEs, NGOs and communities</h2>
             </div>
             <div className="text-lg leading-8 text-slate-600">
               72X works with trusted organisations and development partners to deliver programmes that support entrepreneurs, SMMEs, NGOs and communities across South Africa.
@@ -162,10 +162,10 @@ const ProgramsPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="mt-20">
+        <section className="mt-14 sm:mt-20">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#2563EB]">Why Apply</p>
-            <h2 className="mt-3 text-3xl font-semibold text-slate-900">Support designed to help you grow with confidence</h2>
+            <h2 className="mt-3 text-2xl font-semibold text-slate-900 sm:text-3xl">Support designed to help you grow with confidence</h2>
           </div>
           <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {whyApplyItems.map((item, index) => {

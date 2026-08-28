@@ -9,6 +9,12 @@ export type AnalysisTypeId =
 export interface AnalysisRequest {
   query: string;
   analysisType: AnalysisTypeId;
+  conversationHistory?: ConversationMessage[];
+}
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 export interface AnalysisResponse {

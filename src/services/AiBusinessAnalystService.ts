@@ -2,7 +2,7 @@
 // Thin service wrapper around the AI Business Analyst backend
 
 import axiosClient from '../api/axiosClient';
-import type { AnalysisRequest, AnalysisResponse, UsageStats } from './aiBusinessAnalystTypes';
+import type { AnalysisRequest, AnalysisResponse, ConversationMessage, UsageStats } from './aiBusinessAnalystTypes';
 
 export const aiBusinessAnalystService = {
   async fetchUsage(): Promise<UsageStats | null> {
@@ -15,11 +15,15 @@ export const aiBusinessAnalystService = {
     }
   },
 
-  async analyze(query: string, analysisType: AnalysisRequest['analysisType']): Promise<AnalysisResponse> {
+  async analyze(
+    query: string,
+    analysisType: AnalysisRequest['analysisType'],
+    conversationHistory: ConversationMessage[] = [],
+  ): Promise<AnalysisResponse> {
     console.log('🔍 Sending request to:', '/ai-analytics/analyze');
     const response = await axiosClient.post(
       '/ai-analytics/analyze',
-      { query, analysisType },
+      { query, analysisType, conversationHistory: conversationHistory.slice(-10) },
       {
         headers: { 'Content-Type': 'application/json' },
         timeout: 120000,
