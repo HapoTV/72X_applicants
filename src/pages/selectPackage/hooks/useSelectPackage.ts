@@ -79,7 +79,6 @@ export function useSelectPackage() {
           '14-day free trial',
         ],
         popular: true,
-        disabled: true,
         backendType: UserSubscriptionType.ESSENTIAL,
         iconType: 'sparkles',
         color: 'text-purple-600',
@@ -99,7 +98,6 @@ export function useSelectPackage() {
           'Advanced AI tools',
           '14-day free trial',
         ],
-        disabled: true,
         backendType: UserSubscriptionType.PREMIUM,
         iconType: 'crown',
         color: 'text-amber-600',
@@ -226,7 +224,7 @@ export function useSelectPackage() {
 
   const handlePackageSelect = useCallback((pkgId: string) => {
     const pkg = packageConfigs.find((p) => p.id === pkgId);
-    if (!pkg || pkg.disabled) return;
+    if (!pkg) return;
     setSelectedPackage(pkgId);
     setShowPaymentOptions(true);
   }, [packageConfigs]);
@@ -273,13 +271,10 @@ export function useSelectPackage() {
     setIsActivatingTrial(true);
     try {
       const selectedPkg = packageConfigs.find((p) => p.id === selectedPackage);
-      if (selectedPkg?.disabled) {
-        alert('This package is not available yet. Please select the Start-Up package.');
-        return;
-      }
       if (selectedPkg) {
         const response = await userSubscriptionService.activateFreeTrial(selectedPkg.backendType);
         if (response && response.success) {
+          await fetchCurrentSubscription();
           const serializablePackageData = {
             id: selectedPkg.id, name: selectedPkg.name, description: selectedPkg.description,
             price: selectedPkg.price, currency: selectedPkg.currency, interval: selectedPkg.interval,
@@ -307,7 +302,7 @@ export function useSelectPackage() {
     } finally {
       setIsActivatingTrial(false);
     }
-  }, [selectedPackage, packageConfigs, navigate]);
+  }, [selectedPackage, packageConfigs, navigate, fetchCurrentSubscription]);
 
   const handleProceedToPayment = useCallback(async () => {
     if (!selectedPackage) { alert('Please select a package to continue'); return; }
@@ -315,11 +310,10 @@ export function useSelectPackage() {
     setIsLoading(true);
     try {
       const selectedPkg = packageConfigs.find((p) => p.id === selectedPackage);
-      if (selectedPkg?.disabled) {
-        alert('This package is not available yet. Please select the Start-Up package.');
-        return;
-      }
       if (selectedPkg) {
+        await userSubscriptionService.selectPackage(selectedPkg.backendType);
+        await fetchCurrentSubscription();
+
         const serializablePackageData = {
           id: selectedPkg.id, name: selectedPkg.name, description: selectedPkg.description,
           price: selectedPkg.price, currency: selectedPkg.currency, interval: selectedPkg.interval,
@@ -330,7 +324,6 @@ export function useSelectPackage() {
         localStorage.setItem('selectedPackage', JSON.stringify(serializablePackageData));
         localStorage.setItem('userPackage', selectedPkg.id);
         window.dispatchEvent(new CustomEvent('user-package-updated'));
-        await userSubscriptionService.selectPackage(selectedPkg.backendType);
         localStorage.setItem('userStatus', 'PENDING_PAYMENT');
         localStorage.setItem('requiresPackageSelection', 'false');
         setUserStatus('PENDING_PAYMENT');
@@ -342,7 +335,7 @@ export function useSelectPackage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPackage, packageConfigs, navigate]);
+  }, [selectedPackage, packageConfigs, navigate, fetchCurrentSubscription]);
 
   return {
     isAuthenticated,

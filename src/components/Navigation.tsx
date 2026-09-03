@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import MessageServices from '../services/MessageServices';
 import { authService } from '../services/AuthService';
-import { useAuth } from '../context/AuthContext';
 
 const appLogoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
 
@@ -33,7 +32,6 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ onClose, onCommunityToggle }) => {
   const navigate = useNavigate();
-  const { userPackage } = useAuth();
   const upgradesDisabled = false;
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<boolean>(() => localStorage.getItem('navCollapsed') === '1');
@@ -182,16 +180,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onCommunityToggle }) =
   ];
 
   const isFeatureLocked = (_itemPackage: PackageType): boolean => {
-    const lockFlag = localStorage.getItem('lockFeatures');
-    const gatingEnabled = lockFlag === null ? true : lockFlag === '1';
-    if (!gatingEnabled) return false;
-
-    const ls = localStorage.getItem('userPackage');
-    const userPackageRaw = (userPackage || ls || 'startup') as PackageType;
-    const order: Record<PackageType, number> = { startup: 0, essential: 1, premium: 2 };
-    const userOrder = order[userPackageRaw] ?? 0;
-    const requiredOrder = order[_itemPackage] ?? 0;
-    return userOrder < requiredOrder;
+    return false;
   };
 
   const closeAllSecondaryNavs = () => {

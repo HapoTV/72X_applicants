@@ -30,7 +30,6 @@ const PackageGrid: React.FC<PackageGridProps> = ({
       {packageConfigs.map((pkg) => {
         const isCurrent = isCurrentPackage(pkg.id);
         const isSelected = selectedPackage === pkg.id;
-        const isComingSoon = pkg.disabled === true;
 
         return (
           <div
@@ -47,14 +46,6 @@ const PackageGrid: React.FC<PackageGridProps> = ({
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <span className="px-4 py-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-semibold rounded-full">
                   Most Popular
-                </span>
-              </div>
-            )}
-
-            {isComingSoon && (
-              <div className="absolute -top-3 left-4">
-                <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-semibold rounded-full">
-                  Coming Soon
                 </span>
               </div>
             )}
@@ -101,22 +92,18 @@ const PackageGrid: React.FC<PackageGridProps> = ({
 
               <button
                 onClick={() => onSelect(pkg.id)}
-                disabled={isComingSoon || isCurrent || (!isAuthenticated && !isMandatorySelection)}
+                disabled={isCurrent || (!isAuthenticated && !isMandatorySelection)}
                 className={`w-full py-3 rounded-lg font-semibold transition-colors mb-2 ${
                   isCurrent
                     ? 'bg-green-100 text-green-800 cursor-default'
-                    : isComingSoon
-                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                      : !isAuthenticated && !isMandatorySelection
+                    : !isAuthenticated && !isMandatorySelection
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : isSelected
                         ? 'bg-primary-500 text-white hover:bg-primary-600'
                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                 }`}
               >
-                {isComingSoon
-                  ? 'Coming Soon'
-                  : !isAuthenticated && !isMandatorySelection
+                {!isAuthenticated && !isMandatorySelection
                   ? 'Login to Select'
                   : isCurrent
                     ? 'Current Plan'
