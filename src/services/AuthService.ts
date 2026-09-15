@@ -233,23 +233,22 @@ class AuthService {
         token,
         newPassword
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Reset password error:', error);
-      throw new Error('Failed to reset password.');
-    }
 
-    if (error.response?.status === 400) {
-      errorMessage = 'Invalid or expired reset link.';
-    }
+      let errorMessage = 'Failed to reset password.';
 
-    if (error.response?.status === 404) {
-      errorMessage = 'Reset request not found.';
-    }
+      if (error.response?.status === 400) {
+        errorMessage = 'Invalid or expired reset link.';
+      }
 
-    throw new Error(errorMessage);
+      if (error.response?.status === 404) {
+        errorMessage = 'Reset request not found.';
+      }
+
+      throw new Error(errorMessage);
+    }
   }
-}
-  
 
   /**
    * Reset password verify
