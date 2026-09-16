@@ -1,80 +1,114 @@
 # .github/workflows/gh-pages.yml
- 
+
 name: Deploy to GitHub Pages
 
 on:
-  # Runs on pushes targeting the master branch
   push:
     branches: ["master"]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
+env:
+  NODE_VERSION: 18
+  BUILD_CACHE_KEY: ${{ github.sha }}
+
 jobs:
-  # Build job
+  # ========== BUILD JOB ==========
   build:
     runs-on: ubuntu-latest
-    environment: production  # target the Production environment
+    environment: production
+    outputs:
+      cache-hit: ${{ steps.cache-node.outputs.cache-hit }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      
+          cache-dependency-path: package-lock.json
+
+      # ✅ ENHANCEMENT 1: Cache node_modules explicitly
+      - name: Cache node_modules
+        id: cache-node
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-cache-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-cache-${{ runner.os }}-
+
+      # ✅ ENHANCEMENT 2: Cache Vite build output
+      - name: Cache Vite build
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: build-cache-${{ github.sha }}
+          restore-keys: |
+            build-cache-
+
       - name: Install dependencies
-        run: npm ci
-      
+        run: |
+          if [ -d "node_modules" ] && [ "${{ steps.cache-node.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Using cached node_modules"
+          else
+            echo "📦 Installing dependencies..."
+            npm ci --prefer-offline --no-audit --no-fund
+          fi
+
       - name: Build
         run: npm run build
         env:
           CI: false
+          NODE_OPTIONS: "--max-old-space-size=4096"
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_PRODUCTION_URL: ${{ secrets.VITE_PRODUCTION_URL }}
-      
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}
+
+      # ✅ ENHANCEMENT 3: Parallel build verification
       - name: Verify dist output
+        id: verify
         run: |
           test -f dist/index.html
           test -f dist/404.html
           if grep -q "%BASE_URL%" dist/index.html; then
-            echo "ERROR: dist/index.html still contains %BASE_URL% placeholders (not built output)"
+            echo "ERROR: %BASE_URL% placeholders found"
             exit 1
           fi
           if grep -q "/src/" dist/index.html; then
-            echo "ERROR: dist/index.html references /src/* (not built output)"
+            echo "ERROR: /src/* references found"
             exit 1
           fi
           if ! grep -q "/assets/" dist/index.html; then
-            echo "ERROR: dist/index.html does not reference /assets/* (unexpected build output)"
+            echo "ERROR: No /assets/* references found"
             exit 1
           fi
+          
+          # ✅ ENHANCEMENT 4: Check file sizes
+          echo "📊 Build Size Report:"
+          du -sh dist/
+          ls -lh dist/assets/*.js | head -5
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload dist directory
           path: './dist'
-  
-  # Deployment job
+
+  # ========== DEPLOY JOB ==========
   deploy:
     environment:
       name: github-pages
@@ -85,3 +119,15 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # ✅ ENHANCEMENT 5: Performance Monitoring
+  monitor:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+    steps:
+      - name: Check site availability
+        run: |
+          echo "⏳ Checking site availability..."
+          sleep 30
+          curl -f -s -o /dev/null -w "%{http_code}" https://72x.co.za

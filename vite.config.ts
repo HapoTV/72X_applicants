@@ -1,4 +1,5 @@
 // vite.config.ts
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { copyFileSync } from 'fs'
@@ -35,7 +36,10 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      // Ensure HTML is processed
+      minify: isProduction ? 'esbuild' : false, // FIXED: Use esbuild instead of terser
+      chunkSizeWarningLimit: 1000,
+      sourcemap: isProduction ? false : true,
+      assetsInlineLimit: 4096,
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
@@ -59,6 +63,8 @@ export default defineConfig(({ mode }) => {
               '@radix-ui/react-tooltip',
             ],
             'vendor-utils': ['axios', 'date-fns', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+            'vendor-query': ['@tanstack/react-query'],
+            'vendor-lucide': ['lucide-react'],
           },
         },
       },
@@ -66,6 +72,9 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       host: true,
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-router-dom', 'axios', '@tanstack/react-query'],
     },
   }
 })
