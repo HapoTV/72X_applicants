@@ -108,7 +108,7 @@ const Navigation: React.FC<NavigationProps> = ({ onClose, onCommunityToggle }) =
       window.removeEventListener('storage', refreshProfileImage);
       window.removeEventListener('user-updated', handleUserUpdated as EventListener);
     };
-  }, [isHydratingProfileImage, profileImageUrl]);
+  }, []);
 
   const userStatus = localStorage.getItem('userStatus');
   const isFreeTrial = userStatus === 'FREE_TRIAL';
