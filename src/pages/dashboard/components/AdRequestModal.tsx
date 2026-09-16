@@ -34,6 +34,7 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
       required: "This field is required",
       submitting: "Sending..."
     },
+
     af: {
       requestAdSpace: "Versoek Advertensieruimte",
       businessName: "Besigheidsnaam",
@@ -49,6 +50,7 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
       required: "Hierdie veld is verpligtend",
       submitting: "Stuur..."
     },
+
     zu: {
       requestAdSpace: "Cela Isikhala Sokukhangisa",
       businessName: "Igama Lebhizinisi",
@@ -180,15 +182,29 @@ const AdRequestModal: React.FC<AdRequestModalProps> = ({ isOpen, onClose, onSubm
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t.message} *
+                  {t.description} *
                 </label>
                 <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
-                  placeholder="E.g., I'd like to advertise my business for 1 month, targeting entrepreneurs in Johannesburg..."
+                  placeholder="E.g., What is your ad about and what should we know?"
+                />
+                <p className="text-xs text-gray-700 mt-1 font-semibold">{t.recommendedSize}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.infoLink}
+                </label>
+                <input
+                  type="url"
+                  value={infoLink}
+                  onChange={(e) => setInfoLink(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="https://..."
                 />
               </div>
             </div>

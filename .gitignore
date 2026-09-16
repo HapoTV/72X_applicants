@@ -10,7 +10,16 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-crm
+dist-finance
+dist-tenderlyai
 *.local
+
+# Vite per-app dep caches
+node_modules/.vite-main
+node_modules/.vite-crm
+node_modules/.vite-finance
+node_modules/.vite-tenderlyai
 
 # Editor directories and files
 .vscode/*

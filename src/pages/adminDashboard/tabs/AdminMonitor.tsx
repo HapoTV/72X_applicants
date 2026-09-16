@@ -18,6 +18,7 @@ const AdminMonitor: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [supabaseMetrics, setSupabaseMetrics] = useState<SupabaseMetrics | null>(null);
+
   const [issues, setIssues] = useState<SystemIssue[]>([]);
   const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
   const [loading, setLoading] = useState(true);

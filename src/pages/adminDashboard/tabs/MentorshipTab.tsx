@@ -162,7 +162,7 @@ export default function MentorshipTab() {
                 </div>
                 <button 
                     onClick={() => setShowAddMentor(true)}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
+                    className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg"
                 >
                     Add Mentor
                 </button>

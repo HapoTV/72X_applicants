@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Tag } from 'lucide-react';
-import Spinner from '../components/Spinner';
 import { marketplaceService } from '../services/MarketplaceService';
 import { useAuth } from '../context/AuthContext';
 import type { UserProductItem, MarketplaceCategory, MarketplaceLocation } from '../interfaces/MarketplaceData';
@@ -79,7 +78,7 @@ const Marketplace: React.FC = () => {
     params.set('userId', String(sellerId));
     params.set('message', message);
     params.set('autoSend', '1');
-    navigate(`/connections?${params.toString()}`);
+    navigate(`/community?tab=connections&${params.toString()}`);
     closeProductPreview();
   };
 
@@ -505,7 +504,7 @@ const Marketplace: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Spinner size="xl" color="primary" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
       </div>
     );
   }

@@ -23,6 +23,6 @@ Message:
 ${params.message}
   `;
 
-  const adminEmail = 'admin@hapogroup.co.za';
-  return `mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const supportEmail = 'admin@hapogroup.co.za';
+  return `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 };

@@ -79,8 +79,31 @@ const AdTab: React.FC = () => {
   }, [currentPage, isSuperAdmin, itemsPerPage]);
 
   useEffect(() => {
+    if (!isSuperAdmin) {
+      return;
+    }
     fetchAds();
-  }, [fetchAds]);
+  }, [fetchAds, isSuperAdmin]);
+
+  // Check if user is super admin
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="bg-red-50 p-8 rounded-xl text-center max-w-md">
+          <Crown className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600 mb-4">
+            Only Super Admins can manage advertisements.
+          </p>
+          <div className="bg-red-100 p-4 rounded-lg">
+            <p className="text-sm text-red-700">
+              If you need to manage ads, please contact your system administrator.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Check if user is super admin
   if (!isSuperAdmin) {

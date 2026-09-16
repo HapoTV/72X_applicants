@@ -16,12 +16,15 @@ interface LearningTabProps {
 interface LearningItem {
     id: string;
     title: string;
+
     type: 'ARTICLE' | 'VIDEO' | 'DOCUMENT';
     category: string;
     resourceUrl?: string;
     fileName?: string;
     fileSize?: string;
     updated?: string;
+    updatedAt?: string;
+    createdAt?: string;
     createdBy: string;
     createdByOrganisation?: string;
     targetOrganisation?: string;
@@ -142,7 +145,7 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
                 'leadership': [],
                 'technical': [],
             };
-            
+
             allMaterials.forEach((material: any) => {
                 const backendCategory = material.category || '';
                 const frontendCategory = backendToFrontendCategory[backendCategory] || 
@@ -179,6 +182,17 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
                         transformedData['business-plan'].push(learningItem);
                     }
                 }
+            });
+
+            (Object.keys(transformedData) as LearningSection[]).forEach((section) => {
+                transformedData[section].sort((a, b) => {
+                    const aDateRaw = a.updatedAt || a.createdAt || a.updated;
+                    const bDateRaw = b.updatedAt || b.createdAt || b.updated;
+
+                    const aTime = aDateRaw ? new Date(aDateRaw).getTime() : 0;
+                    const bTime = bDateRaw ? new Date(bDateRaw).getTime() : 0;
+                    return bTime - aTime;
+                });
             });
             
             setLearningData(transformedData);
@@ -347,13 +361,20 @@ export default function LearningTab({ isCocAdmin = false }: LearningTabProps) {
 
         try {
             console.log('Deleting material:', materialId);
-            await axiosClient.delete(`/learning-materials/${materialId}`);
+
+            await learningService.deleteLearningMaterial(materialId);
+
             await fetchLearningMaterials();
             alert('Learning material deleted successfully!');
         } catch (error: any) {
             console.error('Error deleting learning material:', error);
+
             if (error.response?.status === 400) {
                 alert('Delete failed. Backend rejected the request.');
+            } else if (error.response?.data?.message) {
+                alert(`Error deleting learning material: ${error.response.data.message}`);
+            } else if (error.response?.data?.error) {
+                alert(`Error deleting learning material: ${error.response.data.error}`);
             } else {
                 alert('Error deleting learning material.');
             }
