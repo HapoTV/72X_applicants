@@ -1,4 +1,5 @@
 // vite.config.ts
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { copyFileSync } from 'fs'
@@ -26,13 +27,6 @@ export default defineConfig(({ mode }) => {
       }
     ],
     base: base,
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src'),
-      },
-      // Ensure only one copy of React is used across all imports
-      dedupe: ['react', 'react-dom', 'react-router-dom'],
-    },
     define: {
       'process.env.NODE_ENV': `"${mode}"`,
       'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'https://oxabqoodvqvqskrztrsq.supabase.co'),
@@ -42,7 +36,10 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      // Ensure HTML is processed
+      minify: isProduction ? 'esbuild' : false, // FIXED: Use esbuild instead of terser
+      chunkSizeWarningLimit: 1000,
+      sourcemap: isProduction ? false : true,
+      assetsInlineLimit: 4096,
       rollupOptions: {
         input: {
           main: resolve(__dirname, 'index.html'),
@@ -66,6 +63,8 @@ export default defineConfig(({ mode }) => {
               '@radix-ui/react-tooltip',
             ],
             'vendor-utils': ['axios', 'date-fns', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+            'vendor-query': ['@tanstack/react-query'],
+            'vendor-lucide': ['lucide-react'],
           },
         },
       },
@@ -74,6 +73,8 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
     },
-    cacheDir: 'node_modules/.vite-main',
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-router-dom', 'axios', '@tanstack/react-query'],
+    },
   }
 })
