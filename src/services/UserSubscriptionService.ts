@@ -27,8 +27,11 @@ class UserSubscriptionService {
       }
 
       return response.data as UserSubscriptionData;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting user package:', error);
+      if (error.response?.status && error.response.status !== 404) {
+        throw error;
+      }
       return null;
     }
   }
@@ -55,8 +58,11 @@ class UserSubscriptionService {
       }
       
       return response.data as UserSubscriptionData;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting user package:', error);
+      if (error.response?.status && error.response.status !== 404) {
+        throw error;
+      }
       return null;
     }
   }

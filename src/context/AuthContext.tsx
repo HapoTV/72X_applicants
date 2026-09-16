@@ -224,8 +224,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (isStandaloneOrg) {
           if (!cancelled) await handleNoSubscription();
         }
-      } catch {
-        if (!cancelled) await handleNoSubscription();
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('Unable to hydrate user package; preserving existing access state:', error);
+        }
       } finally {
         if (!cancelled) {
           localStorage.setItem('userPackageHydrated', 'true');

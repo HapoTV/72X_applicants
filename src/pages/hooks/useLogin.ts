@@ -26,6 +26,11 @@ function loginPathForType(loginType: LoginType): string {
   return '/login';
 }
 
+function appRouteHref(path: string): string {
+  const baseUrl = import.meta.env.BASE_URL;
+  return `${baseUrl}#${path}`;
+}
+
 function isLoginTypeAllowedForRole(roleRaw: string | undefined | null, loginType: LoginType | undefined): boolean {
   const expected = expectedLoginTypeForRole(roleRaw);
   if (!expected || !loginType) return true;
@@ -157,7 +162,7 @@ async function completeLogin(loginResponse: LoginResponse, login: (user: User, a
       localStorage.removeItem('authToken');
       alert(PERMISSION_DENIED_MESSAGE);
       const expected = expectedLoginTypeForRole((loginResponse as any).role) || 'user';
-      window.location.href = `${import.meta.env.BASE_URL}${loginPathForType(expected).replace(/^\//, '')}`;
+      window.location.href = appRouteHref(loginPathForType(expected));
       return;
     }
 
@@ -204,25 +209,24 @@ async function completeLogin(loginResponse: LoginResponse, login: (user: User, a
     }
 
     setTimeout(() => {
-      const baseUrl = import.meta.env.BASE_URL;
       const role = userRole.toUpperCase();
 
-      if (loginType === 'cocadmin' || role === 'COC_ADMIN') { window.location.href = `${baseUrl}cocadmin/dashboard/applicants`; return; }
-      if (role === 'SUPER_ADMIN' || role === 'ADMIN') { window.location.href = `${baseUrl}admin/dashboard/overview`; return; }
+      if (loginType === 'cocadmin' || role === 'COC_ADMIN') { window.location.href = appRouteHref('/cocadmin/dashboard/applicants'); return; }
+      if (role === 'SUPER_ADMIN' || role === 'ADMIN') { window.location.href = appRouteHref('/admin/dashboard/overview'); return; }
 
       const userStatus = loginResponse.status || localStorage.getItem('userStatus');
       const selectedPackage = localStorage.getItem('selectedPackage');
 
       if ((loginResponse as any).requiresPackageSelection === false && userStatus === 'ACTIVE') {
-        window.location.href = `${baseUrl}dashboard/overview`;
+        window.location.href = appRouteHref('/dashboard/overview');
       } else if (userStatus === 'PENDING_PACKAGE') {
-        window.location.href = `${baseUrl}select-package`;
+        window.location.href = appRouteHref('/select-package');
       } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
-        window.location.href = `${baseUrl}payments/new`;
+        window.location.href = appRouteHref('/payments/new');
       } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
-        window.location.href = `${baseUrl}select-package`;
+        window.location.href = appRouteHref('/select-package');
       } else {
-        window.location.href = `${baseUrl}dashboard/overview`;
+        window.location.href = appRouteHref('/dashboard/overview');
       }
     }, 100);
   } catch (error: any) {

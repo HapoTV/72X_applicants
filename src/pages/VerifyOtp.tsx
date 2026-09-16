@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 
 const logoUrl = `${import.meta.env.BASE_URL}Logo2.svg`;
 
+const appRouteHref = (path: string) => `${import.meta.env.BASE_URL}#${path}`;
+
 const VerifyOtp: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -118,16 +120,15 @@ const VerifyOtp: React.FC = () => {
                 login(userData, response.token);
                 
                 setTimeout(() => {
-                    const baseUrl = import.meta.env.BASE_URL;
                     const role = userRole.toUpperCase();
 
                     if (role === 'COC_ADMIN') {
-                        window.location.href = `${baseUrl}cocadmin/dashboard/applicants`;
+                        window.location.href = appRouteHref('/cocadmin/dashboard/applicants');
                         return;
                     }
 
                     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-                        window.location.href = `${baseUrl}admin/dashboard/overview`;
+                        window.location.href = appRouteHref('/admin/dashboard/overview');
                         return;
                     }
 
@@ -136,15 +137,15 @@ const VerifyOtp: React.FC = () => {
                     const selectedPackage = localStorage.getItem('selectedPackage');
 
                     if (response.requiresPackageSelection === false && userStatus === 'ACTIVE') {
-                        window.location.href = `${baseUrl}dashboard/overview`;
+                        window.location.href = appRouteHref('/dashboard/overview');
                     } else if (response.requiresPackageSelection === true || userStatus === 'PENDING_PACKAGE') {
-                        window.location.href = `${baseUrl}select-package`;
+                        window.location.href = appRouteHref('/select-package');
                     } else if (userStatus === 'PENDING_PAYMENT' && selectedPackage) {
-                        window.location.href = `${baseUrl}payments/new`;
+                        window.location.href = appRouteHref('/payments/new');
                     } else if (userStatus === 'PENDING_PAYMENT' && !selectedPackage) {
-                        window.location.href = `${baseUrl}select-package`;
+                        window.location.href = appRouteHref('/select-package');
                     } else {
-                        window.location.href = `${baseUrl}dashboard/overview`;
+                        window.location.href = appRouteHref('/dashboard/overview');
                     }
                 }, 300);
             } else {
