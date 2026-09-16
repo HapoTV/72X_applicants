@@ -26,6 +26,13 @@ export default defineConfig(({ mode }) => {
       }
     ],
     base: base,
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, 'src'),
+      },
+      // Ensure only one copy of React is used across all imports
+      dedupe: ['react', 'react-dom', 'react-router-dom'],
+    },
     define: {
       'process.env.NODE_ENV': `"${mode}"`,
       'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'https://oxabqoodvqvqskrztrsq.supabase.co'),
@@ -67,5 +74,6 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
     },
+    cacheDir: 'node_modules/.vite-main',
   }
 })
