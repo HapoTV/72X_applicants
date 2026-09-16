@@ -1,5 +1,5 @@
 import React from 'react';
-import 'boxicons';
+import 'boxicons/css/boxicons.min.css';
 import reactSvg from '../assets/react.png';
 import retailImg from '../assets/retail.svg';
 import tourismImg from '../assets/tourism.svg';
