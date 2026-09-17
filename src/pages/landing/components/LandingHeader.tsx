@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Menu } from 'lucide-react';
 import type { ProductCategory, ProductCategoryItem } from '../hooks/useLandingPage';
 
@@ -22,6 +22,33 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
   onProductItemClick,
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Grace period so a quick mouse movement between the trigger and the
+  // panel (or a brief dip outside both) doesn't close the dropdown before
+  // a click can land.
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+
+  const handleDropdownEnter = () => {
+    clearCloseTimer();
+    setProductDropdownOpen(true);
+  };
+
+  const handleDropdownLeave = () => {
+    clearCloseTimer();
+    closeTimerRef.current = setTimeout(() => {
+      setProductDropdownOpen(false);
+    }, 200);
+  };
+
+  useEffect(() => clearCloseTimer, []);
+
   return (
     <header className="sticky top-0 z-50 bg-[#F5F7FA]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -55,8 +82,8 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
               <div
                 className="relative"
                 ref={productDropdownRef}
-                onMouseEnter={() => setProductDropdownOpen(true)}
-                onMouseLeave={() => setProductDropdownOpen(false)}
+                onMouseEnter={handleDropdownEnter}
+                onMouseLeave={handleDropdownLeave}
               >
                 <button
                   onClick={() => setProductDropdownOpen(!productDropdownOpen)}
@@ -70,9 +97,9 @@ const LandingHeader: React.FC<LandingHeaderProps> = ({
 
                 {productDropdownOpen && (
                   <div
-                    className="fixed left-0 right-0 mt-2 bg-white shadow-xl z-50 py-8"
-                    onMouseEnter={() => setProductDropdownOpen(true)}
-                    onMouseLeave={() => setProductDropdownOpen(false)}
+                    className="fixed left-0 right-0 top-20 bg-white shadow-xl z-50 py-8"
+                    onMouseEnter={handleDropdownEnter}
+                    onMouseLeave={handleDropdownLeave}
                   >
                     <div className="max-w-7xl mx-auto px-8">
                       <div className="grid grid-cols-5 gap-8">
