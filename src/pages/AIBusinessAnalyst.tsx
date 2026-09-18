@@ -16,26 +16,62 @@ const responseSectionNames: ResponseSectionName[] = [
   'Follow-up',
 ];
 
-const renderMarkdownTable = (lines: string[]) => {
-  const separatorCells = lines[1]?.split('|').map((cell) => cell.trim()).filter(Boolean) || [];
-  if (lines.length < 2 || separatorCells.length === 0 || !separatorCells.every((cell) => /^:?-{3,}:?$/.test(cell))) {
-    return null;
+const parseMarkdownRow = (line: string) => line
+  .trim()
+  .replace(/^\||\|$/g, '')
+  .split('|')
+  .map((cell) => cleanResponseLine(cell.trim()));
+
+const extractMarkdownTableBlock = (lines: string[]) => {
+  for (let i = 0; i <= lines.length - 2; i++) {
+    const headerCells = parseMarkdownRow(lines[i]);
+    const separatorCells = parseMarkdownRow(lines[i + 1]);
+
+    if (headerCells.length < 2 || separatorCells.length !== headerCells.length) continue;
+    if (!separatorCells.every((cell) => /^:?-{3,}:?$/.test(cell))) continue;
+
+    const tableLines = [lines[i], lines[i + 1]];
+    const rows: string[][] = [];
+
+    for (let j = i + 2; j < lines.length; j++) {
+      const nextLine = lines[j];
+      if (!nextLine.includes('|')) break;
+      const rowCells = parseMarkdownRow(nextLine);
+      if (rowCells.length !== headerCells.length) break;
+      if (rowCells.every((cell) => !cell)) continue;
+      rows.push(rowCells);
+      tableLines.push(nextLine);
+    }
+
+    if (rows.length > 0 || (headerCells.length > 0 && separatorCells.length > 0)) {
+      return {
+        startIndex: i,
+        endIndex: i + tableLines.length,
+        headers: headerCells,
+        rows,
+      };
+    }
   }
 
-  const parseRow = (line: string) => line.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cleanResponseLine(cell.trim()));
-  const headers = parseRow(lines[0]);
-  const rows = lines.slice(2).map(parseRow).filter((row) => row.some(Boolean));
+  return null;
+};
+
+const renderMarkdownTable = (lines: string[]) => {
+  const tableBlock = extractMarkdownTableBlock(lines);
+  if (!tableBlock) return null;
+
+  const { headers, rows } = tableBlock;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border-collapse text-left text-sm">
-        <thead>
-          <tr>{headers.map((header, index) => <th key={index} className="border-b border-gray-300 px-3 py-2 font-semibold">{header}</th>)}</tr>
+    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+      <table className="min-w-full table-fixed border-collapse text-left text-[12.5px] sm:text-sm">
+        <thead className="bg-slate-50">
+          <tr>{headers.map((header, index) => <th key={index} className="border-b border-gray-200 px-3 py-3 align-top font-semibold text-slate-700 first:rounded-tl-xl last:rounded-tr-xl">{header}</th>)}</tr>
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-b border-gray-200 last:border-b-0">
-              {headers.map((_, cellIndex) => <td key={cellIndex} className="px-3 py-2 align-top">{row[cellIndex] || ''}</td>)}
+            <tr key={rowIndex} className="border-b border-gray-200 last:border-b-0 odd:bg-white even:bg-slate-50/40">
+              {headers.map((_, cellIndex) => <td key={cellIndex} className="px-3 py-2.5 align-top text-slate-700 leading-relaxed">{row[cellIndex] || ''}</td>)}
             </tr>
           ))}
         </tbody>
@@ -66,8 +102,28 @@ const parseStructuredResponse = (text: string): Partial<Record<ResponseSectionNa
 
 const renderSectionLines = (content: string, ordered: boolean = false) => {
   const lines = content.split('\n').map((line) => line.trim()).filter(Boolean);
-  const table = renderMarkdownTable(lines);
-  if (table) return table;
+
+  const tableBlock = extractMarkdownTableBlock(lines);
+  if (tableBlock) {
+    const beforeLines = lines.slice(0, tableBlock.startIndex);
+    const afterLines = lines.slice(tableBlock.endIndex);
+
+    return (
+      <div className="space-y-3">
+        {beforeLines.length > 0 && (
+          <div className="whitespace-pre-wrap">
+            {beforeLines.map((line, index) => <React.Fragment key={index}>{cleanResponseLine(line)}{index < beforeLines.length - 1 && <br />}</React.Fragment>)}
+          </div>
+        )}
+        {renderMarkdownTable(lines)}
+        {afterLines.length > 0 && (
+          <div className="whitespace-pre-wrap">
+            {afterLines.map((line, index) => <React.Fragment key={index}>{cleanResponseLine(line)}{index < afterLines.length - 1 && <br />}</React.Fragment>)}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const items = lines.filter((line) => ordered ? /^\d+\.\s+/.test(line) : /^[-*]\s+/.test(line));
 
