@@ -1,0 +1,21 @@
+name: DevSecOps Security Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  Stage-1-Secret-Scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          extra_args: --only-verified
