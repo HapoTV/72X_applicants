@@ -19,3 +19,13 @@ jobs:
         with:
           path: ./
           extra_args: --only-verified
+
+  Stage-2-SAST-Scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Semgrep SAST Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: "p/typescript p/react p/javascript"
