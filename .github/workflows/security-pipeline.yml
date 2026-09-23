@@ -29,3 +29,18 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: "p/typescript p/react p/javascript"
+
+  Stage-3-SCA-Scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
