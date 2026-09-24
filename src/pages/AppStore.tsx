@@ -103,25 +103,26 @@ const AppStore: React.FC = () => {
   const active = APPS.filter((a) => a.status === 'active');
   const comingSoon = APPS.filter((a) => a.status === 'coming-soon');
 
-  const handleOpen = async (app: AppDef) => {
-    if (app.status === 'coming-soon') return;
+  const handleOpen = (app: AppDef) => {
+  if (app.status === 'coming-soon') return;
 
-    const subAppUrl = SUB_APP_URLS[app.title];
-    if (subAppUrl) {
-      // Try to generate an SSO token for seamless sign-in
-      try {
-        const res = await axiosClient.post('/auth/sso/generate');
-        const { ssoToken } = res.data;
-        window.open(`${subAppUrl}?sso=${ssoToken}`, '_blank', 'noopener');
-      } catch {
-        // SSO not yet available — open sub-app directly (user will sign in manually)
-        window.open(subAppUrl, '_blank', 'noopener');
-      }
-    } else {
-      navigate(app.href);
-    }
-  };
+  if (
+    app.title === 'TenderlyAI' ||
+    app.title === 'CRM' ||
+    app.title === 'Finance Manager'
+  ) {
+    navigate(app.href);
+    return;
+  }
 
+  const subAppUrl = SUB_APP_URLS[app.title];
+
+  if (subAppUrl) {
+    window.open(subAppUrl, '_blank', 'noopener');
+  } else {
+    navigate(app.href);
+  }
+};
   return (
     <div className="space-y-6 animate-fade-in px-2 sm:px-0">
       {/* Header */}

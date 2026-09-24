@@ -1,174 +1,222 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { TenderItem } from '../../interfaces/TenderlyAIData';
-
-const STORAGE_KEY = 'tenderlyai_tenders';
-const SAVED_TENDERS_KEY = 'tenderlyai_saved_tenders';
-
-const loadStorage = <T,>(key: string, fallback: T): T => {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const stored = window.localStorage.getItem(key);
-    return stored ? (JSON.parse(stored) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const saveStorage = <T,>(key: string, value: T) => {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-};
-
-const DEFAULT_TENDERS: TenderItem[] = [
-  {
-    id: 'tnd-001',
-    title: 'Agricultural Equipment Supply',
-    buyer: 'Free State Agriculture Department',
-    province: 'Free State',
-    industry: 'Agriculture',
-    publishedAt: 'Dec 18, 2024',
-    closingAt: 'Feb 05, 2026',
-    source: 'fs.gov.za',
-    documentsCount: 2,
-    status: 'EXPIRED',
-  },
-  {
-    id: 'tnd-002',
-    title: 'Software Licensing & Support',
-    buyer: 'City of Johannesburg',
-    province: 'Gauteng',
-    industry: 'ICT & Software',
-    publishedAt: 'Jan 09, 2026',
-    closingAt: 'May 10, 2026',
-    source: 'joburg.org.za',
-    documentsCount: 4,
-    status: 'OPEN',
-  },
-  {
-    id: 'tnd-003',
-    title: 'Cleaning Services for Public Facilities',
-    buyer: 'Department of Public Works',
-    province: 'Western Cape',
-    industry: 'Cleaning & Hygiene',
-    publishedAt: 'Jan 22, 2026',
-    closingAt: 'May 02, 2026',
-    source: 'gov.za',
-    documentsCount: 3,
-    status: 'OPEN',
-  },
-  {
-    id: 'tnd-004',
-    title: 'Security Services (24/7 Guarding)',
-    buyer: 'Provincial Treasury',
-    province: 'KwaZulu-Natal',
-    industry: 'Security Services',
-    publishedAt: 'Feb 14, 2026',
-    closingAt: 'Apr 29, 2026',
-    source: 'kzn.gov.za',
-    documentsCount: 1,
-    status: 'OPEN',
-  },
-  {
-    id: 'tnd-005',
-    title: 'Road Maintenance & Rehabilitation',
-    buyer: 'SANRAL',
-    province: 'North West',
-    industry: 'Construction',
-    publishedAt: 'Feb 01, 2026',
-    closingAt: 'Jun 18, 2026',
-    source: 'sanral.co.za',
-    documentsCount: 6,
-    status: 'OPEN',
-  },
-];
+import TenderlyAIService, {
+  type TenderFilter,
+} from '../../services/TenderlyAIService';
 
 export const useTenders = () => {
-  const [tenders, setTenders] = useState<TenderItem[]>(() =>
-    loadStorage<TenderItem[]>(STORAGE_KEY, DEFAULT_TENDERS),
-  );
-  const [savedTenderIds, setSavedTenderIds] = useState<Set<string>>(() =>
-    new Set(loadStorage<string[]>(SAVED_TENDERS_KEY, [])),
-  );
+  const [tenders, setTenders] = useState<TenderItem[]>([]);
+  const [savedTenderIds, setSavedTenderIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Persist tenders to localStorage whenever they change
-  useEffect(() => {
-    saveStorage(STORAGE_KEY, tenders);
-  }, [tenders]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
 
-  // Persist saved tenders to localStorage whenever they change
-  useEffect(() => {
-    saveStorage(SAVED_TENDERS_KEY, Array.from(savedTenderIds));
-  }, [savedTenderIds]);
-
-  const addTender = async (tenderData: Omit<TenderItem, 'id'>) => {
+  const fetchTenders = useCallback(async (filters: TenderFilter = {}) => {
     setLoading(true);
-    try {
-      const newTender: TenderItem = {
-        ...tenderData,
-        id: `tnd-${(tenders.length + 1).toString().padStart(3, '0')}`,
-      };
-      setTenders((prev) => [newTender, ...prev]);
-      return newTender;
-    } finally {
-      setLoading(false);
-    }
-  };
+    setError(null);
 
-  const updateTender = async (id: string, tenderData: Partial<TenderItem>) => {
-    setLoading(true);
     try {
-      setTenders((prev) =>
-        prev.map((tender) => (tender.id === id ? { ...tender, ...tenderData } : tender)),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+      const response = await TenderlyAIService.listTenders(filters);
 
-  const deleteTender = async (id: string) => {
-    setLoading(true);
-    try {
-      setTenders((prev) => prev.filter((tender) => tender.id !== id));
-      // Also remove from saved if it was saved
-      setSavedTenderIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
+      setTenders(response.data ?? []);
+      setTotal(response.total ?? 0);
+      setPage(response.page ?? 0);
+      setSize(response.size ?? 10);
+      setTotalPages(response.totalPages ?? 0);
+
+      // Keep saved IDs in sync with the backend response.
+      const backendSavedIds = (response.data ?? [])
+        .filter((tender) => tender.isSaved === true)
+        .map((tender) => tender.id);
+
+      setSavedTenderIds((previous) => {
+        const next = new Set(previous);
+
+        backendSavedIds.forEach((id) => next.add(id));
+
         return next;
       });
+
+      return response;
+    } catch (err) {
+      console.error('Failed to fetch tenders:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load tenders',
+      );
+
+      setTenders([]);
+      setTotal(0);
+      setTotalPages(0);
+
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchSavedTenders = useCallback(async () => {
+    try {
+      const savedTenders = await TenderlyAIService.getSavedTenders();
+
+      setSavedTenderIds(
+        new Set(savedTenders.map((tender) => tender.id)),
+      );
+
+      return savedTenders;
+    } catch (err) {
+      console.error('Failed to fetch saved tenders:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load saved tenders',
+      );
+
+      throw err;
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTenders({
+      page: 0,
+      size: 10,
+    }).catch(() => {
+      // Error is already stored in state.
+    });
+
+    fetchSavedTenders().catch(() => {
+      // Error is already stored in state.
+    });
+  }, [fetchTenders, fetchSavedTenders]);
+
+  const addTender = async (_tenderData: Omit<TenderItem, 'id'>) => {
+    console.warn(
+      'addTender is not supported by the current backend API.',
+    );
+  };
+
+  const updateTender = async (
+    _id: string,
+    _tenderData: Partial<TenderItem>,
+  ) => {
+    console.warn(
+      'updateTender is not supported by the current backend API.',
+    );
+  };
+
+  const deleteTender = async (_id: string) => {
+    console.warn(
+      'deleteTender is not supported by the current backend API.',
+    );
+  };
+
+  const toggleSavedTender = async (tenderId: string) => {
+    setLoading(true);
+    setError(null);
+
+    const isCurrentlySaved = savedTenderIds.has(tenderId);
+
+    try {
+      if (isCurrentlySaved) {
+        await TenderlyAIService.unsaveTender(tenderId);
+
+        setSavedTenderIds((previous) => {
+          const next = new Set(previous);
+          next.delete(tenderId);
+          return next;
+        });
+
+        setTenders((previous) =>
+          previous.map((tender) =>
+            tender.id === tenderId
+              ? { ...tender, isSaved: false }
+              : tender,
+          ),
+        );
+      } else {
+        await TenderlyAIService.saveTender(tenderId);
+
+        setSavedTenderIds((previous) => {
+          const next = new Set(previous);
+          next.add(tenderId);
+          return next;
+        });
+
+        setTenders((previous) =>
+          previous.map((tender) =>
+            tender.id === tenderId
+              ? { ...tender, isSaved: true }
+              : tender,
+          ),
+        );
+      }
+    } catch (err) {
+      console.error('Failed to update saved tender:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to update saved tender',
+      );
+
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleSavedTender = (tenderId: string) => {
-    setSavedTenderIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(tenderId)) {
-        next.delete(tenderId);
-      } else {
-        next.add(tenderId);
-      }
-      return next;
-    });
-  };
-
-  const getSavedTenders = () => tenders.filter((t) => savedTenderIds.has(t.id));
+  const getSavedTenders = () =>
+    tenders.filter(
+      (tender) =>
+        savedTenderIds.has(tender.id) ||
+        tender.isSaved === true,
+    );
 
   const getAllIndustries = () => {
-    const industries = Array.from(new Set(tenders.map((t) => t.industry))).filter(Boolean);
+    const industries = Array.from(
+      new Set(
+        tenders
+          .map((tender) => tender.industry)
+          .filter(Boolean),
+      ),
+    );
+
     return industries;
+  };
+
+  const loadFilteredTenders = async (filters: TenderFilter) => {
+    return fetchTenders(filters);
   };
 
   return {
     tenders,
     savedTenderIds,
+
     addTender,
     updateTender,
     deleteTender,
+
     toggleSavedTender,
     getSavedTenders,
     getAllIndustries,
+
+    fetchTenders,
+    fetchSavedTenders,
+    loadFilteredTenders,
+
+    total,
+    page,
+    size,
+    totalPages,
+
     loading,
+    error,
   };
 };

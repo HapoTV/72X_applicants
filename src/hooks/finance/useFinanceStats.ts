@@ -1,60 +1,50 @@
-import { useMemo } from 'react';
-import type { Invoice, Quote, Expense, FinanceStats } from '../../interfaces/FinanceData';
+import { useEffect, useState } from 'react';
+import type { FinanceStats } from '../../interfaces/FinanceData';
+import FinanceService from '../../services/FinanceService';
 
-export const useFinanceStats = (
-  quotes: Quote[],
-  invoices: Invoice[],
-  expenses: Expense[],
-) => {
-  const stats = useMemo((): FinanceStats => {
-    // Calculate cash balance
-    const paidInvoicesTotal = invoices
-      .filter((invoice) => invoice.status === 'Paid')
-      .reduce((sum, invoice) => sum + invoice.total, 0);
+export const useFinanceStats = () => {
+  const [stats, setStats] = useState<FinanceStats>({
+  cashBalance: 0,
+  openQuotes: 0,
+  awaitingInvoices: 0,
+  overdueInvoices: 0,
+  monthlyExpenses: 0,
+  totalRevenue: 0,
+  totalExpenses: 0,
+  netProfit: 0,
+  totalInvoices: 0,
+  paidInvoices: 0,
+  unpaidInvoices: 0,
+  outstandingAmount: 0,
+  conversionRate: 0,
+});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
-    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    const cashBalance = paidInvoicesTotal - totalExpenses;
+        const data = await FinanceService.getStats();
 
-    // Count open quotes
-    const openQuotes = quotes.filter(
-      (quote) => quote.status !== 'Accepted' && quote.status !== 'Rejected',
-    ).length;
-
-    // Count awaiting invoices
-    const awaitingInvoices = invoices.filter(
-      (invoice) => invoice.status === 'Awaiting Payment',
-    ).length;
-
-    // Count overdue invoices
-    const overdueInvoices = invoices.filter(
-      (invoice) => invoice.status === 'Overdue',
-    ).length;
-
-    // Calculate monthly expenses
-    const now = new Date();
-    const monthlyExpenses = expenses
-      .filter((expense) => {
-        const expenseDate = new Date(expense.spentOn);
-        return (
-          expenseDate.getMonth() === now.getMonth() &&
-          expenseDate.getFullYear() === now.getFullYear()
-        );
-      })
-      .reduce((sum, expense) => sum + expense.amount, 0);
-
-    // Calculate total sales
-    const totalSales = invoices.reduce((sum, invoice) => sum + invoice.total, 0);
-
-    return {
-      cashBalance,
-      openQuotes,
-      awaitingInvoices,
-      overdueInvoices,
-      monthlyExpenses,
-      totalSales,
+        setStats(data);
+      } catch (err) {
+        console.error('Failed to load finance stats:', err);
+        setError(err);
+        setStats(null);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [quotes, invoices, expenses]);
 
-  return stats;
+    loadStats();
+  }, []);
+
+  return {
+    stats,
+    loading,
+    error,
+  };
 };

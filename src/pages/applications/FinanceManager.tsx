@@ -82,7 +82,11 @@ const FinanceManager: React.FC = () => {
   const crmContacts = useMemo(() => loadCrmContacts(), []);
 
   // Calculate stats
-  const stats = useFinanceStats(quotes, invoices, expenses);
+ const {
+  stats,
+  loading: statsLoading,
+  error: statsError,
+} = useFinanceStats();
 
   // Filter quotes
   const filteredQuotes = useMemo(() => {
@@ -464,11 +468,7 @@ const FinanceManager: React.FC = () => {
 )}
 
       {activeTab === 'reports' && (
-  <ReportsTab
-    stats={stats}
-    invoices={invoices}
-    cashBalance={cashBalance}
-  />
+  <ReportsTab stats={stats} />
 )}
 
             {/* Modals */}

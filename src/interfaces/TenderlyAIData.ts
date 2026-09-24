@@ -11,6 +11,15 @@ export interface TenderItem {
   source: string;
   documentsCount: number;
   status: TenderStatus;
+
+  // Backend fields
+  referenceNumber?: string;
+  description?: string;
+  category?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  isSaved?: boolean;
+  isViewed?: boolean;
 }
 
 export interface TenderSearchFilters {
